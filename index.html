@@ -1977,6 +1977,660 @@ function Tasks({tasks,setTasks,cu,users,locFilter}){
   );
 }
 
+
+// ── CAPA ─────────────────────────────────────────────────────────────────────
+const CAPA_TYPES=['corrective','preventive','improvement'];
+const CAPA_SOURCES=['Customer Complaint','Internal Audit','Failed Test','Non-Conformance','Employee Report','Regulatory','Other'];
+const SEV_COLORS={low:'bb-gray',medium:'bb-yellow',high:'bb-orange',critical:'bb-red'};
+
+function CAPA({capas,setCapas,cu,users,wos,locFilter}){
+  const[showNew,setNew]=useState(false);
+  const[sel,setSel]=useState(null);
+  const[tab,setTab]=useState('open');
+  const[f,setF]=useState({title:'',type:'corrective',source:'Internal Audit',description:'',product:'',wo_id:'',severity:'medium',assigned_to:'',assigned_id:'',due_date:'',loc:locFilter==='All'?'All':locFilter});
+  const[saving,setSaving]=useState(false);
+  const[newNote,setNewNote]=useState('');
+
+  const filtered=(locFilter&&locFilter!=='All'?capas.filter(c=>!c.loc||c.loc===locFilter||c.loc==='All'):capas).filter(c=>tab==='open'?c.status==='open':tab==='closed'?c.status==='closed':true);
+
+  async function create(){
+    if(!f.title)return;
+    setSaving(true);
+    const capa={id:'CAPA-'+Date.now(),...f,status:'open',created_by:cu.name,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),notes:[],attachments:[]};
+    try{await db.insert('pf_capas',capa);}catch(e){console.error(e);}
+    setCapas(p=>[capa,...p]);
+    setF({title:'',type:'corrective',source:'Internal Audit',description:'',product:'',wo_id:'',severity:'medium',assigned_to:'',assigned_id:'',due_date:'',loc:'All'});
+    setNew(false);setSaving(false);
+  }
+
+  async function updateStatus(capa,status){
+    const update={status,updated_at:new Date().toISOString(),...(status==='closed'?{verified_by:cu.name,verified_at:new Date().toISOString().slice(0,10)}:{})};
+    try{await db.update('pf_capas',capa.id,update);}catch(e){console.error(e);}
+    setCapas(p=>p.map(c=>c.id===capa.id?{...c,...update}:c));
+    setSel(s=>s?{...s,...update}:null);
+  }
+
+  async function updateField(capa,field,value){
+    const update={[field]:value,updated_at:new Date().toISOString()};
+    try{await db.update('pf_capas',capa.id,update);}catch(e){console.error(e);}
+    setCapas(p=>p.map(c=>c.id===capa.id?{...c,...update}:c));
+    setSel(s=>s?{...s,...update}:null);
+  }
+
+  async function addNote(){
+    if(!newNote.trim()||!sel)return;
+    const note={id:'n'+Date.now(),text:newNote,by:cu.name,at:new Date().toISOString()};
+    const notes=[...(sel.notes||[]),note];
+    await updateField(sel,'notes',notes);
+    setNewNote('');
+  }
+
+  const today=new Date().toISOString().slice(0,10);
+
+  return el('div',null,
+    el('div',{className:'ph'},
+      el('div',null,el('div',{className:'pt'},'CAPA'),el('div',{className:'ps'},'Corrective & Preventive Actions')),
+      el('button',{className:'btn b-blue',onClick:()=>setNew(true)},'+ New CAPA'),
+    ),
+    el('div',{className:'g4',style:{marginBottom:20}},
+      [{l:'Open',v:capas.filter(c=>c.status==='open').length,c:'c-blue'},
+       {l:'Overdue',v:capas.filter(c=>c.status==='open'&&c.due_date&&c.due_date<today).length,c:'c-red'},
+       {l:'Closed',v:capas.filter(c=>c.status==='closed').length,c:'c-green'},
+       {l:'Total',v:capas.length,c:'c-muted'},
+      ].map(({l,v,c})=>el('div',{key:l,className:'stat'},el('div',{className:'sl'},l),el('div',{className:`sv ${c}`},v)))
+    ),
+    el('div',{className:'tabs'},
+      [{id:'open',label:'Open'},{id:'closed',label:'Closed'},{id:'all',label:'All'}].map(t=>
+        el('button',{key:t.id,className:`tab ${tab===t.id?'on':''}`,onClick:()=>setTab(t.id)},t.label)
+      )
+    ),
+    filtered.length===0?el('div',{className:'empty'},el('div',{className:'eico'},'🔧'),el('div',{className:'etxt'},'No CAPAs found')):
+    el('div',{className:'card',style:{padding:0}},
+      el('div',{className:'tw'},
+        el('table',null,
+          el('thead',null,el('tr',null,['ID','Title','Type','Source','Severity','Assigned','Due','Status',''].map(h=>el('th',{key:h},h)))),
+          el('tbody',null,filtered.map(capa=>el('tr',{key:capa.id},
+            el('td',null,el('span',{className:'mono tsm c-blue'},capa.id.slice(-8))),
+            el('td',null,el('div',{className:'fw6 tsm'},capa.title),el('div',{className:'tsm c-muted'},capa.product||'—')),
+            el('td',null,el('span',{className:'badge bb-blue'},capa.type)),
+            el('td',null,el('span',{className:'tsm c-muted'},capa.source)),
+            el('td',null,el('span',{className:`badge ${SEV_COLORS[capa.severity]||'bb-gray'}`},capa.severity)),
+            el('td',null,el('span',{className:'tsm'},capa.assigned_to||'—')),
+            el('td',null,capa.due_date&&el('span',{className:`tsm ${capa.due_date<today&&capa.status==='open'?'c-red':'c-muted'}`},capa.due_date<today&&capa.status==='open'?'⚠ '+capa.due_date:capa.due_date)),
+            el('td',null,el('span',{className:`badge ${capa.status==='closed'?'bb-green':'bb-yellow'}`},capa.status)),
+            el('td',null,el('button',{className:'btn b-ghost btn-sm',onClick:()=>setSel(capa)},'View')),
+          )))
+        )
+      )
+    ),
+    showNew&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setNew(false)},
+      el('div',{className:'md'},
+        el('div',{className:'mh'},el('div',{className:'mt2'},'New CAPA'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
+        el('div',{className:'mbd'},
+          el('div',{className:'fg'},el('label',null,'Title'),el('input',{placeholder:'Brief description of the issue',value:f.title,onChange:ev=>setF(p=>({...p,title:ev.target.value}))})),
+          el('div',{className:'g2'},
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Type'),el('select',{value:f.type,onChange:ev=>setF(p=>({...p,type:ev.target.value}))},CAPA_TYPES.map(t=>el('option',{key:t,value:t},t.charAt(0).toUpperCase()+t.slice(1))))),
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Source'),el('select',{value:f.source,onChange:ev=>setF(p=>({...p,source:ev.target.value}))},CAPA_SOURCES.map(s=>el('option',{key:s,value:s},s)))),
+          ),
+          el('div',{className:'g2',style:{marginTop:13}},
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Severity'),el('select',{value:f.severity,onChange:ev=>setF(p=>({...p,severity:ev.target.value}))},['low','medium','high','critical'].map(s=>el('option',{key:s,value:s},s.charAt(0).toUpperCase()+s.slice(1))))),
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Due Date'),el('input',{type:'date',value:f.due_date,onChange:ev=>setF(p=>({...p,due_date:ev.target.value}))})),
+          ),
+          el('div',{className:'fg'},el('label',null,'Description'),el('textarea',{placeholder:'Describe the issue in detail...',value:f.description,onChange:ev=>setF(p=>({...p,description:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:80,resize:'vertical'}})),
+          el('div',{className:'g2'},
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Product / SKU (optional)'),el('input',{placeholder:'e.g. 2G Dispo Habibi',value:f.product,onChange:ev=>setF(p=>({...p,product:ev.target.value}))})),
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Work Order (optional)'),el('select',{value:f.wo_id,onChange:ev=>setF(p=>({...p,wo_id:ev.target.value}))},el('option',{value:''},'— None —'),...wos.slice(0,20).map(w=>el('option',{key:w.id,value:w.id},w.id+' — '+w.sku)))),
+          ),
+          el('div',{className:'fg'},el('label',null,'Assign To'),el('select',{value:f.assigned_id,onChange:ev=>{const u=users.find(x=>x.id===ev.target.value);setF(p=>({...p,assigned_id:ev.target.value,assigned_to:u?.name||''}));}},el('option',{value:''},'— Unassigned —'),...users.filter(u=>u.approved).map(u=>el('option',{key:u.id,value:u.id},`${u.name} (${u.dept})`)))),
+          el('div',{className:'fg'},el('label',null,'Location'),el('select',{value:f.loc,onChange:ev=>setF(p=>({...p,loc:ev.target.value}))},['All','Michigan','Missouri'].map(l=>el('option',{key:l,value:l},l)))),
+        ),
+        el('div',{className:'mf'},el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),el('button',{className:'btn b-blue',onClick:create,disabled:saving||!f.title},saving?'Saving...':'Create CAPA')),
+      )
+    ),
+    sel&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setSel(null)},
+      el('div',{className:'md',style:{width:660}},
+        el('div',{className:'mh'},
+          el('div',{style:{flex:1}},
+            el('div',{style:{display:'flex',gap:8,alignItems:'center'}},el('span',{className:`badge ${SEV_COLORS[sel.severity]||'bb-gray'}`},sel.severity),el('span',{className:'badge bb-blue'},sel.type),el('span',{className:`badge ${sel.status==='closed'?'bb-green':'bb-yellow'}`},sel.status)),
+            el('div',{className:'mt2',style:{marginTop:8}},sel.title),
+            el('div',{className:'tsm c-muted',style:{marginTop:4}},`${sel.source} · ${sel.created_by} · ${sel.created_at?.slice(0,10)}`),
+          ),
+          el('button',{className:'mc',onClick:()=>setSel(null)},'×'),
+        ),
+        el('div',{className:'mbd'},
+          sel.description&&el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:12,marginBottom:14}},el('div',{className:'tsm c-muted mb2'},'Description'),el('div',{className:'tsm'},sel.description)),
+          el('div',{className:'g2 mb4'},
+            el('div',null,el('div',{className:'tsm c-muted mb2'},'Assigned To'),el('select',{value:sel.assigned_id||'',onChange:ev=>{const u=users.find(x=>x.id===ev.target.value);updateField(sel,'assigned_to',u?.name||'');updateField({...sel,assigned_to:u?.name||''},'assigned_id',ev.target.value);},style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},el('option',{value:''},'— Unassigned —'),...users.filter(u=>u.approved).map(u=>el('option',{key:u.id,value:u.id},u.name)))),
+            el('div',null,el('div',{className:'tsm c-muted mb2'},'Due Date'),el('input',{type:'date',value:sel.due_date||'',onChange:ev=>updateField(sel,'due_date',ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px',color:'var(--text)',fontFamily:'inherit',fontSize:13}})),
+          ),
+          el('div',{className:'fg'},el('label',null,'Root Cause Analysis'),el('textarea',{value:sel.root_cause||'',placeholder:'What caused this issue?',onChange:ev=>updateField(sel,'root_cause',ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:80,resize:'vertical'}})),
+          el('div',{className:'fg'},el('label',null,'Corrective Action Taken'),el('textarea',{value:sel.action_taken||'',placeholder:'What actions were taken to resolve this?',onChange:ev=>updateField(sel,'action_taken',ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:80,resize:'vertical'}})),
+          el('div',{className:'divider'}),
+          el('div',{className:'fw6 mb4'},'Notes'),
+          (sel.notes||[]).map(note=>el('div',{key:note.id,style:{background:'var(--surface2)',borderRadius:8,padding:'10px 12px',marginBottom:8}},el('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:4}},el('span',{className:'tsm fw6'},note.by),el('span',{className:'tsm c-muted'},note.at.slice(0,16).replace('T',' '))),el('div',{className:'tsm'},note.text))),
+          el('div',{style:{display:'flex',gap:8}},el('input',{placeholder:'Add a note...',value:newNote,onChange:ev=>setNewNote(ev.target.value),onKeyDown:ev=>ev.key==='Enter'&&addNote(),style:{flex:1,background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none'}}),el('button',{className:'btn b-blue',onClick:addNote,disabled:!newNote.trim()},'Add')),
+        ),
+        el('div',{className:'mf',style:{justifyContent:'space-between'}},
+          el('div',{style:{display:'flex',gap:8}},
+            sel.status==='open'&&el('button',{className:'btn b-green',onClick:()=>updateStatus(sel,'closed')},'✓ Close CAPA'),
+            sel.status==='closed'&&el('button',{className:'btn b-ghost',onClick:()=>updateStatus(sel,'open')},'Reopen'),
+            (cu.role==='admin')&&el('button',{className:'btn b-red',onClick:async()=>{if(!window.confirm('Delete?'))return;await db.remove('pf_capas',sel.id);setCapas(p=>p.filter(c=>c.id!==sel.id));setSel(null);}},'Delete'),
+          ),
+          el('button',{className:'btn b-ghost',onClick:()=>setSel(null)},'Close'),
+        ),
+      )
+    ),
+  );
+}
+
+// ── NCR ───────────────────────────────────────────────────────────────────────
+const DISPOSITIONS=['quarantine','rework','destroy','accept','return_to_supplier'];
+
+function NCR({ncrs,setNcrs,cu,users,wos,capas,setCapas,locFilter}){
+  const[showNew,setNew]=useState(false);
+  const[sel,setSel]=useState(null);
+  const[tab,setTab]=useState('open');
+  const[f,setF]=useState({title:'',description:'',product:'',wo_id:'',qty_affected:0,disposition:'quarantine',severity:'medium',assigned_to:'',assigned_id:'',loc:'All'});
+  const[saving,setSaving]=useState(false);
+
+  const filtered=(locFilter&&locFilter!=='All'?ncrs.filter(n=>!n.loc||n.loc===locFilter||n.loc==='All'):ncrs).filter(n=>tab==='open'?n.status==='open':tab==='closed'?n.status==='closed':true);
+
+  async function create(){
+    if(!f.title)return;
+    setSaving(true);
+    const ncr={id:'NCR-'+Date.now(),...f,qty_affected:parseInt(f.qty_affected)||0,status:'open',created_by:cu.name,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),notes:[],attachments:[]};
+    try{await db.insert('pf_ncrs',ncr);}catch(e){console.error(e);}
+    setNcrs(p=>[ncr,...p]);
+    setF({title:'',description:'',product:'',wo_id:'',qty_affected:0,disposition:'quarantine',severity:'medium',assigned_to:'',assigned_id:'',loc:'All'});
+    setNew(false);setSaving(false);
+  }
+
+  async function createCapa(ncr){
+    const capa={id:'CAPA-'+Date.now(),title:'CAPA for NCR: '+ncr.title,type:'corrective',source:'Non-Conformance',description:ncr.description,product:ncr.product,wo_id:ncr.wo_id,severity:ncr.severity,assigned_to:ncr.assigned_to,assigned_id:ncr.assigned_id,due_date:'',status:'open',created_by:cu.name,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),notes:[],attachments:[],loc:ncr.loc};
+    try{await db.insert('pf_capas',capa);}catch(e){console.error(e);}
+    setCapas(p=>[capa,...p]);
+    const update={capa_id:capa.id,updated_at:new Date().toISOString()};
+    try{await db.update('pf_ncrs',ncr.id,update);}catch(e){console.error(e);}
+    setNcrs(p=>p.map(n=>n.id===ncr.id?{...n,...update}:n));
+    setSel(s=>s?{...s,...update}:null);
+    alert('CAPA created: '+capa.id);
+  }
+
+  return el('div',null,
+    el('div',{className:'ph'},
+      el('div',null,el('div',{className:'pt'},'Non-Conformance Reports'),el('div',{className:'ps'},'Track products or processes that do not meet specifications')),
+      el('button',{className:'btn b-blue',onClick:()=>setNew(true)},'+ New NCR'),
+    ),
+    el('div',{className:'g4',style:{marginBottom:20}},
+      [{l:'Open NCRs',v:ncrs.filter(n=>n.status==='open').length,c:'c-red'},
+       {l:'Quarantined',v:ncrs.filter(n=>n.disposition==='quarantine'&&n.status==='open').length,c:'c-yellow'},
+       {l:'Closed',v:ncrs.filter(n=>n.status==='closed').length,c:'c-green'},
+       {l:'Units Affected',v:ncrs.filter(n=>n.status==='open').reduce((s,n)=>s+(n.qty_affected||0),0).toLocaleString(),c:'c-red'},
+      ].map(({l,v,c})=>el('div',{key:l,className:'stat'},el('div',{className:'sl'},l),el('div',{className:`sv ${c}`},v)))
+    ),
+    el('div',{className:'tabs'},
+      [{id:'open',label:'Open'},{id:'closed',label:'Closed'},{id:'all',label:'All'}].map(t=>
+        el('button',{key:t.id,className:`tab ${tab===t.id?'on':''}`,onClick:()=>setTab(t.id)},t.label)
+      )
+    ),
+    filtered.length===0?el('div',{className:'empty'},el('div',{className:'eico'},'⚠️'),el('div',{className:'etxt'},'No NCRs found')):
+    el('div',{className:'card',style:{padding:0}},
+      el('div',{className:'tw'},
+        el('table',null,
+          el('thead',null,el('tr',null,['ID','Title','Product','Qty Affected','Disposition','Severity','Assigned','Status',''].map(h=>el('th',{key:h},h)))),
+          el('tbody',null,filtered.map(ncr=>el('tr',{key:ncr.id},
+            el('td',null,el('span',{className:'mono tsm c-blue'},ncr.id.slice(-8))),
+            el('td',null,el('div',{className:'fw6 tsm'},ncr.title)),
+            el('td',null,el('span',{className:'tsm c-muted'},ncr.product||'—')),
+            el('td',null,el('span',{className:'tsm c-red fw6'},ncr.qty_affected?.toLocaleString()||'0')),
+            el('td',null,el('span',{className:'badge bb-yellow'},ncr.disposition)),
+            el('td',null,el('span',{className:`badge ${SEV_COLORS[ncr.severity]||'bb-gray'}`},ncr.severity)),
+            el('td',null,el('span',{className:'tsm'},ncr.assigned_to||'—')),
+            el('td',null,el('span',{className:`badge ${ncr.status==='closed'?'bb-green':'bb-red'}`},ncr.status)),
+            el('td',null,el('button',{className:'btn b-ghost btn-sm',onClick:()=>setSel(ncr)},'View')),
+          )))
+        )
+      )
+    ),
+    showNew&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setNew(false)},
+      el('div',{className:'md'},
+        el('div',{className:'mh'},el('div',{className:'mt2'},'New Non-Conformance Report'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
+        el('div',{className:'mbd'},
+          el('div',{className:'fg'},el('label',null,'Title'),el('input',{placeholder:'Briefly describe the non-conformance',value:f.title,onChange:ev=>setF(p=>({...p,title:ev.target.value}))})),
+          el('div',{className:'fg'},el('label',null,'Description'),el('textarea',{placeholder:'Detailed description...',value:f.description,onChange:ev=>setF(p=>({...p,description:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:70,resize:'vertical'}})),
+          el('div',{className:'g2'},
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Product / SKU'),el('input',{placeholder:'e.g. 2G Dispo Habibi',value:f.product,onChange:ev=>setF(p=>({...p,product:ev.target.value}))})),
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Qty Affected'),el('input',{type:'number',value:f.qty_affected,onChange:ev=>setF(p=>({...p,qty_affected:ev.target.value}))})),
+          ),
+          el('div',{className:'g2',style:{marginTop:13}},
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Disposition'),el('select',{value:f.disposition,onChange:ev=>setF(p=>({...p,disposition:ev.target.value}))},DISPOSITIONS.map(d=>el('option',{key:d,value:d},d.replace(/_/g,' ').replace(/\w/g,c=>c.toUpperCase()))))),
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Severity'),el('select',{value:f.severity,onChange:ev=>setF(p=>({...p,severity:ev.target.value}))},['low','medium','high','critical'].map(s=>el('option',{key:s,value:s},s.charAt(0).toUpperCase()+s.slice(1))))),
+          ),
+          el('div',{className:'g2',style:{marginTop:13}},
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Work Order'),el('select',{value:f.wo_id,onChange:ev=>setF(p=>({...p,wo_id:ev.target.value}))},el('option',{value:''},'— None —'),...wos.slice(0,20).map(w=>el('option',{key:w.id,value:w.id},w.id+' — '+w.sku)))),
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Assign To'),el('select',{value:f.assigned_id,onChange:ev=>{const u=users.find(x=>x.id===ev.target.value);setF(p=>({...p,assigned_id:ev.target.value,assigned_to:u?.name||''}));}},el('option',{value:''},'— Unassigned —'),...users.filter(u=>u.approved).map(u=>el('option',{key:u.id,value:u.id},u.name)))),
+          ),
+        ),
+        el('div',{className:'mf'},el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),el('button',{className:'btn b-blue',onClick:create,disabled:saving||!f.title},saving?'Saving...':'Create NCR')),
+      )
+    ),
+    sel&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setSel(null)},
+      el('div',{className:'md',style:{width:640}},
+        el('div',{className:'mh'},
+          el('div',{style:{flex:1}},el('div',{style:{display:'flex',gap:8}},el('span',{className:`badge ${SEV_COLORS[sel.severity]||'bb-gray'}`},sel.severity),el('span',{className:'badge bb-yellow'},sel.disposition),el('span',{className:`badge ${sel.status==='closed'?'bb-green':'bb-red'}`},sel.status)),el('div',{className:'mt2',style:{marginTop:8}},sel.title)),
+          el('button',{className:'mc',onClick:()=>setSel(null)},'×'),
+        ),
+        el('div',{className:'mbd'},
+          el('div',{className:'g2 mb4'},[['Product',sel.product||'—'],['Work Order',sel.wo_id||'—'],['Qty Affected',(sel.qty_affected||0).toLocaleString()+' units'],['Created',sel.created_at?.slice(0,10)]].map(([k,v])=>el('div',{key:k},el('div',{className:'tsm c-muted mb2'},k),el('div',{className:'fw6 tsm'},v)))),
+          sel.description&&el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:12,marginBottom:14}},el('div',{className:'tsm'},sel.description)),
+          el('div',{className:'fg'},el('label',null,'Root Cause'),el('textarea',{value:sel.root_cause||'',placeholder:'Root cause analysis...',onChange:ev=>{const v=ev.target.value;setNcrs(p=>p.map(n=>n.id===sel.id?{...n,root_cause:v}:n));setSel(s=>({...s,root_cause:v}));},onBlur:ev=>db.update('pf_ncrs',sel.id,{root_cause:ev.target.value,updated_at:new Date().toISOString()}).catch(console.error),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:70,resize:'vertical'}})),
+          el('div',{className:'fg'},el('label',null,'Action Taken'),el('textarea',{value:sel.action_taken||'',placeholder:'Actions taken to address this NCR...',onChange:ev=>{const v=ev.target.value;setNcrs(p=>p.map(n=>n.id===sel.id?{...n,action_taken:v}:n));setSel(s=>({...s,action_taken:v}));},onBlur:ev=>db.update('pf_ncrs',sel.id,{action_taken:ev.target.value,updated_at:new Date().toISOString()}).catch(console.error),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:70,resize:'vertical'}})),
+          !sel.capa_id&&el('div',{className:'alert al-blue',style:{cursor:'pointer'},onClick:()=>createCapa(sel)},'💡 No CAPA linked — click to automatically create a CAPA from this NCR'),
+          sel.capa_id&&el('div',{className:'alert al-green'},`✓ Linked to CAPA: ${sel.capa_id}`),
+        ),
+        el('div',{className:'mf',style:{justifyContent:'space-between'}},
+          el('div',{style:{display:'flex',gap:8}},
+            sel.status==='open'&&el('button',{className:'btn b-green',onClick:async()=>{const u={status:'closed',updated_at:new Date().toISOString()};await db.update('pf_ncrs',sel.id,u).catch(console.error);setNcrs(p=>p.map(n=>n.id===sel.id?{...n,...u}:n));setSel(s=>({...s,...u}));}},'✓ Close NCR'),
+            cu.role==='admin'&&el('button',{className:'btn b-red',onClick:async()=>{if(!window.confirm('Delete?'))return;await db.remove('pf_ncrs',sel.id).catch(console.error);setNcrs(p=>p.filter(n=>n.id!==sel.id));setSel(null);}},'Delete'),
+          ),
+          el('button',{className:'btn b-ghost',onClick:()=>setSel(null)},'Close'),
+        ),
+      )
+    ),
+  );
+}
+
+// ── INSPECTIONS ───────────────────────────────────────────────────────────────
+const INSPECTION_TYPES=['Pre-Production','In-Process','Final QC','Lab Testing','Receiving','Environmental'];
+const DEFAULT_CHECKLISTS={
+  'Pre-Production':['Equipment clean and sanitized','Materials verified against BOM','Personnel PPE in place','Work area clean','Previous batch records reviewed'],
+  'In-Process':['Product meets spec at this stage','No cross-contamination','Correct quantities used','Equipment functioning properly'],
+  'Final QC':['Product appearance acceptable','Packaging integrity verified','Label accuracy confirmed','Quantity matches batch record','COA received and within spec'],
+  'Lab Testing':['Sample collected per SOP','Chain of custody maintained','Lab certified','Results within acceptable range','THC/CBD within label claim'],
+};
+
+function Inspections({inspections,setInspections,cu,users,wos,locFilter}){
+  const[showNew,setNew]=useState(false);
+  const[sel,setSel]=useState(null);
+  const[tab,setTab]=useState('all');
+  const[f,setF]=useState({title:'',type:'Final QC',wo_id:'',product:'',stage:'',pass_fail:'',lab_name:'',thc_pct:'',cbd_pct:'',notes:'',loc:'All',checklist:[]});
+  const[saving,setSaving]=useState(false);
+
+  const filtered=locFilter&&locFilter!=='All'?inspections.filter(i=>!i.loc||i.loc===locFilter||i.loc==='All'):inspections;
+  const tabFiltered=tab==='pass'?filtered.filter(i=>i.pass_fail==='pass'):tab==='fail'?filtered.filter(i=>i.pass_fail==='fail'):filtered;
+
+  function initChecklist(type){
+    const items=(DEFAULT_CHECKLISTS[type]||[]).map((item,i)=>({id:'chk-'+i,label:item,checked:false}));
+    setF(p=>({...p,type,checklist:items}));
+  }
+
+  async function create(){
+    if(!f.title)return;
+    setSaving(true);
+    const ins={id:'INS-'+Date.now(),...f,thc_pct:parseFloat(f.thc_pct)||null,cbd_pct:parseFloat(f.cbd_pct)||null,created_by:cu.name,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),attachments:[]};
+    try{await db.insert('pf_inspections',ins);}catch(e){console.error(e);}
+    setInspections(p=>[ins,...p]);
+    setF({title:'',type:'Final QC',wo_id:'',product:'',stage:'',pass_fail:'',lab_name:'',thc_pct:'',cbd_pct:'',notes:'',loc:'All',checklist:[]});
+    setNew(false);setSaving(false);
+  }
+
+  return el('div',null,
+    el('div',{className:'ph'},
+      el('div',null,el('div',{className:'pt'},'Inspections & Testing'),el('div',{className:'ps'},'Quality inspections, COA uploads and lab results')),
+      el('button',{className:'btn b-blue',onClick:()=>{setNew(true);initChecklist('Final QC');}},'+ New Inspection'),
+    ),
+    el('div',{className:'g4',style:{marginBottom:20}},
+      [{l:'Total',v:filtered.length,c:'c-blue'},
+       {l:'Passed',v:filtered.filter(i=>i.pass_fail==='pass').length,c:'c-green'},
+       {l:'Failed',v:filtered.filter(i=>i.pass_fail==='fail').length,c:'c-red'},
+       {l:'Pending',v:filtered.filter(i=>!i.pass_fail||i.pass_fail==='pending').length,c:'c-yellow'},
+      ].map(({l,v,c})=>el('div',{key:l,className:'stat'},el('div',{className:'sl'},l),el('div',{className:`sv ${c}`},v)))
+    ),
+    el('div',{className:'tabs'},
+      [{id:'all',label:'All'},{id:'pass',label:'✓ Pass'},{id:'fail',label:'✗ Fail'},{id:'pending',label:'⏳ Pending'}].map(t=>
+        el('button',{key:t.id,className:`tab ${tab===t.id?'on':''}`,onClick:()=>setTab(t.id)},t.label)
+      )
+    ),
+    tabFiltered.length===0?el('div',{className:'empty'},el('div',{className:'eico'},'🔬'),el('div',{className:'etxt'},'No inspections found')):
+    el('div',{className:'card',style:{padding:0}},
+      el('div',{className:'tw'},
+        el('table',null,
+          el('thead',null,el('tr',null,['ID','Title','Type','Product','Work Order','THC%','CBD%','Result','Date',''].map(h=>el('th',{key:h},h)))),
+          el('tbody',null,tabFiltered.map(ins=>el('tr',{key:ins.id},
+            el('td',null,el('span',{className:'mono tsm c-blue'},ins.id.slice(-8))),
+            el('td',null,el('div',{className:'fw6 tsm'},ins.title)),
+            el('td',null,el('span',{className:'badge bb-gray'},ins.type)),
+            el('td',null,el('span',{className:'tsm c-muted'},ins.product||'—')),
+            el('td',null,ins.wo_id&&el('span',{className:'mono tsm c-blue'},ins.wo_id.slice(-8))||el('span',{className:'tsm c-muted'},'—')),
+            el('td',null,ins.thc_pct!=null?el('span',{className:'tsm fw6'},ins.thc_pct+'%'):el('span',{className:'tsm c-muted'},'—')),
+            el('td',null,ins.cbd_pct!=null?el('span',{className:'tsm fw6'},ins.cbd_pct+'%'):el('span',{className:'tsm c-muted'},'—')),
+            el('td',null,el('span',{className:`badge ${ins.pass_fail==='pass'?'bb-green':ins.pass_fail==='fail'?'bb-red':'bb-yellow'}`},ins.pass_fail||'pending')),
+            el('td',null,el('span',{className:'tsm c-muted'},ins.created_at?.slice(0,10))),
+            el('td',null,el('button',{className:'btn b-ghost btn-sm',onClick:()=>setSel(ins)},'View')),
+          )))
+        )
+      )
+    ),
+    showNew&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setNew(false)},
+      el('div',{className:'md',style:{width:640}},
+        el('div',{className:'mh'},el('div',{className:'mt2'},'New Inspection'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
+        el('div',{className:'mbd'},
+          el('div',{className:'fg'},el('label',null,'Inspection Title'),el('input',{placeholder:'e.g. Final QC - Batch 2G Habibi 5000 units',value:f.title,onChange:ev=>setF(p=>({...p,title:ev.target.value}))})),
+          el('div',{className:'g2'},
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Type'),el('select',{value:f.type,onChange:ev=>initChecklist(ev.target.value)},INSPECTION_TYPES.map(t=>el('option',{key:t,value:t},t)))),
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Work Order'),el('select',{value:f.wo_id,onChange:ev=>setF(p=>({...p,wo_id:ev.target.value}))},el('option',{value:''},'— None —'),...wos.slice(0,20).map(w=>el('option',{key:w.id,value:w.id},w.id+' — '+w.sku)))),
+          ),
+          el('div',{className:'g2',style:{marginTop:13}},
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Product'),el('input',{placeholder:'Product name/SKU',value:f.product,onChange:ev=>setF(p=>({...p,product:ev.target.value}))})),
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Pass / Fail'),el('select',{value:f.pass_fail,onChange:ev=>setF(p=>({...p,pass_fail:ev.target.value}))},el('option',{value:''},'— Pending —'),el('option',{value:'pass'},'✓ Pass'),el('option',{value:'fail'},'✗ Fail'))),
+          ),
+          f.type==='Lab Testing'&&el('div',{className:'g2',style:{marginTop:13}},
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'THC %'),el('input',{type:'number',step:'0.01',placeholder:'0.00',value:f.thc_pct,onChange:ev=>setF(p=>({...p,thc_pct:ev.target.value}))})),
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'CBD %'),el('input',{type:'number',step:'0.01',placeholder:'0.00',value:f.cbd_pct,onChange:ev=>setF(p=>({...p,cbd_pct:ev.target.value}))})),
+          ),
+          f.type==='Lab Testing'&&el('div',{className:'fg'},el('label',null,'Lab Name'),el('input',{placeholder:'Lab name',value:f.lab_name,onChange:ev=>setF(p=>({...p,lab_name:ev.target.value}))})),
+          f.checklist.length>0&&el('div',{style:{marginTop:13}},
+            el('div',{className:'fw6 tsm mb2'},'Inspection Checklist:'),
+            f.checklist.map(item=>el('div',{key:item.id,style:{display:'flex',alignItems:'center',gap:8,padding:'6px 0',borderBottom:'1px solid var(--border)'}},
+              el('input',{type:'checkbox',checked:item.checked,onChange:ev=>setF(p=>({...p,checklist:p.checklist.map(c=>c.id===item.id?{...c,checked:ev.target.checked}:c)})),style:{width:16,height:16,cursor:'pointer'}}),
+              el('span',{className:'tsm',style:{textDecoration:item.checked?'line-through':'none',color:item.checked?'var(--text3)':'var(--text)'}},item.label),
+            ))
+          ),
+          el('div',{className:'fg',style:{marginTop:13}},el('label',null,'Notes'),el('textarea',{placeholder:'Additional notes...',value:f.notes,onChange:ev=>setF(p=>({...p,notes:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:60,resize:'vertical'}})),
+          el('div',{className:'fg'},el('label',null,'Location'),el('select',{value:f.loc,onChange:ev=>setF(p=>({...p,loc:ev.target.value}))},['All','Michigan','Missouri'].map(l=>el('option',{key:l,value:l},l)))),
+        ),
+        el('div',{className:'mf'},el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),el('button',{className:'btn b-blue',onClick:create,disabled:saving||!f.title},saving?'Saving...':'Save Inspection')),
+      )
+    ),
+    sel&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setSel(null)},
+      el('div',{className:'md',style:{width:640}},
+        el('div',{className:'mh'},
+          el('div',{style:{flex:1}},el('div',{style:{display:'flex',gap:8}},el('span',{className:'badge bb-gray'},sel.type),el('span',{className:`badge ${sel.pass_fail==='pass'?'bb-green':sel.pass_fail==='fail'?'bb-red':'bb-yellow'}`},sel.pass_fail||'pending')),el('div',{className:'mt2',style:{marginTop:8}},sel.title)),
+          el('button',{className:'mc',onClick:()=>setSel(null)},'×'),
+        ),
+        el('div',{className:'mbd'},
+          el('div',{className:'g2 mb4'},[['Product',sel.product||'—'],['Work Order',sel.wo_id||'—'],['Lab',sel.lab_name||'—'],['Date',sel.created_at?.slice(0,10)]].map(([k,v])=>el('div',{key:k},el('div',{className:'tsm c-muted mb2'},k),el('div',{className:'fw6 tsm'},v)))),
+          (sel.thc_pct!=null||sel.cbd_pct!=null)&&el('div',{style:{display:'flex',gap:16,marginBottom:14}},
+            sel.thc_pct!=null&&el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:'12px 20px',textAlign:'center'}},el('div',{className:'tsm c-muted mb2'},'THC'),el('div',{className:'sv c-green',style:{fontSize:24}},sel.thc_pct+'%')),
+            sel.cbd_pct!=null&&el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:'12px 20px',textAlign:'center'}},el('div',{className:'tsm c-muted mb2'},'CBD'),el('div',{className:'sv c-blue',style:{fontSize:24}},sel.cbd_pct+'%')),
+          ),
+          (sel.checklist||[]).length>0&&el('div',{marginBottom:14},
+            el('div',{className:'fw6 tsm mb2'},'Checklist:'),
+            (sel.checklist||[]).map(item=>el('div',{key:item.id,style:{display:'flex',alignItems:'center',gap:8,padding:'5px 0'}},
+              el('span',{style:{color:item.checked?'var(--green)':'var(--text3)',fontSize:16}},item.checked?'✓':'○'),
+              el('span',{className:'tsm',style:{color:item.checked?'var(--text)':'var(--text3)'}},item.label),
+            ))
+          ),
+          sel.notes&&el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:12,marginTop:8}},el('div',{className:'tsm c-muted mb2'},'Notes'),el('div',{className:'tsm'},sel.notes)),
+          el('div',{className:'divider'}),
+          el('div',{className:'fg'},el('label',null,'Update Pass/Fail'),el('select',{value:sel.pass_fail||'',onChange:async ev=>{const v=ev.target.value;await db.update('pf_inspections',sel.id,{pass_fail:v,updated_at:new Date().toISOString()}).catch(console.error);setInspections(p=>p.map(i=>i.id===sel.id?{...i,pass_fail:v}:i));setSel(s=>({...s,pass_fail:v}));},style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},el('option',{value:''},'— Pending —'),el('option',{value:'pass'},'✓ Pass'),el('option',{value:'fail'},'✗ Fail'))),
+          el('div',{className:'fg'},
+            el('label',null,'Upload COA (Certificate of Analysis)'),
+            el('input',{type:'file',accept:'.pdf,.jpg,.png',onChange:async ev=>{const file=ev.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=async re=>{const update={coa_file:re.target.result,coa_name:file.name,updated_at:new Date().toISOString()};await db.update('pf_inspections',sel.id,update).catch(console.error);setInspections(p=>p.map(i=>i.id===sel.id?{...i,...update}:i));setSel(s=>({...s,...update}));alert('COA uploaded successfully');};reader.readAsDataURL(file);},style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px',color:'var(--text)',fontFamily:'inherit',fontSize:13}}),
+            sel.coa_name&&el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:6}},el('span',{className:'tsm c-green'},'📎 COA: '+sel.coa_name),el('button',{className:'btn b-ghost btn-sm',onClick:()=>{const a=document.createElement('a');a.href=sel.coa_file;a.download=sel.coa_name;a.click();}},'Download COA')),
+          ),
+        ),
+        el('div',{className:'mf'},el('button',{className:'btn b-ghost',onClick:()=>setSel(null)},'Close')),
+      )
+    ),
+  );
+}
+
+// ── TRAINING ─────────────────────────────────────────────────────────────────
+function Training({training,setTraining,cu,users,sops,locFilter}){
+  const[showNew,setNew]=useState(false);
+  const[f,setF]=useState({sop_id:'',sop_title:'',assigned_to:'',assigned_id:'',due_date:'',loc:'All'});
+  const[saving,setSaving]=useState(false);
+
+  const filtered=locFilter&&locFilter!=='All'?training.filter(t=>!t.loc||t.loc===locFilter||t.loc==='All'):training;
+
+  async function assign(){
+    if(!f.sop_id||!f.assigned_id)return;
+    setSaving(true);
+    const tr={id:'TR-'+Date.now(),...f,status:'pending',assigned_by:cu.name,created_at:new Date().toISOString()};
+    try{await db.insert('pf_training',tr);}catch(e){console.error(e);}
+    setTraining(p=>[tr,...p]);
+    setF({sop_id:'',sop_title:'',assigned_to:'',assigned_id:'',due_date:'',loc:'All'});
+    setNew(false);setSaving(false);
+  }
+
+  async function complete(tr){
+    const update={status:'completed',completed_at:new Date().toISOString().slice(0,10)};
+    try{await db.update('pf_training',tr.id,update);}catch(e){console.error(e);}
+    setTraining(p=>p.map(t=>t.id===tr.id?{...t,...update}:t));
+  }
+
+  const today=new Date().toISOString().slice(0,10);
+
+  return el('div',null,
+    el('div',{className:'ph'},
+      el('div',null,el('div',{className:'pt'},'Training Records'),el('div',{className:'ps'},'Assign SOPs as training and track employee completion')),
+      el('button',{className:'btn b-blue',onClick:()=>setNew(true)},'+ Assign Training'),
+    ),
+    el('div',{className:'g4',style:{marginBottom:20}},
+      [{l:'Assigned',v:filtered.filter(t=>t.status==='pending').length,c:'c-yellow'},
+       {l:'Completed',v:filtered.filter(t=>t.status==='completed').length,c:'c-green'},
+       {l:'Overdue',v:filtered.filter(t=>t.status==='pending'&&t.due_date&&t.due_date<today).length,c:'c-red'},
+       {l:'Total',v:filtered.length,c:'c-muted'},
+      ].map(({l,v,c})=>el('div',{key:l,className:'stat'},el('div',{className:'sl'},l),el('div',{className:`sv ${c}`},v)))
+    ),
+    filtered.length===0?el('div',{className:'empty'},el('div',{className:'eico'},'🎓'),el('div',{className:'etxt'},'No training records')):
+    el('div',{className:'card',style:{padding:0}},
+      el('div',{className:'tw'},
+        el('table',null,
+          el('thead',null,el('tr',null,['SOP','Assigned To','Assigned By','Due Date','Status',''].map(h=>el('th',{key:h},h)))),
+          el('tbody',null,filtered.map(tr=>el('tr',{key:tr.id},
+            el('td',null,el('div',{className:'fw6 tsm'},tr.sop_title)),
+            el('td',null,el('span',{className:'tsm'},tr.assigned_to)),
+            el('td',null,el('span',{className:'tsm c-muted'},tr.assigned_by)),
+            el('td',null,tr.due_date&&el('span',{className:`tsm ${tr.due_date<today&&tr.status==='pending'?'c-red':'c-muted'}`},tr.due_date)||el('span',{className:'tsm c-muted'},'—')),
+            el('td',null,el('span',{className:`badge ${tr.status==='completed'?'bb-green':'bb-yellow'}`},tr.status==='completed'?'✓ Completed':'⏳ Pending'),tr.completed_at&&el('div',{className:'tsm c-muted'},tr.completed_at)),
+            el('td',null,tr.status==='pending'&&(cu.role==='admin'||cu.role==='manager'||tr.assigned_id===cu.id)&&el('button',{className:'btn b-green btn-sm',onClick:()=>complete(tr)},'Mark Complete')),
+          )))
+        )
+      )
+    ),
+    showNew&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setNew(false)},
+      el('div',{className:'md'},
+        el('div',{className:'mh'},el('div',{className:'mt2'},'Assign Training'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
+        el('div',{className:'mbd'},
+          el('div',{className:'fg'},el('label',null,'SOP / Document'),el('select',{value:f.sop_id,onChange:ev=>{const s=sops.find(x=>x.id===ev.target.value);setF(p=>({...p,sop_id:ev.target.value,sop_title:s?.title||''}));}},el('option',{value:''},'— Select SOP —'),...sops.map(s=>el('option',{key:s.id,value:s.id},s.title)))),
+          el('div',{className:'fg'},el('label',null,'Assign To'),el('select',{value:f.assigned_id,onChange:ev=>{const u=users.find(x=>x.id===ev.target.value);setF(p=>({...p,assigned_id:ev.target.value,assigned_to:u?.name||''}));}},el('option',{value:''},'— Select User —'),...users.filter(u=>u.approved).map(u=>el('option',{key:u.id,value:u.id},`${u.name} (${u.dept})`)))),
+          el('div',{className:'fg'},el('label',null,'Due Date'),el('input',{type:'date',value:f.due_date,onChange:ev=>setF(p=>({...p,due_date:ev.target.value}))})),
+          el('div',{className:'fg'},el('label',null,'Location'),el('select',{value:f.loc,onChange:ev=>setF(p=>({...p,loc:ev.target.value}))},['All','Michigan','Missouri'].map(l=>el('option',{key:l,value:l},l)))),
+        ),
+        el('div',{className:'mf'},el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),el('button',{className:'btn b-blue',onClick:assign,disabled:saving||!f.sop_id||!f.assigned_id},saving?'Saving...':'Assign Training')),
+      )
+    ),
+  );
+}
+
+// ── EQUIPMENT ─────────────────────────────────────────────────────────────────
+function Equipment({equipment,setEquipment,cu,locFilter}){
+  const[showNew,setNew]=useState(false);
+  const[sel,setSel]=useState(null);
+  const[f,setF]=useState({name:'',model:'',serial:'',location:'',dept:'',last_calibration:'',next_calibration:'',last_maintenance:'',next_maintenance:'',status:'active',notes:'',loc:'All'});
+  const[saving,setSaving]=useState(false);
+  const[logNote,setLogNote]=useState('');
+
+  const filtered=locFilter&&locFilter!=='All'?equipment.filter(e=>!e.loc||e.loc===locFilter||e.loc==='All'):equipment;
+  const today=new Date().toISOString().slice(0,10);
+  const dueCal=filtered.filter(e=>e.next_calibration&&e.next_calibration<=today&&e.status==='active');
+  const dueMaint=filtered.filter(e=>e.next_maintenance&&e.next_maintenance<=today&&e.status==='active');
+
+  async function create(){
+    if(!f.name)return;
+    setSaving(true);
+    const eq={id:'EQ-'+Date.now(),...f,logs:[],created_at:new Date().toISOString()};
+    try{await db.insert('pf_equipment',eq);}catch(e){console.error(e);}
+    setEquipment(p=>[eq,...p]);
+    setF({name:'',model:'',serial:'',location:'',dept:'',last_calibration:'',next_calibration:'',last_maintenance:'',next_maintenance:'',status:'active',notes:'',loc:'All'});
+    setNew(false);setSaving(false);
+  }
+
+  async function addLog(eq,type){
+    if(!logNote.trim())return;
+    const log={id:'log-'+Date.now(),type,note:logNote,by:cu.name,at:new Date().toISOString().slice(0,10)};
+    const logs=[...(eq.logs||[]),log];
+    const update={logs,updated_at:new Date().toISOString(),...(type==='calibration'?{last_calibration:today}:{last_maintenance:today})};
+    try{await db.update('pf_equipment',eq.id,update);}catch(e){console.error(e);}
+    setEquipment(p=>p.map(e=>e.id===eq.id?{...e,...update}:e));
+    setSel(s=>s?{...s,...update}:null);
+    setLogNote('');
+  }
+
+  return el('div',null,
+    el('div',{className:'ph'},
+      el('div',null,el('div',{className:'pt'},'Equipment'),el('div',{className:'ps'},'Calibration and maintenance tracking')),
+      el('button',{className:'btn b-blue',onClick:()=>setNew(true)},'+ Add Equipment'),
+    ),
+    (dueCal.length>0||dueMaint.length>0)&&el('div',null,
+      dueCal.map(e=>el('div',{key:'cal-'+e.id,className:'alert al-red'},`⚠️ Calibration due: ${e.name}`)),
+      dueMaint.map(e=>el('div',{key:'mnt-'+e.id,className:'alert al-yellow'},`🔧 Maintenance due: ${e.name}`)),
+    ),
+    el('div',{className:'g4',style:{marginBottom:20}},
+      [{l:'Active',v:filtered.filter(e=>e.status==='active').length,c:'c-green'},
+       {l:'Cal Due',v:dueCal.length,c:dueCal.length>0?'c-red':'c-muted'},
+       {l:'Maint Due',v:dueMaint.length,c:dueMaint.length>0?'c-yellow':'c-muted'},
+       {l:'Total',v:filtered.length,c:'c-muted'},
+      ].map(({l,v,c})=>el('div',{key:l,className:'stat'},el('div',{className:'sl'},l),el('div',{className:`sv ${c}`},v)))
+    ),
+    filtered.length===0?el('div',{className:'empty'},el('div',{className:'eico'},'⚙️'),el('div',{className:'etxt'},'No equipment added')):
+    el('div',{className:'card',style:{padding:0}},
+      el('div',{className:'tw'},
+        el('table',null,
+          el('thead',null,el('tr',null,['Name','Model/Serial','Location','Last Cal','Next Cal','Last Maint','Status',''].map(h=>el('th',{key:h},h)))),
+          el('tbody',null,filtered.map(eq=>el('tr',{key:eq.id},
+            el('td',null,el('div',{className:'fw6 tsm'},eq.name),eq.dept&&el('div',{className:'tsm c-muted'},eq.dept)),
+            el('td',null,el('div',{className:'tsm'},eq.model||'—'),eq.serial&&el('div',{className:'tsm c-muted'},'S/N: '+eq.serial)),
+            el('td',null,el('span',{className:'tsm c-muted'},eq.location||'—')),
+            el('td',null,el('span',{className:'tsm c-muted'},eq.last_calibration||'—')),
+            el('td',null,eq.next_calibration&&el('span',{className:`tsm ${eq.next_calibration<=today?'c-red fw6':'c-muted'}`},eq.next_calibration<=today?'⚠ '+eq.next_calibration:eq.next_calibration)||el('span',{className:'tsm c-muted'},'—')),
+            el('td',null,el('span',{className:'tsm c-muted'},eq.last_maintenance||'—')),
+            el('td',null,el('span',{className:`badge ${eq.status==='active'?'bb-green':'bb-red'}`},eq.status)),
+            el('td',null,el('button',{className:'btn b-ghost btn-sm',onClick:()=>setSel(eq)},'View')),
+          )))
+        )
+      )
+    ),
+    showNew&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setNew(false)},
+      el('div',{className:'md'},
+        el('div',{className:'mh'},el('div',{className:'mt2'},'Add Equipment'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
+        el('div',{className:'mbd'},
+          el('div',{className:'g2'},el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Equipment Name'),el('input',{placeholder:'e.g. Filling Machine #1',value:f.name,onChange:ev=>setF(p=>({...p,name:ev.target.value}))})),el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Model'),el('input',{placeholder:'Model number',value:f.model,onChange:ev=>setF(p=>({...p,model:ev.target.value}))}))),
+          el('div',{className:'g2',style:{marginTop:13}},el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Serial Number'),el('input',{placeholder:'Serial #',value:f.serial,onChange:ev=>setF(p=>({...p,serial:ev.target.value}))})),el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Location'),el('input',{placeholder:'e.g. Production Floor A',value:f.location,onChange:ev=>setF(p=>({...p,location:ev.target.value}))}))),
+          el('div',{className:'g2',style:{marginTop:13}},el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Next Calibration'),el('input',{type:'date',value:f.next_calibration,onChange:ev=>setF(p=>({...p,next_calibration:ev.target.value}))})),el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Next Maintenance'),el('input',{type:'date',value:f.next_maintenance,onChange:ev=>setF(p=>({...p,next_maintenance:ev.target.value}))}))),
+          el('div',{className:'fg',style:{marginTop:13}},el('label',null,'Department'),el('select',{value:f.dept,onChange:ev=>setF(p=>({...p,dept:ev.target.value}))},['','Gummy','Cartridge','Pre-Roll','QC','Warehouse','Facility'].map(d=>el('option',{key:d,value:d},d||'— Select —')))),
+          el('div',{className:'fg'},el('label',null,'Location'),el('select',{value:f.loc,onChange:ev=>setF(p=>({...p,loc:ev.target.value}))},['All','Michigan','Missouri'].map(l=>el('option',{key:l,value:l},l)))),
+        ),
+        el('div',{className:'mf'},el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),el('button',{className:'btn b-blue',onClick:create,disabled:saving||!f.name},saving?'Saving...':'Add Equipment')),
+      )
+    ),
+    sel&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setSel(null)},
+      el('div',{className:'md',style:{width:600}},
+        el('div',{className:'mh'},el('div',{style:{flex:1}},el('div',{className:'mt2'},sel.name),el('div',{className:'tsm c-muted mt1'},sel.model+(sel.serial?' · S/N: '+sel.serial:''))),el('button',{className:'mc',onClick:()=>setSel(null)},'×')),
+        el('div',{className:'mbd'},
+          el('div',{className:'g2 mb4'},[['Location',sel.location||'—'],['Department',sel.dept||'—'],['Last Calibration',sel.last_calibration||'—'],['Next Calibration',sel.next_calibration||'—'],['Last Maintenance',sel.last_maintenance||'—'],['Next Maintenance',sel.next_maintenance||'—']].map(([k,v])=>el('div',{key:k},el('div',{className:'tsm c-muted mb2'},k),el('div',{className:`fw6 tsm ${(k.includes('Next')&&v!=='—'&&v<=today)?'c-red':''}`},v)))),
+          el('div',{className:'divider'}),
+          el('div',{className:'fw6 mb4'},'Log Entry'),
+          el('div',{style:{display:'flex',gap:8,marginBottom:12}},
+            el('input',{placeholder:'Log note (e.g. Calibrated by technician John)...',value:logNote,onChange:ev=>setLogNote(ev.target.value),style:{flex:1,background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none'}}),
+            el('button',{className:'btn b-blue',onClick:()=>addLog(sel,'calibration'),disabled:!logNote.trim()},'Cal'),
+            el('button',{className:'btn b-ghost',onClick:()=>addLog(sel,'maintenance'),disabled:!logNote.trim()},'Maint'),
+          ),
+          (sel.logs||[]).length>0&&el('div',null,
+            el('div',{className:'fw6 tsm mb2'},'History:'),
+            [...(sel.logs||[])].reverse().slice(0,10).map(log=>el('div',{key:log.id,style:{display:'flex',justifyContent:'space-between',padding:'7px 0',borderBottom:'1px solid var(--border)'}},el('div',null,el('span',{className:`badge ${log.type==='calibration'?'bb-blue':'bb-green'}`,style:{marginRight:8}},log.type),el('span',{className:'tsm'},log.note)),el('div',{className:'tsm c-muted',style:{whiteSpace:'nowrap',marginLeft:8}},`${log.by} · ${log.at}`))),
+          ),
+        ),
+        el('div',{className:'mf'},el('button',{className:'btn b-ghost',onClick:()=>setSel(null)},'Close')),
+      )
+    ),
+  );
+}
+
+// ── SUPPLIERS ─────────────────────────────────────────────────────────────────
+function Suppliers({suppliers,setSuppliers,cu}){
+  const[showNew,setNew]=useState(false);
+  const[sel,setSel]=useState(null);
+  const[f,setF]=useState({name:'',contact:'',email:'',phone:'',status:'approved',notes:''});
+  const[saving,setSaving]=useState(false);
+
+  async function create(){
+    if(!f.name)return;
+    setSaving(true);
+    const sup={id:'SUP-'+Date.now(),...f,materials:[],coas:[],created_at:new Date().toISOString(),updated_at:new Date().toISOString()};
+    try{await db.insert('pf_suppliers',sup);}catch(e){console.error(e);}
+    setSuppliers(p=>[sup,...p]);
+    setF({name:'',contact:'',email:'',phone:'',status:'approved',notes:''});
+    setNew(false);setSaving(false);
+  }
+
+  return el('div',null,
+    el('div',{className:'ph'},
+      el('div',null,el('div',{className:'pt'},'Supplier Management'),el('div',{className:'ps'},'Approved supplier list and COA tracking')),
+      el('button',{className:'btn b-blue',onClick:()=>setNew(true)},'+ Add Supplier'),
+    ),
+    el('div',{className:'g4',style:{marginBottom:20}},
+      [{l:'Approved',v:suppliers.filter(s=>s.status==='approved').length,c:'c-green'},
+       {l:'Conditional',v:suppliers.filter(s=>s.status==='conditional').length,c:'c-yellow'},
+       {l:'Suspended',v:suppliers.filter(s=>s.status==='suspended').length,c:'c-red'},
+       {l:'Total',v:suppliers.length,c:'c-muted'},
+      ].map(({l,v,c})=>el('div',{key:l,className:'stat'},el('div',{className:'sl'},l),el('div',{className:`sv ${c}`},v)))
+    ),
+    suppliers.length===0?el('div',{className:'empty'},el('div',{className:'eico'},'🏭'),el('div',{className:'etxt'},'No suppliers added')):
+    el('div',{className:'card',style:{padding:0}},
+      el('div',{className:'tw'},
+        el('table',null,
+          el('thead',null,el('tr',null,['Supplier','Contact','Email','Phone','Status','Materials',''].map(h=>el('th',{key:h},h)))),
+          el('tbody',null,suppliers.map(sup=>el('tr',{key:sup.id},
+            el('td',null,el('div',{className:'fw6 tsm'},sup.name)),
+            el('td',null,el('span',{className:'tsm c-muted'},sup.contact||'—')),
+            el('td',null,el('span',{className:'tsm c-muted'},sup.email||'—')),
+            el('td',null,el('span',{className:'tsm c-muted'},sup.phone||'—')),
+            el('td',null,el('span',{className:`badge ${sup.status==='approved'?'bb-green':sup.status==='suspended'?'bb-red':'bb-yellow'}`},sup.status)),
+            el('td',null,el('span',{className:'tsm c-muted'},(sup.materials||[]).length+' materials')),
+            el('td',null,el('button',{className:'btn b-ghost btn-sm',onClick:()=>setSel(sup)},'View')),
+          )))
+        )
+      )
+    ),
+    showNew&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setNew(false)},
+      el('div',{className:'md'},
+        el('div',{className:'mh'},el('div',{className:'mt2'},'Add Supplier'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
+        el('div',{className:'mbd'},
+          el('div',{className:'fg'},el('label',null,'Company Name'),el('input',{placeholder:'Supplier company name',value:f.name,onChange:ev=>setF(p=>({...p,name:ev.target.value}))})),
+          el('div',{className:'g2'},el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Contact Name'),el('input',{placeholder:'Primary contact',value:f.contact,onChange:ev=>setF(p=>({...p,contact:ev.target.value}))})),el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Email'),el('input',{type:'email',placeholder:'email@supplier.com',value:f.email,onChange:ev=>setF(p=>({...p,email:ev.target.value}))}))),
+          el('div',{className:'g2',style:{marginTop:13}},el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Phone'),el('input',{placeholder:'Phone number',value:f.phone,onChange:ev=>setF(p=>({...p,phone:ev.target.value}))})),el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Status'),el('select',{value:f.status,onChange:ev=>setF(p=>({...p,status:ev.target.value}))},['approved','conditional','suspended'].map(s=>el('option',{key:s,value:s},s.charAt(0).toUpperCase()+s.slice(1)))))),
+          el('div',{className:'fg',style:{marginTop:13}},el('label',null,'Notes'),el('textarea',{placeholder:'Any notes about this supplier...',value:f.notes,onChange:ev=>setF(p=>({...p,notes:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:60,resize:'vertical'}})),
+        ),
+        el('div',{className:'mf'},el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),el('button',{className:'btn b-blue',onClick:create,disabled:saving||!f.name},saving?'Saving...':'Add Supplier')),
+      )
+    ),
+    sel&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setSel(null)},
+      el('div',{className:'md',style:{width:600}},
+        el('div',{className:'mh'},el('div',{style:{flex:1}},el('div',{className:'mt2'},sel.name),el('span',{className:`badge ${sel.status==='approved'?'bb-green':sel.status==='suspended'?'bb-red':'bb-yellow'}`,style:{marginTop:6,display:'inline-block'}},sel.status)),el('button',{className:'mc',onClick:()=>setSel(null)},'×')),
+        el('div',{className:'mbd'},
+          el('div',{className:'g2 mb4'},[['Contact',sel.contact||'—'],['Email',sel.email||'—'],['Phone',sel.phone||'—'],['Added',sel.created_at?.slice(0,10)]].map(([k,v])=>el('div',{key:k},el('div',{className:'tsm c-muted mb2'},k),el('div',{className:'fw6 tsm'},v)))),
+          sel.notes&&el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:12,marginBottom:14}},el('div',{className:'tsm c-muted mb2'},'Notes'),el('div',{className:'tsm'},sel.notes)),
+          el('div',{className:'divider'}),
+          el('div',{className:'fg'},
+            el('label',null,'Upload COA'),
+            el('input',{type:'file',accept:'.pdf',onChange:async ev=>{const file=ev.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=async re=>{const coa={id:'coa-'+Date.now(),name:file.name,data:re.target.result,uploaded_by:cu.name,at:new Date().toISOString().slice(0,10)};const coas=[...(sel.coas||[]),coa];await db.update('pf_suppliers',sel.id,{coas,updated_at:new Date().toISOString()}).catch(console.error);setSuppliers(p=>p.map(s=>s.id===sel.id?{...s,coas}:s));setSel(s=>({...s,coas}));alert('COA uploaded');};reader.readAsDataURL(file);},style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px',color:'var(--text)',fontFamily:'inherit',fontSize:13}}),
+          ),
+          (sel.coas||[]).length>0&&el('div',null,
+            el('div',{className:'fw6 tsm mb2'},'COAs on file:'),
+            (sel.coas||[]).map(coa=>el('div',{key:coa.id,style:{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'7px 0',borderBottom:'1px solid var(--border)'}},el('div',null,el('div',{className:'tsm fw6'},coa.name),el('div',{className:'tsm c-muted'},`Uploaded by ${coa.uploaded_by} on ${coa.at}`)),el('button',{className:'btn b-ghost btn-sm',onClick:()=>{const a=document.createElement('a');a.href=coa.data;a.download=coa.name;a.click();}},'Download'))),
+          ),
+          el('div',{className:'divider'}),
+          el('div',{className:'fg'},el('label',null,'Change Status'),el('select',{value:sel.status,onChange:async ev=>{const v=ev.target.value;await db.update('pf_suppliers',sel.id,{status:v,updated_at:new Date().toISOString()}).catch(console.error);setSuppliers(p=>p.map(s=>s.id===sel.id?{...s,status:v}:s));setSel(s=>({...s,status:v}));},style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},['approved','conditional','suspended'].map(s=>el('option',{key:s,value:s},s.charAt(0).toUpperCase()+s.slice(1))))),
+        ),
+        el('div',{className:'mf'},el('button',{className:'btn b-ghost',onClick:()=>setSel(null)},'Close')),
+      )
+    ),
+  );
+}
+
 // ── APP ──────────────────────────────────────────────────────────────────────
 function App(){
   const[cu,setCu]=useState(()=>{try{const s=localStorage.getItem('pf_session');return s?JSON.parse(s):null;}catch{return null;}});
@@ -1988,6 +2642,12 @@ function App(){
   const[approvals,setApprovals]=useState([]);
   const[boms,setBoms]=useState([]);
   const[tasks,setTasks]=useState([]);
+  const[capas,setCapas]=useState([]);
+  const[ncrs,setNcrs]=useState([]);
+  const[inspections,setInspections]=useState([]);
+  const[training,setTraining]=useState([]);
+  const[equipment,setEquipment]=useState([]);
+  const[suppliers,setSuppliers]=useState([]);
   const[locFilter,setLocFilter]=useState('All');
   const[loading,setLoading]=useState(false);
   const[dbReady,setDbReady]=useState(null); // null=checking, true=ready, false=needs setup
@@ -2011,11 +2671,23 @@ function App(){
       db.get('pf_approvals','order=created_at.desc').catch(()=>[]),
       db.get('pf_boms').catch(()=>[]),
       db.get('pf_tasks','order=created_at.desc').catch(()=>[]),
-    ]).then(([w,i,s,u,a,b,t])=>{
+      db.get('pf_capas','order=created_at.desc').catch(()=>[]),
+      db.get('pf_ncrs','order=created_at.desc').catch(()=>[]),
+      db.get('pf_inspections','order=created_at.desc').catch(()=>[]),
+      db.get('pf_training','order=created_at.desc').catch(()=>[]),
+      db.get('pf_equipment').catch(()=>[]),
+      db.get('pf_suppliers').catch(()=>[]),
+    ]).then(([w,i,s,u,a,b,t,ca,nc,ins,tr,eq,sup])=>{
       setWos(w.map(x=>({...x,assignedTo:x.assigned_to,holdReason:x.hold_reason,leadStage:x.lead_stage,stage_counts:x.stage_counts||{},stage_wastes:x.stage_wastes||{}})));
       setApprovals(a||[]);
       setBoms(b||[]);
       setTasks(t||[]);
+      setCapas(ca||[]);
+      setNcrs(nc||[]);
+      setInspections(ins||[]);
+      setTraining(tr||[]);
+      setEquipment(eq||[]);
+      setSuppliers(sup||[]);
       setInv(i);setSops(s);
       setUsers(u.map(x=>({...x,leadStage:x.lead_stage})));
     }).catch(console.error).finally(()=>setLoading(false));
@@ -2037,6 +2709,12 @@ function App(){
     hp(cu,'view_work_orders')&&{id:'orders',ico:'📋',label:'Work Orders',badge:holdCt||null},
     hp(cu,'view_inventory')&&{id:'inventory',ico:'📦',label:'Inventory',badge:lowInv||null},
     (hp(cu,'view_qms')||hp(cu,'sign_sops')||cu.role==='employee'||cu.role==='lead')&&{id:'qms',ico:'📄',label:'QMS / SOPs',badge:pendSops||null},
+    (cu.role==='admin'||cu.role==='manager'||cu.role==='supervisor')&&{id:'capa',ico:'🔧',label:'CAPA',badge:(capas||[]).filter(c=>c.status==='open').length||null},
+    (cu.role==='admin'||cu.role==='manager'||cu.role==='supervisor')&&{id:'ncr',ico:'⚠️',label:'Non-Conformance',badge:(ncrs||[]).filter(n=>n.status==='open').length||null},
+    (cu.role==='admin'||cu.role==='manager'||cu.role==='supervisor')&&{id:'inspections',ico:'🔬',label:'Inspections & Testing'},
+    (cu.role==='admin'||cu.role==='manager')&&{id:'training',ico:'🎓',label:'Training Records'},
+    (cu.role==='admin'||cu.role==='manager')&&{id:'equipment',ico:'⚙️',label:'Equipment'},
+    (cu.role==='admin'||cu.role==='manager')&&{id:'suppliers',ico:'🏭',label:'Suppliers'},
     cu.role==='admin'&&{id:'team',ico:'👥',label:'Team & Access',badge:pending||null},
     cu.role==='admin'&&{id:'approvals',ico:'📨',label:'Approvals',badge:(approvals||[]).filter(a=>a.status==='pending').length||null},
     cu.role==='admin'&&{id:'bom',ico:'📐',label:'Bill of Materials'},
@@ -2073,6 +2751,12 @@ function App(){
       page==='orders'&&el(WorkOrders,{wos,setWos,cu,users,inv,setInv,boms,locFilter,setApprovals}),
       page==='inventory'&&el(Inventory,{inv,setInv,cu,boms,locFilter}),
       page==='qms'&&el(QMS,{sops,setSops,cu,users}),
+      page==='capa'&&el(CAPA,{capas,setCapas,cu,users,wos,locFilter}),
+      page==='ncr'&&el(NCR,{ncrs,setNcrs,cu,users,wos,capas,setCapas,locFilter}),
+      page==='inspections'&&el(Inspections,{inspections,setInspections,cu,users,wos,locFilter}),
+      page==='training'&&el(Training,{training,setTraining,cu,users,sops,locFilter}),
+      page==='equipment'&&el(Equipment,{equipment,setEquipment,cu,locFilter}),
+      page==='suppliers'&&el(Suppliers,{suppliers,setSuppliers,cu}),
       page==='team'&&el(Team,{users,setUsers,cu}),
       page==='approvals'&&el(Approvals,{approvals,setApprovals,wos,setWos,cu}),
       page==='bom'&&el(BOMBuilder,{boms,setBoms,inv,cu}),
