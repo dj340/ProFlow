@@ -988,11 +988,7 @@ function Inventory({inv,setInv,cu,boms}){
   }
 
   async function addItem(){
-    if(!f.sku||!f.name||!f.qty)return;
-    const item={id:'i'+Date.now(),...f,qty:parseInt(f.qty),min_qty:parseInt(f.min_qty)||0};
-    await db.insert('pf_inventory',item);
-    setInv(p=>[...p,item]);
-    setF({sku:'',name:'',dept:'Warehouse',qty:'',min_qty:'',unit:'pcs'});setAdd(false);
+    // legacy - not used
   }
 
   return el('div',null,
@@ -1699,7 +1695,7 @@ function Tasks({tasks,setTasks,cu,users}){
       title:f.title,section:f.section,description:f.description,
       assigned_to:f.assigned_to,assigned_id:f.assigned_id,
       due_date:f.due_date,priority:f.priority,
-      loc:f.loc||locFilter==='All'?'All':locFilter,
+      loc:f.loc||(locFilter==='All'?'All':locFilter),
       status:'open',created_by:cu.name,
       created_at:new Date().toISOString(),
       updated_at:new Date().toISOString(),
