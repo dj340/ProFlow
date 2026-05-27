@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>ProFlow — Production Management</title>
+<title>ProFlow v2.1 — Production Management</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <style>
 :root{--bg:#0f1117;--surface:#181b23;--surface2:#1e2230;--border:#252938;--accent:#4f7cff;--green:#22c55e;--yellow:#f59e0b;--red:#ef4444;--orange:#f97316;--purple:#a855f7;--text:#e8eaf0;--text2:#8b92a8;--text3:#4a5068;--r:12px;--rs:8px;}
@@ -478,15 +478,15 @@ function Auth({onLogin}){
 }
 
 // ── DASHBOARD ────────────────────────────────────────────────────────────────
-function Dashboard({wos,inv,users,cu,setPage,approvals}){
+function Dashboard({wos,inv,users,cu,setPage,approvals,tasks,locFilter}){
   const pending=users.filter(u=>!u.approved);
   const onHold=wos.filter(w=>w.hold);
-  const low=inv.filter(i=>i.qty<=i.min_qty);
+  const low=(locFilter&&locFilter!=='All'?inv.filter(i=>i.sku.startsWith(locFilter==='Michigan'?'MI-':'MO-')):inv).filter(i=>i.qty<=i.min_qty);
   const active=wos.filter(w=>!(w.stage==='Distribution'&&w.status==='completed'));
   const myWos=useMemo(()=>{
-    if(cu.role==='admin'||cu.role==='manager')return wos;
-    if(cu.role==='supervisor')return wos.filter(w=>w.loc===cu.loc&&Object.keys(w.stages||{}).some(s=>sdept(w.product,s)===cu.dept));
-    if(cu.role==='lead')return wos.filter(w=>cu.leadStage&&(w.stages||{})[cu.leadStage]!==undefined&&w.loc===cu.loc);
+    if(cu.role==='admin'||cu.role==='manager')return filtWos;
+    if(cu.role==='supervisor')return filtWos.filter(w=>w.loc===cu.loc&&Object.keys(w.stages||{}).some(s=>sdept(w.product,s)===cu.dept));
+    if(cu.role==='lead')return filtWos.filter(w=>cu.leadStage&&(w.stages||{})[cu.leadStage]!==undefined&&w.loc===cu.loc);
     return [];
   },[wos,cu]);
 
@@ -501,6 +501,39 @@ function Dashboard({wos,inv,users,cu,setPage,approvals}){
        {l:'Pending Approvals',v:pending.length,c:'c-yellow',s:'New registrations'},
       ].map(({l,v,c,s})=>el('div',{key:l,className:'stat'},el('div',{className:'sl'},l),el('div',{className:`sv ${c}`},v),el('div',{className:'ss'},s)))
     ),
+    // Tasks Summary Section
+    el('div',{style:{marginBottom:20}},
+      el('div',{className:'card'},
+        el('div',{className:'flex aic mb4',style:{justifyContent:'space-between'}},
+          el('div',{className:'fw6'},'Task Overview'),
+          el('button',{className:'btn b-ghost btn-sm',onClick:()=>setPage('tasks')},'View All Tasks →'),
+        ),
+        el('div',{style:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10,marginBottom:14}},
+          [{l:'Open',v:tasksOpen.length,c:'c-blue'},{l:'Due Today',v:tasksDueToday.length,c:tasksDueToday.length>0?'c-red':'c-muted'},{l:'Due Tomorrow',v:tasksDueTomorrow.length,c:tasksDueTomorrow.length>0?'c-yellow':'c-muted'},{l:'Overdue',v:tasksOverdue.length,c:tasksOverdue.length>0?'c-red':'c-muted'}].map(({l,v,c})=>
+            el('div',{key:l,style:{background:'var(--surface2)',borderRadius:8,padding:'12px 14px',cursor:'pointer'},onClick:()=>setPage('tasks')},
+              el('div',{className:'tsm c-muted',style:{marginBottom:4}},l),
+              el('div',{className:`fw7 ${c}`,style:{fontSize:22}},v),
+            )
+          )
+        ),
+        // Show urgent/overdue tasks
+        tasksOverdue.length>0&&el('div',null,
+          el('div',{className:'tsm fw6 c-red mb2'},'⚠ Overdue Tasks:'),
+          tasksOverdue.slice(0,3).map(t=>el('div',{key:t.id,style:{display:'flex',justifyContent:'space-between',padding:'6px 0',borderBottom:'1px solid var(--border)',cursor:'pointer'},onClick:()=>setPage('tasks')},
+            el('div',null,el('div',{className:'fw6 tsm'},t.title),el('div',{className:'tsm c-muted'},`${t.section} · ${t.assigned_to||'Unassigned'}`)),
+            el('span',{className:'badge bb-red'},'Overdue '+t.due_date),
+          )),
+        ),
+        tasksDueToday.length>0&&el('div',{style:{marginTop:tasksDueToday.length>0?10:0}},
+          el('div',{className:'tsm fw6 c-yellow mb2'},'🔴 Due Today:'),
+          tasksDueToday.slice(0,3).map(t=>el('div',{key:t.id,style:{display:'flex',justifyContent:'space-between',padding:'6px 0',borderBottom:'1px solid var(--border)',cursor:'pointer'},onClick:()=>setPage('tasks')},
+            el('div',null,el('div',{className:'fw6 tsm'},t.title),el('div',{className:'tsm c-muted'},`${t.section} · ${t.assigned_to||'Unassigned'}`)),
+            el('span',{className:'badge bb-yellow'},'Due Today'),
+          )),
+        ),
+        tasksOverdue.length===0&&tasksDueToday.length===0&&el('div',{className:'tsm c-muted'},'No urgent tasks — all clear ✓'),
+      )
+    ),
     // Production Summary by Product
     el('div',{style:{marginBottom:20}},
       el('div',{className:'card'},
@@ -510,7 +543,7 @@ function Dashboard({wos,inv,users,cu,setPage,approvals}){
         ),
         el('div',{style:{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12}},
           ['Gummy','Cartridge','Pre-Roll'].map(product=>{
-            const activeWos=wos.filter(w=>w.product===product&&!(w.stage==='Distribution'&&w.status==='completed'));
+            const activeWos=filtWos.filter(w=>w.product===product&&!(w.stage==='Distribution'&&w.status==='completed'));
             const totalUnits=activeWos.reduce((sum,w)=>sum+(w.qty||0),0);
             const onHoldUnits=activeWos.filter(w=>w.hold).reduce((sum,w)=>sum+(w.qty||0),0);
             const stageBreakdown={};
@@ -570,13 +603,14 @@ function WorkOrders({wos,setWos,cu,users,inv,boms}){
 
   const visible=useMemo(()=>{
     let list=wos;
+    if(locFilter&&locFilter!=='All')list=list.filter(w=>w.loc===locFilter);
     if(cu.role==='supervisor')list=list.filter(w=>w.loc===cu.loc&&Object.keys(w.stages||{}).some(s=>sdept(w.product,s)===cu.dept));
     else if(cu.role==='lead')list=list.filter(w=>cu.leadStage&&(w.stages||{})[cu.leadStage]!==undefined&&w.loc===cu.loc);
     else if(cu.role==='employee')list=[];
     if(filter==='hold')return list.filter(w=>w.hold);
     if(filter!=='all')return list.filter(w=>w.product===filter);
     return list;
-  },[wos,cu,filter]);
+  },[wos,cu,filter,locFilter]);
 
   async function create(){
     if(!f.sku||!f.qty)return;
@@ -706,7 +740,12 @@ function WorkOrders({wos,setWos,cu,users,inv,boms}){
             el('td',null,el('span',{className:'fw6 tsm'},wo.stage)),
             el('td',{style:{minWidth:100}},el('div',{className:'pw'},el('div',{className:`pf p-${wo.hold?'red':'blue'}`,style:{width:progress(wo.stages)+'%'}})),el('div',{className:'tsm mt1 c-muted'},progress(wo.stages)+'%')),
             el('td',null,el(StatusBadge,{s:wo.hold?'on_hold':wo.status})),
-            el('td',null,el('button',{className:'btn b-ghost btn-sm',onClick:()=>setSel(wo)},'View'),canHold&&el('button',{className:`btn btn-sm ${wo.hold?'b-green':'b-red'}`,style:{marginLeft:6},onClick:()=>toggleHold(wo)},wo.hold?'Release':'Hold')),
+            el('td',null,
+              el('button',{className:'btn b-ghost btn-sm',onClick:()=>setSel(wo)},'View'),
+              canHold&&el('button',{className:`btn btn-sm ${wo.hold?'b-green':'b-red'}`,style:{marginLeft:6},onClick:()=>toggleHold(wo)},wo.hold?'Release':'Hold'),
+              (cu.role==='admin'||cu.role==='manager')&&el('button',{className:'btn b-ghost btn-sm',style:{marginLeft:6},onClick:()=>{setEditF({sku:wo.sku,qty:wo.qty,loc:wo.loc,assigned_to:wo.assigned_to,notes:wo.notes||''});setEditWo(wo);}},'✏️'),
+              cu.role==='admin'&&el('button',{className:'btn b-red btn-sm',style:{marginLeft:6},onClick:async()=>{if(!window.confirm('Delete this work order?'))return;await db.remove('pf_work_orders',wo.id);setWos(p=>p.filter(w=>w.id!==wo.id));}},'🗑'),
+            ),
           ))
         )
       )
@@ -852,6 +891,27 @@ function WorkOrders({wos,setWos,cu,users,inv,boms}){
         )
       )
     ),
+    editWo&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setEditWo(null)},
+      el('div',{className:'md'},
+        el('div',{className:'mh'},el('div',{className:'mt2'},`Edit Work Order — ${editWo.id}`),el('button',{className:'mc',onClick:()=>setEditWo(null)},'×')),
+        el('div',{className:'mbd'},
+          el('div',{className:'fg'},el('label',null,'SKU'),el('input',{value:editF.sku,onChange:ev=>setEditF(p=>({...p,sku:ev.target.value}))})),
+          el('div',{className:'fg'},el('label',null,'Quantity'),el('input',{type:'number',value:editF.qty,onChange:ev=>setEditF(p=>({...p,qty:ev.target.value}))})),
+          el('div',{className:'fg'},el('label',null,'Location'),el('select',{value:editF.loc,onChange:ev=>setEditF(p=>({...p,loc:ev.target.value}))},LOCS.map(l=>el('option',{key:l,value:l},l)))),
+          el('div',{className:'fg'},el('label',null,'Assigned To'),el('select',{value:editF.assigned_to||'',onChange:ev=>setEditF(p=>({...p,assigned_to:ev.target.value}))},el('option',{value:''},'— Select —'),...users.filter(u=>u.approved).map(u=>el('option',{key:u.id,value:u.name},u.name)))),
+          el('div',{className:'fg'},el('label',null,'Notes'),el('input',{value:editF.notes,onChange:ev=>setEditF(p=>({...p,notes:ev.target.value}))})),
+        ),
+        el('div',{className:'mf'},
+          el('button',{className:'btn b-ghost',onClick:()=>setEditWo(null)},'Cancel'),
+          el('button',{className:'btn b-blue',onClick:async()=>{
+            const update={sku:editF.sku,qty:parseInt(editF.qty),loc:editF.loc,assigned_to:editF.assigned_to,notes:editF.notes};
+            await db.update('pf_work_orders',editWo.id,update);
+            setWos(p=>p.map(w=>w.id===editWo.id?{...w,...update,assignedTo:update.assigned_to}:w));
+            setEditWo(null);
+          }},'Save Changes'),
+        )
+      )
+    ),
     sel&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setSel(null)},
       el('div',{className:'md'},
         el('div',{className:'mh'},el('div',null,el('div',{className:'mt2'},sel.id),el('div',{className:'tsm c-muted mt1'},sel.sku)),el('button',{className:'mc',onClick:()=>setSel(null)},'×')),
@@ -918,7 +978,7 @@ function Inventory({inv,setInv,cu,boms}){
   const[receiveForm,setReceiveForm]=useState({sku:'',qty:'',min_qty:'',note:''});
   const canEdit=hp(cu,'update_inventory');
   const canAdd=cu.role==='admin';
-  const low=inv.filter(i=>i.qty<=i.min_qty);
+  const low=(locFilter&&locFilter!=='All'?inv.filter(i=>i.sku.startsWith(locFilter==='Michigan'?'MI-':'MO-')):inv).filter(i=>i.qty<=i.min_qty);
 
   async function updateQty(id){
     const qty=parseInt(editQty);
@@ -928,20 +988,16 @@ function Inventory({inv,setInv,cu,boms}){
   }
 
   async function addItem(){
-    if(!f.sku||!f.name||!f.qty)return;
-    const item={id:'i'+Date.now(),...f,qty:parseInt(f.qty),min_qty:parseInt(f.min_qty)||0};
-    await db.insert('pf_inventory',item);
-    setInv(p=>[...p,item]);
-    setF({sku:'',name:'',dept:'Warehouse',qty:'',min_qty:'',unit:'pcs'});setAdd(false);
+    // legacy - not used
   }
 
   return el('div',null,
-    el('div',{className:'ph'},el('div',null,el('div',{className:'pt'},'Inventory'),el('div',{className:'ps'},'Materials, hardware & packaging')),canAdd&&el('button',{className:'btn b-blue',onClick:()=>setAdd(true)},'+ Add Item')),
+    el('div',{className:'ph'},el('div',null,el('div',{className:'pt'},'Inventory'),el('div',{className:'ps'},'Materials, hardware & packaging')),canAdd&&el('button',{className:'btn b-blue',onClick:()=>setReceive(true)},'+ Receive Stock')),
     low.map(item=>el('div',{key:item.id,className:'alert al-red'},`⚠️ LOW: ${item.name} — ${item.qty.toLocaleString()} ${item.unit} (min ${item.min_qty.toLocaleString()})`)),
     el('div',{className:'card',style:{padding:0}},el('div',{className:'tw'},
       el('table',null,
         el('thead',null,el('tr',null,['SKU','Name','Dept','Quantity','Min Level','Status',''].map(h=>el('th',{key:h},h)))),
-        el('tbody',null,inv.map(item=>{const col=icol(item.qty,item.min_qty);
+        el('tbody',null,filteredInv.map(item=>{const col=icol(item.qty,item.min_qty||0);
           return el('tr',{key:item.id},
             el('td',null,el('span',{className:'mono tsm c-blue'},item.sku)),
             el('td',null,el('span',{className:'fw6 tsm'},item.name)),
@@ -1179,6 +1235,27 @@ function QMS({sops,setSops,cu,users}){
           el('button',{className:'btn b-ghost',onClick:()=>{setUp(false);setRevising(null);},disabled:uploading},'Cancel'),
           el('button',{className:'btn b-blue',onClick:upload,disabled:!f.title||f.depts.length===0||uploading},uploading?'Saving...':(revising?'Save Revision & Notify All':'Upload & Send Emails')),
         ),
+      )
+    ),
+    editWo&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setEditWo(null)},
+      el('div',{className:'md'},
+        el('div',{className:'mh'},el('div',{className:'mt2'},`Edit Work Order — ${editWo.id}`),el('button',{className:'mc',onClick:()=>setEditWo(null)},'×')),
+        el('div',{className:'mbd'},
+          el('div',{className:'fg'},el('label',null,'SKU'),el('input',{value:editF.sku,onChange:ev=>setEditF(p=>({...p,sku:ev.target.value}))})),
+          el('div',{className:'fg'},el('label',null,'Quantity'),el('input',{type:'number',value:editF.qty,onChange:ev=>setEditF(p=>({...p,qty:ev.target.value}))})),
+          el('div',{className:'fg'},el('label',null,'Location'),el('select',{value:editF.loc,onChange:ev=>setEditF(p=>({...p,loc:ev.target.value}))},LOCS.map(l=>el('option',{key:l,value:l},l)))),
+          el('div',{className:'fg'},el('label',null,'Assigned To'),el('select',{value:editF.assigned_to||'',onChange:ev=>setEditF(p=>({...p,assigned_to:ev.target.value}))},el('option',{value:''},'— Select —'),...users.filter(u=>u.approved).map(u=>el('option',{key:u.id,value:u.name},u.name)))),
+          el('div',{className:'fg'},el('label',null,'Notes'),el('input',{value:editF.notes,onChange:ev=>setEditF(p=>({...p,notes:ev.target.value}))})),
+        ),
+        el('div',{className:'mf'},
+          el('button',{className:'btn b-ghost',onClick:()=>setEditWo(null)},'Cancel'),
+          el('button',{className:'btn b-blue',onClick:async()=>{
+            const update={sku:editF.sku,qty:parseInt(editF.qty),loc:editF.loc,assigned_to:editF.assigned_to,notes:editF.notes};
+            await db.update('pf_work_orders',editWo.id,update);
+            setWos(p=>p.map(w=>w.id===editWo.id?{...w,...update,assignedTo:update.assigned_to}:w));
+            setEditWo(null);
+          }},'Save Changes'),
+        )
       )
     ),
     sel&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setSel(null)},
@@ -1502,7 +1579,7 @@ function BOMBuilder({boms,setBoms,inv,cu}){
 
 // ── COMPLETED BATCHES ─────────────────────────────────────────────────────────
 function CompletedBatches({wos}){
-  const completed=wos.filter(w=>w.stage==='Distribution'&&w.status==='completed');
+  const completed=locFilter&&locFilter!=='All'?allCompleted.filter(w=>w.loc===locFilter):allCompleted;
   const[sel,setSel]=useState(null);
 
   return el('div',null,
@@ -1531,6 +1608,27 @@ function CompletedBatches({wos}){
               el('td',null,el('button',{className:'btn b-ghost btn-sm',onClick:()=>setSel(wo)},'Details')),
             );
           }))
+        )
+      )
+    ),
+    editWo&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setEditWo(null)},
+      el('div',{className:'md'},
+        el('div',{className:'mh'},el('div',{className:'mt2'},`Edit Work Order — ${editWo.id}`),el('button',{className:'mc',onClick:()=>setEditWo(null)},'×')),
+        el('div',{className:'mbd'},
+          el('div',{className:'fg'},el('label',null,'SKU'),el('input',{value:editF.sku,onChange:ev=>setEditF(p=>({...p,sku:ev.target.value}))})),
+          el('div',{className:'fg'},el('label',null,'Quantity'),el('input',{type:'number',value:editF.qty,onChange:ev=>setEditF(p=>({...p,qty:ev.target.value}))})),
+          el('div',{className:'fg'},el('label',null,'Location'),el('select',{value:editF.loc,onChange:ev=>setEditF(p=>({...p,loc:ev.target.value}))},LOCS.map(l=>el('option',{key:l,value:l},l)))),
+          el('div',{className:'fg'},el('label',null,'Assigned To'),el('select',{value:editF.assigned_to||'',onChange:ev=>setEditF(p=>({...p,assigned_to:ev.target.value}))},el('option',{value:''},'— Select —'),...users.filter(u=>u.approved).map(u=>el('option',{key:u.id,value:u.name},u.name)))),
+          el('div',{className:'fg'},el('label',null,'Notes'),el('input',{value:editF.notes,onChange:ev=>setEditF(p=>({...p,notes:ev.target.value}))})),
+        ),
+        el('div',{className:'mf'},
+          el('button',{className:'btn b-ghost',onClick:()=>setEditWo(null)},'Cancel'),
+          el('button',{className:'btn b-blue',onClick:async()=>{
+            const update={sku:editF.sku,qty:parseInt(editF.qty),loc:editF.loc,assigned_to:editF.assigned_to,notes:editF.notes};
+            await db.update('pf_work_orders',editWo.id,update);
+            setWos(p=>p.map(w=>w.id===editWo.id?{...w,...update,assignedTo:update.assigned_to}:w));
+            setEditWo(null);
+          }},'Save Changes'),
         )
       )
     ),
@@ -1569,23 +1667,25 @@ function Tasks({tasks,setTasks,cu,users}){
   const[filter,setFilter]=useState('open');
   const[newNote,setNewNote]=useState('');
   const[saving,setSaving]=useState(false);
-  const[f,setF]=useState({title:'',section:'R&D',description:'',assigned_to:'',assigned_id:'',due_date:'',priority:'medium'});
+  const[f,setF]=useState({title:'',section:'R&D',description:'',assigned_to:'',assigned_id:'',due_date:'',priority:'medium',loc:'All'});
 
   const today=new Date().toISOString().slice(0,10);
   const tomorrow=new Date(Date.now()+86400000).toISOString().slice(0,10);
 
-  const visible=tasks.filter(t=>{
+  const visible=allTasks.filter(t=>{
     if(filter==='open'&&t.status!=='open') return false;
     if(filter==='done'&&t.status!=='done') return false;
     if(filter==='archived'&&t.status!=='archived') return false;
     if(section!=='All'&&t.section!==section) return false;
+    // Non-admin/manager only see tasks assigned to them
+    if(cu.role!=='admin'&&cu.role!=='manager'&&t.assigned_id!==cu.id) return false;
     return true;
   });
 
-  const dueToday=tasks.filter(t=>t.status==='open'&&t.due_date===today).length;
-  const dueTomorrow=tasks.filter(t=>t.status==='open'&&t.due_date===tomorrow).length;
-  const overdue=tasks.filter(t=>t.status==='open'&&t.due_date&&t.due_date<today).length;
-  const updatedToday=tasks.filter(t=>t.updated_at&&t.updated_at.slice(0,10)===today).length;
+  const dueToday=allTasks.filter(t=>t.status==='open'&&t.due_date===today).length;
+  const dueTomorrow=allTasks.filter(t=>t.status==='open'&&t.due_date===tomorrow).length;
+  const overdue=allTasks.filter(t=>t.status==='open'&&t.due_date&&t.due_date<today).length;
+  const updatedToday=allTasks.filter(t=>t.updated_at&&t.updated_at.slice(0,10)===today).length;
 
   async function createTask(){
     if(!f.title)return;
@@ -1595,6 +1695,7 @@ function Tasks({tasks,setTasks,cu,users}){
       title:f.title,section:f.section,description:f.description,
       assigned_to:f.assigned_to,assigned_id:f.assigned_id,
       due_date:f.due_date,priority:f.priority,
+      loc:f.loc||(locFilter==='All'?'All':locFilter),
       status:'open',created_by:cu.name,
       created_at:new Date().toISOString(),
       updated_at:new Date().toISOString(),
@@ -1748,6 +1849,7 @@ function Tasks({tasks,setTasks,cu,users}){
             el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Assign To'),el('select',{value:f.assigned_id,onChange:ev=>{const u=users.find(x=>x.id===ev.target.value);setF(p=>({...p,assigned_id:ev.target.value,assigned_to:u?.name||''}));}},el('option',{value:''},'— Unassigned —'),...users.filter(u=>u.approved).map(u=>el('option',{key:u.id,value:u.id},`${u.name} (${u.dept})`)))),
             el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Due Date'),el('input',{type:'date',value:f.due_date,onChange:ev=>setF(p=>({...p,due_date:ev.target.value}))})),
           ),
+          el('div',{className:'fg'},el('label',null,'Location'),el('select',{value:f.loc,onChange:ev=>setF(p=>({...p,loc:ev.target.value}))},['All','Michigan','Missouri'].map(l=>el('option',{key:l,value:l},l)))),
           el('div',{className:'fg'},el('label',null,'Priority'),
             el('div',{style:{display:'flex',gap:8}},
               Object.entries(TASK_PRIORITIES).map(([key,{label,color}])=>
@@ -1874,6 +1976,7 @@ function App(){
   const[approvals,setApprovals]=useState([]);
   const[boms,setBoms]=useState([]);
   const[tasks,setTasks]=useState([]);
+  const[locFilter,setLocFilter]=useState('All');
   const[loading,setLoading]=useState(false);
   const[dbReady,setDbReady]=useState(null); // null=checking, true=ready, false=needs setup
 
@@ -1918,6 +2021,7 @@ function App(){
 
   const nav=[
     {id:'dashboard',ico:'🏠',label:'Dashboard'},
+    {id:'tasks',ico:'✅',label:'Tasks',badge:(()=>{const today=new Date().toISOString().slice(0,10);return tasks.filter(t=>t.status==='open'&&t.due_date===today&&(cu.role==='admin'||cu.role==='manager'||t.assigned_id===cu.id)).length||null;})()},
     hp(cu,'view_work_orders')&&{id:'orders',ico:'📋',label:'Work Orders',badge:holdCt||null},
     hp(cu,'view_inventory')&&{id:'inventory',ico:'📦',label:'Inventory',badge:lowInv||null},
     (hp(cu,'view_qms')||hp(cu,'sign_sops')||cu.role==='employee'||cu.role==='lead')&&{id:'qms',ico:'📄',label:'QMS / SOPs',badge:pendSops||null},
@@ -1931,6 +2035,16 @@ function App(){
     el('div',{className:'sb'},
       el('div',{className:'sb-logo'},'Pro',el('span',null,'Flow')),
       el('div',{className:'sb-section'},
+        el('div',{className:'sb-label'},'Location'),
+        el('div',{style:{display:'flex',flexDirection:'column',gap:3,marginBottom:8}},
+          ['All','Michigan','Missouri'].map(loc=>
+            el('button',{key:loc,className:`nav ${locFilter===loc?'on':''}`,onClick:()=>setLocFilter(loc)},
+              el('span',null,loc==='All'?'🌐':loc==='Michigan'?'🏭':'🏗'),loc
+            )
+          )
+        ),
+      ),
+      el('div',{className:'sb-section'},
         el('div',{className:'sb-label'},'Navigation'),
         nav.map(item=>el('button',{key:item.id,className:`nav ${page===item.id?'on':''}`,onClick:()=>setPage(item.id)},el('span',null,item.ico),item.label,item.badge&&el('span',{className:'dot'},item.badge)))
       ),
@@ -1942,15 +2056,15 @@ function App(){
       )
     ),
     el('div',{className:'main'},
-      page==='dashboard'&&el(Dashboard,{wos,inv,users,cu,setPage,approvals}),
-      page==='tasks'&&el(Tasks,{tasks,setTasks,cu,users}),
-      page==='orders'&&el(WorkOrders,{wos,setWos,cu,users,inv,boms}),
-      page==='inventory'&&el(Inventory,{inv,setInv,cu,boms}),
+      page==='dashboard'&&el(Dashboard,{wos,inv,users,cu,setPage,approvals,tasks,locFilter}),
+      page==='tasks'&&el(Tasks,{tasks,setTasks,cu,users,locFilter}),
+      page==='orders'&&el(WorkOrders,{wos,setWos,cu,users,inv,setInv,boms,locFilter,setApprovals}),
+      page==='inventory'&&el(Inventory,{inv,setInv,cu,boms,locFilter}),
       page==='qms'&&el(QMS,{sops,setSops,cu,users}),
       page==='team'&&el(Team,{users,setUsers,cu}),
       page==='approvals'&&el(Approvals,{approvals,setApprovals,wos,setWos,cu}),
       page==='bom'&&el(BOMBuilder,{boms,setBoms,inv,cu}),
-      page==='completed'&&el(CompletedBatches,{wos}),
+      page==='completed'&&el(CompletedBatches,{wos,locFilter}),
     )
   );
 }
