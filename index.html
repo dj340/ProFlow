@@ -605,6 +605,8 @@ function WorkOrders({wos,setWos,cu,users,inv,setInv,boms,locFilter,setApprovals}
   const[filter,setFilter]=useState('all');
   const[f,setF]=useState({product:'Gummy',sku:'',qty:'',loc:'Missouri',assignedTo:'',notes:''});
   const[saving,setSaving]=useState(false);
+  const[editWo,setEditWo]=useState(null);
+  const[editF,setEditF]=useState({});
   const canCreate=hp(cu,'create_work_orders');
   const canHold=hp(cu,'place_hold');
   const canUpdate=hp(cu,'update_stage');
