@@ -922,6 +922,27 @@ function WorkOrders({wos,setWos,cu,users,inv,setInv,boms,locFilter,setApprovals}
         )
       )
     ),
+    editWo&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setEditWo(null)},
+      el('div',{className:'md'},
+        el('div',{className:'mh'},el('div',{className:'mt2'},`Edit Work Order — ${editWo.id}`),el('button',{className:'mc',onClick:()=>setEditWo(null)},'×')),
+        el('div',{className:'mbd'},
+          el('div',{className:'fg'},el('label',null,'SKU'),el('input',{value:editF.sku,onChange:ev=>setEditF(p=>({...p,sku:ev.target.value}))})),
+          el('div',{className:'fg'},el('label',null,'Quantity'),el('input',{type:'number',value:editF.qty,onChange:ev=>setEditF(p=>({...p,qty:ev.target.value}))})),
+          el('div',{className:'fg'},el('label',null,'Location'),el('select',{value:editF.loc,onChange:ev=>setEditF(p=>({...p,loc:ev.target.value}))},LOCS.map(l=>el('option',{key:l,value:l},l)))),
+          el('div',{className:'fg'},el('label',null,'Assigned To'),el('select',{value:editF.assigned_to||'',onChange:ev=>setEditF(p=>({...p,assigned_to:ev.target.value}))},el('option',{value:''},'— Select —'),...users.filter(u=>u.approved).map(u=>el('option',{key:u.id,value:u.name},u.name)))),
+          el('div',{className:'fg'},el('label',null,'Notes'),el('input',{value:editF.notes,onChange:ev=>setEditF(p=>({...p,notes:ev.target.value}))})),
+        ),
+        el('div',{className:'mf'},
+          el('button',{className:'btn b-ghost',onClick:()=>setEditWo(null)},'Cancel'),
+          el('button',{className:'btn b-blue',onClick:async()=>{
+            const update={sku:editF.sku,qty:parseInt(editF.qty),loc:editF.loc,assigned_to:editF.assigned_to,notes:editF.notes};
+            await db.update('pf_work_orders',editWo.id,update);
+            setWos(p=>p.map(w=>w.id===editWo.id?{...w,...update,assignedTo:update.assigned_to}:w));
+            setEditWo(null);
+          }},'Save Changes'),
+        )
+      )
+    ),
     sel&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setSel(null)},
       el('div',{className:'md'},
         el('div',{className:'mh'},el('div',null,el('div',{className:'mt2'},sel.id),el('div',{className:'tsm c-muted mt1'},sel.sku)),el('button',{className:'mc',onClick:()=>setSel(null)},'×')),
@@ -1246,27 +1267,6 @@ function QMS({sops,setSops,cu,users}){
           el('button',{className:'btn b-ghost',onClick:()=>{setUp(false);setRevising(null);},disabled:uploading},'Cancel'),
           el('button',{className:'btn b-blue',onClick:upload,disabled:!f.title||f.depts.length===0||uploading},uploading?'Saving...':(revising?'Save Revision & Notify All':'Upload & Send Emails')),
         ),
-      )
-    ),
-    editWo&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setEditWo(null)},
-      el('div',{className:'md'},
-        el('div',{className:'mh'},el('div',{className:'mt2'},`Edit Work Order — ${editWo.id}`),el('button',{className:'mc',onClick:()=>setEditWo(null)},'×')),
-        el('div',{className:'mbd'},
-          el('div',{className:'fg'},el('label',null,'SKU'),el('input',{value:editF.sku,onChange:ev=>setEditF(p=>({...p,sku:ev.target.value}))})),
-          el('div',{className:'fg'},el('label',null,'Quantity'),el('input',{type:'number',value:editF.qty,onChange:ev=>setEditF(p=>({...p,qty:ev.target.value}))})),
-          el('div',{className:'fg'},el('label',null,'Location'),el('select',{value:editF.loc,onChange:ev=>setEditF(p=>({...p,loc:ev.target.value}))},LOCS.map(l=>el('option',{key:l,value:l},l)))),
-          el('div',{className:'fg'},el('label',null,'Assigned To'),el('select',{value:editF.assigned_to||'',onChange:ev=>setEditF(p=>({...p,assigned_to:ev.target.value}))},el('option',{value:''},'— Select —'),...users.filter(u=>u.approved).map(u=>el('option',{key:u.id,value:u.name},u.name)))),
-          el('div',{className:'fg'},el('label',null,'Notes'),el('input',{value:editF.notes,onChange:ev=>setEditF(p=>({...p,notes:ev.target.value}))})),
-        ),
-        el('div',{className:'mf'},
-          el('button',{className:'btn b-ghost',onClick:()=>setEditWo(null)},'Cancel'),
-          el('button',{className:'btn b-blue',onClick:async()=>{
-            const update={sku:editF.sku,qty:parseInt(editF.qty),loc:editF.loc,assigned_to:editF.assigned_to,notes:editF.notes};
-            await db.update('pf_work_orders',editWo.id,update);
-            setWos(p=>p.map(w=>w.id===editWo.id?{...w,...update,assignedTo:update.assigned_to}:w));
-            setEditWo(null);
-          }},'Save Changes'),
-        )
       )
     ),
     sel&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setSel(null)},
