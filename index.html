@@ -992,7 +992,7 @@ function Inventory({inv,setInv,cu,boms}){
   }
 
   return el('div',null,
-    el('div',{className:'ph'},el('div',null,el('div',{className:'pt'},'Inventory'),el('div',{className:'ps'},'Materials, hardware & packaging')),canAdd&&el('button',{className:'btn b-blue',onClick:()=>setAdd(true)},'+ Add Item')),
+    el('div',{className:'ph'},el('div',null,el('div',{className:'pt'},'Inventory'),el('div',{className:'ps'},'Materials, hardware & packaging')),canAdd&&el('button',{className:'btn b-blue',onClick:()=>setReceive(true)},'+ Receive Stock')),
     low.map(item=>el('div',{key:item.id,className:'alert al-red'},`⚠️ LOW: ${item.name} — ${item.qty.toLocaleString()} ${item.unit} (min ${item.min_qty.toLocaleString()})`)),
     el('div',{className:'card',style:{padding:0}},el('div',{className:'tw'},
       el('table',null,
@@ -2058,7 +2058,7 @@ function App(){
     el('div',{className:'main'},
       page==='dashboard'&&el(Dashboard,{wos,inv,users,cu,setPage,approvals,tasks,locFilter}),
       page==='tasks'&&el(Tasks,{tasks,setTasks,cu,users,locFilter}),
-      page==='orders'&&el(WorkOrders,{wos,setWos,cu,users,inv,boms,locFilter}),
+      page==='orders'&&el(WorkOrders,{wos,setWos,cu,users,inv,setInv,boms,locFilter,setApprovals}),
       page==='inventory'&&el(Inventory,{inv,setInv,cu,boms,locFilter}),
       page==='qms'&&el(QMS,{sops,setSops,cu,users}),
       page==='team'&&el(Team,{users,setUsers,cu}),
