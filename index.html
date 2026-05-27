@@ -160,7 +160,7 @@ const db={
 
 // ── CONSTANTS ────────────────────────────────────────────────────────────────
 const DEPTS=['Gummy','Cartridge','Pre-Roll','QC','Distribution','Warehouse','Facility'];
-const LOCS=['Missouri','Michigan'];
+const LOCS=['Nationwide','Michigan','Missouri'];
 const ROLES=['employee','lead','supervisor','manager','admin'];
 const RLABEL={employee:'Employee',lead:'Lead',supervisor:'Supervisor',manager:'Manager',admin:'Admin'};
 const RCOLOR={employee:'bb-gray',lead:'bb-blue',supervisor:'bb-purple',manager:'bb-orange',admin:'bb-red'};
@@ -413,7 +413,7 @@ function SetupScreen({onDone}){
 // ── AUTH ─────────────────────────────────────────────────────────────────────
 function Auth({onLogin}){
   const[tab,setTab]=useState('login');
-  const[f,setF]=useState({name:'',email:'',pw:'',dept:'Gummy',loc:'Missouri'});
+  const[f,setF]=useState({firstName:'',lastName:'',email:'',pw:'',dept:'Gummy',loc:'Michigan'});
   const[msg,setMsg]=useState('');
   const[pend,setPend]=useState(false);
   const[loading,setLoading]=useState(false);
@@ -432,12 +432,18 @@ function Auth({onLogin}){
   }
 
   async function register(){
-    if(!f.name||!f.email||!f.pw){setMsg('Please fill all fields.');return;}
+    if(!f.firstName||!f.lastName||!f.email||!f.pw){setMsg('Please fill all fields.');return;}
     setLoading(true);setMsg('');
     try{
+      const fullName=f.firstName.trim()+' '+f.lastName.trim();
+      const uid='u'+Date.now();
       const exists=await db.get('pf_users',`email=eq.${encodeURIComponent(f.email)}`);
       if(exists.length){setMsg('Email already registered.');setLoading(false);return;}
-      await db.insert('pf_users',{id:'u'+Date.now(),name:f.name,email:f.email,pw:f.pw,role:'employee',dept:f.dept,loc:f.loc,approved:false,perms:[],lead_stage:null});
+      await db.insert('pf_users',{id:uid,name:fullName,first_name:f.firstName,last_name:f.lastName,email:f.email,pw:f.pw,role:'employee',dept:f.dept,loc:f.loc,approved:false,perms:[],lead_stage:null});
+      // Auto-create HR employee profile
+      try{
+        await db.insert('pf_employees',{id:'EMP-'+uid,user_id:uid,name:fullName,email:f.email,dept:f.dept,loc:f.loc,position:'',hire_date:'',status:'pending',phone:'',emergency_contact:'',notes:'',created_at:new Date().toISOString()});
+      }catch(e){console.log('HR profile will be created on approval');}
       setPend(true);
     }catch(err){setMsg('Error creating account. Please try again.');console.error(err);}
     setLoading(false);
@@ -466,11 +472,14 @@ function Auth({onLogin}){
       el('div',{className:'fg'},el('label',null,'Password'),el('input',{type:'password',placeholder:'••••••••',value:f.pw,onChange:ev=>setF(p=>({...p,pw:ev.target.value})),onKeyDown:ev=>ev.key==='Enter'&&login()})),
       el('button',{className:'btn-primary',onClick:login,disabled:loading},loading?'Signing in...':'Sign In'),
     ):el('div',null,
-      el('div',{className:'fg'},el('label',null,'Full Name'),el('input',{placeholder:'John Smith',value:f.name,onChange:ev=>setF(p=>({...p,name:ev.target.value}))})),
+      el('div',{className:'g2'},
+        el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'First Name'),el('input',{placeholder:'First name',value:f.firstName,onChange:ev=>setF(p=>({...p,firstName:ev.target.value}))})),
+        el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Last Name'),el('input',{placeholder:'Last name',value:f.lastName,onChange:ev=>setF(p=>({...p,lastName:ev.target.value}))})),
+      ),
       el('div',{className:'fg'},el('label',null,'Email'),el('input',{type:'email',value:f.email,onChange:ev=>setF(p=>({...p,email:ev.target.value}))})),
       el('div',{className:'fg'},el('label',null,'Password'),el('input',{type:'password',value:f.pw,onChange:ev=>setF(p=>({...p,pw:ev.target.value}))})),
-      el('div',{className:'fg'},el('label',null,'Department'),el('select',{value:f.dept,onChange:ev=>setF(p=>({...p,dept:ev.target.value}))},DEPTS.map(d=>el('option',{key:d,value:d},d)))),
       el('div',{className:'fg'},el('label',null,'Location'),el('select',{value:f.loc,onChange:ev=>setF(p=>({...p,loc:ev.target.value}))},LOCS.map(l=>el('option',{key:l,value:l},l)))),
+      el('div',{className:'fg'},el('label',null,'Department'),el('select',{value:f.dept,onChange:ev=>setF(p=>({...p,dept:ev.target.value}))},DEPTS.map(d=>el('option',{key:d,value:d},d)))),
       el('button',{className:'btn-primary',onClick:register,disabled:loading},loading?'Submitting...':'Request Access'),
       el('div',{className:'auth-note'},'An admin will review and approve your account before you can log in.'),
     )
@@ -482,7 +491,7 @@ function Dashboard({wos,inv,users,cu,setPage,approvals,tasks,locFilter}){
   const pending=users.filter(u=>!u.approved);
   const today=new Date().toISOString().slice(0,10);
   const tomorrow=new Date(Date.now()+86400000).toISOString().slice(0,10);
-  const filtWos=useMemo(()=>locFilter&&locFilter!=='All'?wos.filter(w=>w.loc===locFilter):wos,[wos,locFilter]);
+  const filtWos=useMemo(()=>locFilter&&locFilter!=='Nationwide'?wos.filter(w=>w.loc===locFilter):wos,[wos,locFilter]);
   const onHold=filtWos.filter(w=>w.hold);
   const low=inv.filter(i=>i.qty<=(i.min_qty||0));
   const active=filtWos.filter(w=>!(w.stage==='Distribution'&&w.status==='completed'));
@@ -613,7 +622,7 @@ function WorkOrders({wos,setWos,cu,users,inv,setInv,boms,locFilter,setApprovals}
 
   const visible=useMemo(()=>{
     let list=wos;
-    if(locFilter&&locFilter!=='All')list=list.filter(w=>w.loc===locFilter);
+    if(locFilter&&locFilter!=='Nationwide')list=list.filter(w=>w.loc===locFilter);
     if(cu.role==='supervisor')list=list.filter(w=>w.loc===cu.loc&&Object.keys(w.stages||{}).some(s=>sdept(w.product,s)===cu.dept));
     else if(cu.role==='lead')list=list.filter(w=>cu.leadStage&&(w.stages||{})[cu.leadStage]!==undefined&&w.loc===cu.loc);
     else if(cu.role==='employee')list=[];
@@ -1167,6 +1176,15 @@ function QMS({sops,setSops,cu,users}){
     try{
       await db.update('pf_sops',sid,{acks:newAcks});
       setSops(p=>p.map(s=>s.id===sid?{...s,acks:newAcks}:s));
+      // Log signed SOP in employee HR profile
+      try{
+        const empList=await db.get('pf_employees',`user_id=eq.${cu.id}`);
+        if(empList&&empList.length>0){
+          const emp=empList[0];
+          const signedDocs=[...(emp.signed_docs||[]),{sop_id:sid,title:sop.title,signed_at:new Date().toISOString(),type:'SOP'}];
+          await db.update('pf_employees',emp.id,{signed_docs:JSON.stringify(signedDocs)});
+        }
+      }catch(e){console.log('HR update skipped');}
     }catch(e){
       console.error('Ack error:',e);
       alert('Error signing SOP. Please try again.');
@@ -1315,6 +1333,18 @@ function Team({users,setUsers,cu}){
     const perms=ROLE_PERMS[r]||[];
     await db.update('pf_users',id,{approved:true,role:r,perms});
     setUsers(p=>p.map(u=>u.id===id?{...u,approved:true,role:r,perms}:u));
+    // Auto-create HR profile if not exists
+    const approvedUser=users.find(u=>u.id===id);
+    if(approvedUser){
+      try{
+        const existing=await db.get('pf_employees',`user_id=eq.${id}`);
+        if(!existing||existing.length===0){
+          await db.insert('pf_employees',{id:'EMP-'+id,user_id:id,name:approvedUser.name,email:approvedUser.email,dept:approvedUser.dept,loc:approvedUser.loc,position:'',hire_date:new Date().toISOString().slice(0,10),status:'active',phone:'',emergency_contact:'',notes:'Auto-created on account approval',created_at:new Date().toISOString()});
+        } else {
+          await db.update('pf_employees',existing[0].id,{status:'active'});
+        }
+      }catch(e){console.log('HR auto-create:',e);}
+    }
     // Send approval email
     const user=users.find(u=>u.id===id);
     if(user?.email){
@@ -1670,34 +1700,42 @@ function CompletedBatches({wos}){
 // ── TASKS ────────────────────────────────────────────────────────────────────
 const TASK_SECTIONS=['R&D','Special Projects','Production Investigation','HR','General'];
 const TASK_PRIORITIES={low:{label:'Low',color:'bb-gray'},medium:{label:'Medium',color:'bb-blue'},high:{label:'High',color:'bb-yellow'},urgent:{label:'Urgent',color:'bb-red'}};
+const TASK_STATUSES=['not_started','in_progress','done','approved','archived'];
+const TASK_STATUS_LABELS={'not_started':'Not Started','in_progress':'In Progress','done':'Done','approved':'Approved','archived':'Archived'};
+const TASK_STATUS_COLORS={'not_started':'bb-gray','in_progress':'bb-blue','done':'bb-green','approved':'bb-purple','archived':'bb-gray'};
 
 function Tasks({tasks,setTasks,cu,users,locFilter}){
   const[section,setSection]=useState('All');
   const[showNew,setNew]=useState(false);
   const[selected,setSelected]=useState(null);
-  const[filter,setFilter]=useState('open');
+  const[filter,setFilter]=useState('active');
   const[newNote,setNewNote]=useState('');
   const[saving,setSaving]=useState(false);
-  const[f,setF]=useState({title:'',section:'R&D',description:'',assigned_to:'',assigned_id:'',due_date:'',priority:'medium',loc:'All'});
+  const[f,setF]=useState({title:'',section:'R&D',description:'',assignees:[],due_date:'',priority:'medium',loc:'Nationwide',tags:[]});
+  const[tagInput,setTagInput]=useState('');
 
   const today=new Date().toISOString().slice(0,10);
   const tomorrow=new Date(Date.now()+86400000).toISOString().slice(0,10);
-  const allTasks=locFilter&&locFilter!=='All'?tasks.filter(t=>!t.loc||t.loc===locFilter||t.loc==='All'):tasks;
+
+  // Visibility: admin/manager see all, others see only tasks they created or are assigned to
+  const canSeeAll=cu.role==='admin'||cu.role==='manager';
+  const allTasks=useMemo(()=>{
+    let list=locFilter&&locFilter!=='Nationwide'?tasks.filter(t=>!t.loc||t.loc===locFilter||t.loc==='Nationwide'):tasks;
+    if(!canSeeAll) list=list.filter(t=>t.created_by_id===cu.id||(t.assignees||[]).some(a=>a.id===cu.id));
+    return list;
+  },[tasks,locFilter,cu,canSeeAll]);
 
   const visible=allTasks.filter(t=>{
-    if(filter==='open'&&t.status!=='open') return false;
-    if(filter==='done'&&t.status!=='done') return false;
-    if(filter==='archived'&&t.status!=='archived') return false;
-    if(section!=='All'&&t.section!==section) return false;
-    // Non-admin/manager only see tasks assigned to them
-    if(cu.role!=='admin'&&cu.role!=='manager'&&t.assigned_id!==cu.id) return false;
+    if(filter==='active') return t.status!=='archived';
+    if(filter==='archived') return t.status==='archived';
+    if(filter==='mine') return (t.assignees||[]).some(a=>a.id===cu.id);
     return true;
-  });
+  }).filter(t=>section==='All'||t.section===section);
 
-  const dueToday=allTasks.filter(t=>t.status==='open'&&t.due_date===today).length;
-  const dueTomorrow=allTasks.filter(t=>t.status==='open'&&t.due_date===tomorrow).length;
-  const overdue=allTasks.filter(t=>t.status==='open'&&t.due_date&&t.due_date<today).length;
-  const updatedToday=allTasks.filter(t=>t.updated_at&&t.updated_at.slice(0,10)===today).length;
+  const dueToday=allTasks.filter(t=>t.status!=='archived'&&t.status!=='approved'&&t.due_date===today).length;
+  const dueTomorrow=allTasks.filter(t=>t.status!=='archived'&&t.status!=='approved'&&t.due_date===tomorrow).length;
+  const overdue=allTasks.filter(t=>t.status!=='archived'&&t.status!=='approved'&&t.due_date&&t.due_date<today).length;
+  const needsReview=allTasks.filter(t=>t.status==='done'&&(canSeeAll||t.created_by_id===cu.id)).length;
 
   async function createTask(){
     if(!f.title)return;
@@ -1705,10 +1743,11 @@ function Tasks({tasks,setTasks,cu,users,locFilter}){
     const task={
       id:'task-'+Date.now(),
       title:f.title,section:f.section,description:f.description,
-      assigned_to:f.assigned_to,assigned_id:f.assigned_id,
+      assignees:f.assignees,
       due_date:f.due_date,priority:f.priority,
-      loc:f.loc||(locFilter==='All'?'All':locFilter),
-      status:'open',created_by:cu.name,
+      loc:f.loc,tags:f.tags,
+      status:'not_started',
+      created_by:cu.name,created_by_id:cu.id,
       created_at:new Date().toISOString(),
       updated_at:new Date().toISOString(),
       updated_by:cu.name,
@@ -1716,132 +1755,144 @@ function Tasks({tasks,setTasks,cu,users,locFilter}){
     };
     try{await db.insert('pf_tasks',task);}catch(e){console.error(e);}
     setTasks(p=>[task,...p]);
-    setF({title:'',section:'R&D',description:'',assigned_to:'',assigned_id:'',due_date:'',priority:'medium'});
+    // Send email to assignees
+    const assigneesWithEmail=f.assignees.filter(a=>a.email);
+    if(assigneesWithEmail.length>0){
+      assigneesWithEmail.forEach(a=>{
+        sendEmail({
+          to:a.email,
+          subject:`New Task Assigned: "${f.title}"`,
+          html:`<div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#0f1117;color:#e8eaf0;padding:32px;border-radius:12px;">
+            <div style="font-size:24px;font-weight:700;color:#4f7cff;margin-bottom:4px;">ProFlow</div>
+            <div style="font-size:18px;font-weight:600;margin-bottom:8px;">New Task Assigned to You</div>
+            <div style="font-size:14px;color:#8b92a8;margin-bottom:16px;">Hi ${a.name}, ${cu.name} assigned you a task.</div>
+            <div style="background:#181b23;border:1px solid #252938;border-radius:8px;padding:16px;margin-bottom:20px;">
+              <div style="font-size:16px;font-weight:600;margin-bottom:8px;">${f.title}</div>
+              <div style="font-size:13px;color:#8b92a8;">Section: ${f.section}</div>
+              ${f.due_date?`<div style="font-size:13px;color:#f59e0b;margin-top:4px;">Due: ${f.due_date}</div>`:''}
+              ${f.description?`<div style="font-size:13px;color:#8b92a8;margin-top:8px;">${f.description}</div>`:''}
+            </div>
+            <a href="${APP_URL}" style="display:inline-block;background:#4f7cff;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;">Open ProFlow →</a>
+          </div>`
+        }).catch(console.error);
+      });
+    }
+    setF({title:'',section:'R&D',description:'',assignees:[],due_date:'',priority:'medium',loc:'Nationwide',tags:[]});
     setNew(false);setSaving(false);
+  }
+
+  async function updateTaskStatus(task,newStatus){
+    const update={status:newStatus,updated_at:new Date().toISOString(),updated_by:cu.name};
+    if(newStatus==='approved') update.approved_by=cu.name;
+    if(newStatus==='archived') update.archived_at=new Date().toISOString();
+    try{await db.update('pf_tasks',task.id,update);}catch(e){console.error(e);}
+    setTasks(p=>p.map(t=>t.id===task.id?{...t,...update}:t));
+    setSelected(s=>s?{...s,...update}:null);
+    // Notify creator when status changes to done
+    if(newStatus==='done'){
+      const creator=users.find(u=>u.id===task.created_by_id);
+      if(creator?.email&&creator.id!==cu.id){
+        sendEmail({
+          to:creator.email,
+          subject:`Task Completed: "${task.title}" — Needs Your Review`,
+          html:`<div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#0f1117;color:#e8eaf0;padding:32px;border-radius:12px;">
+            <div style="font-size:24px;font-weight:700;color:#4f7cff;margin-bottom:4px;">ProFlow</div>
+            <div style="font-size:18px;font-weight:600;margin-bottom:8px;">Task Completed — Review Required</div>
+            <div style="font-size:14px;color:#8b92a8;margin-bottom:16px;">${cu.name} marked a task as done. Please review and approve.</div>
+            <div style="background:#181b23;border:1px solid #252938;border-radius:8px;padding:16px;margin-bottom:20px;">
+              <div style="font-size:16px;font-weight:600;">${task.title}</div>
+            </div>
+            <a href="${APP_URL}" style="display:inline-block;background:#22c55e;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;">Review Task →</a>
+          </div>`
+        }).catch(console.error);
+      }
+    }
   }
 
   async function addNote(){
     if(!newNote.trim()||!selected)return;
-    const note={id:'n'+Date.now(),text:newNote,by:cu.name,at:new Date().toISOString()};
+    const note={id:'n'+Date.now(),text:newNote,by:cu.name,by_id:cu.id,at:new Date().toISOString()};
     const updated={...selected,notes:[...(selected.notes||[]),note],updated_at:new Date().toISOString(),updated_by:cu.name};
     try{await db.update('pf_tasks',selected.id,{notes:updated.notes,updated_at:updated.updated_at,updated_by:updated.updated_by});}catch(e){console.error(e);}
     setTasks(p=>p.map(t=>t.id===selected.id?updated:t));
     setSelected(updated);setNewNote('');
   }
 
-  async function approve(task){
-    const updated={...task,status:'done',approved_by:cu.name,approved_at:new Date().toISOString(),updated_at:new Date().toISOString(),updated_by:cu.name};
-    try{await db.update('pf_tasks',task.id,{status:'done',approved_by:cu.name,approved_at:updated.approved_at,updated_at:updated.updated_at,updated_by:cu.name});}catch(e){console.error(e);}
-    setTasks(p=>p.map(t=>t.id===task.id?updated:t));
-    setSelected(null);
-  }
-
-  async function archive(task){
-    const updated={...task,status:'archived',updated_at:new Date().toISOString(),updated_by:cu.name};
-    try{await db.update('pf_tasks',task.id,{status:'archived',updated_at:updated.updated_at,updated_by:cu.name});}catch(e){console.error(e);}
-    setTasks(p=>p.map(t=>t.id===task.id?updated:t));
-    setSelected(null);
-  }
-
-  async function deleteTask(id){
-    if(!window.confirm('Delete this task?'))return;
-    try{await db.remove('pf_tasks',id);}catch(e){console.error(e);}
-    setTasks(p=>p.filter(t=>t.id!==id));
-    setSelected(null);
-  }
-
   async function updateField(task,field,value){
     const updated={...task,[field]:value,updated_at:new Date().toISOString(),updated_by:cu.name};
-    try{await db.update('pf_tasks',task.id,{[field]:value,updated_at:updated.updated_at,updated_by:cu.name});}catch(e){console.error(e);}
+    try{await db.update('pf_tasks',task.id,{[field]:value,updated_at:updated.updated_at,updated_by:updated.updated_by});}catch(e){console.error(e);}
     setTasks(p=>p.map(t=>t.id===task.id?updated:t));
     setSelected(updated);
   }
 
-  function getDueColor(due){
-    if(!due) return '';
-    if(due<today) return 'c-red';
-    if(due===today) return 'c-yellow';
-    if(due===tomorrow) return 'c-blue';
-    return 'c-muted';
-  }
+  const isAssigned=task=>(task.assignees||[]).some(a=>a.id===cu.id);
+  const isCreator=task=>task.created_by_id===cu.id;
+  const priColor=p=>TASK_PRIORITIES[p]?.color||'bb-gray';
 
   function getDueLabel(due){
-    if(!due) return 'No due date';
-    if(due<today) return '⚠ Overdue';
-    if(due===today) return '🔴 Due Today';
-    if(due===tomorrow) return '🟡 Due Tomorrow';
-    return due;
+    if(!due) return null;
+    if(due<today) return el('span',{className:'badge bb-red'},'⚠ Overdue');
+    if(due===today) return el('span',{className:'badge bb-red'},'Due Today');
+    if(due===tomorrow) return el('span',{className:'badge bb-yellow'},'Due Tomorrow');
+    return el('span',{className:'tsm c-muted'},due);
   }
-
-  const priColor=p=>TASK_PRIORITIES[p]?.color||'bb-gray';
-  const priLabel=p=>TASK_PRIORITIES[p]?.label||p;
 
   return el('div',null,
     // Header
     el('div',{className:'ph'},
-      el('div',null,el('div',{className:'pt'},'Tasks'),el('div',{className:'ps'},'Manage tasks across R&D, Projects, Production, and HR')),
+      el('div',null,el('div',{className:'pt'},'Tasks'),el('div',{className:'ps'},'Assign and track tasks across teams')),
       el('button',{className:'btn b-blue',onClick:()=>setNew(true)},'+ New Task'),
     ),
-
-    // Stats row
+    // Stats
     el('div',{className:'g4',style:{marginBottom:20}},
-      [{l:'Due Today',v:dueToday,c:dueToday>0?'c-red':'c-muted',click:()=>{setFilter('open');setSection('All');}},
-       {l:'Due Tomorrow',v:dueTomorrow,c:dueTomorrow>0?'c-yellow':'c-muted',click:()=>{setFilter('open');setSection('All');}},
-       {l:'Overdue',v:overdue,c:overdue>0?'c-red':'c-muted',click:()=>{setFilter('open');setSection('All');}},
-       {l:'Updated Today',v:updatedToday,c:'c-blue',click:()=>{}},
-      ].map(({l,v,c,click})=>el('div',{key:l,className:'stat',style:{cursor:'pointer'},onClick:click},
-        el('div',{className:'sl'},l),el('div',{className:`sv ${c}`},v),
-      ))
+      [{l:'Due Today',v:dueToday,c:dueToday>0?'c-red':'c-muted'},{l:'Due Tomorrow',v:dueTomorrow,c:dueTomorrow>0?'c-yellow':'c-muted'},{l:'Overdue',v:overdue,c:overdue>0?'c-red':'c-muted'},{l:'Needs Review',v:needsReview,c:needsReview>0?'c-yellow':'c-muted'}]
+        .map(({l,v,c})=>el('div',{key:l,className:'stat'},el('div',{className:'sl'},l),el('div',{className:`sv ${c}`},v)))
     ),
-
     // Section tabs
-    el('div',{style:{display:'flex',gap:8,marginBottom:16,flexWrap:'wrap'}},
-      ['All',...TASK_SECTIONS].map(s=>
-        el('button',{key:s,className:`btn ${section===s?'b-blue':'b-ghost'}`,style:{padding:'6px 14px',fontSize:12},onClick:()=>setSection(s)},s)
-      )
+    el('div',{style:{display:'flex',gap:6,marginBottom:12,flexWrap:'wrap'}},
+      ['All',...TASK_SECTIONS].map(s=>el('button',{key:s,className:`btn ${section===s?'b-blue':'b-ghost'}`,style:{padding:'5px 12px',fontSize:12},onClick:()=>setSection(s)},s))
     ),
-
     // Status filter
     el('div',{className:'tabs'},
-      [{id:'open',label:'Open'},{id:'done',label:'✓ Done'},{id:'archived',label:'📦 Archived'}].map(f=>
+      [{id:'active',label:'Active'},{id:'mine',label:'My Tasks'},{id:'archived',label:'Archived'},{id:'all',label:'All'}].map(f=>
         el('button',{key:f.id,className:`tab ${filter===f.id?'on':''}`,onClick:()=>setFilter(f.id)},f.label)
       )
     ),
-
-    // Task list - grouped by section
-    visible.length===0?el('div',{className:'empty'},el('div',{className:'eico'},'✅'),el('div',{className:'etxt'},'No tasks found')):
+    // Task list grouped by section
+    visible.length===0?el('div',{className:'empty'},el('div',{className:'eico'},'✅'),el('div',{className:'etxt'},'No tasks')):
     el('div',null,
-      // Group by section
-      (section==='All'?TASK_SECTIONS:[ section]).map(sec=>{
+      (section==='All'?TASK_SECTIONS:[section]).map(sec=>{
         const secTasks=visible.filter(t=>t.section===sec);
-        if(secTasks.length===0) return null;
+        if(!secTasks.length) return null;
         return el('div',{key:sec,style:{marginBottom:20}},
           el('div',{style:{display:'flex',alignItems:'center',gap:10,marginBottom:8}},
-            el('div',{className:'fw6',style:{fontSize:13,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'0.8px'}},sec),
+            el('div',{className:'fw6',style:{fontSize:12,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'0.8px'}},sec),
             el('span',{className:'badge bb-gray'},secTasks.length),
           ),
           el('div',{className:'card',style:{padding:0}},
-            secTasks.map((task,i)=>
-              el('div',{key:task.id,
-                style:{display:'flex',alignItems:'center',gap:12,padding:'12px 16px',borderBottom:i<secTasks.length-1?'1px solid var(--border)':'none',cursor:'pointer'},
-                onClick:()=>setSelected(task),
-              },
-                // Status indicator
-                el('div',{style:{width:16,height:16,borderRadius:'50%',border:`2px solid ${task.status==='done'?'var(--green)':'var(--border)'}`,background:task.status==='done'?'var(--green)':'transparent',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,color:'#fff'}},task.status==='done'?'✓':''),
-                // Title and meta
-                el('div',{style:{flex:1,minWidth:0}},
-                  el('div',{className:'fw6',style:{fontSize:13,textDecoration:task.status==='done'?'line-through':'none',color:task.status==='done'?'var(--text3)':'var(--text)'}},task.title),
-                  el('div',{style:{display:'flex',alignItems:'center',gap:8,marginTop:3}},
-                    task.assigned_to&&el('span',{className:'tsm c-muted'},`👤 ${task.assigned_to}`),
-                    (task.notes||[]).length>0&&el('span',{className:'tsm c-muted'},`💬 ${(task.notes||[]).length}`),
-                  ),
+            secTasks.map((task,i)=>el('div',{key:task.id,
+              style:{display:'flex',alignItems:'center',gap:12,padding:'12px 16px',borderBottom:i<secTasks.length-1?'1px solid var(--border)':'none',cursor:'pointer'},
+              onClick:()=>setSelected(task)},
+              // Status dot
+              el('div',{style:{width:14,height:14,borderRadius:'50%',flexShrink:0,
+                background:task.status==='approved'?'var(--purple)':task.status==='done'?'var(--green)':task.status==='in_progress'?'var(--accent)':'transparent',
+                border:`2px solid ${task.status==='approved'?'var(--purple)':task.status==='done'?'var(--green)':task.status==='in_progress'?'var(--accent)':'var(--border)'}`}}),
+              // Content
+              el('div',{style:{flex:1,minWidth:0}},
+                el('div',{className:'fw6',style:{fontSize:13}},task.title),
+                el('div',{style:{display:'flex',gap:8,marginTop:3,flexWrap:'wrap',alignItems:'center'}},
+                  (task.assignees||[]).slice(0,3).map(a=>el('span',{key:a.id,className:'tsm c-muted'},`👤 ${a.name}`)),
+                  (task.tags||[]).map(tag=>el('span',{key:tag,style:{background:'rgba(79,124,255,.12)',color:'var(--accent)',borderRadius:4,padding:'1px 6px',fontSize:11}},tag)),
+                  (task.notes||[]).length>0&&el('span',{className:'tsm c-muted'},`💬 ${(task.notes||[]).length}`),
+                  (task.attachments||[]).length>0&&el('span',{className:'tsm c-muted'},`📎 ${(task.attachments||[]).length}`),
                 ),
-                // Priority
-                el('span',{className:`badge ${priColor(task.priority)}`},priLabel(task.priority)),
-                // Due date
-                task.due_date&&el('span',{className:`tsm fw6 ${getDueColor(task.due_date)}`,style:{whiteSpace:'nowrap'}},getDueLabel(task.due_date)),
-              )
-            )
+              ),
+              el('div',{style:{display:'flex',gap:6,alignItems:'center',flexShrink:0}},
+                el('span',{className:`badge ${priColor(task.priority)}`},TASK_PRIORITIES[task.priority]?.label||task.priority),
+                el('span',{className:`badge ${TASK_STATUS_COLORS[task.status]||'bb-gray'}`},TASK_STATUS_LABELS[task.status]||task.status),
+                getDueLabel(task.due_date),
+              ),
+            ))
           )
         );
       })
@@ -1849,68 +1900,96 @@ function Tasks({tasks,setTasks,cu,users,locFilter}){
 
     // New Task Modal
     showNew&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setNew(false)},
-      el('div',{className:'md'},
+      el('div',{className:'md',style:{width:620}},
         el('div',{className:'mh'},el('div',{className:'mt2'},'New Task'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
         el('div',{className:'mbd'},
           el('div',{className:'fg'},el('label',null,'Task Title'),el('input',{placeholder:'What needs to be done?',value:f.title,onChange:ev=>setF(p=>({...p,title:ev.target.value}))})),
-          el('div',{className:'fg'},el('label',null,'Section'),el('select',{value:f.section,onChange:ev=>setF(p=>({...p,section:ev.target.value}))},TASK_SECTIONS.map(s=>el('option',{key:s,value:s},s)))),
-          el('div',{className:'fg'},el('label',null,'Description'),
-            el('textarea',{placeholder:'Add more details...',value:f.description,onChange:ev=>setF(p=>({...p,description:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'10px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:80,resize:'vertical'}})
-          ),
           el('div',{className:'g2'},
-            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Assign To'),el('select',{value:f.assigned_id,onChange:ev=>{const u=users.find(x=>x.id===ev.target.value);setF(p=>({...p,assigned_id:ev.target.value,assigned_to:u?.name||''}));}},el('option',{value:''},'— Unassigned —'),...users.filter(u=>u.approved).map(u=>el('option',{key:u.id,value:u.id},`${u.name} (${u.dept})`)))),
-            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Due Date'),el('input',{type:'date',value:f.due_date,onChange:ev=>setF(p=>({...p,due_date:ev.target.value}))})),
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Section'),el('select',{value:f.section,onChange:ev=>setF(p=>({...p,section:ev.target.value}))},TASK_SECTIONS.map(s=>el('option',{key:s,value:s},s)))),
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Priority'),el('select',{value:f.priority,onChange:ev=>setF(p=>({...p,priority:ev.target.value}))},Object.entries(TASK_PRIORITIES).map(([k,{label}])=>el('option',{key:k,value:k},label)))),
           ),
-          el('div',{className:'fg'},el('label',null,'Location'),el('select',{value:f.loc,onChange:ev=>setF(p=>({...p,loc:ev.target.value}))},['All','Michigan','Missouri'].map(l=>el('option',{key:l,value:l},l)))),
-          el('div',{className:'fg'},el('label',null,'Priority'),
+          el('div',{className:'fg'},el('label',null,'Description'),el('textarea',{placeholder:'Details...',value:f.description,onChange:ev=>setF(p=>({...p,description:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:70,resize:'vertical'}})),
+          el('div',{className:'g2'},
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Due Date'),el('input',{type:'date',value:f.due_date,onChange:ev=>setF(p=>({...p,due_date:ev.target.value}))})),
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Location'),el('select',{value:f.loc,onChange:ev=>setF(p=>({...p,loc:ev.target.value}))},['Nationwide','Michigan','Missouri'].map(l=>el('option',{key:l,value:l},l)))),
+          ),
+          // Multi-assign
+          el('div',{className:'fg'},
+            el('label',null,'Assign To (multiple)'),
+            el('select',{onChange:ev=>{const u=users.find(x=>x.id===ev.target.value);if(u&&!f.assignees.find(a=>a.id===u.id))setF(p=>({...p,assignees:[...p.assignees,{id:u.id,name:u.name,email:u.email,dept:u.dept}]}));ev.target.value='';},style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},el('option',{value:''},'+ Add person...'),
+              ...users.filter(u=>u.approved&&!f.assignees.find(a=>a.id===u.id)).map(u=>el('option',{key:u.id,value:u.id},`${u.name} (${u.dept}) — ${u.loc}`))
+            ),
+            f.assignees.length>0&&el('div',{style:{display:'flex',flexWrap:'wrap',gap:6,marginTop:8}},
+              f.assignees.map(a=>el('div',{key:a.id,style:{display:'flex',alignItems:'center',gap:6,background:'var(--surface2)',borderRadius:6,padding:'4px 10px',fontSize:12}},
+                el('span',null,a.name),el('span',{style:{cursor:'pointer',color:'var(--text3)'},onClick:()=>setF(p=>({...p,assignees:p.assignees.filter(x=>x.id!==a.id)}))},'×'),
+              ))
+            ),
+          ),
+          // Tags
+          el('div',{className:'fg'},
+            el('label',null,'Tags'),
             el('div',{style:{display:'flex',gap:8}},
-              Object.entries(TASK_PRIORITIES).map(([key,{label,color}])=>
-                el('button',{key,className:`btn ${f.priority===key?'b-blue':'b-ghost'}`,style:{flex:1,fontSize:12,padding:'6px'},onClick:()=>setF(p=>({...p,priority:key}))},label)
-              )
-            )
+              el('input',{placeholder:'Add tag and press Enter...',value:tagInput,onChange:ev=>setTagInput(ev.target.value),onKeyDown:ev=>{if(ev.key==='Enter'&&tagInput.trim()){setF(p=>({...p,tags:[...new Set([...p.tags,tagInput.trim()])]}));setTagInput('');}},style:{flex:1,background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px 12px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none'}}),
+              el('button',{className:'btn b-ghost',onClick:()=>{if(tagInput.trim()){setF(p=>({...p,tags:[...new Set([...p.tags,tagInput.trim()])]}));setTagInput('');}}},'Add'),
+            ),
+            f.tags.length>0&&el('div',{style:{display:'flex',flexWrap:'wrap',gap:6,marginTop:8}},
+              f.tags.map(tag=>el('div',{key:tag,style:{display:'flex',alignItems:'center',gap:4,background:'rgba(79,124,255,.12)',color:'var(--accent)',borderRadius:4,padding:'3px 8px',fontSize:12}},
+                el('span',null,tag),el('span',{style:{cursor:'pointer'},onClick:()=>setF(p=>({...p,tags:p.tags.filter(t=>t!==tag)}))},'×'),
+              ))
+            ),
           ),
         ),
-        el('div',{className:'mf'},el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),el('button',{className:'btn b-blue',onClick:createTask,disabled:saving||!f.title},saving?'Creating...':'Create Task')),
+        el('div',{className:'mf'},el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),el('button',{className:'btn b-blue',onClick:createTask,disabled:saving||!f.title},saving?'Creating...':'Create & Notify')),
       )
     ),
 
     // Task Detail Modal
     selected&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setSelected(null)},
-      el('div',{className:'md',style:{width:660}},
+      el('div',{className:'md',style:{width:680}},
         el('div',{className:'mh'},
           el('div',{style:{flex:1}},
-            el('div',{style:{display:'flex',alignItems:'center',gap:8}},
-              el('span',{className:`badge ${priColor(selected.priority)}`},priLabel(selected.priority)),
+            el('div',{style:{display:'flex',gap:8,flexWrap:'wrap',marginBottom:8}},
+              el('span',{className:`badge ${priColor(selected.priority)}`},TASK_PRIORITIES[selected.priority]?.label),
               el('span',{className:'badge bb-gray'},selected.section),
-              selected.status==='done'&&el('span',{className:'badge bb-green'},'✓ Done'),
+              el('span',{className:`badge ${TASK_STATUS_COLORS[selected.status]||'bb-gray'}`},TASK_STATUS_LABELS[selected.status]),
+              (selected.tags||[]).map(tag=>el('span',{key:tag,style:{background:'rgba(79,124,255,.12)',color:'var(--accent)',borderRadius:4,padding:'2px 8px',fontSize:11}},tag)),
             ),
-            el('div',{className:'mt2',style:{marginTop:8}},selected.title),
+            el('div',{className:'mt2'},selected.title),
           ),
           el('button',{className:'mc',onClick:()=>setSelected(null)},'×'),
         ),
         el('div',{className:'mbd'},
-          // Meta info
+          // Status change — assignees can change status
+          (isAssigned(selected)||isCreator(selected)||canSeeAll)&&el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:12,marginBottom:14}},
+            el('div',{className:'tsm fw6 mb2'},'Update Status:'),
+            el('div',{style:{display:'flex',gap:8,flexWrap:'wrap'}},
+              ['not_started','in_progress','done'].map(st=>
+                el('button',{key:st,className:`btn ${selected.status===st?'b-blue':'b-ghost'} btn-sm`,
+                  disabled:!isAssigned(selected)&&!canSeeAll,
+                  onClick:()=>updateTaskStatus(selected,st)
+                },TASK_STATUS_LABELS[st])
+              ),
+              (canSeeAll||isCreator(selected))&&selected.status==='done'&&el('button',{className:'btn b-green btn-sm',onClick:()=>updateTaskStatus(selected,'approved')},'✓ Approve'),
+              (canSeeAll||isCreator(selected))&&selected.status==='approved'&&el('button',{className:'btn b-ghost btn-sm',onClick:()=>updateTaskStatus(selected,'archived')},'📦 Archive'),
+            ),
+          ),
+          // Meta
           el('div',{className:'g2 mb4'},
             el('div',null,
-              el('div',{className:'tsm c-muted mb2'},'Assigned To'),
-              el('select',{value:selected.assigned_id||'',onChange:ev=>{const u=users.find(x=>x.id===ev.target.value);updateField(selected,'assigned_to',u?.name||'');updateField({...selected,assigned_to:u?.name||''},'assigned_id',ev.target.value);},style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px 12px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
-                el('option',{value:''},'— Unassigned —'),
-                ...users.filter(u=>u.approved).map(u=>el('option',{key:u.id,value:u.id},u.name))
+              el('div',{className:'tsm c-muted mb2'},'Assignees'),
+              (selected.assignees||[]).length===0?el('div',{className:'tsm c-muted'},'Unassigned'):
+              el('div',{style:{display:'flex',flexDirection:'column',gap:4}},
+                (selected.assignees||[]).map(a=>el('div',{key:a.id,className:'tsm'},`👤 ${a.name} — ${a.dept}`))
               ),
             ),
             el('div',null,
               el('div',{className:'tsm c-muted mb2'},'Due Date'),
-              el('input',{type:'date',value:selected.due_date||'',onChange:ev=>updateField(selected,'due_date',ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px 12px',color:'var(--text)',fontFamily:'inherit',fontSize:13}}),
+              el('input',{type:'date',value:selected.due_date||'',onChange:ev=>updateField(selected,'due_date',ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px',color:'var(--text)',fontFamily:'inherit',fontSize:13}}),
             ),
           ),
-
           // Description
-          el('div',{className:'fg'},
-            el('label',null,'Description / Details'),
-            el('textarea',{value:selected.description||'',onChange:ev=>updateField(selected,'description',ev.target.value),onBlur:ev=>updateField(selected,'description',ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'10px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:100,resize:'vertical'}})
-          ),
-
-          // File attachment
+          el('div',{className:'fg'},el('label',null,'Description'),el('textarea',{value:selected.description||'',onChange:ev=>updateField(selected,'description',ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:80,resize:'vertical'}})),
+          // File Upload
           el('div',{className:'fg'},
             el('label',null,'Attach Document'),
             el('input',{type:'file',accept:'.pdf,.doc,.docx,.png,.jpg,.xlsx,.csv',onChange:async ev=>{
@@ -1922,1356 +2001,34 @@ function Tasks({tasks,setTasks,cu,users,locFilter}){
                 await updateField(selected,'attachments',newAtts);
               };
               reader.readAsDataURL(file);
-            },style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px 12px',color:'var(--text)',fontFamily:'inherit',fontSize:13}}),
+            },style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px',color:'var(--text)',fontFamily:'inherit',fontSize:13}}),
           ),
-
-          // Attachments list
           (selected.attachments||[]).length>0&&el('div',{style:{marginBottom:14}},
-            el('div',{className:'tsm fw6 mb2'},'Attachments:'),
-            (selected.attachments||[]).map(att=>
-              el('div',{key:att.id,style:{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'7px 10px',background:'var(--surface2)',borderRadius:6,marginBottom:5}},
-                el('span',{className:'tsm'},`📎 ${att.name}`),
-                el('button',{className:'btn b-ghost btn-sm',onClick:()=>{const a=document.createElement('a');a.href=att.data;a.download=att.name;a.click();}},'Download'),
-              )
-            )
+            (selected.attachments||[]).map(att=>el('div',{key:att.id,style:{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'6px 10px',background:'var(--surface2)',borderRadius:6,marginBottom:5}},
+              el('span',{className:'tsm'},`📎 ${att.name}`),
+              el('button',{className:'btn b-ghost btn-sm',onClick:()=>{const a=document.createElement('a');a.href=att.data;a.download=att.name;a.click();}},'Download'),
+            ))
           ),
-
           el('div',{className:'divider'}),
-
-          // Notes / Comments
-          el('div',{className:'fw6 mb4'},'Notes & Comments'),
-          (selected.notes||[]).length===0&&el('div',{className:'tsm c-muted mb4'},'No notes yet'),
-          (selected.notes||[]).map(note=>
-            el('div',{key:note.id,style:{background:'var(--surface2)',borderRadius:8,padding:'10px 12px',marginBottom:8}},
-              el('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:4}},
-                el('span',{className:'tsm fw6'},note.by),
-                el('span',{className:'tsm c-muted'},note.at.slice(0,16).replace('T',' ')),
-              ),
-              el('div',{className:'tsm',style:{lineHeight:1.5}},note.text),
-            )
+          el('div',{className:'fw6 mb4'},'Comments'),
+          (selected.notes||[]).map(note=>el('div',{key:note.id,style:{background:'var(--surface2)',borderRadius:8,padding:'10px 12px',marginBottom:8}},
+            el('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:4}},el('span',{className:'tsm fw6'},note.by),el('span',{className:'tsm c-muted'},note.at.slice(0,16).replace('T',' '))),
+            el('div',{className:'tsm'},note.text),
+          )),
+          el('div',{style:{display:'flex',gap:8}},
+            el('input',{placeholder:'Add a comment...',value:newNote,onChange:ev=>setNewNote(ev.target.value),onKeyDown:ev=>ev.key==='Enter'&&addNote(),style:{flex:1,background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none'}}),
+            el('button',{className:'btn b-blue',onClick:addNote,disabled:!newNote.trim()},'Post'),
           ),
-          el('div',{style:{display:'flex',gap:8,marginTop:8}},
-            el('input',{placeholder:'Add a note...',value:newNote,onChange:ev=>setNewNote(ev.target.value),onKeyDown:ev=>ev.key==='Enter'&&!ev.shiftKey&&addNote(),style:{flex:1,background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none'}}),
-            el('button',{className:'btn b-blue',onClick:addNote,disabled:!newNote.trim()},'Add'),
-          ),
-
-          // Meta footer
           el('div',{className:'divider'}),
           el('div',{style:{display:'flex',justifyContent:'space-between'}},
             el('div',{className:'tsm c-muted'},`Created by ${selected.created_by} · ${selected.created_at?.slice(0,10)}`),
             selected.updated_by&&el('div',{className:'tsm c-muted'},`Updated by ${selected.updated_by} · ${selected.updated_at?.slice(0,10)}`),
           ),
         ),
-
-        // Action footer
         el('div',{className:'mf',style:{justifyContent:'space-between'}},
-          el('div',{style:{display:'flex',gap:8}},
-            selected.status==='open'&&(cu.role==='admin'||cu.role==='manager')&&el('button',{className:'btn b-green',onClick:()=>approve(selected)},'✓ Approve & Complete'),
-            selected.status==='done'&&el('button',{className:'btn b-ghost',onClick:()=>archive(selected)},'📦 Move to Archive'),
-            (cu.role==='admin')&&el('button',{className:'btn b-red',onClick:()=>deleteTask(selected.id)},'Delete'),
-          ),
+          el('div',null,cu.role==='admin'&&el('button',{className:'btn b-red',onClick:async()=>{if(!window.confirm('Delete?'))return;await db.remove('pf_tasks',selected.id).catch(console.error);setTasks(p=>p.filter(t=>t.id!==selected.id));setSelected(null);}},'Delete')),
           el('button',{className:'btn b-ghost',onClick:()=>setSelected(null)},'Close'),
         ),
-      )
-    ),
-  );
-}
-
-
-// ── CAPA ─────────────────────────────────────────────────────────────────────
-const CAPA_TYPES=['corrective','preventive','improvement'];
-const CAPA_SOURCES=['Customer Complaint','Internal Audit','Failed Test','Non-Conformance','Employee Report','Regulatory','Other'];
-const SEV_COLORS={low:'bb-gray',medium:'bb-yellow',high:'bb-orange',critical:'bb-red'};
-
-function CAPA({capas,setCapas,cu,users,wos,locFilter}){
-  const[showNew,setNew]=useState(false);
-  const[sel,setSel]=useState(null);
-  const[tab,setTab]=useState('open');
-  const[f,setF]=useState({title:'',type:'corrective',source:'Internal Audit',description:'',product:'',wo_id:'',severity:'medium',assigned_to:'',assigned_id:'',due_date:'',loc:locFilter==='All'?'All':locFilter});
-  const[saving,setSaving]=useState(false);
-  const[newNote,setNewNote]=useState('');
-
-  const filtered=(locFilter&&locFilter!=='All'?capas.filter(c=>!c.loc||c.loc===locFilter||c.loc==='All'):capas).filter(c=>tab==='open'?c.status==='open':tab==='closed'?c.status==='closed':true);
-
-  async function create(){
-    if(!f.title)return;
-    setSaving(true);
-    const capa={id:'CAPA-'+Date.now(),...f,status:'open',created_by:cu.name,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),notes:[],attachments:[]};
-    try{await db.insert('pf_capas',capa);}catch(e){console.error(e);}
-    setCapas(p=>[capa,...p]);
-    setF({title:'',type:'corrective',source:'Internal Audit',description:'',product:'',wo_id:'',severity:'medium',assigned_to:'',assigned_id:'',due_date:'',loc:'All'});
-    setNew(false);setSaving(false);
-  }
-
-  async function updateStatus(capa,status){
-    const update={status,updated_at:new Date().toISOString(),...(status==='closed'?{verified_by:cu.name,verified_at:new Date().toISOString().slice(0,10)}:{})};
-    try{await db.update('pf_capas',capa.id,update);}catch(e){console.error(e);}
-    setCapas(p=>p.map(c=>c.id===capa.id?{...c,...update}:c));
-    setSel(s=>s?{...s,...update}:null);
-  }
-
-  async function updateField(capa,field,value){
-    const update={[field]:value,updated_at:new Date().toISOString()};
-    try{await db.update('pf_capas',capa.id,update);}catch(e){console.error(e);}
-    setCapas(p=>p.map(c=>c.id===capa.id?{...c,...update}:c));
-    setSel(s=>s?{...s,...update}:null);
-  }
-
-  async function addNote(){
-    if(!newNote.trim()||!sel)return;
-    const note={id:'n'+Date.now(),text:newNote,by:cu.name,at:new Date().toISOString()};
-    const notes=[...(sel.notes||[]),note];
-    await updateField(sel,'notes',notes);
-    setNewNote('');
-  }
-
-  const today=new Date().toISOString().slice(0,10);
-
-  return el('div',null,
-    el('div',{className:'ph'},
-      el('div',null,el('div',{className:'pt'},'CAPA'),el('div',{className:'ps'},'Corrective & Preventive Actions')),
-      el('button',{className:'btn b-blue',onClick:()=>setNew(true)},'+ New CAPA'),
-    ),
-    el('div',{className:'g4',style:{marginBottom:20}},
-      [{l:'Open',v:capas.filter(c=>c.status==='open').length,c:'c-blue'},
-       {l:'Overdue',v:capas.filter(c=>c.status==='open'&&c.due_date&&c.due_date<today).length,c:'c-red'},
-       {l:'Closed',v:capas.filter(c=>c.status==='closed').length,c:'c-green'},
-       {l:'Total',v:capas.length,c:'c-muted'},
-      ].map(({l,v,c})=>el('div',{key:l,className:'stat'},el('div',{className:'sl'},l),el('div',{className:`sv ${c}`},v)))
-    ),
-    el('div',{className:'tabs'},
-      [{id:'open',label:'Open'},{id:'closed',label:'Closed'},{id:'all',label:'All'}].map(t=>
-        el('button',{key:t.id,className:`tab ${tab===t.id?'on':''}`,onClick:()=>setTab(t.id)},t.label)
-      )
-    ),
-    filtered.length===0?el('div',{className:'empty'},el('div',{className:'eico'},'🔧'),el('div',{className:'etxt'},'No CAPAs found')):
-    el('div',{className:'card',style:{padding:0}},
-      el('div',{className:'tw'},
-        el('table',null,
-          el('thead',null,el('tr',null,['ID','Title','Type','Source','Severity','Assigned','Due','Status',''].map(h=>el('th',{key:h},h)))),
-          el('tbody',null,filtered.map(capa=>el('tr',{key:capa.id},
-            el('td',null,el('span',{className:'mono tsm c-blue'},capa.id.slice(-8))),
-            el('td',null,el('div',{className:'fw6 tsm'},capa.title),el('div',{className:'tsm c-muted'},capa.product||'—')),
-            el('td',null,el('span',{className:'badge bb-blue'},capa.type)),
-            el('td',null,el('span',{className:'tsm c-muted'},capa.source)),
-            el('td',null,el('span',{className:`badge ${SEV_COLORS[capa.severity]||'bb-gray'}`},capa.severity)),
-            el('td',null,el('span',{className:'tsm'},capa.assigned_to||'—')),
-            el('td',null,capa.due_date&&el('span',{className:`tsm ${capa.due_date<today&&capa.status==='open'?'c-red':'c-muted'}`},capa.due_date<today&&capa.status==='open'?'⚠ '+capa.due_date:capa.due_date)),
-            el('td',null,el('span',{className:`badge ${capa.status==='closed'?'bb-green':'bb-yellow'}`},capa.status)),
-            el('td',null,el('button',{className:'btn b-ghost btn-sm',onClick:()=>setSel(capa)},'View')),
-          )))
-        )
-      )
-    ),
-    showNew&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setNew(false)},
-      el('div',{className:'md'},
-        el('div',{className:'mh'},el('div',{className:'mt2'},'New CAPA'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
-        el('div',{className:'mbd'},
-          el('div',{className:'fg'},el('label',null,'Title'),el('input',{placeholder:'Brief description of the issue',value:f.title,onChange:ev=>setF(p=>({...p,title:ev.target.value}))})),
-          el('div',{className:'g2'},
-            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Type'),el('select',{value:f.type,onChange:ev=>setF(p=>({...p,type:ev.target.value}))},CAPA_TYPES.map(t=>el('option',{key:t,value:t},t.charAt(0).toUpperCase()+t.slice(1))))),
-            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Source'),el('select',{value:f.source,onChange:ev=>setF(p=>({...p,source:ev.target.value}))},CAPA_SOURCES.map(s=>el('option',{key:s,value:s},s)))),
-          ),
-          el('div',{className:'g2',style:{marginTop:13}},
-            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Severity'),el('select',{value:f.severity,onChange:ev=>setF(p=>({...p,severity:ev.target.value}))},['low','medium','high','critical'].map(s=>el('option',{key:s,value:s},s.charAt(0).toUpperCase()+s.slice(1))))),
-            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Due Date'),el('input',{type:'date',value:f.due_date,onChange:ev=>setF(p=>({...p,due_date:ev.target.value}))})),
-          ),
-          el('div',{className:'fg'},el('label',null,'Description'),el('textarea',{placeholder:'Describe the issue in detail...',value:f.description,onChange:ev=>setF(p=>({...p,description:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:80,resize:'vertical'}})),
-          el('div',{className:'g2'},
-            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Product / SKU (optional)'),el('input',{placeholder:'e.g. 2G Dispo Habibi',value:f.product,onChange:ev=>setF(p=>({...p,product:ev.target.value}))})),
-            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Work Order (optional)'),el('select',{value:f.wo_id,onChange:ev=>setF(p=>({...p,wo_id:ev.target.value}))},el('option',{value:''},'— None —'),...wos.slice(0,20).map(w=>el('option',{key:w.id,value:w.id},w.id+' — '+w.sku)))),
-          ),
-          el('div',{className:'fg'},el('label',null,'Assign To'),el('select',{value:f.assigned_id,onChange:ev=>{const u=users.find(x=>x.id===ev.target.value);setF(p=>({...p,assigned_id:ev.target.value,assigned_to:u?.name||''}));}},el('option',{value:''},'— Unassigned —'),...users.filter(u=>u.approved).map(u=>el('option',{key:u.id,value:u.id},`${u.name} (${u.dept})`)))),
-          el('div',{className:'fg'},el('label',null,'Location'),el('select',{value:f.loc,onChange:ev=>setF(p=>({...p,loc:ev.target.value}))},['All','Michigan','Missouri'].map(l=>el('option',{key:l,value:l},l)))),
-        ),
-        el('div',{className:'mf'},el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),el('button',{className:'btn b-blue',onClick:create,disabled:saving||!f.title},saving?'Saving...':'Create CAPA')),
-      )
-    ),
-    sel&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setSel(null)},
-      el('div',{className:'md',style:{width:660}},
-        el('div',{className:'mh'},
-          el('div',{style:{flex:1}},
-            el('div',{style:{display:'flex',gap:8,alignItems:'center'}},el('span',{className:`badge ${SEV_COLORS[sel.severity]||'bb-gray'}`},sel.severity),el('span',{className:'badge bb-blue'},sel.type),el('span',{className:`badge ${sel.status==='closed'?'bb-green':'bb-yellow'}`},sel.status)),
-            el('div',{className:'mt2',style:{marginTop:8}},sel.title),
-            el('div',{className:'tsm c-muted',style:{marginTop:4}},`${sel.source} · ${sel.created_by} · ${sel.created_at?.slice(0,10)}`),
-          ),
-          el('button',{className:'mc',onClick:()=>setSel(null)},'×'),
-        ),
-        el('div',{className:'mbd'},
-          sel.description&&el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:12,marginBottom:14}},el('div',{className:'tsm c-muted mb2'},'Description'),el('div',{className:'tsm'},sel.description)),
-          el('div',{className:'g2 mb4'},
-            el('div',null,el('div',{className:'tsm c-muted mb2'},'Assigned To'),el('select',{value:sel.assigned_id||'',onChange:ev=>{const u=users.find(x=>x.id===ev.target.value);updateField(sel,'assigned_to',u?.name||'');updateField({...sel,assigned_to:u?.name||''},'assigned_id',ev.target.value);},style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},el('option',{value:''},'— Unassigned —'),...users.filter(u=>u.approved).map(u=>el('option',{key:u.id,value:u.id},u.name)))),
-            el('div',null,el('div',{className:'tsm c-muted mb2'},'Due Date'),el('input',{type:'date',value:sel.due_date||'',onChange:ev=>updateField(sel,'due_date',ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px',color:'var(--text)',fontFamily:'inherit',fontSize:13}})),
-          ),
-          el('div',{className:'fg'},el('label',null,'Root Cause Analysis'),el('textarea',{value:sel.root_cause||'',placeholder:'What caused this issue?',onChange:ev=>updateField(sel,'root_cause',ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:80,resize:'vertical'}})),
-          el('div',{className:'fg'},el('label',null,'Corrective Action Taken'),el('textarea',{value:sel.action_taken||'',placeholder:'What actions were taken to resolve this?',onChange:ev=>updateField(sel,'action_taken',ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:80,resize:'vertical'}})),
-          el('div',{className:'divider'}),
-          el('div',{className:'fw6 mb4'},'Notes'),
-          (sel.notes||[]).map(note=>el('div',{key:note.id,style:{background:'var(--surface2)',borderRadius:8,padding:'10px 12px',marginBottom:8}},el('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:4}},el('span',{className:'tsm fw6'},note.by),el('span',{className:'tsm c-muted'},note.at.slice(0,16).replace('T',' '))),el('div',{className:'tsm'},note.text))),
-          el('div',{style:{display:'flex',gap:8}},el('input',{placeholder:'Add a note...',value:newNote,onChange:ev=>setNewNote(ev.target.value),onKeyDown:ev=>ev.key==='Enter'&&addNote(),style:{flex:1,background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none'}}),el('button',{className:'btn b-blue',onClick:addNote,disabled:!newNote.trim()},'Add')),
-        ),
-        el('div',{className:'mf',style:{justifyContent:'space-between'}},
-          el('div',{style:{display:'flex',gap:8}},
-            sel.status==='open'&&el('button',{className:'btn b-green',onClick:()=>updateStatus(sel,'closed')},'✓ Close CAPA'),
-            sel.status==='closed'&&el('button',{className:'btn b-ghost',onClick:()=>updateStatus(sel,'open')},'Reopen'),
-            (cu.role==='admin')&&el('button',{className:'btn b-red',onClick:async()=>{if(!window.confirm('Delete?'))return;await db.remove('pf_capas',sel.id);setCapas(p=>p.filter(c=>c.id!==sel.id));setSel(null);}},'Delete'),
-          ),
-          el('button',{className:'btn b-ghost',onClick:()=>setSel(null)},'Close'),
-        ),
-      )
-    ),
-  );
-}
-
-// ── NCR ───────────────────────────────────────────────────────────────────────
-const DISPOSITIONS=['quarantine','rework','destroy','accept','return_to_supplier'];
-
-function NCR({ncrs,setNcrs,cu,users,wos,capas,setCapas,locFilter}){
-  const[showNew,setNew]=useState(false);
-  const[sel,setSel]=useState(null);
-  const[tab,setTab]=useState('open');
-  const[f,setF]=useState({title:'',description:'',product:'',wo_id:'',qty_affected:0,disposition:'quarantine',severity:'medium',assigned_to:'',assigned_id:'',loc:'All'});
-  const[saving,setSaving]=useState(false);
-
-  const filtered=(locFilter&&locFilter!=='All'?ncrs.filter(n=>!n.loc||n.loc===locFilter||n.loc==='All'):ncrs).filter(n=>tab==='open'?n.status==='open':tab==='closed'?n.status==='closed':true);
-
-  async function create(){
-    if(!f.title)return;
-    setSaving(true);
-    const ncr={id:'NCR-'+Date.now(),...f,qty_affected:parseInt(f.qty_affected)||0,status:'open',created_by:cu.name,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),notes:[],attachments:[]};
-    try{await db.insert('pf_ncrs',ncr);}catch(e){console.error(e);}
-    setNcrs(p=>[ncr,...p]);
-    setF({title:'',description:'',product:'',wo_id:'',qty_affected:0,disposition:'quarantine',severity:'medium',assigned_to:'',assigned_id:'',loc:'All'});
-    setNew(false);setSaving(false);
-  }
-
-  async function createCapa(ncr){
-    const capa={id:'CAPA-'+Date.now(),title:'CAPA for NCR: '+ncr.title,type:'corrective',source:'Non-Conformance',description:ncr.description,product:ncr.product,wo_id:ncr.wo_id,severity:ncr.severity,assigned_to:ncr.assigned_to,assigned_id:ncr.assigned_id,due_date:'',status:'open',created_by:cu.name,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),notes:[],attachments:[],loc:ncr.loc};
-    try{await db.insert('pf_capas',capa);}catch(e){console.error(e);}
-    setCapas(p=>[capa,...p]);
-    const update={capa_id:capa.id,updated_at:new Date().toISOString()};
-    try{await db.update('pf_ncrs',ncr.id,update);}catch(e){console.error(e);}
-    setNcrs(p=>p.map(n=>n.id===ncr.id?{...n,...update}:n));
-    setSel(s=>s?{...s,...update}:null);
-    alert('CAPA created: '+capa.id);
-  }
-
-  return el('div',null,
-    el('div',{className:'ph'},
-      el('div',null,el('div',{className:'pt'},'Non-Conformance Reports'),el('div',{className:'ps'},'Track products or processes that do not meet specifications')),
-      el('button',{className:'btn b-blue',onClick:()=>setNew(true)},'+ New NCR'),
-    ),
-    el('div',{className:'g4',style:{marginBottom:20}},
-      [{l:'Open NCRs',v:ncrs.filter(n=>n.status==='open').length,c:'c-red'},
-       {l:'Quarantined',v:ncrs.filter(n=>n.disposition==='quarantine'&&n.status==='open').length,c:'c-yellow'},
-       {l:'Closed',v:ncrs.filter(n=>n.status==='closed').length,c:'c-green'},
-       {l:'Units Affected',v:ncrs.filter(n=>n.status==='open').reduce((s,n)=>s+(n.qty_affected||0),0).toLocaleString(),c:'c-red'},
-      ].map(({l,v,c})=>el('div',{key:l,className:'stat'},el('div',{className:'sl'},l),el('div',{className:`sv ${c}`},v)))
-    ),
-    el('div',{className:'tabs'},
-      [{id:'open',label:'Open'},{id:'closed',label:'Closed'},{id:'all',label:'All'}].map(t=>
-        el('button',{key:t.id,className:`tab ${tab===t.id?'on':''}`,onClick:()=>setTab(t.id)},t.label)
-      )
-    ),
-    filtered.length===0?el('div',{className:'empty'},el('div',{className:'eico'},'⚠️'),el('div',{className:'etxt'},'No NCRs found')):
-    el('div',{className:'card',style:{padding:0}},
-      el('div',{className:'tw'},
-        el('table',null,
-          el('thead',null,el('tr',null,['ID','Title','Product','Qty Affected','Disposition','Severity','Assigned','Status',''].map(h=>el('th',{key:h},h)))),
-          el('tbody',null,filtered.map(ncr=>el('tr',{key:ncr.id},
-            el('td',null,el('span',{className:'mono tsm c-blue'},ncr.id.slice(-8))),
-            el('td',null,el('div',{className:'fw6 tsm'},ncr.title)),
-            el('td',null,el('span',{className:'tsm c-muted'},ncr.product||'—')),
-            el('td',null,el('span',{className:'tsm c-red fw6'},ncr.qty_affected?.toLocaleString()||'0')),
-            el('td',null,el('span',{className:'badge bb-yellow'},ncr.disposition)),
-            el('td',null,el('span',{className:`badge ${SEV_COLORS[ncr.severity]||'bb-gray'}`},ncr.severity)),
-            el('td',null,el('span',{className:'tsm'},ncr.assigned_to||'—')),
-            el('td',null,el('span',{className:`badge ${ncr.status==='closed'?'bb-green':'bb-red'}`},ncr.status)),
-            el('td',null,el('button',{className:'btn b-ghost btn-sm',onClick:()=>setSel(ncr)},'View')),
-          )))
-        )
-      )
-    ),
-    showNew&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setNew(false)},
-      el('div',{className:'md'},
-        el('div',{className:'mh'},el('div',{className:'mt2'},'New Non-Conformance Report'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
-        el('div',{className:'mbd'},
-          el('div',{className:'fg'},el('label',null,'Title'),el('input',{placeholder:'Briefly describe the non-conformance',value:f.title,onChange:ev=>setF(p=>({...p,title:ev.target.value}))})),
-          el('div',{className:'fg'},el('label',null,'Description'),el('textarea',{placeholder:'Detailed description...',value:f.description,onChange:ev=>setF(p=>({...p,description:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:70,resize:'vertical'}})),
-          el('div',{className:'g2'},
-            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Product / SKU'),el('input',{placeholder:'e.g. 2G Dispo Habibi',value:f.product,onChange:ev=>setF(p=>({...p,product:ev.target.value}))})),
-            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Qty Affected'),el('input',{type:'number',value:f.qty_affected,onChange:ev=>setF(p=>({...p,qty_affected:ev.target.value}))})),
-          ),
-          el('div',{className:'g2',style:{marginTop:13}},
-            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Disposition'),el('select',{value:f.disposition,onChange:ev=>setF(p=>({...p,disposition:ev.target.value}))},DISPOSITIONS.map(d=>el('option',{key:d,value:d},d.replace(/_/g,' ').replace(/\w/g,c=>c.toUpperCase()))))),
-            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Severity'),el('select',{value:f.severity,onChange:ev=>setF(p=>({...p,severity:ev.target.value}))},['low','medium','high','critical'].map(s=>el('option',{key:s,value:s},s.charAt(0).toUpperCase()+s.slice(1))))),
-          ),
-          el('div',{className:'g2',style:{marginTop:13}},
-            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Work Order'),el('select',{value:f.wo_id,onChange:ev=>setF(p=>({...p,wo_id:ev.target.value}))},el('option',{value:''},'— None —'),...wos.slice(0,20).map(w=>el('option',{key:w.id,value:w.id},w.id+' — '+w.sku)))),
-            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Assign To'),el('select',{value:f.assigned_id,onChange:ev=>{const u=users.find(x=>x.id===ev.target.value);setF(p=>({...p,assigned_id:ev.target.value,assigned_to:u?.name||''}));}},el('option',{value:''},'— Unassigned —'),...users.filter(u=>u.approved).map(u=>el('option',{key:u.id,value:u.id},u.name)))),
-          ),
-        ),
-        el('div',{className:'mf'},el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),el('button',{className:'btn b-blue',onClick:create,disabled:saving||!f.title},saving?'Saving...':'Create NCR')),
-      )
-    ),
-    sel&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setSel(null)},
-      el('div',{className:'md',style:{width:640}},
-        el('div',{className:'mh'},
-          el('div',{style:{flex:1}},el('div',{style:{display:'flex',gap:8}},el('span',{className:`badge ${SEV_COLORS[sel.severity]||'bb-gray'}`},sel.severity),el('span',{className:'badge bb-yellow'},sel.disposition),el('span',{className:`badge ${sel.status==='closed'?'bb-green':'bb-red'}`},sel.status)),el('div',{className:'mt2',style:{marginTop:8}},sel.title)),
-          el('button',{className:'mc',onClick:()=>setSel(null)},'×'),
-        ),
-        el('div',{className:'mbd'},
-          el('div',{className:'g2 mb4'},[['Product',sel.product||'—'],['Work Order',sel.wo_id||'—'],['Qty Affected',(sel.qty_affected||0).toLocaleString()+' units'],['Created',sel.created_at?.slice(0,10)]].map(([k,v])=>el('div',{key:k},el('div',{className:'tsm c-muted mb2'},k),el('div',{className:'fw6 tsm'},v)))),
-          sel.description&&el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:12,marginBottom:14}},el('div',{className:'tsm'},sel.description)),
-          el('div',{className:'fg'},el('label',null,'Root Cause'),el('textarea',{value:sel.root_cause||'',placeholder:'Root cause analysis...',onChange:ev=>{const v=ev.target.value;setNcrs(p=>p.map(n=>n.id===sel.id?{...n,root_cause:v}:n));setSel(s=>({...s,root_cause:v}));},onBlur:ev=>db.update('pf_ncrs',sel.id,{root_cause:ev.target.value,updated_at:new Date().toISOString()}).catch(console.error),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:70,resize:'vertical'}})),
-          el('div',{className:'fg'},el('label',null,'Action Taken'),el('textarea',{value:sel.action_taken||'',placeholder:'Actions taken to address this NCR...',onChange:ev=>{const v=ev.target.value;setNcrs(p=>p.map(n=>n.id===sel.id?{...n,action_taken:v}:n));setSel(s=>({...s,action_taken:v}));},onBlur:ev=>db.update('pf_ncrs',sel.id,{action_taken:ev.target.value,updated_at:new Date().toISOString()}).catch(console.error),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:70,resize:'vertical'}})),
-          !sel.capa_id&&el('div',{className:'alert al-blue',style:{cursor:'pointer'},onClick:()=>createCapa(sel)},'💡 No CAPA linked — click to automatically create a CAPA from this NCR'),
-          sel.capa_id&&el('div',{className:'alert al-green'},`✓ Linked to CAPA: ${sel.capa_id}`),
-        ),
-        el('div',{className:'mf',style:{justifyContent:'space-between'}},
-          el('div',{style:{display:'flex',gap:8}},
-            sel.status==='open'&&el('button',{className:'btn b-green',onClick:async()=>{const u={status:'closed',updated_at:new Date().toISOString()};await db.update('pf_ncrs',sel.id,u).catch(console.error);setNcrs(p=>p.map(n=>n.id===sel.id?{...n,...u}:n));setSel(s=>({...s,...u}));}},'✓ Close NCR'),
-            cu.role==='admin'&&el('button',{className:'btn b-red',onClick:async()=>{if(!window.confirm('Delete?'))return;await db.remove('pf_ncrs',sel.id).catch(console.error);setNcrs(p=>p.filter(n=>n.id!==sel.id));setSel(null);}},'Delete'),
-          ),
-          el('button',{className:'btn b-ghost',onClick:()=>setSel(null)},'Close'),
-        ),
-      )
-    ),
-  );
-}
-
-// ── INSPECTIONS ───────────────────────────────────────────────────────────────
-const INSPECTION_TYPES=['Pre-Production','In-Process','Final QC','Lab Testing','Receiving','Environmental'];
-const DEFAULT_CHECKLISTS={
-  'Pre-Production':['Equipment clean and sanitized','Materials verified against BOM','Personnel PPE in place','Work area clean','Previous batch records reviewed'],
-  'In-Process':['Product meets spec at this stage','No cross-contamination','Correct quantities used','Equipment functioning properly'],
-  'Final QC':['Product appearance acceptable','Packaging integrity verified','Label accuracy confirmed','Quantity matches batch record','COA received and within spec'],
-  'Lab Testing':['Sample collected per SOP','Chain of custody maintained','Lab certified','Results within acceptable range','THC/CBD within label claim'],
-};
-
-function Inspections({inspections,setInspections,cu,users,wos,locFilter}){
-  const[showNew,setNew]=useState(false);
-  const[sel,setSel]=useState(null);
-  const[tab,setTab]=useState('all');
-  const[f,setF]=useState({title:'',type:'Final QC',wo_id:'',product:'',stage:'',pass_fail:'',lab_name:'',thc_pct:'',cbd_pct:'',notes:'',loc:'All',checklist:[]});
-  const[saving,setSaving]=useState(false);
-
-  const filtered=locFilter&&locFilter!=='All'?inspections.filter(i=>!i.loc||i.loc===locFilter||i.loc==='All'):inspections;
-  const tabFiltered=tab==='pass'?filtered.filter(i=>i.pass_fail==='pass'):tab==='fail'?filtered.filter(i=>i.pass_fail==='fail'):filtered;
-
-  function initChecklist(type){
-    const items=(DEFAULT_CHECKLISTS[type]||[]).map((item,i)=>({id:'chk-'+i,label:item,checked:false}));
-    setF(p=>({...p,type,checklist:items}));
-  }
-
-  async function create(){
-    if(!f.title)return;
-    setSaving(true);
-    const ins={id:'INS-'+Date.now(),...f,thc_pct:parseFloat(f.thc_pct)||null,cbd_pct:parseFloat(f.cbd_pct)||null,created_by:cu.name,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),attachments:[]};
-    try{await db.insert('pf_inspections',ins);}catch(e){console.error(e);}
-    setInspections(p=>[ins,...p]);
-    setF({title:'',type:'Final QC',wo_id:'',product:'',stage:'',pass_fail:'',lab_name:'',thc_pct:'',cbd_pct:'',notes:'',loc:'All',checklist:[]});
-    setNew(false);setSaving(false);
-  }
-
-  return el('div',null,
-    el('div',{className:'ph'},
-      el('div',null,el('div',{className:'pt'},'Inspections & Testing'),el('div',{className:'ps'},'Quality inspections, COA uploads and lab results')),
-      el('button',{className:'btn b-blue',onClick:()=>{setNew(true);initChecklist('Final QC');}},'+ New Inspection'),
-    ),
-    el('div',{className:'g4',style:{marginBottom:20}},
-      [{l:'Total',v:filtered.length,c:'c-blue'},
-       {l:'Passed',v:filtered.filter(i=>i.pass_fail==='pass').length,c:'c-green'},
-       {l:'Failed',v:filtered.filter(i=>i.pass_fail==='fail').length,c:'c-red'},
-       {l:'Pending',v:filtered.filter(i=>!i.pass_fail||i.pass_fail==='pending').length,c:'c-yellow'},
-      ].map(({l,v,c})=>el('div',{key:l,className:'stat'},el('div',{className:'sl'},l),el('div',{className:`sv ${c}`},v)))
-    ),
-    el('div',{className:'tabs'},
-      [{id:'all',label:'All'},{id:'pass',label:'✓ Pass'},{id:'fail',label:'✗ Fail'},{id:'pending',label:'⏳ Pending'}].map(t=>
-        el('button',{key:t.id,className:`tab ${tab===t.id?'on':''}`,onClick:()=>setTab(t.id)},t.label)
-      )
-    ),
-    tabFiltered.length===0?el('div',{className:'empty'},el('div',{className:'eico'},'🔬'),el('div',{className:'etxt'},'No inspections found')):
-    el('div',{className:'card',style:{padding:0}},
-      el('div',{className:'tw'},
-        el('table',null,
-          el('thead',null,el('tr',null,['ID','Title','Type','Product','Work Order','THC%','CBD%','Result','Date',''].map(h=>el('th',{key:h},h)))),
-          el('tbody',null,tabFiltered.map(ins=>el('tr',{key:ins.id},
-            el('td',null,el('span',{className:'mono tsm c-blue'},ins.id.slice(-8))),
-            el('td',null,el('div',{className:'fw6 tsm'},ins.title)),
-            el('td',null,el('span',{className:'badge bb-gray'},ins.type)),
-            el('td',null,el('span',{className:'tsm c-muted'},ins.product||'—')),
-            el('td',null,ins.wo_id&&el('span',{className:'mono tsm c-blue'},ins.wo_id.slice(-8))||el('span',{className:'tsm c-muted'},'—')),
-            el('td',null,ins.thc_pct!=null?el('span',{className:'tsm fw6'},ins.thc_pct+'%'):el('span',{className:'tsm c-muted'},'—')),
-            el('td',null,ins.cbd_pct!=null?el('span',{className:'tsm fw6'},ins.cbd_pct+'%'):el('span',{className:'tsm c-muted'},'—')),
-            el('td',null,el('span',{className:`badge ${ins.pass_fail==='pass'?'bb-green':ins.pass_fail==='fail'?'bb-red':'bb-yellow'}`},ins.pass_fail||'pending')),
-            el('td',null,el('span',{className:'tsm c-muted'},ins.created_at?.slice(0,10))),
-            el('td',null,el('button',{className:'btn b-ghost btn-sm',onClick:()=>setSel(ins)},'View')),
-          )))
-        )
-      )
-    ),
-    showNew&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setNew(false)},
-      el('div',{className:'md',style:{width:640}},
-        el('div',{className:'mh'},el('div',{className:'mt2'},'New Inspection'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
-        el('div',{className:'mbd'},
-          el('div',{className:'fg'},el('label',null,'Inspection Title'),el('input',{placeholder:'e.g. Final QC - Batch 2G Habibi 5000 units',value:f.title,onChange:ev=>setF(p=>({...p,title:ev.target.value}))})),
-          el('div',{className:'g2'},
-            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Type'),el('select',{value:f.type,onChange:ev=>initChecklist(ev.target.value)},INSPECTION_TYPES.map(t=>el('option',{key:t,value:t},t)))),
-            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Work Order'),el('select',{value:f.wo_id,onChange:ev=>setF(p=>({...p,wo_id:ev.target.value}))},el('option',{value:''},'— None —'),...wos.slice(0,20).map(w=>el('option',{key:w.id,value:w.id},w.id+' — '+w.sku)))),
-          ),
-          el('div',{className:'g2',style:{marginTop:13}},
-            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Product'),el('input',{placeholder:'Product name/SKU',value:f.product,onChange:ev=>setF(p=>({...p,product:ev.target.value}))})),
-            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Pass / Fail'),el('select',{value:f.pass_fail,onChange:ev=>setF(p=>({...p,pass_fail:ev.target.value}))},el('option',{value:''},'— Pending —'),el('option',{value:'pass'},'✓ Pass'),el('option',{value:'fail'},'✗ Fail'))),
-          ),
-          f.type==='Lab Testing'&&el('div',{className:'g2',style:{marginTop:13}},
-            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'THC %'),el('input',{type:'number',step:'0.01',placeholder:'0.00',value:f.thc_pct,onChange:ev=>setF(p=>({...p,thc_pct:ev.target.value}))})),
-            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'CBD %'),el('input',{type:'number',step:'0.01',placeholder:'0.00',value:f.cbd_pct,onChange:ev=>setF(p=>({...p,cbd_pct:ev.target.value}))})),
-          ),
-          f.type==='Lab Testing'&&el('div',{className:'fg'},el('label',null,'Lab Name'),el('input',{placeholder:'Lab name',value:f.lab_name,onChange:ev=>setF(p=>({...p,lab_name:ev.target.value}))})),
-          f.checklist.length>0&&el('div',{style:{marginTop:13}},
-            el('div',{className:'fw6 tsm mb2'},'Inspection Checklist:'),
-            f.checklist.map(item=>el('div',{key:item.id,style:{display:'flex',alignItems:'center',gap:8,padding:'6px 0',borderBottom:'1px solid var(--border)'}},
-              el('input',{type:'checkbox',checked:item.checked,onChange:ev=>setF(p=>({...p,checklist:p.checklist.map(c=>c.id===item.id?{...c,checked:ev.target.checked}:c)})),style:{width:16,height:16,cursor:'pointer'}}),
-              el('span',{className:'tsm',style:{textDecoration:item.checked?'line-through':'none',color:item.checked?'var(--text3)':'var(--text)'}},item.label),
-            ))
-          ),
-          el('div',{className:'fg',style:{marginTop:13}},el('label',null,'Notes'),el('textarea',{placeholder:'Additional notes...',value:f.notes,onChange:ev=>setF(p=>({...p,notes:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:60,resize:'vertical'}})),
-          el('div',{className:'fg'},el('label',null,'Location'),el('select',{value:f.loc,onChange:ev=>setF(p=>({...p,loc:ev.target.value}))},['All','Michigan','Missouri'].map(l=>el('option',{key:l,value:l},l)))),
-        ),
-        el('div',{className:'mf'},el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),el('button',{className:'btn b-blue',onClick:create,disabled:saving||!f.title},saving?'Saving...':'Save Inspection')),
-      )
-    ),
-    sel&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setSel(null)},
-      el('div',{className:'md',style:{width:640}},
-        el('div',{className:'mh'},
-          el('div',{style:{flex:1}},el('div',{style:{display:'flex',gap:8}},el('span',{className:'badge bb-gray'},sel.type),el('span',{className:`badge ${sel.pass_fail==='pass'?'bb-green':sel.pass_fail==='fail'?'bb-red':'bb-yellow'}`},sel.pass_fail||'pending')),el('div',{className:'mt2',style:{marginTop:8}},sel.title)),
-          el('button',{className:'mc',onClick:()=>setSel(null)},'×'),
-        ),
-        el('div',{className:'mbd'},
-          el('div',{className:'g2 mb4'},[['Product',sel.product||'—'],['Work Order',sel.wo_id||'—'],['Lab',sel.lab_name||'—'],['Date',sel.created_at?.slice(0,10)]].map(([k,v])=>el('div',{key:k},el('div',{className:'tsm c-muted mb2'},k),el('div',{className:'fw6 tsm'},v)))),
-          (sel.thc_pct!=null||sel.cbd_pct!=null)&&el('div',{style:{display:'flex',gap:16,marginBottom:14}},
-            sel.thc_pct!=null&&el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:'12px 20px',textAlign:'center'}},el('div',{className:'tsm c-muted mb2'},'THC'),el('div',{className:'sv c-green',style:{fontSize:24}},sel.thc_pct+'%')),
-            sel.cbd_pct!=null&&el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:'12px 20px',textAlign:'center'}},el('div',{className:'tsm c-muted mb2'},'CBD'),el('div',{className:'sv c-blue',style:{fontSize:24}},sel.cbd_pct+'%')),
-          ),
-          (sel.checklist||[]).length>0&&el('div',{marginBottom:14},
-            el('div',{className:'fw6 tsm mb2'},'Checklist:'),
-            (sel.checklist||[]).map(item=>el('div',{key:item.id,style:{display:'flex',alignItems:'center',gap:8,padding:'5px 0'}},
-              el('span',{style:{color:item.checked?'var(--green)':'var(--text3)',fontSize:16}},item.checked?'✓':'○'),
-              el('span',{className:'tsm',style:{color:item.checked?'var(--text)':'var(--text3)'}},item.label),
-            ))
-          ),
-          sel.notes&&el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:12,marginTop:8}},el('div',{className:'tsm c-muted mb2'},'Notes'),el('div',{className:'tsm'},sel.notes)),
-          el('div',{className:'divider'}),
-          el('div',{className:'fg'},el('label',null,'Update Pass/Fail'),el('select',{value:sel.pass_fail||'',onChange:async ev=>{const v=ev.target.value;await db.update('pf_inspections',sel.id,{pass_fail:v,updated_at:new Date().toISOString()}).catch(console.error);setInspections(p=>p.map(i=>i.id===sel.id?{...i,pass_fail:v}:i));setSel(s=>({...s,pass_fail:v}));},style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},el('option',{value:''},'— Pending —'),el('option',{value:'pass'},'✓ Pass'),el('option',{value:'fail'},'✗ Fail'))),
-          el('div',{className:'fg'},
-            el('label',null,'Upload COA (Certificate of Analysis)'),
-            el('input',{type:'file',accept:'.pdf,.jpg,.png',onChange:async ev=>{const file=ev.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=async re=>{const update={coa_file:re.target.result,coa_name:file.name,updated_at:new Date().toISOString()};await db.update('pf_inspections',sel.id,update).catch(console.error);setInspections(p=>p.map(i=>i.id===sel.id?{...i,...update}:i));setSel(s=>({...s,...update}));alert('COA uploaded successfully');};reader.readAsDataURL(file);},style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px',color:'var(--text)',fontFamily:'inherit',fontSize:13}}),
-            sel.coa_name&&el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:6}},el('span',{className:'tsm c-green'},'📎 COA: '+sel.coa_name),el('button',{className:'btn b-ghost btn-sm',onClick:()=>{const a=document.createElement('a');a.href=sel.coa_file;a.download=sel.coa_name;a.click();}},'Download COA')),
-          ),
-        ),
-        el('div',{className:'mf'},el('button',{className:'btn b-ghost',onClick:()=>setSel(null)},'Close')),
-      )
-    ),
-  );
-}
-
-// ── TRAINING ─────────────────────────────────────────────────────────────────
-function Training({training,setTraining,cu,users,sops,locFilter}){
-  const[showNew,setNew]=useState(false);
-  const[f,setF]=useState({sop_id:'',sop_title:'',assigned_to:'',assigned_id:'',due_date:'',loc:'All'});
-  const[saving,setSaving]=useState(false);
-
-  const filtered=locFilter&&locFilter!=='All'?training.filter(t=>!t.loc||t.loc===locFilter||t.loc==='All'):training;
-
-  async function assign(){
-    if(!f.sop_id||!f.assigned_id)return;
-    setSaving(true);
-    const tr={id:'TR-'+Date.now(),...f,status:'pending',assigned_by:cu.name,created_at:new Date().toISOString()};
-    try{await db.insert('pf_training',tr);}catch(e){console.error(e);}
-    setTraining(p=>[tr,...p]);
-    setF({sop_id:'',sop_title:'',assigned_to:'',assigned_id:'',due_date:'',loc:'All'});
-    setNew(false);setSaving(false);
-  }
-
-  async function complete(tr){
-    const update={status:'completed',completed_at:new Date().toISOString().slice(0,10)};
-    try{await db.update('pf_training',tr.id,update);}catch(e){console.error(e);}
-    setTraining(p=>p.map(t=>t.id===tr.id?{...t,...update}:t));
-  }
-
-  const today=new Date().toISOString().slice(0,10);
-
-  return el('div',null,
-    el('div',{className:'ph'},
-      el('div',null,el('div',{className:'pt'},'Training Records'),el('div',{className:'ps'},'Assign SOPs as training and track employee completion')),
-      el('button',{className:'btn b-blue',onClick:()=>setNew(true)},'+ Assign Training'),
-    ),
-    el('div',{className:'g4',style:{marginBottom:20}},
-      [{l:'Assigned',v:filtered.filter(t=>t.status==='pending').length,c:'c-yellow'},
-       {l:'Completed',v:filtered.filter(t=>t.status==='completed').length,c:'c-green'},
-       {l:'Overdue',v:filtered.filter(t=>t.status==='pending'&&t.due_date&&t.due_date<today).length,c:'c-red'},
-       {l:'Total',v:filtered.length,c:'c-muted'},
-      ].map(({l,v,c})=>el('div',{key:l,className:'stat'},el('div',{className:'sl'},l),el('div',{className:`sv ${c}`},v)))
-    ),
-    filtered.length===0?el('div',{className:'empty'},el('div',{className:'eico'},'🎓'),el('div',{className:'etxt'},'No training records')):
-    el('div',{className:'card',style:{padding:0}},
-      el('div',{className:'tw'},
-        el('table',null,
-          el('thead',null,el('tr',null,['SOP','Assigned To','Assigned By','Due Date','Status',''].map(h=>el('th',{key:h},h)))),
-          el('tbody',null,filtered.map(tr=>el('tr',{key:tr.id},
-            el('td',null,el('div',{className:'fw6 tsm'},tr.sop_title)),
-            el('td',null,el('span',{className:'tsm'},tr.assigned_to)),
-            el('td',null,el('span',{className:'tsm c-muted'},tr.assigned_by)),
-            el('td',null,tr.due_date&&el('span',{className:`tsm ${tr.due_date<today&&tr.status==='pending'?'c-red':'c-muted'}`},tr.due_date)||el('span',{className:'tsm c-muted'},'—')),
-            el('td',null,el('span',{className:`badge ${tr.status==='completed'?'bb-green':'bb-yellow'}`},tr.status==='completed'?'✓ Completed':'⏳ Pending'),tr.completed_at&&el('div',{className:'tsm c-muted'},tr.completed_at)),
-            el('td',null,tr.status==='pending'&&(cu.role==='admin'||cu.role==='manager'||tr.assigned_id===cu.id)&&el('button',{className:'btn b-green btn-sm',onClick:()=>complete(tr)},'Mark Complete')),
-          )))
-        )
-      )
-    ),
-    showNew&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setNew(false)},
-      el('div',{className:'md'},
-        el('div',{className:'mh'},el('div',{className:'mt2'},'Assign Training'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
-        el('div',{className:'mbd'},
-          el('div',{className:'fg'},el('label',null,'SOP / Document'),el('select',{value:f.sop_id,onChange:ev=>{const s=sops.find(x=>x.id===ev.target.value);setF(p=>({...p,sop_id:ev.target.value,sop_title:s?.title||''}));}},el('option',{value:''},'— Select SOP —'),...sops.map(s=>el('option',{key:s.id,value:s.id},s.title)))),
-          el('div',{className:'fg'},el('label',null,'Assign To'),el('select',{value:f.assigned_id,onChange:ev=>{const u=users.find(x=>x.id===ev.target.value);setF(p=>({...p,assigned_id:ev.target.value,assigned_to:u?.name||''}));}},el('option',{value:''},'— Select User —'),...users.filter(u=>u.approved).map(u=>el('option',{key:u.id,value:u.id},`${u.name} (${u.dept})`)))),
-          el('div',{className:'fg'},el('label',null,'Due Date'),el('input',{type:'date',value:f.due_date,onChange:ev=>setF(p=>({...p,due_date:ev.target.value}))})),
-          el('div',{className:'fg'},el('label',null,'Location'),el('select',{value:f.loc,onChange:ev=>setF(p=>({...p,loc:ev.target.value}))},['All','Michigan','Missouri'].map(l=>el('option',{key:l,value:l},l)))),
-        ),
-        el('div',{className:'mf'},el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),el('button',{className:'btn b-blue',onClick:assign,disabled:saving||!f.sop_id||!f.assigned_id},saving?'Saving...':'Assign Training')),
-      )
-    ),
-  );
-}
-
-// ── EQUIPMENT ─────────────────────────────────────────────────────────────────
-function Equipment({equipment,setEquipment,cu,locFilter}){
-  const[showNew,setNew]=useState(false);
-  const[sel,setSel]=useState(null);
-  const[f,setF]=useState({name:'',model:'',serial:'',location:'',dept:'',last_calibration:'',next_calibration:'',last_maintenance:'',next_maintenance:'',status:'active',notes:'',loc:'All'});
-  const[saving,setSaving]=useState(false);
-  const[logNote,setLogNote]=useState('');
-
-  const filtered=locFilter&&locFilter!=='All'?equipment.filter(e=>!e.loc||e.loc===locFilter||e.loc==='All'):equipment;
-  const today=new Date().toISOString().slice(0,10);
-  const dueCal=filtered.filter(e=>e.next_calibration&&e.next_calibration<=today&&e.status==='active');
-  const dueMaint=filtered.filter(e=>e.next_maintenance&&e.next_maintenance<=today&&e.status==='active');
-
-  async function create(){
-    if(!f.name)return;
-    setSaving(true);
-    const eq={id:'EQ-'+Date.now(),...f,logs:[],created_at:new Date().toISOString()};
-    try{await db.insert('pf_equipment',eq);}catch(e){console.error(e);}
-    setEquipment(p=>[eq,...p]);
-    setF({name:'',model:'',serial:'',location:'',dept:'',last_calibration:'',next_calibration:'',last_maintenance:'',next_maintenance:'',status:'active',notes:'',loc:'All'});
-    setNew(false);setSaving(false);
-  }
-
-  async function addLog(eq,type){
-    if(!logNote.trim())return;
-    const log={id:'log-'+Date.now(),type,note:logNote,by:cu.name,at:new Date().toISOString().slice(0,10)};
-    const logs=[...(eq.logs||[]),log];
-    const update={logs,updated_at:new Date().toISOString(),...(type==='calibration'?{last_calibration:today}:{last_maintenance:today})};
-    try{await db.update('pf_equipment',eq.id,update);}catch(e){console.error(e);}
-    setEquipment(p=>p.map(e=>e.id===eq.id?{...e,...update}:e));
-    setSel(s=>s?{...s,...update}:null);
-    setLogNote('');
-  }
-
-  return el('div',null,
-    el('div',{className:'ph'},
-      el('div',null,el('div',{className:'pt'},'Equipment'),el('div',{className:'ps'},'Calibration and maintenance tracking')),
-      el('button',{className:'btn b-blue',onClick:()=>setNew(true)},'+ Add Equipment'),
-    ),
-    (dueCal.length>0||dueMaint.length>0)&&el('div',null,
-      dueCal.map(e=>el('div',{key:'cal-'+e.id,className:'alert al-red'},`⚠️ Calibration due: ${e.name}`)),
-      dueMaint.map(e=>el('div',{key:'mnt-'+e.id,className:'alert al-yellow'},`🔧 Maintenance due: ${e.name}`)),
-    ),
-    el('div',{className:'g4',style:{marginBottom:20}},
-      [{l:'Active',v:filtered.filter(e=>e.status==='active').length,c:'c-green'},
-       {l:'Cal Due',v:dueCal.length,c:dueCal.length>0?'c-red':'c-muted'},
-       {l:'Maint Due',v:dueMaint.length,c:dueMaint.length>0?'c-yellow':'c-muted'},
-       {l:'Total',v:filtered.length,c:'c-muted'},
-      ].map(({l,v,c})=>el('div',{key:l,className:'stat'},el('div',{className:'sl'},l),el('div',{className:`sv ${c}`},v)))
-    ),
-    filtered.length===0?el('div',{className:'empty'},el('div',{className:'eico'},'⚙️'),el('div',{className:'etxt'},'No equipment added')):
-    el('div',{className:'card',style:{padding:0}},
-      el('div',{className:'tw'},
-        el('table',null,
-          el('thead',null,el('tr',null,['Name','Model/Serial','Location','Last Cal','Next Cal','Last Maint','Status',''].map(h=>el('th',{key:h},h)))),
-          el('tbody',null,filtered.map(eq=>el('tr',{key:eq.id},
-            el('td',null,el('div',{className:'fw6 tsm'},eq.name),eq.dept&&el('div',{className:'tsm c-muted'},eq.dept)),
-            el('td',null,el('div',{className:'tsm'},eq.model||'—'),eq.serial&&el('div',{className:'tsm c-muted'},'S/N: '+eq.serial)),
-            el('td',null,el('span',{className:'tsm c-muted'},eq.location||'—')),
-            el('td',null,el('span',{className:'tsm c-muted'},eq.last_calibration||'—')),
-            el('td',null,eq.next_calibration&&el('span',{className:`tsm ${eq.next_calibration<=today?'c-red fw6':'c-muted'}`},eq.next_calibration<=today?'⚠ '+eq.next_calibration:eq.next_calibration)||el('span',{className:'tsm c-muted'},'—')),
-            el('td',null,el('span',{className:'tsm c-muted'},eq.last_maintenance||'—')),
-            el('td',null,el('span',{className:`badge ${eq.status==='active'?'bb-green':'bb-red'}`},eq.status)),
-            el('td',null,el('button',{className:'btn b-ghost btn-sm',onClick:()=>setSel(eq)},'View')),
-          )))
-        )
-      )
-    ),
-    showNew&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setNew(false)},
-      el('div',{className:'md'},
-        el('div',{className:'mh'},el('div',{className:'mt2'},'Add Equipment'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
-        el('div',{className:'mbd'},
-          el('div',{className:'g2'},el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Equipment Name'),el('input',{placeholder:'e.g. Filling Machine #1',value:f.name,onChange:ev=>setF(p=>({...p,name:ev.target.value}))})),el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Model'),el('input',{placeholder:'Model number',value:f.model,onChange:ev=>setF(p=>({...p,model:ev.target.value}))}))),
-          el('div',{className:'g2',style:{marginTop:13}},el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Serial Number'),el('input',{placeholder:'Serial #',value:f.serial,onChange:ev=>setF(p=>({...p,serial:ev.target.value}))})),el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Location'),el('input',{placeholder:'e.g. Production Floor A',value:f.location,onChange:ev=>setF(p=>({...p,location:ev.target.value}))}))),
-          el('div',{className:'g2',style:{marginTop:13}},el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Next Calibration'),el('input',{type:'date',value:f.next_calibration,onChange:ev=>setF(p=>({...p,next_calibration:ev.target.value}))})),el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Next Maintenance'),el('input',{type:'date',value:f.next_maintenance,onChange:ev=>setF(p=>({...p,next_maintenance:ev.target.value}))}))),
-          el('div',{className:'fg',style:{marginTop:13}},el('label',null,'Department'),el('select',{value:f.dept,onChange:ev=>setF(p=>({...p,dept:ev.target.value}))},['','Gummy','Cartridge','Pre-Roll','QC','Warehouse','Facility'].map(d=>el('option',{key:d,value:d},d||'— Select —')))),
-          el('div',{className:'fg'},el('label',null,'Location'),el('select',{value:f.loc,onChange:ev=>setF(p=>({...p,loc:ev.target.value}))},['All','Michigan','Missouri'].map(l=>el('option',{key:l,value:l},l)))),
-        ),
-        el('div',{className:'mf'},el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),el('button',{className:'btn b-blue',onClick:create,disabled:saving||!f.name},saving?'Saving...':'Add Equipment')),
-      )
-    ),
-    sel&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setSel(null)},
-      el('div',{className:'md',style:{width:600}},
-        el('div',{className:'mh'},el('div',{style:{flex:1}},el('div',{className:'mt2'},sel.name),el('div',{className:'tsm c-muted mt1'},sel.model+(sel.serial?' · S/N: '+sel.serial:''))),el('button',{className:'mc',onClick:()=>setSel(null)},'×')),
-        el('div',{className:'mbd'},
-          el('div',{className:'g2 mb4'},[['Location',sel.location||'—'],['Department',sel.dept||'—'],['Last Calibration',sel.last_calibration||'—'],['Next Calibration',sel.next_calibration||'—'],['Last Maintenance',sel.last_maintenance||'—'],['Next Maintenance',sel.next_maintenance||'—']].map(([k,v])=>el('div',{key:k},el('div',{className:'tsm c-muted mb2'},k),el('div',{className:`fw6 tsm ${(k.includes('Next')&&v!=='—'&&v<=today)?'c-red':''}`},v)))),
-          el('div',{className:'divider'}),
-          el('div',{className:'fw6 mb4'},'Log Entry'),
-          el('div',{style:{display:'flex',gap:8,marginBottom:12}},
-            el('input',{placeholder:'Log note (e.g. Calibrated by technician John)...',value:logNote,onChange:ev=>setLogNote(ev.target.value),style:{flex:1,background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none'}}),
-            el('button',{className:'btn b-blue',onClick:()=>addLog(sel,'calibration'),disabled:!logNote.trim()},'Cal'),
-            el('button',{className:'btn b-ghost',onClick:()=>addLog(sel,'maintenance'),disabled:!logNote.trim()},'Maint'),
-          ),
-          (sel.logs||[]).length>0&&el('div',null,
-            el('div',{className:'fw6 tsm mb2'},'History:'),
-            [...(sel.logs||[])].reverse().slice(0,10).map(log=>el('div',{key:log.id,style:{display:'flex',justifyContent:'space-between',padding:'7px 0',borderBottom:'1px solid var(--border)'}},el('div',null,el('span',{className:`badge ${log.type==='calibration'?'bb-blue':'bb-green'}`,style:{marginRight:8}},log.type),el('span',{className:'tsm'},log.note)),el('div',{className:'tsm c-muted',style:{whiteSpace:'nowrap',marginLeft:8}},`${log.by} · ${log.at}`))),
-          ),
-        ),
-        el('div',{className:'mf'},el('button',{className:'btn b-ghost',onClick:()=>setSel(null)},'Close')),
-      )
-    ),
-  );
-}
-
-// ── SUPPLIERS ─────────────────────────────────────────────────────────────────
-function Suppliers({suppliers,setSuppliers,cu}){
-  const[showNew,setNew]=useState(false);
-  const[sel,setSel]=useState(null);
-  const[f,setF]=useState({name:'',contact:'',email:'',phone:'',status:'approved',notes:''});
-  const[saving,setSaving]=useState(false);
-
-  async function create(){
-    if(!f.name)return;
-    setSaving(true);
-    const sup={id:'SUP-'+Date.now(),...f,materials:[],coas:[],created_at:new Date().toISOString(),updated_at:new Date().toISOString()};
-    try{await db.insert('pf_suppliers',sup);}catch(e){console.error(e);}
-    setSuppliers(p=>[sup,...p]);
-    setF({name:'',contact:'',email:'',phone:'',status:'approved',notes:''});
-    setNew(false);setSaving(false);
-  }
-
-  return el('div',null,
-    el('div',{className:'ph'},
-      el('div',null,el('div',{className:'pt'},'Supplier Management'),el('div',{className:'ps'},'Approved supplier list and COA tracking')),
-      el('button',{className:'btn b-blue',onClick:()=>setNew(true)},'+ Add Supplier'),
-    ),
-    el('div',{className:'g4',style:{marginBottom:20}},
-      [{l:'Approved',v:suppliers.filter(s=>s.status==='approved').length,c:'c-green'},
-       {l:'Conditional',v:suppliers.filter(s=>s.status==='conditional').length,c:'c-yellow'},
-       {l:'Suspended',v:suppliers.filter(s=>s.status==='suspended').length,c:'c-red'},
-       {l:'Total',v:suppliers.length,c:'c-muted'},
-      ].map(({l,v,c})=>el('div',{key:l,className:'stat'},el('div',{className:'sl'},l),el('div',{className:`sv ${c}`},v)))
-    ),
-    suppliers.length===0?el('div',{className:'empty'},el('div',{className:'eico'},'🏭'),el('div',{className:'etxt'},'No suppliers added')):
-    el('div',{className:'card',style:{padding:0}},
-      el('div',{className:'tw'},
-        el('table',null,
-          el('thead',null,el('tr',null,['Supplier','Contact','Email','Phone','Status','Materials',''].map(h=>el('th',{key:h},h)))),
-          el('tbody',null,suppliers.map(sup=>el('tr',{key:sup.id},
-            el('td',null,el('div',{className:'fw6 tsm'},sup.name)),
-            el('td',null,el('span',{className:'tsm c-muted'},sup.contact||'—')),
-            el('td',null,el('span',{className:'tsm c-muted'},sup.email||'—')),
-            el('td',null,el('span',{className:'tsm c-muted'},sup.phone||'—')),
-            el('td',null,el('span',{className:`badge ${sup.status==='approved'?'bb-green':sup.status==='suspended'?'bb-red':'bb-yellow'}`},sup.status)),
-            el('td',null,el('span',{className:'tsm c-muted'},(sup.materials||[]).length+' materials')),
-            el('td',null,el('button',{className:'btn b-ghost btn-sm',onClick:()=>setSel(sup)},'View')),
-          )))
-        )
-      )
-    ),
-    showNew&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setNew(false)},
-      el('div',{className:'md'},
-        el('div',{className:'mh'},el('div',{className:'mt2'},'Add Supplier'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
-        el('div',{className:'mbd'},
-          el('div',{className:'fg'},el('label',null,'Company Name'),el('input',{placeholder:'Supplier company name',value:f.name,onChange:ev=>setF(p=>({...p,name:ev.target.value}))})),
-          el('div',{className:'g2'},el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Contact Name'),el('input',{placeholder:'Primary contact',value:f.contact,onChange:ev=>setF(p=>({...p,contact:ev.target.value}))})),el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Email'),el('input',{type:'email',placeholder:'email@supplier.com',value:f.email,onChange:ev=>setF(p=>({...p,email:ev.target.value}))}))),
-          el('div',{className:'g2',style:{marginTop:13}},el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Phone'),el('input',{placeholder:'Phone number',value:f.phone,onChange:ev=>setF(p=>({...p,phone:ev.target.value}))})),el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Status'),el('select',{value:f.status,onChange:ev=>setF(p=>({...p,status:ev.target.value}))},['approved','conditional','suspended'].map(s=>el('option',{key:s,value:s},s.charAt(0).toUpperCase()+s.slice(1)))))),
-          el('div',{className:'fg',style:{marginTop:13}},el('label',null,'Notes'),el('textarea',{placeholder:'Any notes about this supplier...',value:f.notes,onChange:ev=>setF(p=>({...p,notes:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:60,resize:'vertical'}})),
-        ),
-        el('div',{className:'mf'},el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),el('button',{className:'btn b-blue',onClick:create,disabled:saving||!f.name},saving?'Saving...':'Add Supplier')),
-      )
-    ),
-    sel&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setSel(null)},
-      el('div',{className:'md',style:{width:600}},
-        el('div',{className:'mh'},el('div',{style:{flex:1}},el('div',{className:'mt2'},sel.name),el('span',{className:`badge ${sel.status==='approved'?'bb-green':sel.status==='suspended'?'bb-red':'bb-yellow'}`,style:{marginTop:6,display:'inline-block'}},sel.status)),el('button',{className:'mc',onClick:()=>setSel(null)},'×')),
-        el('div',{className:'mbd'},
-          el('div',{className:'g2 mb4'},[['Contact',sel.contact||'—'],['Email',sel.email||'—'],['Phone',sel.phone||'—'],['Added',sel.created_at?.slice(0,10)]].map(([k,v])=>el('div',{key:k},el('div',{className:'tsm c-muted mb2'},k),el('div',{className:'fw6 tsm'},v)))),
-          sel.notes&&el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:12,marginBottom:14}},el('div',{className:'tsm c-muted mb2'},'Notes'),el('div',{className:'tsm'},sel.notes)),
-          el('div',{className:'divider'}),
-          el('div',{className:'fg'},
-            el('label',null,'Upload COA'),
-            el('input',{type:'file',accept:'.pdf',onChange:async ev=>{const file=ev.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=async re=>{const coa={id:'coa-'+Date.now(),name:file.name,data:re.target.result,uploaded_by:cu.name,at:new Date().toISOString().slice(0,10)};const coas=[...(sel.coas||[]),coa];await db.update('pf_suppliers',sel.id,{coas,updated_at:new Date().toISOString()}).catch(console.error);setSuppliers(p=>p.map(s=>s.id===sel.id?{...s,coas}:s));setSel(s=>({...s,coas}));alert('COA uploaded');};reader.readAsDataURL(file);},style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px',color:'var(--text)',fontFamily:'inherit',fontSize:13}}),
-          ),
-          (sel.coas||[]).length>0&&el('div',null,
-            el('div',{className:'fw6 tsm mb2'},'COAs on file:'),
-            (sel.coas||[]).map(coa=>el('div',{key:coa.id,style:{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'7px 0',borderBottom:'1px solid var(--border)'}},el('div',null,el('div',{className:'tsm fw6'},coa.name),el('div',{className:'tsm c-muted'},`Uploaded by ${coa.uploaded_by} on ${coa.at}`)),el('button',{className:'btn b-ghost btn-sm',onClick:()=>{const a=document.createElement('a');a.href=coa.data;a.download=coa.name;a.click();}},'Download'))),
-          ),
-          el('div',{className:'divider'}),
-          el('div',{className:'fg'},el('label',null,'Change Status'),el('select',{value:sel.status,onChange:async ev=>{const v=ev.target.value;await db.update('pf_suppliers',sel.id,{status:v,updated_at:new Date().toISOString()}).catch(console.error);setSuppliers(p=>p.map(s=>s.id===sel.id?{...s,status:v}:s));setSel(s=>({...s,status:v}));},style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},['approved','conditional','suspended'].map(s=>el('option',{key:s,value:s},s.charAt(0).toUpperCase()+s.slice(1))))),
-        ),
-        el('div',{className:'mf'},el('button',{className:'btn b-ghost',onClick:()=>setSel(null)},'Close')),
-      )
-    ),
-  );
-}
-
-// ── PURCHASE ORDERS ──────────────────────────────────────────────────────────
-function PurchaseOrders({purchaseOrders,setPurchaseOrders,suppliers,inv,setInv,cu,locFilter}){
-  const[showNew,setNew]=useState(false);
-  const[sel,setSel]=useState(null);
-  const[tab,setTab]=useState('all');
-  const[f,setF]=useState({supplier_id:'',supplier_name:'',expected_date:'',notes:'',loc:'All',items:[]});
-  const[newItem,setNewItem]=useState({sku:'',name:'',qty:1,unit:'pcs',unit_cost:0});
-  const[saving,setSaving]=useState(false);
-
-  const filtered=(locFilter&&locFilter!=='All'?purchaseOrders.filter(p=>!p.loc||p.loc===locFilter||p.loc==='All'):purchaseOrders)
-    .filter(p=>tab==='all'?true:p.status===tab);
-
-  function addItem(){
-    if(!newItem.name||!newItem.qty)return;
-    setF(p=>({...p,items:[...p.items,{...newItem,id:'pi-'+Date.now(),total:newItem.qty*newItem.unit_cost}]}));
-    setNewItem({sku:'',name:'',qty:1,unit:'pcs',unit_cost:0});
-  }
-
-  function removeItem(id){setF(p=>({...p,items:p.items.filter(i=>i.id!==id)}));}
-
-  async function create(){
-    if(!f.supplier_name||f.items.length===0)return;
-    setSaving(true);
-    const subtotal=f.items.reduce((s,i)=>s+(i.qty*i.unit_cost),0);
-    const po={id:'PO-'+Date.now(),...f,subtotal,status:'draft',created_by:cu.name,created_at:new Date().toISOString(),updated_at:new Date().toISOString()};
-    try{await db.insert('pf_purchase_orders',po);}catch(e){console.error(e);}
-    setPurchaseOrders(p=>[po,...p]);
-    setF({supplier_id:'',supplier_name:'',expected_date:'',notes:'',loc:'All',items:[]});
-    setNew(false);setSaving(false);
-  }
-
-  async function updateStatus(po,status){
-    const update={status,updated_at:new Date().toISOString(),...(status==='received'?{received_date:new Date().toISOString().slice(0,10),received_by:cu.name}:{})};
-    try{await db.update('pf_purchase_orders',po.id,update);}catch(e){console.error(e);}
-    // If received, update inventory
-    if(status==='received'){
-      for(const item of (po.items||[])){
-        if(!item.sku)continue;
-        const invItem=inv.find(i=>i.sku===item.sku);
-        if(invItem){
-          const newQty=invItem.qty+(item.qty||0);
-          try{await db.update('pf_inventory',invItem.id,{qty:newQty});}catch(e){console.error(e);}
-          setInv(p=>p.map(i=>i.id===invItem.id?{...i,qty:newQty}:i));
-        } else {
-          const newInv={id:'inv-'+Date.now()+'-'+item.sku,sku:item.sku,name:item.name,dept:'Warehouse',qty:item.qty||0,min_qty:0,unit:item.unit||'pcs'};
-          try{await db.insert('pf_inventory',newInv);}catch(e){console.error(e);}
-          setInv(p=>[...p,newInv]);
-        }
-      }
-    }
-    setPurchaseOrders(p=>p.map(x=>x.id===po.id?{...x,...update}:x));
-    setSel(s=>s?{...s,...update}:null);
-  }
-
-  const statusColors={draft:'bb-gray',pending:'bb-yellow',ordered:'bb-blue',received:'bb-green',cancelled:'bb-red'};
-
-  return el('div',null,
-    el('div',{className:'ph'},
-      el('div',null,el('div',{className:'pt'},'Purchase Orders'),el('div',{className:'ps'},'Order materials from suppliers and track deliveries')),
-      el('button',{className:'btn b-blue',onClick:()=>setNew(true)},'+ New PO'),
-    ),
-    el('div',{className:'g4',style:{marginBottom:20}},
-      [{l:'Draft',v:purchaseOrders.filter(p=>p.status==='draft').length,c:'c-muted'},
-       {l:'Pending',v:purchaseOrders.filter(p=>p.status==='pending'||p.status==='ordered').length,c:'c-yellow'},
-       {l:'Received',v:purchaseOrders.filter(p=>p.status==='received').length,c:'c-green'},
-       {l:'Total Value',v:'$'+(purchaseOrders.filter(p=>p.status!=='cancelled').reduce((s,p)=>s+(p.subtotal||0),0)).toLocaleString(undefined,{minimumFractionDigits:0}),c:'c-blue'},
-      ].map(({l,v,c})=>el('div',{key:l,className:'stat'},el('div',{className:'sl'},l),el('div',{className:`sv ${c}`},v)))
-    ),
-    el('div',{className:'tabs'},
-      [{id:'all',label:'All'},{id:'draft',label:'Draft'},{id:'pending',label:'Pending'},{id:'ordered',label:'Ordered'},{id:'received',label:'Received'}].map(t=>
-        el('button',{key:t.id,className:`tab ${tab===t.id?'on':''}`,onClick:()=>setTab(t.id)},t.label)
-      )
-    ),
-    filtered.length===0?el('div',{className:'empty'},el('div',{className:'eico'},'🛒'),el('div',{className:'etxt'},'No purchase orders')):
-    el('div',{className:'card',style:{padding:0}},
-      el('div',{className:'tw'},
-        el('table',null,
-          el('thead',null,el('tr',null,['PO #','Supplier','Items','Total','Expected','Status',''].map(h=>el('th',{key:h},h)))),
-          el('tbody',null,filtered.map(po=>el('tr',{key:po.id},
-            el('td',null,el('span',{className:'mono tsm c-blue'},po.id.slice(-8))),
-            el('td',null,el('div',{className:'fw6 tsm'},po.supplier_name)),
-            el('td',null,el('span',{className:'tsm c-muted'},(po.items||[]).length+' items')),
-            el('td',null,el('span',{className:'tsm fw6'},'$'+(po.subtotal||0).toLocaleString())),
-            el('td',null,el('span',{className:'tsm c-muted'},po.expected_date||'—')),
-            el('td',null,el('span',{className:`badge ${statusColors[po.status]||'bb-gray'}`},po.status)),
-            el('td',null,el('button',{className:'btn b-ghost btn-sm',onClick:()=>setSel(po)},'View')),
-          )))
-        )
-      )
-    ),
-    showNew&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setNew(false)},
-      el('div',{className:'md',style:{width:660}},
-        el('div',{className:'mh'},el('div',{className:'mt2'},'New Purchase Order'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
-        el('div',{className:'mbd'},
-          el('div',{className:'g2'},
-            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Supplier'),el('select',{value:f.supplier_id,onChange:ev=>{const s=suppliers.find(x=>x.id===ev.target.value);setF(p=>({...p,supplier_id:ev.target.value,supplier_name:s?.name||''}));}},el('option',{value:''},'— Select Supplier —'),...suppliers.map(s=>el('option',{key:s.id,value:s.id},s.name)))),
-            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Expected Delivery'),el('input',{type:'date',value:f.expected_date,onChange:ev=>setF(p=>({...p,expected_date:ev.target.value}))})),
-          ),
-          el('div',{className:'fg',style:{marginTop:13}},el('label',null,'Location'),el('select',{value:f.loc,onChange:ev=>setF(p=>({...p,loc:ev.target.value}))},['All','Michigan','Missouri'].map(l=>el('option',{key:l,value:l},l)))),
-          el('div',{className:'divider'}),
-          el('div',{className:'fw6 mb4'},'Line Items'),
-          f.items.length>0&&el('div',{style:{marginBottom:12}},
-            f.items.map(item=>el('div',{key:item.id,style:{display:'flex',justifyContent:'space-between',alignItems:'center',background:'var(--surface2)',borderRadius:6,padding:'8px 12px',marginBottom:6}},
-              el('div',null,el('div',{className:'fw6 tsm'},item.name),item.sku&&el('div',{className:'tsm c-muted'},item.sku),el('div',{className:'tsm c-muted'},`${item.qty} ${item.unit} × $${item.unit_cost} = $${(item.qty*item.unit_cost).toFixed(2)}`)),
-              el('button',{className:'btn b-red btn-sm',onClick:()=>removeItem(item.id)},'×'),
-            ))
-          ),
-          el('div',{style:{background:'var(--bg)',borderRadius:8,padding:12,border:'1px solid var(--border)'}},
-            el('div',{className:'tsm fw6 mb2'},'Add Item:'),
-            el('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:8}},
-              el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Item Name'),el('input',{placeholder:'Material name',value:newItem.name,onChange:ev=>setNewItem(p=>({...p,name:ev.target.value}))})),
-              el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Inventory SKU'),el('input',{placeholder:'SKU (optional)',value:newItem.sku,onChange:ev=>setNewItem(p=>({...p,sku:ev.target.value}))})),
-            ),
-            el('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8}},
-              el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Qty'),el('input',{type:'number',value:newItem.qty,onChange:ev=>setNewItem(p=>({...p,qty:parseFloat(ev.target.value)||1}))})),
-              el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Unit'),el('select',{value:newItem.unit,onChange:ev=>setNewItem(p=>({...p,unit:ev.target.value}))},['pcs','g','kg','L','boxes','rolls'].map(u=>el('option',{key:u,value:u},u)))),
-              el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Unit Cost ($)'),el('input',{type:'number',step:'0.01',value:newItem.unit_cost,onChange:ev=>setNewItem(p=>({...p,unit_cost:parseFloat(ev.target.value)||0}))})),
-            ),
-            el('button',{className:'btn b-ghost',style:{marginTop:10},onClick:addItem,disabled:!newItem.name},'+ Add Item'),
-          ),
-          f.items.length>0&&el('div',{style:{textAlign:'right',marginTop:10}},el('span',{className:'fw6'},'Subtotal: '),el('span',{className:'fw6 c-blue'},'$'+f.items.reduce((s,i)=>s+(i.qty*i.unit_cost),0).toFixed(2))),
-          el('div',{className:'fg',style:{marginTop:13}},el('label',null,'Notes'),el('input',{placeholder:'Any notes for this PO...',value:f.notes,onChange:ev=>setF(p=>({...p,notes:ev.target.value}))})),
-        ),
-        el('div',{className:'mf'},el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),el('button',{className:'btn b-blue',onClick:create,disabled:saving||!f.supplier_name||f.items.length===0},saving?'Saving...':'Create PO')),
-      )
-    ),
-    sel&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setSel(null)},
-      el('div',{className:'md',style:{width:640}},
-        el('div',{className:'mh'},
-          el('div',{style:{flex:1}},el('div',{className:'flex aic g2x'},el('span',{className:'mono c-blue'},sel.id),el('span',{className:`badge ${statusColors[sel.status]||'bb-gray'}`},sel.status)),el('div',{className:'fw6',style:{marginTop:6}},sel.supplier_name)),
-          el('button',{className:'mc',onClick:()=>setSel(null)},'×'),
-        ),
-        el('div',{className:'mbd'},
-          el('div',{className:'g2 mb4'},[['Created By',sel.created_by],['Created',sel.created_at?.slice(0,10)],['Expected',sel.expected_date||'—'],['Received',sel.received_date||'—']].map(([k,v])=>el('div',{key:k},el('div',{className:'tsm c-muted mb2'},k),el('div',{className:'fw6 tsm'},v||'—')))),
-          el('div',{className:'divider'}),
-          el('div',{className:'fw6 mb4'},'Line Items'),
-          (sel.items||[]).map((item,i)=>el('div',{key:i,style:{display:'flex',justifyContent:'space-between',padding:'8px 0',borderBottom:'1px solid var(--border)'}},
-            el('div',null,el('div',{className:'fw6 tsm'},item.name),item.sku&&el('div',{className:'tsm c-muted'},item.sku)),
-            el('div',{style:{textAlign:'right'}},el('div',{className:'tsm'},`${item.qty} ${item.unit} × $${item.unit_cost}`),el('div',{className:'fw6 tsm c-blue'},'$'+(item.qty*item.unit_cost).toFixed(2))),
-          )),
-          el('div',{style:{display:'flex',justifyContent:'flex-end',marginTop:10}},el('div',{className:'fw6'},'Total: '),el('div',{className:'fw6 c-blue',style:{marginLeft:8}},'$'+(sel.subtotal||0).toFixed(2))),
-          sel.notes&&el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:12,marginTop:12}},el('div',{className:'tsm c-muted mb2'},'Notes'),el('div',{className:'tsm'},sel.notes)),
-        ),
-        el('div',{className:'mf',style:{justifyContent:'space-between'}},
-          el('div',{style:{display:'flex',gap:8}},
-            sel.status==='draft'&&el('button',{className:'btn b-yellow',onClick:()=>updateStatus(sel,'ordered')},'📤 Mark as Ordered'),
-            sel.status==='ordered'&&el('button',{className:'btn b-green',onClick:()=>updateStatus(sel,'received')},'📥 Mark as Received'),
-            (sel.status==='draft'||sel.status==='ordered')&&el('button',{className:'btn b-red',onClick:()=>updateStatus(sel,'cancelled')},'Cancel PO'),
-          ),
-          el('button',{className:'btn b-ghost',onClick:()=>setSel(null)},'Close'),
-        ),
-      )
-    ),
-  );
-}
-
-// ── PRODUCTION PLAN ───────────────────────────────────────────────────────────
-function ProductionPlan({productionPlans,setProductionPlans,wos,cu,users,locFilter}){
-  const[showNew,setNew]=useState(false);
-  const[sel,setSel]=useState(null);
-  const[f,setF]=useState({title:'',week_start:'',notes:'',loc:'All',items:[]});
-  const[newItem,setNewItem]=useState({product:'Cartridge',sku:'',qty:0,assigned_to:'',day:'Monday'});
-  const[saving,setSaving]=useState(false);
-  const DAYS=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-
-  const filtered=locFilter&&locFilter!=='All'?productionPlans.filter(p=>!p.loc||p.loc===locFilter||p.loc==='All'):productionPlans;
-
-  function addItem(){
-    if(!newItem.sku||!newItem.qty)return;
-    setF(p=>({...p,items:[...p.items,{...newItem,id:'pp-'+Date.now()}]}));
-    setNewItem({product:'Cartridge',sku:'',qty:0,assigned_to:'',day:'Monday'});
-  }
-
-  async function create(){
-    if(!f.title||f.items.length===0)return;
-    setSaving(true);
-    const plan={id:'PLAN-'+Date.now(),...f,status:'draft',created_by:cu.name,created_at:new Date().toISOString(),updated_at:new Date().toISOString()};
-    try{await db.insert('pf_production_plans',plan);}catch(e){console.error(e);}
-    setProductionPlans(p=>[plan,...p]);
-    setF({title:'',week_start:'',notes:'',loc:'All',items:[]});
-    setNew(false);setSaving(false);
-  }
-
-  return el('div',null,
-    el('div',{className:'ph'},
-      el('div',null,el('div',{className:'pt'},'Production Planning'),el('div',{className:'ps'},'Schedule weekly production runs by product, SKU and day')),
-      el('button',{className:'btn b-blue',onClick:()=>setNew(true)},'+ New Plan'),
-    ),
-    el('div',{className:'g4',style:{marginBottom:20}},
-      [{l:'This Week',v:filtered.filter(p=>p.status==='active').length,c:'c-blue'},
-       {l:'Draft',v:filtered.filter(p=>p.status==='draft').length,c:'c-muted'},
-       {l:'Completed',v:filtered.filter(p=>p.status==='completed').length,c:'c-green'},
-       {l:'Total Planned Units',v:filtered.flatMap(p=>p.items||[]).reduce((s,i)=>s+(i.qty||0),0).toLocaleString(),c:'c-blue'},
-      ].map(({l,v,c})=>el('div',{key:l,className:'stat'},el('div',{className:'sl'},l),el('div',{className:`sv ${c}`},v)))
-    ),
-    filtered.length===0?el('div',{className:'empty'},el('div',{className:'eico'},'📅'),el('div',{className:'etxt'},'No production plans')):
-    filtered.map(plan=>el('div',{key:plan.id,className:'card',style:{marginBottom:14}},
-      el('div',{className:'flex aic',style:{justifyContent:'space-between',marginBottom:12}},
-        el('div',null,
-          el('div',{className:'fw6'},plan.title),
-          el('div',{className:'tsm c-muted'},`Week of ${plan.week_start||'—'} · ${(plan.items||[]).length} batches · ${(plan.items||[]).reduce((s,i)=>s+(i.qty||0),0).toLocaleString()} units`),
-        ),
-        el('div',{style:{display:'flex',gap:8,alignItems:'center'}},
-          el('span',{className:`badge ${plan.status==='active'?'bb-blue':plan.status==='completed'?'bb-green':'bb-gray'}`},plan.status),
-          el('button',{className:'btn b-ghost btn-sm',onClick:()=>setSel(plan)},'View'),
-          cu.role==='admin'&&plan.status==='draft'&&el('button',{className:'btn b-blue btn-sm',onClick:async()=>{const u={status:'active',updated_at:new Date().toISOString()};await db.update('pf_production_plans',plan.id,u).catch(console.error);setProductionPlans(p=>p.map(x=>x.id===plan.id?{...x,...u}:x));}},'Activate'),
-        ),
-      ),
-      el('div',{style:{overflowX:'auto'}},
-        el('div',{style:{display:'grid',gridTemplateColumns:'repeat(6,1fr)',gap:8,minWidth:600}},
-          DAYS.map(day=>el('div',{key:day,style:{background:'var(--surface2)',borderRadius:8,padding:10}},
-            el('div',{className:'tsm fw6 c-muted mb2',style:{textTransform:'uppercase',letterSpacing:'0.5px',fontSize:10}},day),
-            (plan.items||[]).filter(i=>i.day===day).map(item=>el('div',{key:item.id,style:{background:'var(--surface)',borderRadius:6,padding:'7px 9px',marginBottom:6,fontSize:12}},
-              el('div',{className:'fw6'},item.sku),
-              el('div',{className:'tsm c-muted'},item.product),
-              el('div',{className:'tsm c-blue fw6'},item.qty?.toLocaleString()+' units'),
-              item.assigned_to&&el('div',{className:'tsm c-muted'},'👤 '+item.assigned_to),
-            )),
-            (plan.items||[]).filter(i=>i.day===day).length===0&&el('div',{className:'tsm c-muted',style:{fontStyle:'italic'}},'—'),
-          ))
-        )
-      )
-    )),
-    showNew&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setNew(false)},
-      el('div',{className:'md',style:{width:680}},
-        el('div',{className:'mh'},el('div',{className:'mt2'},'New Production Plan'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
-        el('div',{className:'mbd'},
-          el('div',{className:'g2'},
-            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Plan Title'),el('input',{placeholder:'e.g. Week 23 Michigan Production',value:f.title,onChange:ev=>setF(p=>({...p,title:ev.target.value}))})),
-            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Week Starting'),el('input',{type:'date',value:f.week_start,onChange:ev=>setF(p=>({...p,week_start:ev.target.value}))})),
-          ),
-          el('div',{className:'fg',style:{marginTop:13}},el('label',null,'Location'),el('select',{value:f.loc,onChange:ev=>setF(p=>({...p,loc:ev.target.value}))},['All','Michigan','Missouri'].map(l=>el('option',{key:l,value:l},l)))),
-          el('div',{className:'divider'}),
-          el('div',{className:'fw6 mb4'},'Schedule Batches'),
-          f.items.length>0&&el('div',{style:{marginBottom:12}},
-            f.items.map(item=>el('div',{key:item.id,style:{display:'flex',justifyContent:'space-between',alignItems:'center',background:'var(--surface2)',borderRadius:6,padding:'8px 12px',marginBottom:6}},
-              el('div',null,el('span',{className:'badge bb-gray',style:{marginRight:8}},item.day),el('span',{className:'fw6 tsm'},item.sku),el('span',{className:'tsm c-muted',style:{marginLeft:8}},item.product+' · '+item.qty?.toLocaleString()+' units'+(item.assigned_to?' · '+item.assigned_to:''))),
-              el('button',{className:'btn b-red btn-sm',onClick:()=>setF(p=>({...p,items:p.items.filter(i=>i.id!==item.id)}))},'×'),
-            ))
-          ),
-          el('div',{style:{background:'var(--bg)',borderRadius:8,padding:12,border:'1px solid var(--border)'}},
-            el('div',{className:'tsm fw6 mb2'},'Add Batch:'),
-            el('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,marginBottom:8}},
-              el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Day'),el('select',{value:newItem.day,onChange:ev=>setNewItem(p=>({...p,day:ev.target.value}))},DAYS.map(d=>el('option',{key:d,value:d},d)))),
-              el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Product'),el('select',{value:newItem.product,onChange:ev=>setNewItem(p=>({...p,product:ev.target.value}))},['Gummy','Cartridge','Pre-Roll'].map(x=>el('option',{key:x,value:x},x)))),
-              el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Qty (units)'),el('input',{type:'number',placeholder:'5000',value:newItem.qty||'',onChange:ev=>setNewItem(p=>({...p,qty:parseInt(ev.target.value)||0}))})),
-            ),
-            el('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}},
-              el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'SKU / Flavor'),el('input',{placeholder:'e.g. 2G-DAIO-HBB',value:newItem.sku,onChange:ev=>setNewItem(p=>({...p,sku:ev.target.value}))})),
-              el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Assign To'),el('select',{value:newItem.assigned_to,onChange:ev=>setNewItem(p=>({...p,assigned_to:ev.target.value}))},el('option',{value:''},'— Unassigned —'),...users.filter(u=>u.approved).map(u=>el('option',{key:u.id,value:u.name},u.name)))),
-            ),
-            el('button',{className:'btn b-ghost',style:{marginTop:10},onClick:addItem,disabled:!newItem.sku||!newItem.qty},'+ Add to Schedule'),
-          ),
-        ),
-        el('div',{className:'mf'},el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),el('button',{className:'btn b-blue',onClick:create,disabled:saving||!f.title||f.items.length===0},saving?'Saving...':'Create Plan')),
-      )
-    ),
-    sel&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setSel(null)},
-      el('div',{className:'md',style:{width:700}},
-        el('div',{className:'mh'},el('div',{className:'mt2'},sel.title),el('button',{className:'mc',onClick:()=>setSel(null)},'×')),
-        el('div',{className:'mbd'},
-          el('div',{style:{overflowX:'auto'}},
-            el('div',{style:{display:'grid',gridTemplateColumns:'repeat(6,1fr)',gap:8,minWidth:600}},
-              DAYS.map(day=>el('div',{key:day,style:{background:'var(--surface2)',borderRadius:8,padding:10}},
-                el('div',{className:'tsm fw6 c-muted mb2',style:{textTransform:'uppercase',letterSpacing:'0.5px',fontSize:10}},day),
-                (sel.items||[]).filter(i=>i.day===day).map(item=>el('div',{key:item.id,style:{background:'var(--surface)',borderRadius:6,padding:'7px 9px',marginBottom:6,fontSize:12}},
-                  el('div',{className:'fw6'},item.sku),el('div',{className:'tsm c-muted'},item.product),el('div',{className:'tsm c-blue fw6'},item.qty?.toLocaleString()+' units'),item.assigned_to&&el('div',{className:'tsm c-muted'},'👤 '+item.assigned_to),
-                )),
-                (sel.items||[]).filter(i=>i.day===day).length===0&&el('div',{className:'tsm c-muted',style:{fontStyle:'italic'}},'—'),
-              ))
-            )
-          )
-        ),
-        el('div',{className:'mf'},el('button',{className:'btn b-ghost',onClick:()=>setSel(null)},'Close')),
-      )
-    ),
-  );
-}
-
-// ── CUSTOMERS ─────────────────────────────────────────────────────────────────
-function Customers({customers,setCustomers,salesOrders,cu}){
-  const[showNew,setNew]=useState(false);
-  const[f,setF]=useState({name:'',contact:'',email:'',phone:'',address:'',state:'',license:'',status:'active',notes:''});
-  const[saving,setSaving]=useState(false);
-
-  async function create(){
-    if(!f.name)return;
-    setSaving(true);
-    const cust={id:'CUST-'+Date.now(),...f,created_at:new Date().toISOString()};
-    try{await db.insert('pf_customers',cust);}catch(e){console.error(e);}
-    setCustomers(p=>[cust,...p]);
-    setF({name:'',contact:'',email:'',phone:'',address:'',state:'',license:'',status:'active',notes:''});
-    setNew(false);setSaving(false);
-  }
-
-  return el('div',null,
-    el('div',{className:'ph'},
-      el('div',null,el('div',{className:'pt'},'Customers'),el('div',{className:'ps'},'Customer accounts and order history')),
-      el('button',{className:'btn b-blue',onClick:()=>setNew(true)},'+ Add Customer'),
-    ),
-    el('div',{className:'g4',style:{marginBottom:20}},
-      [{l:'Active',v:customers.filter(c=>c.status==='active').length,c:'c-green'},
-       {l:'Total Orders',v:salesOrders.length,c:'c-blue'},
-       {l:'Pending Orders',v:salesOrders.filter(s=>s.status==='pending').length,c:'c-yellow'},
-       {l:'Total',v:customers.length,c:'c-muted'},
-      ].map(({l,v,c})=>el('div',{key:l,className:'stat'},el('div',{className:'sl'},l),el('div',{className:`sv ${c}`},v)))
-    ),
-    customers.length===0?el('div',{className:'empty'},el('div',{className:'eico'},'🤝'),el('div',{className:'etxt'},'No customers yet')):
-    el('div',{className:'card',style:{padding:0}},
-      el('div',{className:'tw'},
-        el('table',null,
-          el('thead',null,el('tr',null,['Customer','Contact','Email','State','License','Orders','Status',''].map(h=>el('th',{key:h},h)))),
-          el('tbody',null,customers.map(c=>el('tr',{key:c.id},
-            el('td',null,el('div',{className:'fw6 tsm'},c.name)),
-            el('td',null,el('span',{className:'tsm c-muted'},c.contact||'—')),
-            el('td',null,el('span',{className:'tsm c-muted'},c.email||'—')),
-            el('td',null,el('span',{className:'tsm c-muted'},c.state||'—')),
-            el('td',null,el('span',{className:'tsm c-muted'},c.license||'—')),
-            el('td',null,el('span',{className:'tsm c-blue fw6'},salesOrders.filter(s=>s.customer_id===c.id).length)),
-            el('td',null,el('span',{className:`badge ${c.status==='active'?'bb-green':'bb-gray'}`},c.status)),
-            el('td',null,el('button',{className:'btn b-ghost btn-sm',onClick:async()=>{if(!window.confirm('Remove customer?'))return;await db.remove('pf_customers',c.id).catch(console.error);setCustomers(p=>p.filter(x=>x.id!==c.id));}},'Remove')),
-          )))
-        )
-      )
-    ),
-    showNew&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setNew(false)},
-      el('div',{className:'md'},
-        el('div',{className:'mh'},el('div',{className:'mt2'},'Add Customer'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
-        el('div',{className:'mbd'},
-          el('div',{className:'fg'},el('label',null,'Company Name'),el('input',{placeholder:'Customer company name',value:f.name,onChange:ev=>setF(p=>({...p,name:ev.target.value}))})),
-          el('div',{className:'g2'},el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Contact Name'),el('input',{placeholder:'Primary contact',value:f.contact,onChange:ev=>setF(p=>({...p,contact:ev.target.value}))})),el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Email'),el('input',{type:'email',value:f.email,onChange:ev=>setF(p=>({...p,email:ev.target.value}))}))),
-          el('div',{className:'g2',style:{marginTop:13}},el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Phone'),el('input',{value:f.phone,onChange:ev=>setF(p=>({...p,phone:ev.target.value}))})),el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'State'),el('input',{placeholder:'MI / MO',value:f.state,onChange:ev=>setF(p=>({...p,state:ev.target.value}))}))),
-          el('div',{className:'g2',style:{marginTop:13}},el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'License #'),el('input',{placeholder:'State license number',value:f.license,onChange:ev=>setF(p=>({...p,license:ev.target.value}))})),el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Address'),el('input',{value:f.address,onChange:ev=>setF(p=>({...p,address:ev.target.value}))}))),
-        ),
-        el('div',{className:'mf'},el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),el('button',{className:'btn b-blue',onClick:create,disabled:saving||!f.name},saving?'Saving...':'Add Customer')),
-      )
-    ),
-  );
-}
-
-// ── SALES ORDERS ──────────────────────────────────────────────────────────────
-function SalesOrders({salesOrders,setSalesOrders,customers,inv,setInv,cu,locFilter}){
-  const[showNew,setNew]=useState(false);
-  const[sel,setSel]=useState(null);
-  const[tab,setTab]=useState('all');
-  const[f,setF]=useState({customer_id:'',customer_name:'',due_date:'',notes:'',loc:'All',items:[]});
-  const[newItem,setNewItem]=useState({sku:'',name:'',qty:1,unit:'pcs',unit_price:0});
-  const[saving,setSaving]=useState(false);
-
-  const filtered=(locFilter&&locFilter!=='All'?salesOrders.filter(s=>!s.loc||s.loc===locFilter||s.loc==='All'):salesOrders).filter(s=>tab==='all'?true:s.status===tab);
-
-  function addItem(){
-    if(!newItem.name||!newItem.qty)return;
-    setF(p=>({...p,items:[...p.items,{...newItem,id:'si-'+Date.now(),total:newItem.qty*newItem.unit_price}]}));
-    setNewItem({sku:'',name:'',qty:1,unit:'pcs',unit_price:0});
-  }
-
-  async function create(){
-    if(!f.customer_name||f.items.length===0)return;
-    setSaving(true);
-    const subtotal=f.items.reduce((s,i)=>s+(i.qty*i.unit_price),0);
-    const so={id:'SO-'+Date.now(),...f,subtotal,status:'pending',created_by:cu.name,created_at:new Date().toISOString(),updated_at:new Date().toISOString()};
-    try{await db.insert('pf_sales_orders',so);}catch(e){console.error(e);}
-    setSalesOrders(p=>[so,...p]);
-    setF({customer_id:'',customer_name:'',due_date:'',notes:'',loc:'All',items:[]});
-    setNew(false);setSaving(false);
-  }
-
-  async function fulfill(so){
-    const update={status:'fulfilled',fulfilled_date:new Date().toISOString().slice(0,10),updated_at:new Date().toISOString()};
-    try{await db.update('pf_sales_orders',so.id,update);}catch(e){console.error(e);}
-    setSalesOrders(p=>p.map(s=>s.id===so.id?{...s,...update}:s));
-    setSel(s=>s?{...s,...update}:null);
-  }
-
-  const statusColors={pending:'bb-yellow',confirmed:'bb-blue',fulfilled:'bb-green',cancelled:'bb-red'};
-
-  return el('div',null,
-    el('div',{className:'ph'},
-      el('div',null,el('div',{className:'pt'},'Sales Orders'),el('div',{className:'ps'},'Customer orders and fulfillment tracking')),
-      el('button',{className:'btn b-blue',onClick:()=>setNew(true)},'+ New Order'),
-    ),
-    el('div',{className:'g4',style:{marginBottom:20}},
-      [{l:'Pending',v:salesOrders.filter(s=>s.status==='pending').length,c:'c-yellow'},
-       {l:'Fulfilled',v:salesOrders.filter(s=>s.status==='fulfilled').length,c:'c-green'},
-       {l:'Revenue',v:'$'+salesOrders.filter(s=>s.status==='fulfilled').reduce((s,o)=>s+(o.subtotal||0),0).toLocaleString(undefined,{minimumFractionDigits:0}),c:'c-blue'},
-       {l:'Total Orders',v:salesOrders.length,c:'c-muted'},
-      ].map(({l,v,c})=>el('div',{key:l,className:'stat'},el('div',{className:'sl'},l),el('div',{className:`sv ${c}`},v)))
-    ),
-    el('div',{className:'tabs'},
-      [{id:'all',label:'All'},{id:'pending',label:'Pending'},{id:'confirmed',label:'Confirmed'},{id:'fulfilled',label:'Fulfilled'}].map(t=>
-        el('button',{key:t.id,className:`tab ${tab===t.id?'on':''}`,onClick:()=>setTab(t.id)},t.label)
-      )
-    ),
-    filtered.length===0?el('div',{className:'empty'},el('div',{className:'eico'},'📦'),el('div',{className:'etxt'},'No sales orders')):
-    el('div',{className:'card',style:{padding:0}},
-      el('div',{className:'tw'},
-        el('table',null,
-          el('thead',null,el('tr',null,['SO #','Customer','Items','Total','Due Date','Status',''].map(h=>el('th',{key:h},h)))),
-          el('tbody',null,filtered.map(so=>el('tr',{key:so.id},
-            el('td',null,el('span',{className:'mono tsm c-blue'},so.id.slice(-8))),
-            el('td',null,el('div',{className:'fw6 tsm'},so.customer_name)),
-            el('td',null,el('span',{className:'tsm c-muted'},(so.items||[]).length+' items')),
-            el('td',null,el('span',{className:'tsm fw6'},'$'+(so.subtotal||0).toLocaleString())),
-            el('td',null,el('span',{className:'tsm c-muted'},so.due_date||'—')),
-            el('td',null,el('span',{className:`badge ${statusColors[so.status]||'bb-gray'}`},so.status)),
-            el('td',null,el('button',{className:'btn b-ghost btn-sm',onClick:()=>setSel(so)},'View')),
-          )))
-        )
-      )
-    ),
-    showNew&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setNew(false)},
-      el('div',{className:'md',style:{width:640}},
-        el('div',{className:'mh'},el('div',{className:'mt2'},'New Sales Order'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
-        el('div',{className:'mbd'},
-          el('div',{className:'g2'},
-            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Customer'),el('select',{value:f.customer_id,onChange:ev=>{const c=customers.find(x=>x.id===ev.target.value);setF(p=>({...p,customer_id:ev.target.value,customer_name:c?.name||''}));}},el('option',{value:''},'— Select Customer —'),...customers.map(c=>el('option',{key:c.id,value:c.id},c.name)))),
-            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Due Date'),el('input',{type:'date',value:f.due_date,onChange:ev=>setF(p=>({...p,due_date:ev.target.value}))})),
-          ),
-          el('div',{className:'fg',style:{marginTop:13}},el('label',null,'Location'),el('select',{value:f.loc,onChange:ev=>setF(p=>({...p,loc:ev.target.value}))},['All','Michigan','Missouri'].map(l=>el('option',{key:l,value:l},l)))),
-          el('div',{className:'divider'}),
-          el('div',{className:'fw6 mb4'},'Order Items'),
-          f.items.length>0&&el('div',{style:{marginBottom:12}},
-            f.items.map(item=>el('div',{key:item.id,style:{display:'flex',justifyContent:'space-between',alignItems:'center',background:'var(--surface2)',borderRadius:6,padding:'8px 12px',marginBottom:6}},
-              el('div',null,el('div',{className:'fw6 tsm'},item.name),item.sku&&el('div',{className:'tsm c-muted'},item.sku),el('div',{className:'tsm c-muted'},`${item.qty} × $${item.unit_price} = $${(item.qty*item.unit_price).toFixed(2)}`)),
-              el('button',{className:'btn b-red btn-sm',onClick:()=>setF(p=>({...p,items:p.items.filter(i=>i.id!==item.id)}))},'×'),
-            ))
-          ),
-          el('div',{style:{background:'var(--bg)',borderRadius:8,padding:12,border:'1px solid var(--border)'}},
-            el('div',{className:'tsm fw6 mb2'},'Add Item:'),
-            el('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:8}},
-              el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Product Name'),el('input',{placeholder:'SKU or product name',value:newItem.name,onChange:ev=>setNewItem(p=>({...p,name:ev.target.value}))})),
-              el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'SKU'),el('input',{placeholder:'SKU',value:newItem.sku,onChange:ev=>setNewItem(p=>({...p,sku:ev.target.value}))})),
-            ),
-            el('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8}},
-              el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Qty'),el('input',{type:'number',value:newItem.qty,onChange:ev=>setNewItem(p=>({...p,qty:parseInt(ev.target.value)||1}))})),
-              el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Unit'),el('select',{value:newItem.unit,onChange:ev=>setNewItem(p=>({...p,unit:ev.target.value}))},['pcs','cases','boxes'].map(u=>el('option',{key:u,value:u},u)))),
-              el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Unit Price ($)'),el('input',{type:'number',step:'0.01',value:newItem.unit_price,onChange:ev=>setNewItem(p=>({...p,unit_price:parseFloat(ev.target.value)||0}))})),
-            ),
-            el('button',{className:'btn b-ghost',style:{marginTop:10},onClick:addItem,disabled:!newItem.name},'+ Add Item'),
-          ),
-          f.items.length>0&&el('div',{style:{textAlign:'right',marginTop:10}},el('span',{className:'fw6'},'Total: '),el('span',{className:'fw6 c-blue'},'$'+f.items.reduce((s,i)=>s+(i.qty*i.unit_price),0).toFixed(2))),
-        ),
-        el('div',{className:'mf'},el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),el('button',{className:'btn b-blue',onClick:create,disabled:saving||!f.customer_name||f.items.length===0},saving?'Saving...':'Create Order')),
-      )
-    ),
-    sel&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setSel(null)},
-      el('div',{className:'md',style:{width:600}},
-        el('div',{className:'mh'},el('div',{style:{flex:1}},el('div',{className:'flex aic g2x'},el('span',{className:'mono c-blue'},sel.id),el('span',{className:`badge ${statusColors[sel.status]||'bb-gray'}`},sel.status)),el('div',{className:'fw6',style:{marginTop:6}},sel.customer_name)),el('button',{className:'mc',onClick:()=>setSel(null)},'×')),
-        el('div',{className:'mbd'},
-          el('div',{className:'g2 mb4'},[['Created By',sel.created_by],['Created',sel.created_at?.slice(0,10)],['Due Date',sel.due_date||'—'],['Fulfilled',sel.fulfilled_date||'—']].map(([k,v])=>el('div',{key:k},el('div',{className:'tsm c-muted mb2'},k),el('div',{className:'fw6 tsm'},v||'—')))),
-          el('div',{className:'divider'}),
-          (sel.items||[]).map((item,i)=>el('div',{key:i,style:{display:'flex',justifyContent:'space-between',padding:'8px 0',borderBottom:'1px solid var(--border)'}},
-            el('div',null,el('div',{className:'fw6 tsm'},item.name),item.sku&&el('div',{className:'tsm c-muted'},item.sku)),
-            el('div',{style:{textAlign:'right'}},el('div',{className:'tsm'},`${item.qty} × $${item.unit_price}`),el('div',{className:'fw6 tsm c-blue'},'$'+(item.qty*item.unit_price).toFixed(2))),
-          )),
-          el('div',{style:{display:'flex',justifyContent:'flex-end',marginTop:10}},el('div',{className:'fw6'},'Total: '),el('div',{className:'fw6 c-blue',style:{marginLeft:8}},'$'+(sel.subtotal||0).toFixed(2))),
-        ),
-        el('div',{className:'mf',style:{justifyContent:'space-between'}},
-          el('div',{style:{display:'flex',gap:8}},
-            sel.status==='pending'&&el('button',{className:'btn b-blue',onClick:async()=>{const u={status:'confirmed',updated_at:new Date().toISOString()};await db.update('pf_sales_orders',sel.id,u).catch(console.error);setSalesOrders(p=>p.map(s=>s.id===sel.id?{...s,...u}:s));setSel(s=>({...s,...u}));}},'Confirm'),
-            sel.status==='confirmed'&&el('button',{className:'btn b-green',onClick:()=>fulfill(sel)},'Mark Fulfilled'),
-            (sel.status==='pending'||sel.status==='confirmed')&&el('button',{className:'btn b-red',onClick:async()=>{const u={status:'cancelled',updated_at:new Date().toISOString()};await db.update('pf_sales_orders',sel.id,u).catch(console.error);setSalesOrders(p=>p.map(s=>s.id===sel.id?{...s,...u}:s));setSel(s=>({...s,...u}));}},'Cancel'),
-          ),
-          el('button',{className:'btn b-ghost',onClick:()=>setSel(null)},'Close'),
-        ),
-      )
-    ),
-  );
-}
-
-// ── HR ────────────────────────────────────────────────────────────────────────
-function HR({employees,setEmployees,users,cu,locFilter}){
-  const[showNew,setNew]=useState(false);
-  const[sel,setSel]=useState(null);
-  const[f,setF]=useState({user_id:'',name:'',email:'',dept:'',loc:'All',position:'',hire_date:'',phone:'',emergency_contact:'',notes:''});
-  const[saving,setSaving]=useState(false);
-
-  const filtered=locFilter&&locFilter!=='All'?employees.filter(e=>!e.loc||e.loc===locFilter||e.loc==='All'):employees;
-
-  async function create(){
-    if(!f.name)return;
-    setSaving(true);
-    const emp={id:'EMP-'+Date.now(),...f,status:'active',created_at:new Date().toISOString()};
-    try{await db.insert('pf_employees',emp);}catch(e){console.error(e);}
-    setEmployees(p=>[emp,...p]);
-    setF({user_id:'',name:'',email:'',dept:'',loc:'All',position:'',hire_date:'',phone:'',emergency_contact:'',notes:''});
-    setNew(false);setSaving(false);
-  }
-
-  return el('div',null,
-    el('div',{className:'ph'},
-      el('div',null,el('div',{className:'pt'},'HR & Employees'),el('div',{className:'ps'},'Employee records, positions and contact information')),
-      el('button',{className:'btn b-blue',onClick:()=>setNew(true)},'+ Add Employee'),
-    ),
-    el('div',{className:'g4',style:{marginBottom:20}},
-      [{l:'Active',v:filtered.filter(e=>e.status==='active').length,c:'c-green'},
-       {l:'Michigan',v:filtered.filter(e=>e.loc==='Michigan').length,c:'c-blue'},
-       {l:'Missouri',v:filtered.filter(e=>e.loc==='Missouri').length,c:'c-yellow'},
-       {l:'Total',v:filtered.length,c:'c-muted'},
-      ].map(({l,v,c})=>el('div',{key:l,className:'stat'},el('div',{className:'sl'},l),el('div',{className:`sv ${c}`},v)))
-    ),
-    filtered.length===0?el('div',{className:'empty'},el('div',{className:'eico'},'👤'),el('div',{className:'etxt'},'No employees added')):
-    el('div',{className:'card',style:{padding:0}},
-      el('div',{className:'tw'},
-        el('table',null,
-          el('thead',null,el('tr',null,['Name','Position','Department','Location','Hire Date','Phone','Status',''].map(h=>el('th',{key:h},h)))),
-          el('tbody',null,filtered.map(emp=>el('tr',{key:emp.id},
-            el('td',null,el('div',{className:'fw6 tsm'},emp.name),emp.email&&el('div',{className:'tsm c-muted'},emp.email)),
-            el('td',null,el('span',{className:'tsm'},emp.position||'—')),
-            el('td',null,el('span',{className:'badge bb-gray'},emp.dept||'—')),
-            el('td',null,el('span',{className:'tsm c-muted'},emp.loc||'—')),
-            el('td',null,el('span',{className:'tsm c-muted'},emp.hire_date||'—')),
-            el('td',null,el('span',{className:'tsm c-muted'},emp.phone||'—')),
-            el('td',null,el('span',{className:`badge ${emp.status==='active'?'bb-green':'bb-gray'}`},emp.status)),
-            el('td',null,el('button',{className:'btn b-ghost btn-sm',onClick:()=>setSel(emp)},'View')),
-          )))
-        )
-      )
-    ),
-    showNew&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setNew(false)},
-      el('div',{className:'md'},
-        el('div',{className:'mh'},el('div',{className:'mt2'},'Add Employee'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
-        el('div',{className:'mbd'},
-          el('div',{className:'fg'},el('label',null,'Link to App User (optional)'),el('select',{value:f.user_id,onChange:ev=>{const u=users.find(x=>x.id===ev.target.value);setF(p=>({...p,user_id:ev.target.value,name:u?.name||p.name,email:u?.email||p.email,dept:u?.dept||p.dept,loc:u?.loc||p.loc}));}},el('option',{value:''},'— Select User —'),...users.filter(u=>u.approved).map(u=>el('option',{key:u.id,value:u.id},`${u.name} (${u.dept})`)))),
-          el('div',{className:'g2'},el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Full Name'),el('input',{value:f.name,onChange:ev=>setF(p=>({...p,name:ev.target.value}))})),el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Position/Title'),el('input',{placeholder:'e.g. Lead Filler, QC Tech',value:f.position,onChange:ev=>setF(p=>({...p,position:ev.target.value}))}))),
-          el('div',{className:'g2',style:{marginTop:13}},el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Department'),el('select',{value:f.dept,onChange:ev=>setF(p=>({...p,dept:ev.target.value}))},['','Gummy','Cartridge','Pre-Roll','QC','Distribution','Warehouse'].map(d=>el('option',{key:d,value:d},d||'— Select —')))),el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Location'),el('select',{value:f.loc,onChange:ev=>setF(p=>({...p,loc:ev.target.value}))},['All','Michigan','Missouri'].map(l=>el('option',{key:l,value:l},l))))),
-          el('div',{className:'g2',style:{marginTop:13}},el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Hire Date'),el('input',{type:'date',value:f.hire_date,onChange:ev=>setF(p=>({...p,hire_date:ev.target.value}))})),el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Phone'),el('input',{placeholder:'Phone number',value:f.phone,onChange:ev=>setF(p=>({...p,phone:ev.target.value}))}))),
-          el('div',{className:'fg',style:{marginTop:13}},el('label',null,'Emergency Contact'),el('input',{placeholder:'Name and phone number',value:f.emergency_contact,onChange:ev=>setF(p=>({...p,emergency_contact:ev.target.value}))})),
-          el('div',{className:'fg'},el('label',null,'Notes'),el('textarea',{placeholder:'Any notes...',value:f.notes,onChange:ev=>setF(p=>({...p,notes:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:60,resize:'vertical'}})),
-        ),
-        el('div',{className:'mf'},el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),el('button',{className:'btn b-blue',onClick:create,disabled:saving||!f.name},saving?'Saving...':'Add Employee')),
-      )
-    ),
-    sel&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setSel(null)},
-      el('div',{className:'md'},
-        el('div',{className:'mh'},el('div',{style:{flex:1}},el('div',{className:'mt2'},sel.name),el('div',{className:'tsm c-muted mt1'},sel.position+(sel.dept?' · '+sel.dept:''))),el('button',{className:'mc',onClick:()=>setSel(null)},'×')),
-        el('div',{className:'mbd'},
-          el('div',{className:'g2 mb4'},[['Location',sel.loc],['Hire Date',sel.hire_date||'—'],['Email',sel.email||'—'],['Phone',sel.phone||'—'],['Emergency Contact',sel.emergency_contact||'—'],['Status',sel.status]].map(([k,v])=>el('div',{key:k},el('div',{className:'tsm c-muted mb2'},k),el('div',{className:'fw6 tsm'},v||'—')))),
-          sel.notes&&el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:12}},el('div',{className:'tsm c-muted mb2'},'Notes'),el('div',{className:'tsm'},sel.notes)),
-        ),
-        el('div',{className:'mf',style:{justifyContent:'space-between'}},
-          el('div',null,
-            sel.status==='active'&&el('button',{className:'btn b-red',onClick:async()=>{await db.update('pf_employees',sel.id,{status:'inactive'}).catch(console.error);setEmployees(p=>p.map(e=>e.id===sel.id?{...e,status:'inactive'}:e));setSel(s=>({...s,status:'inactive'}));}},'Deactivate'),
-          ),
-          el('button',{className:'btn b-ghost',onClick:()=>setSel(null)},'Close'),
-        ),
-      )
-    ),
-  );
-}
-
-// ── ANALYTICS ─────────────────────────────────────────────────────────────────
-function Analytics({wos,inv,purchaseOrders,salesOrders,capas,ncrs,inspections,cu,locFilter}){
-  const filtWos=locFilter&&locFilter!=='All'?wos.filter(w=>w.loc===locFilter):wos;
-  const filtSO=locFilter&&locFilter!=='All'?salesOrders.filter(s=>!s.loc||s.loc===locFilter||s.loc==='All'):salesOrders;
-  const filtPO=locFilter&&locFilter!=='All'?purchaseOrders.filter(p=>!p.loc||p.loc===locFilter||p.loc==='All'):purchaseOrders;
-
-  const completedWos=filtWos.filter(w=>w.status==='completed');
-  const totalUnitsProduced=completedWos.reduce((s,w)=>s+(w.qty||0),0);
-  const totalWaste=completedWos.reduce((s,w)=>s+Object.values(w.stage_wastes||{}).reduce((a,v)=>a+(v.waste||0),0),0);
-  const yieldRate=totalUnitsProduced>0?Math.round((totalUnitsProduced-totalWaste)/totalUnitsProduced*100):0;
-  const passRate=inspections.length>0?Math.round(inspections.filter(i=>i.pass_fail==='pass').length/inspections.length*100):0;
-  const totalRevenue=filtSO.filter(s=>s.status==='fulfilled').reduce((s,o)=>s+(o.subtotal||0),0);
-  const totalSpend=filtPO.filter(p=>p.status==='received').reduce((s,p)=>s+(p.subtotal||0),0);
-
-  const byProduct={};
-  filtWos.forEach(w=>{
-    if(!byProduct[w.product])byProduct[w.product]={product:w.product,batches:0,units:0,waste:0};
-    byProduct[w.product].batches++;
-    byProduct[w.product].units+=(w.qty||0);
-    byProduct[w.product].waste+=Object.values(w.stage_wastes||{}).reduce((a,v)=>a+(v.waste||0),0);
-  });
-
-  const openCAPAs=(capas||[]).filter(c=>c.status==='open').length;
-  const openNCRs=(ncrs||[]).filter(n=>n.status==='open').length;
-  const lowInv=inv.filter(i=>i.qty<=(i.min_qty||0)).length;
-
-  return el('div',null,
-    el('div',{className:'ph'},el('div',null,el('div',{className:'pt'},'Analytics & Reports'),el('div',{className:'ps'},'Production metrics, quality KPIs and financial overview'))),
-    el('div',{className:'fw6',style:{marginBottom:12,fontSize:15}},'Production Overview'),
-    el('div',{className:'g4',style:{marginBottom:20}},
-      [{l:'Total Batches',v:filtWos.length,c:'c-blue'},
-       {l:'Units Produced',v:totalUnitsProduced.toLocaleString(),c:'c-blue'},
-       {l:'Total Waste',v:totalWaste.toLocaleString(),c:'c-red'},
-       {l:'Yield Rate',v:yieldRate+'%',c:yieldRate>=95?'c-green':yieldRate>=85?'c-yellow':'c-red'},
-      ].map(({l,v,c})=>el('div',{key:l,className:'stat'},el('div',{className:'sl'},l),el('div',{className:`sv ${c}`},v)))
-    ),
-    el('div',{className:'fw6',style:{marginBottom:12,fontSize:15}},'Quality KPIs'),
-    el('div',{className:'g4',style:{marginBottom:20}},
-      [{l:'Inspection Pass Rate',v:passRate+'%',c:passRate>=95?'c-green':passRate>=80?'c-yellow':'c-red'},
-       {l:'Open CAPAs',v:openCAPAs,c:openCAPAs>0?'c-red':'c-green'},
-       {l:'Open NCRs',v:openNCRs,c:openNCRs>0?'c-red':'c-green'},
-       {l:'Low Inventory Alerts',v:lowInv,c:lowInv>0?'c-yellow':'c-green'},
-      ].map(({l,v,c})=>el('div',{key:l,className:'stat'},el('div',{className:'sl'},l),el('div',{className:`sv ${c}`},v)))
-    ),
-    el('div',{className:'fw6',style:{marginBottom:12,fontSize:15}},'Financial Overview'),
-    el('div',{className:'g4',style:{marginBottom:20}},
-      [{l:'Total Revenue',v:'$'+totalRevenue.toLocaleString(undefined,{minimumFractionDigits:0}),c:'c-green'},
-       {l:'Total Spend (POs)',v:'$'+totalSpend.toLocaleString(undefined,{minimumFractionDigits:0}),c:'c-blue'},
-       {l:'Gross Margin',v:totalRevenue>0?Math.round((totalRevenue-totalSpend)/totalRevenue*100)+'%':'—',c:'c-blue'},
-       {l:'Pending Orders',v:filtSO.filter(s=>s.status==='pending').length,c:'c-yellow'},
-      ].map(({l,v,c})=>el('div',{key:l,className:'stat'},el('div',{className:'sl'},l),el('div',{className:`sv ${c}`},v)))
-    ),
-    el('div',{className:'fw6',style:{marginBottom:12,fontSize:15}},'Production by Product'),
-    el('div',{className:'card',style:{padding:0}},
-      el('div',{className:'tw'},
-        el('table',null,
-          el('thead',null,el('tr',null,['Product','Batches','Units Planned','Waste','Yield Rate','Completed'].map(h=>el('th',{key:h},h)))),
-          el('tbody',null,Object.values(byProduct).map(row=>{
-            const yield_r=row.units>0?Math.round((row.units-row.waste)/row.units*100):0;
-            const completed=filtWos.filter(w=>w.product===row.product&&w.status==='completed').length;
-            return el('tr',{key:row.product},
-              el('td',null,el('span',{className:'fw6'},row.product)),
-              el('td',null,el('span',{className:'tsm'},row.batches)),
-              el('td',null,el('span',{className:'tsm'},row.units.toLocaleString())),
-              el('td',null,el('span',{className:'tsm c-red'},row.waste.toLocaleString())),
-              el('td',null,
-                el('div',{style:{display:'flex',alignItems:'center',gap:8}},
-                  el('div',{className:'pw',style:{width:60}},el('div',{className:`pf ${yield_r>=95?'p-green':yield_r>=85?'p-yellow':'p-red'}`,style:{width:yield_r+'%'}})),
-                  el('span',{className:`tsm fw6 ${yield_r>=95?'c-green':yield_r>=85?'c-yellow':'c-red'}`},yield_r+'%'),
-                )
-              ),
-              el('td',null,el('span',{className:'tsm c-green'},completed)),
-            );
-          }))
-        )
-      )
-    ),
-    el('div',{className:'fw6',style:{marginBottom:12,marginTop:20,fontSize:15}},'Active Work Orders by Stage'),
-    el('div',{className:'card'},
-      el('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(120px,1fr))',gap:10}},
-        ['Priming','Filling','Kiefing','Testing','Packaging','Labeling','QC','Distribution'].map(stage=>{
-          const count=filtWos.filter(w=>w.stage===stage&&w.status!=='completed').length;
-          const units=filtWos.filter(w=>w.stage===stage&&w.status!=='completed').reduce((s,w)=>s+(w.qty||0),0);
-          return el('div',{key:stage,style:{background:'var(--surface2)',borderRadius:8,padding:'12px',textAlign:'center'}},
-            el('div',{className:'tsm c-muted mb2',style:{fontSize:11}},stage.toUpperCase()),
-            el('div',{className:'fw7 c-blue',style:{fontSize:20}},count),
-            el('div',{className:'tsm c-muted'},units.toLocaleString()+' units'),
-          );
-        })
       )
     ),
   );
@@ -3299,7 +2056,7 @@ function App(){
   const[customers,setCustomers]=useState([]);
   const[salesOrders,setSalesOrders]=useState([]);
   const[employees,setEmployees]=useState([]);
-  const[locFilter,setLocFilter]=useState('All');
+  const[locFilter,setLocFilter]=useState(cu?.loc==='Nationwide'?'Nationwide':cu?.loc||'Nationwide');
   const[loading,setLoading]=useState(false);
   const[dbReady,setDbReady]=useState(null); // null=checking, true=ready, false=needs setup
 
@@ -3394,11 +2151,17 @@ function App(){
       el('div',{className:'sb-section'},
         el('div',{className:'sb-label'},'Location'),
         el('div',{style:{display:'flex',flexDirection:'column',gap:3,marginBottom:8}},
-          ['All','Michigan','Missouri'].map(loc=>
-            el('button',{key:loc,className:`nav ${locFilter===loc?'on':''}`,onClick:()=>setLocFilter(loc)},
-              el('span',null,loc==='All'?'🌐':loc==='Michigan'?'🏭':'🏗'),loc
-            )
-          )
+          (()=>{
+            // Show only user's location unless admin/manager
+            const locs=cu.role==='admin'?['Nationwide','Michigan','Missouri']:
+              cu.loc==='Nationwide'?['Nationwide','Michigan','Missouri']:
+              [cu.loc];
+            return locs.map(loc=>
+              el('button',{key:loc,className:`nav ${locFilter===loc?'on':''}`,onClick:()=>setLocFilter(loc)},
+                el('span',null,loc==='Nationwide'?'🌐':loc==='Michigan'?'🏭':'🏗'),loc
+              )
+            );
+          })()
         ),
       ),
       el('div',{className:'sb-section'},
@@ -3425,7 +2188,7 @@ function App(){
       page==='equipment'&&el(Equipment,{equipment,setEquipment,cu,locFilter}),
       page==='suppliers'&&el(Suppliers,{suppliers,setSuppliers,cu}),
       page==='purchase_orders'&&el(PurchaseOrders,{purchaseOrders,setPurchaseOrders,suppliers,inv,setInv,cu,locFilter}),
-      page==='production_plan'&&el(ProductionPlan,{productionPlans,setProductionPlans,wos,cu,users,locFilter}),
+      page==='production_plan'&&el(ProductionPlan,{productionPlans,setProductionPlans,wos,setWos,cu,users,locFilter}),
       page==='sales_orders'&&el(SalesOrders,{salesOrders,setSalesOrders,customers,inv,setInv,cu,locFilter}),
       page==='customers'&&el(Customers,{customers,setCustomers,salesOrders,cu}),
       page==='hr'&&el(HR,{employees,setEmployees,users,cu,locFilter}),
