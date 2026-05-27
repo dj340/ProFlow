@@ -480,15 +480,23 @@ function Auth({onLogin}){
 // ── DASHBOARD ────────────────────────────────────────────────────────────────
 function Dashboard({wos,inv,users,cu,setPage,approvals,tasks,locFilter}){
   const pending=users.filter(u=>!u.approved);
-  const onHold=wos.filter(w=>w.hold);
-  const low=filteredInv.filter(i=>i.qty<=(i.min_qty||0));
-  const active=wos.filter(w=>!(w.stage==='Distribution'&&w.status==='completed'));
+  const today=new Date().toISOString().slice(0,10);
+  const tomorrow=new Date(Date.now()+86400000).toISOString().slice(0,10);
+  const filtWos=useMemo(()=>locFilter&&locFilter!=='All'?wos.filter(w=>w.loc===locFilter):wos,[wos,locFilter]);
+  const onHold=filtWos.filter(w=>w.hold);
+  const low=inv.filter(i=>i.qty<=(i.min_qty||0));
+  const active=filtWos.filter(w=>!(w.stage==='Distribution'&&w.status==='completed'));
+  const myTasks=useMemo(()=>(tasks||[]).filter(t=>cu.role==='admin'||cu.role==='manager'||t.assigned_id===cu.id),[tasks,cu]);
+  const tasksDueToday=myTasks.filter(t=>t.status==='open'&&t.due_date===today);
+  const tasksDueTomorrow=myTasks.filter(t=>t.status==='open'&&t.due_date===tomorrow);
+  const tasksOverdue=myTasks.filter(t=>t.status==='open'&&t.due_date&&t.due_date<today);
+  const tasksOpen=myTasks.filter(t=>t.status==='open');
   const myWos=useMemo(()=>{
     if(cu.role==='admin'||cu.role==='manager')return filtWos;
     if(cu.role==='supervisor')return filtWos.filter(w=>w.loc===cu.loc&&Object.keys(w.stages||{}).some(s=>sdept(w.product,s)===cu.dept));
     if(cu.role==='lead')return filtWos.filter(w=>cu.leadStage&&(w.stages||{})[cu.leadStage]!==undefined&&w.loc===cu.loc);
     return [];
-  },[wos,cu]);
+  },[filtWos,cu]);
 
   return el('div',null,
     el('div',{className:'ph'},el('div',null,el('div',{className:'pt'},`Good day, ${cu.name.split(' ')[0]} 👋`),el('div',{className:'ps'},'Production overview'))),
