@@ -3262,7 +3262,7 @@ function Analytics({wos,inv,purchaseOrders,salesOrders,capas,ncrs,inspections,cu
     ),
     el('div',{className:'fw6',style:{marginBottom:12,marginTop:20,fontSize:15}},'Active Work Orders by Stage'),
     el('div',{className:'card'},
-      el('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(120px,1fr)',gap:10}},
+      el('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(120px,1fr))',gap:10}},
         ['Priming','Filling','Kiefing','Testing','Packaging','Labeling','QC','Distribution'].map(stage=>{
           const count=filtWos.filter(w=>w.stage===stage&&w.status!=='completed').length;
           const units=filtWos.filter(w=>w.stage===stage&&w.status!=='completed').reduce((s,w)=>s+(w.qty||0),0);
@@ -3369,7 +3369,7 @@ function App(){
     {id:'tasks',ico:'✅',label:'Tasks',badge:(()=>{const today=new Date().toISOString().slice(0,10);return tasks.filter(t=>t.status==='open'&&t.due_date===today&&(cu.role==='admin'||cu.role==='manager'||t.assigned_id===cu.id)).length||null;})()},
     hp(cu,'view_work_orders')&&{id:'orders',ico:'📋',label:'Work Orders',badge:holdCt||null},
     hp(cu,'view_inventory')&&{id:'inventory',ico:'📦',label:'Inventory',badge:lowInv||null},
-    (hp(cu,'view_qms')||hp(cu,'sign_sops')||cu.role==='employee'||cu.role==='lead')&&{id:'qms',ico:'📄',label:'QMS / SOPs',badge:pendSops||null},
+    (hp(cu,'view_qms')||hp(cu,'sign_sops')||cu.role==='employee'||cu.role==='lead')&&{id:'qms',ico:'📄',label:'SOPs',badge:pendSops||null},
     (cu.role==='admin'||cu.role==='manager'||cu.role==='supervisor')&&{id:'capa',ico:'🔧',label:'CAPA',badge:(capas||[]).filter(c=>c.status==='open').length||null},
     (cu.role==='admin'||cu.role==='manager'||cu.role==='supervisor')&&{id:'ncr',ico:'⚠️',label:'Non-Conformance',badge:(ncrs||[]).filter(n=>n.status==='open').length||null},
     (cu.role==='admin'||cu.role==='manager'||cu.role==='supervisor')&&{id:'inspections',ico:'🔬',label:'Inspections & Testing'},
