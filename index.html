@@ -481,7 +481,7 @@ function Auth({onLogin}){
 function Dashboard({wos,inv,users,cu,setPage,approvals,tasks,locFilter}){
   const pending=users.filter(u=>!u.approved);
   const onHold=wos.filter(w=>w.hold);
-  const low=(locFilter&&locFilter!=='All'?inv.filter(i=>i.sku.startsWith(locFilter==='Michigan'?'MI-':'MO-')):inv).filter(i=>i.qty<=i.min_qty);
+  const low=filteredInv.filter(i=>i.qty<=(i.min_qty||0));
   const active=wos.filter(w=>!(w.stage==='Distribution'&&w.status==='completed'));
   const myWos=useMemo(()=>{
     if(cu.role==='admin'||cu.role==='manager')return filtWos;
@@ -591,7 +591,7 @@ function Dashboard({wos,inv,users,cu,setPage,approvals,tasks,locFilter}){
 }
 
 // ── WORK ORDERS ──────────────────────────────────────────────────────────────
-function WorkOrders({wos,setWos,cu,users,inv,boms}){
+function WorkOrders({wos,setWos,cu,users,inv,setInv,boms,locFilter,setApprovals}){
   const[showNew,setNew]=useState(false);
   const[sel,setSel]=useState(null);
   const[filter,setFilter]=useState('all');
@@ -952,7 +952,8 @@ function WorkOrders({wos,setWos,cu,users,inv,boms}){
 }
 
 // ── INVENTORY ────────────────────────────────────────────────────────────────
-function Inventory({inv,setInv,cu,boms}){
+function Inventory({inv,setInv,cu,boms,locFilter}){
+  const filteredInv=React.useMemo(()=>locFilter&&locFilter!=='All'?inv.filter(i=>i.sku.toUpperCase().startsWith(locFilter==='Michigan'?'MI-':'MO-')):inv,[inv,locFilter]);
   // Build master catalog from all BOM items
   const catalog=React.useMemo(()=>{
     const items={};
@@ -978,7 +979,7 @@ function Inventory({inv,setInv,cu,boms}){
   const[receiveForm,setReceiveForm]=useState({sku:'',qty:'',min_qty:'',note:''});
   const canEdit=hp(cu,'update_inventory');
   const canAdd=cu.role==='admin';
-  const low=(locFilter&&locFilter!=='All'?inv.filter(i=>i.sku.startsWith(locFilter==='Michigan'?'MI-':'MO-')):inv).filter(i=>i.qty<=i.min_qty);
+  const low=filteredInv.filter(i=>i.qty<=(i.min_qty||0));
 
   async function updateQty(id){
     const qty=parseInt(editQty);
@@ -1660,7 +1661,7 @@ function CompletedBatches({wos}){
 const TASK_SECTIONS=['R&D','Special Projects','Production Investigation','HR','General'];
 const TASK_PRIORITIES={low:{label:'Low',color:'bb-gray'},medium:{label:'Medium',color:'bb-blue'},high:{label:'High',color:'bb-yellow'},urgent:{label:'Urgent',color:'bb-red'}};
 
-function Tasks({tasks,setTasks,cu,users}){
+function Tasks({tasks,setTasks,cu,users,locFilter}){
   const[section,setSection]=useState('All');
   const[showNew,setNew]=useState(false);
   const[selected,setSelected]=useState(null);
