@@ -518,37 +518,40 @@ function Dashboard({wos,inv,users,cu,setPage,approvals,tasks,locFilter}){
        {l:'Pending Approvals',v:pending.length,c:'c-yellow',s:'New registrations'},
       ].map(({l,v,c,s})=>el('div',{key:l,className:'stat'},el('div',{className:'sl'},l),el('div',{className:`sv ${c}`},v),el('div',{className:'ss'},s)))
     ),
-    // Tasks Summary Section
+    // Tasks Board Summary on Dashboard
     el('div',{style:{marginBottom:20}},
       el('div',{className:'card'},
         el('div',{className:'flex aic mb4',style:{justifyContent:'space-between'}},
-          el('div',{className:'fw6'},'Task Overview'),
-          el('button',{className:'btn b-ghost btn-sm',onClick:()=>setPage('tasks')},'View All Tasks →'),
+          el('div',{className:'fw6'},'Tasks Overview'),
+          el('button',{className:'btn b-ghost btn-sm',onClick:()=>setPage('tasks')},'Open Board →'),
         ),
-        el('div',{style:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10,marginBottom:14}},
-          [{l:'Open',v:tasksOpen.length,c:'c-blue'},{l:'Due Today',v:tasksDueToday.length,c:tasksDueToday.length>0?'c-red':'c-muted'},{l:'Due Tomorrow',v:tasksDueTomorrow.length,c:tasksDueTomorrow.length>0?'c-yellow':'c-muted'},{l:'Overdue',v:tasksOverdue.length,c:tasksOverdue.length>0?'c-red':'c-muted'}].map(({l,v,c})=>
-            el('div',{key:l,style:{background:'var(--surface2)',borderRadius:8,padding:'12px 14px',cursor:'pointer'},onClick:()=>setPage('tasks')},
-              el('div',{className:'tsm c-muted',style:{marginBottom:4}},l),
-              el('div',{className:`fw7 ${c}`,style:{fontSize:22}},v),
-            )
-          )
+        // Column counts
+        el('div',{style:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8,marginBottom:16}},
+          [{id:'not_started',label:'Not Started',color:'#4a5068'},{id:'in_progress',label:'In Progress',color:'#3b82f6'},{id:'review',label:'In Review',color:'#f59e0b'},{id:'done',label:'Done',color:'#22c55e'}].map(col=>{
+            const count=myTasks.filter(t=>t.status===col.id).length;
+            return el('div',{key:col.id,style:{background:'var(--surface2)',borderRadius:8,padding:'10px 12px',cursor:'pointer',borderLeft:`3px solid ${col.color}`},onClick:()=>setPage('tasks')},
+              el('div',{style:{fontSize:11,color:'var(--text2)',marginBottom:4}},col.label),
+              el('div',{style:{fontSize:22,fontWeight:700,color:col.color}},count),
+            );
+          })
         ),
-        // Show urgent/overdue tasks
-        tasksOverdue.length>0&&el('div',null,
-          el('div',{className:'tsm fw6 c-red mb2'},'⚠ Overdue Tasks:'),
-          tasksOverdue.slice(0,3).map(t=>el('div',{key:t.id,style:{display:'flex',justifyContent:'space-between',padding:'6px 0',borderBottom:'1px solid var(--border)',cursor:'pointer'},onClick:()=>setPage('tasks')},
-            el('div',null,el('div',{className:'fw6 tsm'},t.title),el('div',{className:'tsm c-muted'},`${t.section} · ${t.assigned_to||'Unassigned'}`)),
-            el('span',{className:'badge bb-red'},'Overdue '+t.due_date),
-          )),
-        ),
-        tasksDueToday.length>0&&el('div',{style:{marginTop:tasksDueToday.length>0?10:0}},
-          el('div',{className:'tsm fw6 c-yellow mb2'},'🔴 Due Today:'),
-          tasksDueToday.slice(0,3).map(t=>el('div',{key:t.id,style:{display:'flex',justifyContent:'space-between',padding:'6px 0',borderBottom:'1px solid var(--border)',cursor:'pointer'},onClick:()=>setPage('tasks')},
-            el('div',null,el('div',{className:'fw6 tsm'},t.title),el('div',{className:'tsm c-muted'},`${t.section} · ${t.assigned_to||'Unassigned'}`)),
-            el('span',{className:'badge bb-yellow'},'Due Today'),
-          )),
-        ),
-        tasksOverdue.length===0&&tasksDueToday.length===0&&el('div',{className:'tsm c-muted'},'No urgent tasks — all clear ✓'),
+        // Urgent tasks
+        (()=>{
+          const urgent=[...tasksOverdue.slice(0,2),...tasksDueToday.slice(0,2)];
+          if(!urgent.length) return el('div',{className:'tsm c-muted'},'No urgent tasks — all clear ✓');
+          return el('div',null,
+            overdue>0&&el('div',{className:'tsm fw6 c-red mb2'},'⚠ Overdue:'),
+            tasksOverdue.slice(0,2).map(t=>el('div',{key:t.id,style:{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'7px 0',borderBottom:'1px solid var(--border)',cursor:'pointer'},onClick:()=>setPage('tasks')},
+              el('div',null,el('div',{style:{fontSize:12,fontWeight:600}},t.title),el('div',{style:{fontSize:11,color:'var(--text2)'}},t.section+' · '+(t.assignees||[]).map(a=>a.name).join(', ')||'Unassigned')),
+              el('span',{className:'badge bb-red',style:{fontSize:10}},'Overdue'),
+            )),
+            tasksDueToday.length>0&&el('div',{className:'tsm fw6 c-yellow mb2',style:{marginTop:8}},'Due Today:'),
+            tasksDueToday.slice(0,2).map(t=>el('div',{key:t.id,style:{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'7px 0',borderBottom:'1px solid var(--border)',cursor:'pointer'},onClick:()=>setPage('tasks')},
+              el('div',null,el('div',{style:{fontSize:12,fontWeight:600}},t.title),el('div',{style:{fontSize:11,color:'var(--text2)'}},t.section)),
+              el('span',{className:'badge bb-yellow',style:{fontSize:10}},'Today'),
+            )),
+          );
+        })(),
       )
     ),
     // Production Summary by Product
@@ -1699,112 +1702,113 @@ function CompletedBatches({wos}){
 
 // ── TASKS ────────────────────────────────────────────────────────────────────
 const TASK_SECTIONS=['R&D','Special Projects','Production Investigation','HR','General'];
-const TASK_PRIORITIES={low:{label:'Low',color:'bb-gray'},medium:{label:'Medium',color:'bb-blue'},high:{label:'High',color:'bb-yellow'},urgent:{label:'Urgent',color:'bb-red'}};
-const TASK_STATUSES=['not_started','in_progress','done','approved','archived'];
-const TASK_STATUS_LABELS={'not_started':'Not Started','in_progress':'In Progress','done':'Done','approved':'Approved','archived':'Archived'};
-const TASK_STATUS_COLORS={'not_started':'bb-gray','in_progress':'bb-blue','done':'bb-green','approved':'bb-purple','archived':'bb-gray'};
+const TASK_PRIORITIES={low:{label:'Low',color:'#6b7280'},medium:{label:'Medium',color:'#3b82f6'},high:{label:'High',color:'#f59e0b'},urgent:{label:'Urgent',color:'#ef4444'}};
+const TASK_COLS=[
+  {id:'not_started',label:'Not Started',color:'#4a5068'},
+  {id:'in_progress',label:'In Progress',color:'#3b82f6'},
+  {id:'review',label:'In Review',color:'#f59e0b'},
+  {id:'done',label:'Done',color:'#22c55e'},
+  {id:'archived',label:'Archived',color:'#374151'},
+];
+
+function TaskCard({task,cu,users,onOpen,onStatusChange}){
+  const today=new Date().toISOString().slice(0,10);
+  const isOverdue=task.due_date&&task.due_date<today&&task.status!=='done'&&task.status!=='archived';
+  const priDef=TASK_PRIORITIES[task.priority]||TASK_PRIORITIES.medium;
+
+  return el('div',{
+    onClick:()=>onOpen(task),
+    style:{background:'var(--surface)',border:`1px solid ${isOverdue?'rgba(239,68,68,.4)':'var(--border)'}`,borderRadius:10,padding:'12px 14px',marginBottom:8,cursor:'pointer',transition:'transform .1s,box-shadow .1s'},
+    onMouseEnter:ev=>{ev.currentTarget.style.transform='translateY(-1px)';ev.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,.3)';},
+    onMouseLeave:ev=>{ev.currentTarget.style.transform='';ev.currentTarget.style.boxShadow='';},
+  },
+    // Priority bar on left
+    el('div',{style:{display:'flex',gap:10}},
+      el('div',{style:{width:3,borderRadius:4,background:priDef.color,flexShrink:0}}),
+      el('div',{style:{flex:1,minWidth:0}},
+        // Section badge + tags
+        el('div',{style:{display:'flex',gap:5,marginBottom:6,flexWrap:'wrap'}},
+          el('span',{style:{background:'var(--surface2)',color:'var(--text2)',borderRadius:4,padding:'1px 7px',fontSize:10,fontWeight:600}},task.section),
+          (task.tags||[]).map(tag=>el('span',{key:tag,style:{background:'rgba(79,124,255,.15)',color:'var(--accent)',borderRadius:4,padding:'1px 7px',fontSize:10}},tag)),
+        ),
+        // Title
+        el('div',{style:{fontSize:13,fontWeight:600,color:'var(--text)',marginBottom:8,lineHeight:1.4}},task.title),
+        // Assignees + meta row
+        el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center'}},
+          el('div',{style:{display:'flex',gap:4,alignItems:'center'}},
+            (task.assignees||[]).slice(0,3).map((a,i)=>
+              el('div',{key:a.id,title:a.name,style:{width:24,height:24,borderRadius:'50%',background:`hsl(${(a.name.charCodeAt(0)*47)%360},50%,35%)`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:700,color:'#fff',border:'2px solid var(--surface)',marginLeft:i>0?-6:0}},
+                a.name.charAt(0).toUpperCase()
+              )
+            ),
+            (task.assignees||[]).length>3&&el('div',{style:{width:24,height:24,borderRadius:'50%',background:'var(--surface2)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,color:'var(--text2)',marginLeft:-6}},'+'+((task.assignees||[]).length-3)),
+          ),
+          el('div',{style:{display:'flex',gap:8,alignItems:'center'}},
+            (task.notes||[]).length>0&&el('span',{style:{fontSize:11,color:'var(--text3)'}},`💬${(task.notes||[]).length}`),
+            (task.attachments||[]).length>0&&el('span',{style:{fontSize:11,color:'var(--text3)'}},`📎${(task.attachments||[]).length}`),
+            task.due_date&&el('span',{style:{fontSize:11,fontWeight:600,color:isOverdue?'var(--red)':task.due_date===today?'var(--yellow)':'var(--text3)'}},
+              isOverdue?'⚠ '+task.due_date:task.due_date
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
 
 function Tasks({tasks,setTasks,cu,users,locFilter}){
+  const[view,setView]=useState('board'); // board | list
   const[section,setSection]=useState('All');
   const[showNew,setNew]=useState(false);
   const[selected,setSelected]=useState(null);
-  const[filter,setFilter]=useState('active');
   const[newNote,setNewNote]=useState('');
   const[saving,setSaving]=useState(false);
-  const[f,setF]=useState({title:'',section:'R&D',description:'',assignees:[],due_date:'',priority:'medium',loc:'Nationwide',tags:[]});
   const[tagInput,setTagInput]=useState('');
+  const[f,setF]=useState({title:'',section:'R&D',description:'',assignees:[],due_date:'',priority:'medium',loc:'Nationwide',tags:[],status:'not_started'});
 
   const today=new Date().toISOString().slice(0,10);
   const tomorrow=new Date(Date.now()+86400000).toISOString().slice(0,10);
 
-  // Visibility: admin/manager see all, others see only tasks they created or are assigned to
   const canSeeAll=cu.role==='admin'||cu.role==='manager';
+
   const allTasks=useMemo(()=>{
     let list=locFilter&&locFilter!=='Nationwide'?tasks.filter(t=>!t.loc||t.loc===locFilter||t.loc==='Nationwide'):tasks;
     if(!canSeeAll) list=list.filter(t=>t.created_by_id===cu.id||(t.assignees||[]).some(a=>a.id===cu.id));
+    if(section!=='All') list=list.filter(t=>t.section===section);
     return list;
-  },[tasks,locFilter,cu,canSeeAll]);
+  },[tasks,locFilter,cu,canSeeAll,section]);
 
-  const visible=allTasks.filter(t=>{
-    if(filter==='active') return t.status!=='archived';
-    if(filter==='archived') return t.status==='archived';
-    if(filter==='mine') return (t.assignees||[]).some(a=>a.id===cu.id);
-    return true;
-  }).filter(t=>section==='All'||t.section===section);
-
-  const dueToday=allTasks.filter(t=>t.status!=='archived'&&t.status!=='approved'&&t.due_date===today).length;
-  const dueTomorrow=allTasks.filter(t=>t.status!=='archived'&&t.status!=='approved'&&t.due_date===tomorrow).length;
-  const overdue=allTasks.filter(t=>t.status!=='archived'&&t.status!=='approved'&&t.due_date&&t.due_date<today).length;
-  const needsReview=allTasks.filter(t=>t.status==='done'&&(canSeeAll||t.created_by_id===cu.id)).length;
+  // Stats
+  const dueToday=allTasks.filter(t=>!['done','archived'].includes(t.status)&&t.due_date===today).length;
+  const overdue=allTasks.filter(t=>!['done','archived'].includes(t.status)&&t.due_date&&t.due_date<today).length;
+  const needsReview=canSeeAll?allTasks.filter(t=>t.status==='review').length:0;
+  const myTasks=allTasks.filter(t=>(t.assignees||[]).some(a=>a.id===cu.id)&&!['done','archived'].includes(t.status)).length;
 
   async function createTask(){
     if(!f.title)return;
     setSaving(true);
-    const task={
-      id:'task-'+Date.now(),
-      title:f.title,section:f.section,description:f.description,
-      assignees:f.assignees,
-      due_date:f.due_date,priority:f.priority,
-      loc:f.loc,tags:f.tags,
-      status:'not_started',
-      created_by:cu.name,created_by_id:cu.id,
-      created_at:new Date().toISOString(),
-      updated_at:new Date().toISOString(),
-      updated_by:cu.name,
-      notes:[],attachments:[],
-    };
+    const task={id:'task-'+Date.now(),...f,created_by:cu.name,created_by_id:cu.id,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),updated_by:cu.name,notes:[],attachments:[]};
     try{await db.insert('pf_tasks',task);}catch(e){console.error(e);}
     setTasks(p=>[task,...p]);
-    // Send email to assignees
-    const assigneesWithEmail=f.assignees.filter(a=>a.email);
-    if(assigneesWithEmail.length>0){
-      assigneesWithEmail.forEach(a=>{
-        sendEmail({
-          to:a.email,
-          subject:`New Task Assigned: "${f.title}"`,
-          html:`<div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#0f1117;color:#e8eaf0;padding:32px;border-radius:12px;">
-            <div style="font-size:24px;font-weight:700;color:#4f7cff;margin-bottom:4px;">ProFlow</div>
-            <div style="font-size:18px;font-weight:600;margin-bottom:8px;">New Task Assigned to You</div>
-            <div style="font-size:14px;color:#8b92a8;margin-bottom:16px;">Hi ${a.name}, ${cu.name} assigned you a task.</div>
-            <div style="background:#181b23;border:1px solid #252938;border-radius:8px;padding:16px;margin-bottom:20px;">
-              <div style="font-size:16px;font-weight:600;margin-bottom:8px;">${f.title}</div>
-              <div style="font-size:13px;color:#8b92a8;">Section: ${f.section}</div>
-              ${f.due_date?`<div style="font-size:13px;color:#f59e0b;margin-top:4px;">Due: ${f.due_date}</div>`:''}
-              ${f.description?`<div style="font-size:13px;color:#8b92a8;margin-top:8px;">${f.description}</div>`:''}
-            </div>
-            <a href="${APP_URL}" style="display:inline-block;background:#4f7cff;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;">Open ProFlow →</a>
-          </div>`
-        }).catch(console.error);
-      });
-    }
-    setF({title:'',section:'R&D',description:'',assignees:[],due_date:'',priority:'medium',loc:'Nationwide',tags:[]});
+    // Notify assignees
+    f.assignees.filter(a=>a.email).forEach(a=>{
+      sendEmail({to:a.email,subject:`New task: "${f.title}"`,html:`<div style="font-family:sans-serif;background:#0f1117;color:#e8eaf0;padding:24px;border-radius:12px;max-width:500px"><div style="color:#4f7cff;font-size:20px;font-weight:700;margin-bottom:12px">ProFlow Tasks</div><p>Hi ${a.name}, <strong>${cu.name}</strong> assigned you a task:</p><div style="background:#181b23;border-radius:8px;padding:16px;margin:16px 0"><strong style="font-size:15px">${f.title}</strong>${f.due_date?`<p style="color:#f59e0b;margin:8px 0 0">Due: ${f.due_date}</p>`:''}</div><a href="${APP_URL}" style="background:#4f7cff;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600">Open ProFlow →</a></div>`}).catch(console.error);
+    });
+    setF({title:'',section:'R&D',description:'',assignees:[],due_date:'',priority:'medium',loc:'Nationwide',tags:[],status:'not_started'});
     setNew(false);setSaving(false);
   }
 
-  async function updateTaskStatus(task,newStatus){
+  async function moveTask(task,newStatus){
     const update={status:newStatus,updated_at:new Date().toISOString(),updated_by:cu.name};
-    if(newStatus==='approved') update.approved_by=cu.name;
-    if(newStatus==='archived') update.archived_at=new Date().toISOString();
+    if(newStatus==='done') update.completed_at=new Date().toISOString();
     try{await db.update('pf_tasks',task.id,update);}catch(e){console.error(e);}
     setTasks(p=>p.map(t=>t.id===task.id?{...t,...update}:t));
-    setSelected(s=>s?{...s,...update}:null);
-    // Notify creator when status changes to done
-    if(newStatus==='done'){
+    setSelected(s=>s?.id===task.id?{...s,...update}:s);
+    // Notify creator when done
+    if(newStatus==='review'||newStatus==='done'){
       const creator=users.find(u=>u.id===task.created_by_id);
       if(creator?.email&&creator.id!==cu.id){
-        sendEmail({
-          to:creator.email,
-          subject:`Task Completed: "${task.title}" — Needs Your Review`,
-          html:`<div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#0f1117;color:#e8eaf0;padding:32px;border-radius:12px;">
-            <div style="font-size:24px;font-weight:700;color:#4f7cff;margin-bottom:4px;">ProFlow</div>
-            <div style="font-size:18px;font-weight:600;margin-bottom:8px;">Task Completed — Review Required</div>
-            <div style="font-size:14px;color:#8b92a8;margin-bottom:16px;">${cu.name} marked a task as done. Please review and approve.</div>
-            <div style="background:#181b23;border:1px solid #252938;border-radius:8px;padding:16px;margin-bottom:20px;">
-              <div style="font-size:16px;font-weight:600;">${task.title}</div>
-            </div>
-            <a href="${APP_URL}" style="display:inline-block;background:#22c55e;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;">Review Task →</a>
-          </div>`
-        }).catch(console.error);
+        sendEmail({to:creator.email,subject:`Task "${task.title}" — ${newStatus==='review'?'Ready for Review':'Completed'}`,html:`<div style="font-family:sans-serif;background:#0f1117;color:#e8eaf0;padding:24px;border-radius:12px;max-width:500px"><div style="color:#4f7cff;font-size:20px;font-weight:700;margin-bottom:12px">ProFlow Tasks</div><p>${cu.name} marked <strong>"${task.title}"</strong> as ${newStatus==='review'?'ready for review':'done'}.</p><a href="${APP_URL}" style="background:#22c55e;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600">Review Now →</a></div>`}).catch(console.error);
       }
     }
   }
@@ -1825,208 +1829,213 @@ function Tasks({tasks,setTasks,cu,users,locFilter}){
     setSelected(updated);
   }
 
-  const isAssigned=task=>(task.assignees||[]).some(a=>a.id===cu.id);
-  const isCreator=task=>task.created_by_id===cu.id;
-  const priColor=p=>TASK_PRIORITIES[p]?.color||'bb-gray';
-
-  function getDueLabel(due){
-    if(!due) return null;
-    if(due<today) return el('span',{className:'badge bb-red'},'⚠ Overdue');
-    if(due===today) return el('span',{className:'badge bb-red'},'Due Today');
-    if(due===tomorrow) return el('span',{className:'badge bb-yellow'},'Due Tomorrow');
-    return el('span',{className:'tsm c-muted'},due);
-  }
+  // Board view columns (exclude archived unless viewing all)
+  const boardCols=TASK_COLS.filter(c=>c.id!=='archived');
 
   return el('div',null,
     // Header
     el('div',{className:'ph'},
-      el('div',null,el('div',{className:'pt'},'Tasks'),el('div',{className:'ps'},'Assign and track tasks across teams')),
-      el('button',{className:'btn b-blue',onClick:()=>setNew(true)},'+ New Task'),
+      el('div',null,el('div',{className:'pt'},'Tasks'),el('div',{className:'ps'},'Manage and track tasks across your team')),
+      el('div',{style:{display:'flex',gap:8,alignItems:'center'}},
+        el('div',{style:{display:'flex',background:'var(--surface2)',borderRadius:'var(--rs)',padding:3,gap:2}},
+          [{id:'board',ico:'⬛'},{id:'list',ico:'☰'}].map(v=>el('button',{key:v.id,onClick:()=>setView(v.id),style:{padding:'5px 10px',borderRadius:6,border:'none',background:view===v.id?'var(--surface)':'transparent',color:view===v.id?'var(--text)':'var(--text2)',cursor:'pointer',fontSize:13}},v.ico+' '+(v.id==='board'?'Board':'List')))
+        ),
+        el('button',{className:'btn b-blue',onClick:()=>setNew(true)},'+ New Task'),
+      ),
     ),
-    // Stats
-    el('div',{className:'g4',style:{marginBottom:20}},
-      [{l:'Due Today',v:dueToday,c:dueToday>0?'c-red':'c-muted'},{l:'Due Tomorrow',v:dueTomorrow,c:dueTomorrow>0?'c-yellow':'c-muted'},{l:'Overdue',v:overdue,c:overdue>0?'c-red':'c-muted'},{l:'Needs Review',v:needsReview,c:needsReview>0?'c-yellow':'c-muted'}]
-        .map(({l,v,c})=>el('div',{key:l,className:'stat'},el('div',{className:'sl'},l),el('div',{className:`sv ${c}`},v)))
+
+    // Stats row
+    el('div',{className:'g4',style:{marginBottom:16}},
+      [{l:'My Tasks',v:myTasks,c:'c-blue'},{l:'Due Today',v:dueToday,c:dueToday>0?'c-red':'c-muted'},{l:'Overdue',v:overdue,c:overdue>0?'c-red':'c-muted'},{l:'In Review',v:needsReview,c:needsReview>0?'c-yellow':'c-muted'}]
+        .map(({l,v,c})=>el('div',{key:l,className:'stat',style:{cursor:'pointer'}},el('div',{className:'sl'},l),el('div',{className:`sv ${c}`},v)))
     ),
-    // Section tabs
-    el('div',{style:{display:'flex',gap:6,marginBottom:12,flexWrap:'wrap'}},
-      ['All',...TASK_SECTIONS].map(s=>el('button',{key:s,className:`btn ${section===s?'b-blue':'b-ghost'}`,style:{padding:'5px 12px',fontSize:12},onClick:()=>setSection(s)},s))
+
+    // Section filter
+    el('div',{style:{display:'flex',gap:6,marginBottom:16,flexWrap:'wrap'}},
+      ['All',...TASK_SECTIONS].map(s=>el('button',{key:s,onClick:()=>setSection(s),style:{padding:'5px 14px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:500,cursor:'pointer',background:section===s?'var(--accent)':'transparent',color:section===s?'#fff':'var(--text2)',borderColor:section===s?'var(--accent)':'var(--border)'}},s))
     ),
-    // Status filter
-    el('div',{className:'tabs'},
-      [{id:'active',label:'Active'},{id:'mine',label:'My Tasks'},{id:'archived',label:'Archived'},{id:'all',label:'All'}].map(f=>
-        el('button',{key:f.id,className:`tab ${filter===f.id?'on':''}`,onClick:()=>setFilter(f.id)},f.label)
-      )
-    ),
-    // Task list grouped by section
-    visible.length===0?el('div',{className:'empty'},el('div',{className:'eico'},'✅'),el('div',{className:'etxt'},'No tasks')):
-    el('div',null,
-      (section==='All'?TASK_SECTIONS:[section]).map(sec=>{
-        const secTasks=visible.filter(t=>t.section===sec);
-        if(!secTasks.length) return null;
-        return el('div',{key:sec,style:{marginBottom:20}},
-          el('div',{style:{display:'flex',alignItems:'center',gap:10,marginBottom:8}},
-            el('div',{className:'fw6',style:{fontSize:12,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'0.8px'}},sec),
-            el('span',{className:'badge bb-gray'},secTasks.length),
+
+    // BOARD VIEW
+    view==='board'&&el('div',{style:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:14,overflowX:'auto'}},
+      boardCols.map(col=>{
+        const colTasks=allTasks.filter(t=>t.status===col.id);
+        return el('div',{key:col.id,style:{background:'var(--surface2)',borderRadius:12,padding:'12px'}},
+          // Column header
+          el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}},
+            el('div',{style:{display:'flex',alignItems:'center',gap:8}},
+              el('div',{style:{width:10,height:10,borderRadius:'50%',background:col.color}}),
+              el('div',{style:{fontWeight:700,fontSize:13,color:'var(--text)'}},col.label),
+              el('div',{style:{background:'var(--surface)',borderRadius:10,padding:'1px 8px',fontSize:11,color:'var(--text2)',fontWeight:600}},colTasks.length),
+            ),
+            canSeeAll&&el('button',{onClick:()=>{setF(p=>({...p,status:col.id}));setNew(true);},style:{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:18,lineHeight:1}},'＋'),
           ),
-          el('div',{className:'card',style:{padding:0}},
-            secTasks.map((task,i)=>el('div',{key:task.id,
-              style:{display:'flex',alignItems:'center',gap:12,padding:'12px 16px',borderBottom:i<secTasks.length-1?'1px solid var(--border)':'none',cursor:'pointer'},
-              onClick:()=>setSelected(task)},
-              // Status dot
-              el('div',{style:{width:14,height:14,borderRadius:'50%',flexShrink:0,
-                background:task.status==='approved'?'var(--purple)':task.status==='done'?'var(--green)':task.status==='in_progress'?'var(--accent)':'transparent',
-                border:`2px solid ${task.status==='approved'?'var(--purple)':task.status==='done'?'var(--green)':task.status==='in_progress'?'var(--accent)':'var(--border)'}`}}),
-              // Content
-              el('div',{style:{flex:1,minWidth:0}},
-                el('div',{className:'fw6',style:{fontSize:13}},task.title),
-                el('div',{style:{display:'flex',gap:8,marginTop:3,flexWrap:'wrap',alignItems:'center'}},
-                  (task.assignees||[]).slice(0,3).map(a=>el('span',{key:a.id,className:'tsm c-muted'},`👤 ${a.name}`)),
-                  (task.tags||[]).map(tag=>el('span',{key:tag,style:{background:'rgba(79,124,255,.12)',color:'var(--accent)',borderRadius:4,padding:'1px 6px',fontSize:11}},tag)),
-                  (task.notes||[]).length>0&&el('span',{className:'tsm c-muted'},`💬 ${(task.notes||[]).length}`),
-                  (task.attachments||[]).length>0&&el('span',{className:'tsm c-muted'},`📎 ${(task.attachments||[]).length}`),
-                ),
-              ),
-              el('div',{style:{display:'flex',gap:6,alignItems:'center',flexShrink:0}},
-                el('span',{className:`badge ${priColor(task.priority)}`},TASK_PRIORITIES[task.priority]?.label||task.priority),
-                el('span',{className:`badge ${TASK_STATUS_COLORS[task.status]||'bb-gray'}`},TASK_STATUS_LABELS[task.status]||task.status),
-                getDueLabel(task.due_date),
-              ),
-            ))
-          )
+          // Cards
+          colTasks.length===0?el('div',{style:{border:'2px dashed var(--border)',borderRadius:8,padding:'20px 12px',textAlign:'center',color:'var(--text3)',fontSize:12}},'No tasks'):
+          colTasks.map(task=>el(TaskCard,{key:task.id,task,cu,users,onOpen:setSelected,onStatusChange:moveTask})),
         );
       })
     ),
 
-    // New Task Modal
+    // LIST VIEW
+    view==='list'&&el('div',null,
+      TASK_COLS.map(col=>{
+        const colTasks=allTasks.filter(t=>t.status===col.id);
+        if(!colTasks.length) return null;
+        return el('div',{key:col.id,style:{marginBottom:20}},
+          el('div',{style:{display:'flex',alignItems:'center',gap:10,marginBottom:8,padding:'8px 0',borderBottom:'2px solid var(--border)'}},
+            el('div',{style:{width:10,height:10,borderRadius:'50%',background:col.color}}),
+            el('div',{style:{fontWeight:700,fontSize:13}},col.label),
+            el('span',{style:{background:'var(--surface2)',borderRadius:10,padding:'1px 8px',fontSize:11,color:'var(--text2)'}},colTasks.length),
+          ),
+          el('div',{className:'card',style:{padding:0}},
+            colTasks.map((task,i)=>el('div',{key:task.id,
+              style:{display:'flex',alignItems:'center',gap:12,padding:'11px 16px',borderBottom:i<colTasks.length-1?'1px solid var(--border)':'none',cursor:'pointer'},
+              onClick:()=>setSelected(task)},
+              el('div',{style:{width:3,height:32,borderRadius:4,background:TASK_PRIORITIES[task.priority]?.color||'#6b7280',flexShrink:0}}),
+              el('div',{style:{flex:1,minWidth:0}},
+                el('div',{style:{fontSize:13,fontWeight:600}},task.title),
+                el('div',{style:{fontSize:11,color:'var(--text2)',marginTop:2}},task.section+' · Created by '+task.created_by),
+              ),
+              el('div',{style:{display:'flex',gap:6,alignItems:'center',flexShrink:0}},
+                (task.assignees||[]).slice(0,2).map(a=>el('div',{key:a.id,title:a.name,style:{width:22,height:22,borderRadius:'50%',background:`hsl(${(a.name.charCodeAt(0)*47)%360},50%,35%)`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,fontWeight:700,color:'#fff'}},a.name.charAt(0).toUpperCase())),
+                task.due_date&&el('span',{style:{fontSize:11,color:task.due_date<today?'var(--red)':task.due_date===today?'var(--yellow)':'var(--text3)',whiteSpace:'nowrap'}},task.due_date),
+              ),
+            ))
+          ),
+        );
+      })
+    ),
+
+    // NEW TASK MODAL
     showNew&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setNew(false)},
       el('div',{className:'md',style:{width:620}},
         el('div',{className:'mh'},el('div',{className:'mt2'},'New Task'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
         el('div',{className:'mbd'},
-          el('div',{className:'fg'},el('label',null,'Task Title'),el('input',{placeholder:'What needs to be done?',value:f.title,onChange:ev=>setF(p=>({...p,title:ev.target.value}))})),
+          el('div',{className:'fg'},el('label',null,'Title'),el('input',{placeholder:'What needs to be done?',value:f.title,onChange:ev=>setF(p=>({...p,title:ev.target.value})),autoFocus:true})),
           el('div',{className:'g2'},
             el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Section'),el('select',{value:f.section,onChange:ev=>setF(p=>({...p,section:ev.target.value}))},TASK_SECTIONS.map(s=>el('option',{key:s,value:s},s)))),
             el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Priority'),el('select',{value:f.priority,onChange:ev=>setF(p=>({...p,priority:ev.target.value}))},Object.entries(TASK_PRIORITIES).map(([k,{label}])=>el('option',{key:k,value:k},label)))),
           ),
-          el('div',{className:'fg'},el('label',null,'Description'),el('textarea',{placeholder:'Details...',value:f.description,onChange:ev=>setF(p=>({...p,description:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:70,resize:'vertical'}})),
-          el('div',{className:'g2'},
+          el('div',{className:'g2',style:{marginTop:13}},
             el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Due Date'),el('input',{type:'date',value:f.due_date,onChange:ev=>setF(p=>({...p,due_date:ev.target.value}))})),
-            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Location'),el('select',{value:f.loc,onChange:ev=>setF(p=>({...p,loc:ev.target.value}))},['Nationwide','Michigan','Missouri'].map(l=>el('option',{key:l,value:l},l)))),
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Status'),el('select',{value:f.status,onChange:ev=>setF(p=>({...p,status:ev.target.value}))},TASK_COLS.filter(c=>c.id!=='archived').map(c=>el('option',{key:c.id,value:c.id},c.label)))),
           ),
-          // Multi-assign
+          el('div',{className:'fg'},el('label',null,'Description'),el('textarea',{placeholder:'More details...',value:f.description,onChange:ev=>setF(p=>({...p,description:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:70,resize:'vertical'}})),
           el('div',{className:'fg'},
-            el('label',null,'Assign To (multiple)'),
-            el('select',{onChange:ev=>{const u=users.find(x=>x.id===ev.target.value);if(u&&!f.assignees.find(a=>a.id===u.id))setF(p=>({...p,assignees:[...p.assignees,{id:u.id,name:u.name,email:u.email,dept:u.dept}]}));ev.target.value='';},style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},el('option',{value:''},'+ Add person...'),
-              ...users.filter(u=>u.approved&&!f.assignees.find(a=>a.id===u.id)).map(u=>el('option',{key:u.id,value:u.id},`${u.name} (${u.dept}) — ${u.loc}`))
+            el('label',null,'Assign To'),
+            el('select',{value:'',onChange:ev=>{const u=users.find(x=>x.id===ev.target.value);if(u&&!f.assignees.find(a=>a.id===u.id))setF(p=>({...p,assignees:[...p.assignees,{id:u.id,name:u.name,email:u.email,dept:u.dept}]})  );ev.target.value='';},style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+              el('option',{value:''},'+ Add person...'),
+              ...users.filter(u=>u.approved&&!f.assignees.find(a=>a.id===u.id)).map(u=>el('option',{key:u.id,value:u.id},`${u.name} — ${u.dept} — ${u.loc}`))
             ),
             f.assignees.length>0&&el('div',{style:{display:'flex',flexWrap:'wrap',gap:6,marginTop:8}},
-              f.assignees.map(a=>el('div',{key:a.id,style:{display:'flex',alignItems:'center',gap:6,background:'var(--surface2)',borderRadius:6,padding:'4px 10px',fontSize:12}},
-                el('span',null,a.name),el('span',{style:{cursor:'pointer',color:'var(--text3)'},onClick:()=>setF(p=>({...p,assignees:p.assignees.filter(x=>x.id!==a.id)}))},'×'),
+              f.assignees.map(a=>el('div',{key:a.id,style:{display:'flex',alignItems:'center',gap:6,background:'var(--surface2)',borderRadius:20,padding:'4px 12px',fontSize:12}},
+                el('div',{style:{width:18,height:18,borderRadius:'50%',background:`hsl(${(a.name.charCodeAt(0)*47)%360},50%,35%)`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,fontWeight:700,color:'#fff'}},a.name.charAt(0).toUpperCase()),
+                el('span',null,a.name),
+                el('span',{style:{cursor:'pointer',color:'var(--text3)',marginLeft:2},onClick:()=>setF(p=>({...p,assignees:p.assignees.filter(x=>x.id!==a.id)}))},'×'),
               ))
             ),
           ),
-          // Tags
           el('div',{className:'fg'},
             el('label',null,'Tags'),
             el('div',{style:{display:'flex',gap:8}},
-              el('input',{placeholder:'Add tag and press Enter...',value:tagInput,onChange:ev=>setTagInput(ev.target.value),onKeyDown:ev=>{if(ev.key==='Enter'&&tagInput.trim()){setF(p=>({...p,tags:[...new Set([...p.tags,tagInput.trim()])]}));setTagInput('');}},style:{flex:1,background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px 12px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none'}}),
-              el('button',{className:'btn b-ghost',onClick:()=>{if(tagInput.trim()){setF(p=>({...p,tags:[...new Set([...p.tags,tagInput.trim()])]}));setTagInput('');}}},'Add'),
+              el('input',{placeholder:'Type tag and press Enter',value:tagInput,onChange:ev=>setTagInput(ev.target.value),onKeyDown:ev=>{if(ev.key==='Enter'&&tagInput.trim()){setF(p=>({...p,tags:[...new Set([...p.tags,tagInput.trim()])]}));setTagInput('');}},style:{flex:1,background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px 12px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none'}}),
             ),
             f.tags.length>0&&el('div',{style:{display:'flex',flexWrap:'wrap',gap:6,marginTop:8}},
-              f.tags.map(tag=>el('div',{key:tag,style:{display:'flex',alignItems:'center',gap:4,background:'rgba(79,124,255,.12)',color:'var(--accent)',borderRadius:4,padding:'3px 8px',fontSize:12}},
-                el('span',null,tag),el('span',{style:{cursor:'pointer'},onClick:()=>setF(p=>({...p,tags:p.tags.filter(t=>t!==tag)}))},'×'),
+              f.tags.map(tag=>el('div',{key:tag,style:{display:'flex',alignItems:'center',gap:4,background:'rgba(79,124,255,.15)',color:'var(--accent)',borderRadius:20,padding:'3px 10px',fontSize:12}},
+                tag,el('span',{style:{cursor:'pointer',marginLeft:4},onClick:()=>setF(p=>({...p,tags:p.tags.filter(t=>t!==tag)}))},'×'),
               ))
             ),
           ),
         ),
-        el('div',{className:'mf'},el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),el('button',{className:'btn b-blue',onClick:createTask,disabled:saving||!f.title},saving?'Creating...':'Create & Notify')),
+        el('div',{className:'mf'},el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),el('button',{className:'btn b-blue',onClick:createTask,disabled:saving||!f.title},saving?'Creating...':'Create Task')),
       )
     ),
 
-    // Task Detail Modal
+    // TASK DETAIL MODAL
     selected&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setSelected(null)},
-      el('div',{className:'md',style:{width:680}},
+      el('div',{className:'md',style:{width:700,maxHeight:'90vh',overflowY:'auto'}},
         el('div',{className:'mh'},
           el('div',{style:{flex:1}},
             el('div',{style:{display:'flex',gap:8,flexWrap:'wrap',marginBottom:8}},
-              el('span',{className:`badge ${priColor(selected.priority)}`},TASK_PRIORITIES[selected.priority]?.label),
+              el('div',{style:{width:10,height:10,borderRadius:'50%',background:TASK_PRIORITIES[selected.priority]?.color||'#6b7280',marginTop:3}}),
+              el('span',{style:{fontSize:12,fontWeight:600,color:'var(--text2)'}},TASK_PRIORITIES[selected.priority]?.label),
               el('span',{className:'badge bb-gray'},selected.section),
-              el('span',{className:`badge ${TASK_STATUS_COLORS[selected.status]||'bb-gray'}`},TASK_STATUS_LABELS[selected.status]),
-              (selected.tags||[]).map(tag=>el('span',{key:tag,style:{background:'rgba(79,124,255,.12)',color:'var(--accent)',borderRadius:4,padding:'2px 8px',fontSize:11}},tag)),
+              (selected.tags||[]).map(tag=>el('span',{key:tag,style:{background:'rgba(79,124,255,.15)',color:'var(--accent)',borderRadius:4,padding:'2px 8px',fontSize:11}},tag)),
             ),
-            el('div',{className:'mt2'},selected.title),
+            el('div',{style:{fontSize:16,fontWeight:700}},selected.title),
           ),
           el('button',{className:'mc',onClick:()=>setSelected(null)},'×'),
         ),
         el('div',{className:'mbd'},
-          // Status change — assignees can change status
-          (isAssigned(selected)||isCreator(selected)||canSeeAll)&&el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:12,marginBottom:14}},
-            el('div',{className:'tsm fw6 mb2'},'Update Status:'),
-            el('div',{style:{display:'flex',gap:8,flexWrap:'wrap'}},
-              ['not_started','in_progress','done'].map(st=>
-                el('button',{key:st,className:`btn ${selected.status===st?'b-blue':'b-ghost'} btn-sm`,
-                  disabled:!isAssigned(selected)&&!canSeeAll,
-                  onClick:()=>updateTaskStatus(selected,st)
-                },TASK_STATUS_LABELS[st])
-              ),
-              (canSeeAll||isCreator(selected))&&selected.status==='done'&&el('button',{className:'btn b-green btn-sm',onClick:()=>updateTaskStatus(selected,'approved')},'✓ Approve'),
-              (canSeeAll||isCreator(selected))&&selected.status==='approved'&&el('button',{className:'btn b-ghost btn-sm',onClick:()=>updateTaskStatus(selected,'archived')},'📦 Archive'),
-            ),
+          // Status pipeline
+          el('div',{style:{display:'flex',gap:4,marginBottom:16,flexWrap:'wrap'}},
+            TASK_COLS.map(col=>{
+              const isActive=selected.status===col.id;
+              const canMove=(()=>{
+                if(canSeeAll||selected.created_by_id===cu.id) return true;
+                const assigned=(selected.assignees||[]).some(a=>a.id===cu.id);
+                if(!assigned) return false;
+                // Assignees can move to in_progress or review only
+                return col.id==='in_progress'||col.id==='review';
+              })();
+              return el('button',{key:col.id,onClick:()=>canMove&&moveTask(selected,col.id),style:{flex:1,padding:'7px 4px',borderRadius:8,border:`2px solid ${isActive?col.color:'var(--border)'}`,background:isActive?col.color+'22':'transparent',color:isActive?col.color:'var(--text2)',cursor:canMove?'pointer':'not-allowed',fontSize:11,fontWeight:600,opacity:canMove?1:0.5,transition:'all .15s'}},col.label);
+            })
           ),
-          // Meta
+          // 2-col meta
           el('div',{className:'g2 mb4'},
             el('div',null,
               el('div',{className:'tsm c-muted mb2'},'Assignees'),
-              (selected.assignees||[]).length===0?el('div',{className:'tsm c-muted'},'Unassigned'):
-              el('div',{style:{display:'flex',flexDirection:'column',gap:4}},
-                (selected.assignees||[]).map(a=>el('div',{key:a.id,className:'tsm'},`👤 ${a.name} — ${a.dept}`))
+              (selected.assignees||[]).length===0?el('div',{className:'tsm c-muted'},'None'):
+              el('div',{style:{display:'flex',flexDirection:'column',gap:5}},
+                (selected.assignees||[]).map(a=>el('div',{key:a.id,style:{display:'flex',alignItems:'center',gap:8}},
+                  el('div',{style:{width:24,height:24,borderRadius:'50%',background:`hsl(${(a.name.charCodeAt(0)*47)%360},50%,35%)`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:700,color:'#fff'}},a.name.charAt(0).toUpperCase()),
+                  el('div',null,el('div',{style:{fontSize:12,fontWeight:600}},a.name),el('div',{style:{fontSize:11,color:'var(--text2)'}},a.dept)),
+                ))
               ),
             ),
             el('div',null,
               el('div',{className:'tsm c-muted mb2'},'Due Date'),
               el('input',{type:'date',value:selected.due_date||'',onChange:ev=>updateField(selected,'due_date',ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px',color:'var(--text)',fontFamily:'inherit',fontSize:13}}),
+              el('div',{className:'tsm c-muted',style:{marginTop:8}},'Created by '+selected.created_by),
+              el('div',{className:'tsm c-muted'},selected.created_at?.slice(0,10)),
             ),
           ),
           // Description
-          el('div',{className:'fg'},el('label',null,'Description'),el('textarea',{value:selected.description||'',onChange:ev=>updateField(selected,'description',ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:80,resize:'vertical'}})),
-          // File Upload
           el('div',{className:'fg'},
-            el('label',null,'Attach Document'),
-            el('input',{type:'file',accept:'.pdf,.doc,.docx,.png,.jpg,.xlsx,.csv',onChange:async ev=>{
-              const file=ev.target.files[0];if(!file)return;
-              const reader=new FileReader();
-              reader.onload=async re=>{
-                const att={id:'att-'+Date.now(),name:file.name,type:file.type,data:re.target.result,by:cu.name,at:new Date().toISOString()};
-                const newAtts=[...(selected.attachments||[]),att];
-                await updateField(selected,'attachments',newAtts);
-              };
-              reader.readAsDataURL(file);
-            },style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px',color:'var(--text)',fontFamily:'inherit',fontSize:13}}),
+            el('label',null,'Description'),
+            el('textarea',{value:selected.description||'',placeholder:'Add description...',onChange:ev=>updateField(selected,'description',ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:80,resize:'vertical'}}),
+          ),
+          // Attachments
+          el('div',{className:'fg'},
+            el('label',null,'Attach File'),
+            el('input',{type:'file',accept:'.pdf,.doc,.docx,.png,.jpg,.xlsx,.csv',onChange:async ev=>{const file=ev.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=async re=>{const att={id:'att-'+Date.now(),name:file.name,data:re.target.result,by:cu.name,at:new Date().toISOString()};await updateField(selected,'attachments',[...(selected.attachments||[]),att]);};reader.readAsDataURL(file);},style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px',color:'var(--text)',fontFamily:'inherit',fontSize:13}}),
           ),
           (selected.attachments||[]).length>0&&el('div',{style:{marginBottom:14}},
             (selected.attachments||[]).map(att=>el('div',{key:att.id,style:{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'6px 10px',background:'var(--surface2)',borderRadius:6,marginBottom:5}},
-              el('span',{className:'tsm'},`📎 ${att.name}`),
+              el('span',{style:{fontSize:12}},`📎 ${att.name}`),
               el('button',{className:'btn b-ghost btn-sm',onClick:()=>{const a=document.createElement('a');a.href=att.data;a.download=att.name;a.click();}},'Download'),
             ))
           ),
           el('div',{className:'divider'}),
-          el('div',{className:'fw6 mb4'},'Comments'),
-          (selected.notes||[]).map(note=>el('div',{key:note.id,style:{background:'var(--surface2)',borderRadius:8,padding:'10px 12px',marginBottom:8}},
-            el('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:4}},el('span',{className:'tsm fw6'},note.by),el('span',{className:'tsm c-muted'},note.at.slice(0,16).replace('T',' '))),
-            el('div',{className:'tsm'},note.text),
+          // Comments
+          el('div',{style:{fontWeight:600,marginBottom:12}},`Comments (${(selected.notes||[]).length})`),
+          (selected.notes||[]).map(note=>el('div',{key:note.id,style:{display:'flex',gap:10,marginBottom:12}},
+            el('div',{style:{width:28,height:28,borderRadius:'50%',background:`hsl(${(note.by.charCodeAt(0)*47)%360},50%,35%)`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700,color:'#fff',flexShrink:0}},note.by.charAt(0).toUpperCase()),
+            el('div',{style:{flex:1,background:'var(--surface2)',borderRadius:'0 8px 8px 8px',padding:'8px 12px'}},
+              el('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:4}},el('span',{style:{fontSize:12,fontWeight:600}},note.by),el('span',{style:{fontSize:11,color:'var(--text2)'}},note.at.slice(0,16).replace('T',' '))),
+              el('div',{style:{fontSize:13}},note.text),
+            ),
           )),
-          el('div',{style:{display:'flex',gap:8}},
-            el('input',{placeholder:'Add a comment...',value:newNote,onChange:ev=>setNewNote(ev.target.value),onKeyDown:ev=>ev.key==='Enter'&&addNote(),style:{flex:1,background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none'}}),
-            el('button',{className:'btn b-blue',onClick:addNote,disabled:!newNote.trim()},'Post'),
-          ),
-          el('div',{className:'divider'}),
-          el('div',{style:{display:'flex',justifyContent:'space-between'}},
-            el('div',{className:'tsm c-muted'},`Created by ${selected.created_by} · ${selected.created_at?.slice(0,10)}`),
-            selected.updated_by&&el('div',{className:'tsm c-muted'},`Updated by ${selected.updated_by} · ${selected.updated_at?.slice(0,10)}`),
+          el('div',{style:{display:'flex',gap:8,alignItems:'flex-end'}},
+            el('div',{style:{width:28,height:28,borderRadius:'50%',background:`hsl(${(cu.name.charCodeAt(0)*47)%360},50%,35%)`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700,color:'#fff',flexShrink:0}},cu.name.charAt(0).toUpperCase()),
+            el('div',{style:{flex:1}},
+              el('textarea',{placeholder:'Write a comment...',value:newNote,onChange:ev=>setNewNote(ev.target.value),onKeyDown:ev=>ev.key==='Enter'&&!ev.shiftKey&&(ev.preventDefault(),addNote()),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px 12px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:60,resize:'none'}}),
+              el('button',{className:'btn b-blue',style:{marginTop:6},onClick:addNote,disabled:!newNote.trim()},'Post Comment'),
+            ),
           ),
         ),
         el('div',{className:'mf',style:{justifyContent:'space-between'}},
-          el('div',null,cu.role==='admin'&&el('button',{className:'btn b-red',onClick:async()=>{if(!window.confirm('Delete?'))return;await db.remove('pf_tasks',selected.id).catch(console.error);setTasks(p=>p.filter(t=>t.id!==selected.id));setSelected(null);}},'Delete')),
+          el('div',null,cu.role==='admin'&&el('button',{className:'btn b-red',onClick:async()=>{if(!window.confirm('Delete this task?'))return;await db.remove('pf_tasks',selected.id).catch(console.error);setTasks(p=>p.filter(t=>t.id!==selected.id));setSelected(null);}},'Delete')),
           el('button',{className:'btn b-ghost',onClick:()=>setSelected(null)},'Close'),
         ),
       )
