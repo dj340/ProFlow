@@ -386,6 +386,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
   const isManager=cu.role==='manager'||cu.role==='admin';
   const isAssigned=(task.assignees||[]).some(a=>a.id===cu.id);
   const isCreator=task.created_by_id===cu.id;
+  const canEdit=isAdmin||isCreator;
   const canMove=isAssigned||isManager||isCreator;
   const canApprove=isManager||isCreator;
 
@@ -467,9 +468,13 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
           ),
           el('div',null,
             el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:8}},'Due Date'),
-            isAdmin?el('input',{type:'date',value:task.due_date||'',onChange:ev=>updateField('due_date',ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px',color:overdue?'var(--red)':'var(--text)',fontFamily:'inherit',fontSize:13}}):
+            isAdmin||isCreator?el('input',{type:'date',value:task.due_date||'',onChange:ev=>updateField('due_date',ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px',color:overdue?'var(--red)':'var(--text)',fontFamily:'inherit',fontSize:13}}):
             el('div',{style:{fontSize:13,fontWeight:600,color:overdue?'var(--red)':'var(--text)'}},task.due_date||'—'),
-            el('div',{style:{marginTop:10,fontSize:11,color:'var(--text3)'}},'Created by '+task.created_by),
+            el('div',{style:{marginTop:10,display:'flex',alignItems:'center',gap:6}},
+              el('span',{style:{fontSize:11,color:'var(--text3)'}},'Created by'),
+              el('span',{style:{fontSize:11,fontWeight:700,color:'var(--accent)'}},task.created_by),
+            ),
+            !isCreator&&!isAdmin&&el('div',{style:{marginTop:6,background:'rgba(245,166,35,.06)',border:'1px solid rgba(245,166,35,.15)',borderRadius:6,padding:'5px 10px',fontSize:11,color:'var(--accent)'}},'👁 View only — only the creator can edit this task'),
             el('div',{style:{fontSize:11,color:'var(--text3)'}},task.created_at?.slice(0,10)),
           ),
         ),
@@ -478,10 +483,10 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
           el('label',null,'Description'),
           isAdmin||isCreator?
             el('textarea',{value:task.description||'',placeholder:'Add description...',onChange:ev=>updateField('description',ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:80,resize:'vertical'}}):
-            el('div',{style:{fontSize:13,color:'var(--text2)',padding:'9px 0',lineHeight:1.6}},task.description||'No description.'),
+            el('div',{style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'10px 14px',fontSize:13,color:'var(--text2)',lineHeight:1.6,minHeight:60}},task.description||'No description.'),
         ),
         // Attachments
-        (isAdmin||isCreator||isAssigned)&&el('div',{className:'fg'},
+        canEdit&&el('div',{className:'fg'},
           el('label',null,'Attach File'),
           el('input',{type:'file',accept:'.pdf,.doc,.docx,.png,.jpg,.xlsx,.csv',onChange:async ev=>{
             const file=ev.target.files[0];if(!file)return;
@@ -519,7 +524,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
       ),
       el('div',{className:'mf',style:{justifyContent:'space-between'}},
         el('div',null,
-          isAdmin&&el('button',{className:'btn b-red',onClick:async()=>{if(!window.confirm('Delete this task?'))return;await db.remove('pf_tasks',task.id).catch(console.error);onDelete(task.id);onClose();}},'Delete'),
+          canEdit&&el('button',{className:'btn b-red',onClick:async()=>{if(!window.confirm('Delete this task?'))return;await db.remove('pf_tasks',task.id).catch(console.error);onDelete(task.id);onClose();}},'Delete'),
         ),
         el('button',{className:'btn b-ghost',onClick:onClose},'Close'),
       ),
@@ -545,10 +550,20 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter}){
     let list=tasks;
     if(locFilter&&locFilter!=='Nationwide') list=list.filter(t=>!t.loc||t.loc===locFilter||t.loc==='Nationwide');
     if(section!=='All') list=list.filter(t=>t.section===section);
-    // Non-admin/manager only see their tasks
-    if(!isManager) list=list.filter(t=>t.created_by_id===cu.id||(t.assignees||[]).some(a=>a.id===cu.id));
+    if(!isManager){
+      // Non-admin/manager: see tasks they created, are assigned to, OR are a manager of an assignee
+      list=list.filter(t=>{
+        if(t.created_by_id===cu.id) return true;
+        if((t.assignees||[]).some(a=>a.id===cu.id)) return true;
+        // Check if cu is a manager of any assignee
+        return (t.assignees||[]).some(a=>{
+          const assigneeUser=users.find(u=>u.id===a.id);
+          return (assigneeUser?.managers||[]).some(m=>m.id===cu.id);
+        });
+      });
+    }
     return list;
-  },[tasks,locFilter,section,cu,isManager]);
+  },[tasks,locFilter,section,cu,isManager,users]);
 
   async function createTask(){
     if(!f.title||f.assignees.length===0)return;
@@ -590,7 +605,7 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter}){
   const inReview=filtered.filter(t=>t.status==='review');
 
   // Available users to assign (filter by location)
-  const assignableUsers=users.filter(u=>u.approved&&(locFilter==='Nationwide'||!u.loc||u.loc===locFilter||u.loc==='Nationwide'));
+  const assignableUsers=users.filter(u=>u.approved);
 
   return el('div',null,
     // Header
@@ -825,7 +840,7 @@ function Team({users,setUsers,cu}){
               ev.target.value='';
             },style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
               el('option',{value:''},'+ Add manager...'),
-              ...users.filter(u=>u.approved&&(u.role==='manager'||u.role==='admin')&&u.id!==editU.id&&!(editU.managers||[]).find(m=>m.id===u.id)).map(u=>el('option',{key:u.id,value:u.id},`${u.name} — ${u.role} — ${u.loc}`))
+              ...users.filter(u=>u.approved&&u.id!==editU.id&&!(editU.managers||[]).find(m=>m.id===u.id)).map(u=>el('option',{key:u.id,value:u.id},`${u.name} — ${RLABEL[u.role]||u.role} — ${u.loc}`))
             ),
             (editU.managers||[]).length>0&&el('div',{style:{marginTop:8,display:'flex',flexDirection:'column',gap:6}},
               (editU.managers||[]).map((m,i)=>el('div',{key:m.id,style:{display:'flex',alignItems:'center',justifyContent:'space-between',background:'var(--surface2)',borderRadius:8,padding:'8px 12px'}},
