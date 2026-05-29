@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>ProFlow — Task Management</title>
+<title>Hendrix Task Management</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <style>
 :root{
-  --bg:#0f1117;--surface:#181b23;--surface2:#1e2230;--border:#252938;
-  --accent:#4f7cff;--green:#22c55e;--yellow:#f59e0b;--red:#ef4444;
-  --orange:#f97316;--purple:#a855f7;--text:#e8eaf0;--text2:#8b92a8;--text3:#4a5068;
+  --bg:#0a0f1e;--surface:#0f1628;--surface2:#162040;--border:#1e2d52;
+  --accent:#f5a623;--green:#22c55e;--yellow:#f5a623;--red:#ef4444;
+  --orange:#f97316;--purple:#a855f7;--text:#e8edf8;--text2:#7b8db8;--text3:#3a4a72;
   --r:12px;--rs:8px;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -41,7 +41,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .sb-label{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1.2px;padding:0 8px;margin-bottom:5px;}
 .nav{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--rs);cursor:pointer;font-size:13px;font-weight:500;color:var(--text2);border:none;background:none;width:100%;text-align:left;position:relative;transition:all .12s;}
 .nav:hover{background:var(--surface2);color:var(--text);}
-.nav.on{background:rgba(79,124,255,.12);color:var(--accent);}
+.nav.on{background:rgba(245,166,35,.12);color:var(--accent);}
 .nav .dot{position:absolute;right:10px;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 5px;border-radius:10px;min-width:17px;text-align:center;}
 .sb-user{margin-top:auto;padding:11px;background:var(--surface2);border-radius:var(--rs);}
 .sb-name{font-size:13px;font-weight:600;}
@@ -82,7 +82,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .task-card:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(0,0,0,.35);border-color:rgba(79,124,255,.3);}
 .task-card.overdue{border-color:rgba(239,68,68,.35);}
 .pri-bar{width:3px;border-radius:4px;flex-shrink:0;align-self:stretch;}
-.tag{background:rgba(79,124,255,.12);color:var(--accent);border-radius:4px;padding:1px 7px;font-size:10px;font-weight:600;}
+.tag{background:rgba(245,166,35,.12);color:var(--accent);border-radius:4px;padding:1px 7px;font-size:10px;font-weight:600;}
 .section-tag{background:var(--surface2);color:var(--text2);border-radius:4px;padding:1px 7px;font-size:10px;font-weight:600;}
 .avatar{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;border:2px solid var(--surface);flex-shrink:0;}
 /* STATUS PIPELINE */
@@ -101,7 +101,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .g2{display:grid;grid-template-columns:repeat(2,1fr);gap:13px;}
 .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin-bottom:20px;}
 .badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;}
-.bb-blue{background:rgba(79,124,255,.12);color:var(--accent);}
+.bb-blue{background:rgba(245,166,35,.12);color:var(--accent);}
 .bb-green{background:rgba(34,197,94,.12);color:var(--green);}
 .bb-yellow{background:rgba(245,158,11,.12);color:var(--yellow);}
 .bb-red{background:rgba(239,68,68,.12);color:var(--red);}
@@ -162,29 +162,33 @@ const db={
 
 async function sendEmail({to,subject,html}){
   try{
-    await fetch('https://api.resend.com/emails',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+RESEND_KEY},body:JSON.stringify({from:'ProFlow <noreply@hendrix.com>',to:Array.isArray(to)?to:[to],subject,html})});
+    await fetch(`${SUPA_URL}/functions/v1/send-email`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPA_KEY},
+      body:JSON.stringify({to,subject,html}),
+    });
   }catch(e){console.error('Email:',e);}
 }
 
 // ── CONSTANTS ─────────────────────────────────────────────────────────────────
 const LOCS=['Nationwide','Michigan','Missouri'];
-const DEPTS=['Gummy','Cartridge','Pre-Roll','QC','Distribution','Warehouse','Facility','HR','Management'];
+const DEPTS=['Gummy','Cartridge','Pre-Roll','QC','Distribution','Warehouse','Facility','HR','Management','Extraction','Testing','Waste','Purchasing','Biomass','Shipping','Receiving'];
 const ROLES=['employee','lead','supervisor','manager','admin'];
 const RLABEL={employee:'Employee',lead:'Lead',supervisor:'Supervisor',manager:'Manager',admin:'Admin'};
 const RCOLOR={employee:'bb-gray',lead:'bb-blue',supervisor:'bb-purple',manager:'bb-yellow',admin:'bb-red'};
 
-const SECTIONS=['R&D','Special Projects','Production Investigation','HR','General','Michigan Production','Missouri Production'];
+const SECTIONS=['R&D','Special Projects','Production Investigation','HR','General','Michigan Production','Missouri Production','Extraction','Testing','Waste','Inventory Check','Purchasing','Biomass','Shipping','Receiving'];
 
 const COLS=[
   {id:'not_started',label:'Not Started',color:'#4a5068'},
-  {id:'in_progress',label:'In Progress',color:'#3b82f6'},
+  {id:'in_progress',label:'In Progress',color:'#f5a623'},
   {id:'review',label:'In Review',color:'#f59e0b'},
   {id:'done',label:'Done',color:'#22c55e'},
 ];
 
 const PRI={
   low:{label:'Low',color:'#6b7280'},
-  medium:{label:'Medium',color:'#3b82f6'},
+  medium:{label:'Medium',color:'#f5a623'},
   high:{label:'High',color:'#f59e0b'},
   urgent:{label:'Urgent',color:'#ef4444'},
 };
@@ -252,7 +256,7 @@ function Auth({onLogin}){
   }
 
   if(pend)return el('div',{className:'auth-wrap'},el('div',{className:'auth-box'},
-    el('div',{className:'logo'},'Pro',el('span',null,'Flow')),
+    el('div',{className:'logo'},'Hendrix',el('span',null,' TMS')),
     el('div',{className:'pending-box',style:{marginTop:16}},
       el('div',{style:{fontSize:32,marginBottom:10}},'⏳'),
       el('div',{style:{fontWeight:700,fontSize:15,marginBottom:8}},'Account Pending Approval'),
@@ -262,8 +266,8 @@ function Auth({onLogin}){
   ));
 
   return el('div',{className:'auth-wrap'},el('div',{className:'auth-box'},
-    el('div',{className:'logo'},'Pro',el('span',null,'Flow')),
-    el('div',{className:'auth-sub'},'Task Management'),
+    el('div',{className:'logo'},'Hendrix',el('span',null,' TMS')),
+    el('div',{className:'auth-sub'},'Task Management System'),
     el('div',{className:'auth-tabs'},
       el('button',{className:`atab ${tab==='login'?'on':''}`,onClick:()=>{setTab('login');setMsg('');}}, 'Sign In'),
       el('button',{className:`atab ${tab==='reg'?'on':''}`,onClick:()=>{setTab('reg');setMsg('');}}, 'Register'),
@@ -296,7 +300,7 @@ function SetupScreen({onDone}){
   function copy(){navigator.clipboard.writeText(SETUP_SQL.trim()).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);});}
   return el('div',{className:'auth-wrap'},
     el('div',{className:'auth-box',style:{width:540}},
-      el('div',{className:'logo'},'Pro',el('span',null,'Flow')),
+      el('div',{className:'logo'},'Hendrix',el('span',null,' TMS')),
       el('div',{className:'auth-sub'},'One-time setup required'),
       el('div',{style:{background:'var(--bg)',border:'1px solid var(--border)',borderRadius:8,padding:12,marginBottom:14,maxHeight:180,overflowY:'auto'}},
         el('pre',{style:{fontSize:11,color:'var(--text2)',whiteSpace:'pre-wrap',fontFamily:'DM Mono, monospace',lineHeight:1.5}},SETUP_SQL.trim())
@@ -363,7 +367,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
     if(s==='review'){
       const creator=users.find(u=>u.id===task.created_by_id);
       if(creator?.email&&creator.id!==cu.id){
-        sendEmail({to:creator.email,subject:`Task ready for review: "${task.title}"`,html:`<div style="font-family:sans-serif;background:#0f1117;color:#e8eaf0;padding:24px;border-radius:12px;max-width:500px"><div style="color:#4f7cff;font-size:20px;font-weight:700;margin-bottom:12px">ProFlow</div><p><strong>${cu.name}</strong> marked <strong>"${task.title}"</strong> as ready for review.</p><a href="${APP_URL}" style="display:inline-block;background:#f59e0b;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600;margin-top:12px">Review Now →</a></div>`});
+        sendEmail({to:creator.email,subject:`Task ready for review: "${task.title}"`,html:`<div style="font-family:sans-serif;background:#0f1117;color:#e8eaf0;padding:24px;border-radius:12px;max-width:500px"><div style="color:#f5a623;font-size:20px;font-weight:700;margin-bottom:12px">ProFlow</div><p><strong>${cu.name}</strong> marked <strong>"${task.title}"</strong> as ready for review.</p><a href="${APP_URL}" style="display:inline-block;background:#f59e0b;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600;margin-top:12px">Review Now →</a></div>`});
       }
     }
   }
@@ -522,7 +526,7 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter}){
     // Notify assignees
     f.assignees.filter(a=>a.email).forEach(a=>{
       sendEmail({to:a.email,subject:`New task assigned: "${f.title}"`,
-        html:`<div style="font-family:sans-serif;background:#0f1117;color:#e8eaf0;padding:24px;border-radius:12px;max-width:500px"><div style="color:#4f7cff;font-size:20px;font-weight:700;margin-bottom:12px">ProFlow</div><p>Hi ${a.name},</p><p style="margin:10px 0"><strong>${cu.name}</strong> assigned you a task:</p><div style="background:#181b23;border-radius:8px;padding:16px;margin:16px 0"><strong style="font-size:15px">${f.title}</strong>${f.description?`<p style="color:#8b92a8;margin:8px 0 0;font-size:13px">${f.description}</p>`:''}<p style="color:#f59e0b;margin:8px 0 0;font-size:13px">${f.due_date?'Due: '+f.due_date:''}</p></div><a href="${APP_URL}" style="display:inline-block;background:#4f7cff;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:600">Open ProFlow →</a></div>`
+        html:`<div style="font-family:sans-serif;background:#0f1117;color:#e8eaf0;padding:24px;border-radius:12px;max-width:500px"><div style="color:#f5a623;font-size:20px;font-weight:700;margin-bottom:12px">ProFlow</div><p>Hi ${a.name},</p><p style="margin:10px 0"><strong>${cu.name}</strong> assigned you a task:</p><div style="background:#181b23;border-radius:8px;padding:16px;margin:16px 0"><strong style="font-size:15px">${f.title}</strong>${f.description?`<p style="color:#8b92a8;margin:8px 0 0;font-size:13px">${f.description}</p>`:''}<p style="color:#f59e0b;margin:8px 0 0;font-size:13px">${f.due_date?'Due: '+f.due_date:''}</p></div><a href="${APP_URL}" style="display:inline-block;background:#f5a623;color:#0a0f1e;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:600">Open ProFlow →</a></div>`
       });
     });
     setF({title:'',section:'General',description:'',assignees:[],due_date:'',priority:'medium',loc:locFilter==='Nationwide'?'Nationwide':locFilter,tags:[]});
@@ -664,7 +668,7 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter}){
               el('input',{placeholder:'Type tag, press Enter',value:tagInput,onChange:ev=>setTagInput(ev.target.value),onKeyDown:ev=>{if(ev.key==='Enter'&&ev.target.value.trim()){setF(p=>({...p,tags:[...new Set([...p.tags,ev.target.value.trim()])]}));setTagInput('');}}}),
             ),
             f.tags.length>0&&el('div',{style:{display:'flex',flexWrap:'wrap',gap:6,marginTop:8}},
-              f.tags.map(tag=>el('div',{key:tag,style:{display:'flex',alignItems:'center',gap:4,background:'rgba(79,124,255,.15)',color:'var(--accent)',borderRadius:20,padding:'3px 10px',fontSize:12}},
+              f.tags.map(tag=>el('div',{key:tag,style:{display:'flex',alignItems:'center',gap:4,background:'rgba(245,166,35,.15)',color:'var(--accent)',borderRadius:20,padding:'3px 10px',fontSize:12}},
                 tag,el('span',{style:{cursor:'pointer',marginLeft:4,color:'var(--accent)'},onClick:()=>setF(p=>({...p,tags:p.tags.filter(t=>t!==tag)}))},'×'),
               ))
             ),
@@ -696,7 +700,7 @@ function Team({users,setUsers,cu}){
     setUsers(p=>p.map(u=>u.id===id?{...u,approved:true,role:r}:u));
     const user=users.find(u=>u.id===id);
     if(user?.email){
-      sendEmail({to:user.email,subject:'Your ProFlow account is approved',html:`<div style="font-family:sans-serif;background:#0f1117;color:#e8eaf0;padding:24px;border-radius:12px;max-width:500px"><div style="color:#4f7cff;font-size:20px;font-weight:700;margin-bottom:12px">ProFlow</div><p>Hi ${user.name}, your account has been approved. You can now sign in.</p><a href="${APP_URL}" style="display:inline-block;background:#4f7cff;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:600;margin-top:12px">Sign In →</a></div>`});
+      sendEmail({to:user.email,subject:'Your ProFlow account is approved',html:`<div style="font-family:sans-serif;background:#0f1117;color:#e8eaf0;padding:24px;border-radius:12px;max-width:500px"><div style="color:#f5a623;font-size:20px;font-weight:700;margin-bottom:12px">ProFlow</div><p>Hi ${user.name}, your account has been approved. You can now sign in.</p><a href="${APP_URL}" style="display:inline-block;background:#f5a623;color:#0a0f1e;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:600;margin-top:12px">Sign In →</a></div>`});
     }
   }
 
@@ -826,7 +830,7 @@ function App(){
 
   return el('div',{className:'app'},
     el('div',{className:'sb'},
-      el('div',{className:'sb-logo'},'Pro',el('span',null,'Flow')),
+      el('div',{className:'sb-logo'},'Hendrix',el('span',null,' TMS')),
       el('div',{style:{marginBottom:16}},
         el('div',{className:'sb-label',style:{marginBottom:8}},'Location'),
         LOCS.filter(l=>isAdmin||l===cu.loc||cu.loc==='Nationwide').map(l=>
