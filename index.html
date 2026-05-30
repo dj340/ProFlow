@@ -738,17 +738,53 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
   const canApprove=isAdmin||isCreator;
 
   async function changeStatus(s){
-    const update={status:s,updated_at:new Date().toISOString(),updated_by:cu.name};
-    if(s==='done') update.completed_at=new Date().toISOString();
-    if(s==='archived') update.archived_at=new Date().toISOString();
-    if(s==='approved') update.approved_by=cu.name;
+    // If assignee marks 'done', move to 'review' first and notify creator to approve
+    const actualStatus = (s==='done' && !canApprove) ? 'review' : s;
+    const update={status:actualStatus,updated_at:new Date().toISOString(),updated_by:cu.name};
+    if(actualStatus==='done') update.completed_at=new Date().toISOString();
+    if(actualStatus==='archived') update.archived_at=new Date().toISOString();
+    if(actualStatus==='approved') update.approved_by=cu.name;
     try{await db.update('pf_tasks',task.id,update);}catch(e){console.error(e);}
     onUpdate({...task,...update});
-    if(s==='review'){
+    // Notify creator when task goes to review (either directly or via done)
+    if(actualStatus==='review'){
       const creator=users.find(u=>u.id===task.created_by_id);
       if(creator?.email&&creator.id!==cu.id){
-        sendEmail({to:creator.email,subject:`Task ready for review: "${task.title}"`,html:`<div style="font-family:sans-serif;background:#0f1117;color:#e8eaf0;padding:24px;border-radius:12px;max-width:500px"><div style="color:#f5a623;font-size:20px;font-weight:700;margin-bottom:12px">Hendrix TMS</div><p><strong>${cu.name}</strong> marked <strong>"${task.title}"</strong> as ready for review.</p><a href="${APP_URL}" style="display:inline-block;background:#f59e0b;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600;margin-top:12px">Review Now →</a></div>`});
+        const isDoneRequest = s==='done';
+        sendEmail({to:creator.email,
+          subject:`${isDoneRequest?'✅ Task completed':'👁 Task ready for review'}: "${task.title}"`,
+          html:`<div style="font-family:sans-serif;background:#0a0f1e;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
+            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:12px">Hendrix TMS</div>
+            <div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:10px;padding:16px;margin-bottom:20px">
+              <div style="font-size:28px;margin-bottom:8px">${isDoneRequest?'✅':'👁'}</div>
+              <div style="font-size:16px;font-weight:700;margin-bottom:6px">${isDoneRequest?'Task Marked Complete':'Ready for Review'}</div>
+              <div style="font-size:14px;color:#a5b4d4">"${task.title}"</div>
+            </div>
+            <p style="margin-bottom:6px;font-size:13px;color:#7b8db8"><strong style="color:#e8edf8">${cu.name}</strong> ${isDoneRequest?'has completed this task and is requesting your approval.':'has submitted this task for review.'}</p>
+            <a href="${APP_URL}" style="display:inline-block;margin-top:16px;background:#10b981;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">${isDoneRequest?'✅ Review & Approve →':'Review Now →'}</a>
+          </div>`
+        });
+        sendLocalNotification(isDoneRequest?'✅ Task completed':'👁 Ready for review', cu.name+' — '+task.title);
       }
+    }
+    // Notify assignees when creator approves/completes from review
+    if(actualStatus==='done' && canApprove){
+      (task.assignees||[]).filter(a=>a.email&&a.id!==cu.id).forEach(a=>{
+        sendEmail({to:a.email,
+          subject:`✅ Task approved & completed: "${task.title}"`,
+          html:`<div style="font-family:sans-serif;background:#0a0f1e;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
+            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:12px">Hendrix TMS</div>
+            <div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:10px;padding:16px;margin-bottom:20px;text-align:center">
+              <div style="font-size:36px;margin-bottom:8px">🎉</div>
+              <div style="font-size:16px;font-weight:700">Task Approved & Completed!</div>
+              <div style="font-size:14px;color:#a5b4d4;margin-top:6px">"${task.title}"</div>
+            </div>
+            <p style="font-size:13px;color:#7b8db8">Approved by <strong style="color:#e8edf8">${cu.name}</strong></p>
+            <a href="${APP_URL}" style="display:inline-block;margin-top:16px;background:#f5a623;color:#0a0f1e;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">View Task →</a>
+          </div>`
+        });
+      });
+      sendLocalNotification('🎉 Task approved!', task.title+' approved by '+cu.name);
     }
   }
 
@@ -791,8 +827,9 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
             const isActive=task.status===col.id;
             const allowed=(()=>{
               if(col.id==='on_hold') return canEdit;
-              if(col.id==='done'||col.id==='archived'||col.id==='approved') return canApprove;
-              if(col.id==='review') return isAssigned||canEdit;
+              if(col.id==='done') return isAssigned||canEdit; // assignee marks done → goes to review
+              if(col.id==='archived'||col.id==='approved') return canApprove;
+              if(col.id==='review') return canEdit; // only creator/admin can approve from review
               if(isCC) return false;
               return canMove;
             })();
@@ -2174,6 +2211,187 @@ Create comprehensive meeting notes in this EXACT JSON format (no markdown, just 
   );
 }
 
+// ── SCOREBOARD ───────────────────────────────────────────────────────────────
+function Scoreboard({tasks,cu,users}){
+  const[period,setPeriod]=useState('all');
+  const today=new Date().toISOString().slice(0,10);
+
+  function filterByPeriod(t){
+    if(period==='all') return true;
+    const created=t.created_at?.slice(0,10)||'';
+    const now=new Date();
+    if(period==='month'){
+      const start=new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10);
+      return created>=start;
+    }
+    if(period==='week'){
+      const start=new Date(now-7*86400000).toISOString().slice(0,10);
+      return created>=start;
+    }
+    return true;
+  }
+
+  const approvedUsers=users.filter(u=>u.approved);
+  const periodTasks=tasks.filter(filterByPeriod);
+
+  // Calculate score per user
+  const scores=approvedUsers.map(u=>{
+    const assigned=periodTasks.filter(t=>(t.assignees||[]).some(a=>a.id===u.id));
+    const total=assigned.length;
+    const done=assigned.filter(t=>t.status==='done');
+    const inProgress=assigned.filter(t=>t.status==='in_progress');
+    const inReview=assigned.filter(t=>t.status==='review');
+    const notStarted=assigned.filter(t=>t.status==='not_started');
+    const onHold=assigned.filter(t=>t.status==='on_hold');
+
+    // On time: done before or on due_date
+    const doneOnTime=done.filter(t=>t.due_date&&t.completed_at&&t.completed_at.slice(0,10)<=t.due_date);
+    // Late: done after due_date
+    const doneLate=done.filter(t=>t.due_date&&t.completed_at&&t.completed_at.slice(0,10)>t.due_date);
+    // Overdue: not done and past due
+    const overdue=assigned.filter(t=>!['done','archived'].includes(t.status)&&t.due_date&&t.due_date<today);
+    // Never completed (archived without done)
+    const notCompleted=assigned.filter(t=>t.status==='archived'&&!t.completed_at);
+
+    // Score formula: +10 per done on time, +5 per done late, -3 per overdue, -5 per not completed
+    const score=(doneOnTime.length*10)+(doneLate.length*5)-(overdue.length*3)-(notCompleted.length*5);
+    const completionRate=total>0?Math.round((done.length/total)*100):0;
+    const onTimeRate=done.length>0?Math.round((doneOnTime.length/done.length)*100):0;
+
+    return{
+      user:u, total, done:done.length, inProgress:inProgress.length,
+      inReview:inReview.length, notStarted:notStarted.length,
+      onHold:onHold.length, doneOnTime:doneOnTime.length,
+      doneLate:doneLate.length, overdue:overdue.length,
+      notCompleted:notCompleted.length, score, completionRate, onTimeRate,
+    };
+  }).sort((a,b)=>b.score-a.score);
+
+  const maxScore=Math.max(...scores.map(s=>s.score),1);
+  const weakest=scores.filter(s=>s.total>0).sort((a,b)=>a.score-b.score).slice(0,3);
+  const strongest=scores.filter(s=>s.total>0).sort((a,b)=>b.score-a.score).slice(0,3);
+
+  function medalColor(i){return['#f5a623','#94a3b8','#b45309'][i]||'var(--text3)';}
+  function medalEmoji(i){return['🥇','🥈','🥉'][i]||'';}
+  function scoreColor(s){
+    if(s>=50) return 'var(--green)';
+    if(s>=20) return 'var(--accent)';
+    if(s>=0)  return 'var(--text2)';
+    return 'var(--red)';
+  }
+
+  return el('div',null,
+    el('div',{className:'ph'},
+      el('div',null,el('div',{className:'pt'},'Scoreboard'),el('div',{className:'ps'},'Task performance — who\'s crushing it, who needs support')),
+      el('div',{style:{display:'flex',gap:6}},
+        [{id:'week',l:'This Week'},{id:'month',l:'This Month'},{id:'all',l:'All Time'}].map(p=>
+          el('button',{key:p.id,onClick:()=>setPeriod(p.id),style:{padding:'6px 14px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:500,cursor:'pointer',background:period===p.id?'var(--accent)':'transparent',color:period===p.id?'#0a0f1e':'var(--text2)',borderColor:period===p.id?'var(--accent)':'var(--border)',transition:'all .15s'}},p.l)
+        )
+      )
+    ),
+
+    // Top 3 podium
+    strongest.length>0&&el('div',{style:{display:'flex',justifyContent:'center',gap:12,marginBottom:28,alignItems:'flex-end',flexWrap:'wrap'}},
+      [1,0,2].map(i=>{
+        const s=strongest[i];
+        if(!s) return null;
+        const heights=[160,200,140];
+        const isFirst=i===0;
+        return el('div',{key:s.user.id,style:{display:'flex',flexDirection:'column',alignItems:'center',gap:8}},
+          el('div',{style:{fontSize:isFirst?36:28}},medalEmoji(i)),
+          el('div',{className:'avatar',style:{background:avatarColor(s.user.name),width:isFirst?48:40,height:isFirst?48:40,fontSize:isFirst?18:14,border:'3px solid '+medalColor(i)}},s.user.name.charAt(0).toUpperCase()),
+          el('div',{style:{fontWeight:700,fontSize:isFirst?14:12,maxWidth:90,textAlign:'center',lineHeight:1.3}},s.user.name.split(' ')[0]),
+          el('div',{style:{fontSize:isFirst?20:16,fontWeight:800,color:scoreColor(s.score)}},s.score),
+          el('div',{style:{
+            width:isFirst?80:70,height:heights[i],
+            background:`linear-gradient(to top, ${medalColor(i)}33, ${medalColor(i)}88)`,
+            border:'1px solid '+medalColor(i),
+            borderRadius:'6px 6px 0 0',display:'flex',alignItems:'flex-start',justifyContent:'center',paddingTop:8,
+          }},
+            el('div',{style:{fontSize:11,fontWeight:700,color:medalColor(i)}},'#'+(i===0?1:i===1?2:3))
+          ),
+        );
+      })
+    ),
+
+    // Needs attention
+    weakest.length>0&&el('div',{style:{background:'rgba(239,68,68,.04)',border:'1px solid rgba(239,68,68,.15)',borderRadius:12,padding:'14px 16px',marginBottom:20}},
+      el('div',{style:{fontWeight:700,fontSize:13,color:'var(--red)',marginBottom:10}},'⚠️ Needs Attention'),
+      el('div',{style:{display:'flex',gap:10,flexWrap:'wrap'}},
+        weakest.map(s=>el('div',{key:s.user.id,style:{display:'flex',alignItems:'center',gap:8,background:'rgba(239,68,68,.06)',borderRadius:8,padding:'8px 12px',flex:1,minWidth:180}},
+          el('div',{className:'avatar',style:{background:avatarColor(s.user.name),width:28,height:28,fontSize:11}},s.user.name.charAt(0).toUpperCase()),
+          el('div',null,
+            el('div',{style:{fontSize:12,fontWeight:600}},s.user.name),
+            el('div',{style:{fontSize:11,color:'var(--text3)'}},
+              s.overdue>0?`${s.overdue} overdue`:s.doneLate>0?`${s.doneLate} late`:s.notCompleted>0?`${s.notCompleted} incomplete`:'Low score'
+            ),
+          ),
+          el('div',{style:{marginLeft:'auto',fontSize:16,fontWeight:800,color:'var(--red)'}},s.score),
+        ))
+      ),
+    ),
+
+    // Full table
+    el('div',{className:'card',style:{padding:0}},
+      el('div',{className:'tw'},
+        el('table',null,
+          el('thead',null,el('tr',null,
+            ['#','Member','Score','Tasks','Done','On Time','Late','Overdue','Incomplete','In Progress','Rate'].map(h=>el('th',{key:h},h))
+          )),
+          el('tbody',null,scores.map((s,i)=>
+            el('tr',{key:s.user.id,style:{background:i===0?'rgba(245,166,35,.04)':i===scores.length-1&&s.total>0?'rgba(239,68,68,.03)':''}},
+              el('td',null,el('span',{style:{fontSize:16}},medalEmoji(i)||String(i+1))),
+              el('td',null,
+                el('div',{style:{display:'flex',alignItems:'center',gap:8}},
+                  el('div',{className:'avatar',style:{background:avatarColor(s.user.name),width:28,height:28,fontSize:11}},s.user.name.charAt(0).toUpperCase()),
+                  el('div',null,
+                    el('div',{style:{fontWeight:600,fontSize:13}},s.user.name),
+                    el('div',{style:{fontSize:11,color:'var(--text3)'}},RLABEL[s.user.role]||s.user.role),
+                  )
+                )
+              ),
+              el('td',null,
+                el('div',null,
+                  el('div',{style:{fontSize:16,fontWeight:800,color:scoreColor(s.score)}},s.score),
+                  el('div',{style:{width:60,height:3,background:'var(--surface2)',borderRadius:2,marginTop:3}},
+                    el('div',{style:{width:Math.max(0,Math.min(100,(s.score/maxScore)*100))+'%',height:'100%',background:scoreColor(s.score),borderRadius:2}})
+                  ),
+                )
+              ),
+              el('td',null,el('span',{style:{fontWeight:600}},s.total)),
+              el('td',null,el('span',{style:{color:'var(--green)',fontWeight:s.done>0?700:400}},s.done)),
+              el('td',null,el('span',{style:{color:s.doneOnTime>0?'var(--green)':'var(--text3)',fontWeight:s.doneOnTime>0?700:400}},s.doneOnTime)),
+              el('td',null,el('span',{style:{color:s.doneLate>0?'var(--accent)':'var(--text3)',fontWeight:s.doneLate>0?600:400}},s.doneLate)),
+              el('td',null,el('span',{style:{color:s.overdue>0?'var(--red)':'var(--text3)',fontWeight:s.overdue>0?700:400}},s.overdue)),
+              el('td',null,el('span',{style:{color:s.notCompleted>0?'var(--red)':'var(--text3)'}},s.notCompleted)),
+              el('td',null,el('span',{style:{color:'var(--blue)'}},s.inProgress)),
+              el('td',null,
+                s.total>0?el('div',null,
+                  el('div',{style:{fontSize:12,fontWeight:600,color:s.completionRate>=80?'var(--green)':s.completionRate>=50?'var(--accent)':'var(--red)'}},s.completionRate+'%'),
+                  el('div',{style:{width:50,height:3,background:'var(--surface2)',borderRadius:2,marginTop:2}},
+                    el('div',{style:{width:s.completionRate+'%',height:'100%',background:s.completionRate>=80?'var(--green)':s.completionRate>=50?'var(--accent)':'var(--red)',borderRadius:2}})
+                  ),
+                ):el('span',{style:{color:'var(--text3)',fontSize:12}},'—'),
+              ),
+            )
+          ))
+        )
+      )
+    ),
+
+    // Score legend
+    el('div',{style:{marginTop:16,background:'var(--surface)',border:'1px solid var(--border)',borderRadius:10,padding:'12px 16px'}},
+      el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'.8px',marginBottom:8}},'How scores are calculated'),
+      el('div',{style:{display:'flex',gap:16,flexWrap:'wrap',fontSize:12,color:'var(--text2)'}},
+        el('span',{style:{color:'var(--green)'}},'✅ Done on time = +10 pts'),
+        el('span',{style:{color:'var(--accent)'}},'⏰ Done late = +5 pts'),
+        el('span',{style:{color:'var(--red)'}},'⚠️ Overdue = −3 pts'),
+        el('span',{style:{color:'var(--red)'}},'❌ Not completed = −5 pts'),
+      ),
+    ),
+  );
+}
+
 // ── SOPs ──────────────────────────────────────────────────────────────────────
 function SOPs({sops,setSops,cu,users}){
   const[view,setView]=useState('list'); // list | detail
@@ -2184,7 +2402,7 @@ function SOPs({sops,setSops,cu,users}){
   const[saving,setSaving]=useState(false);
   const[ackMsg,setAckMsg]=useState('');
   const[f,setF]=useState({
-    title:'',dept:'Production',description:'',
+    title:'',depts:[],description:'',
     steps:[{id:'s1',text:''}],
     version:'1.0',status:'draft',
     attachments:[],
@@ -2207,7 +2425,7 @@ function SOPs({sops,setSops,cu,users}){
   });
 
   const filtered=visibleSops.filter(s=>{
-    if(deptFilter!=='All'&&s.dept!==deptFilter) return false;
+    if(deptFilter!=='All'&&!(s.depts||[s.dept]).includes(deptFilter)) return false;
     if(search&&!s.title.toLowerCase().includes(search.toLowerCase())&&!s.dept.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
@@ -2235,7 +2453,7 @@ function SOPs({sops,setSops,cu,users}){
       await db.insert('pf_sops',sop);
       setSops(p=>[sop,...p]);
       setNew(false);
-      setF({title:'',dept:'Production',description:'',steps:[{id:'s1',text:''}],version:'1.0',status:'draft',attachments:[],visible_to_roles:[],visible_to_depts:[]});
+      setF({title:'',depts:[],description:'',steps:[{id:'s1',text:''}],version:'1.0',status:'draft',attachments:[],visible_to_roles:[],visible_to_depts:[]});
     }catch(e){
       console.error(e);
       alert('Failed to create SOP. Run SQL migration:\n\nCREATE TABLE IF NOT EXISTS pf_sops (\n  id text primary key, title text, dept text,\n  description text default \'\', steps jsonb default \'[]\',\n  version text default \'1.0\', status text default \'draft\',\n  attachments jsonb default \'[]\',\n  visible_to_roles jsonb default \'[]\',\n  visible_to_depts jsonb default \'[]\',\n  acknowledgements jsonb default \'[]\',\n  created_by text, created_by_id text,\n  created_at text, updated_at text, updated_by text\n);\nALTER TABLE pf_sops DISABLE ROW LEVEL SECURITY;');
@@ -2369,7 +2587,7 @@ function SOPs({sops,setSops,cu,users}){
             el('div',{style:{flex:1}},
               el('div',{style:{display:'flex',gap:6,marginBottom:6,flexWrap:'wrap',alignItems:'center'}},
                 el('span',{className:`badge ${statusBg[sop.status]}`},sop.status==='published'?'✅ Published':sop.status==='draft'?'📝 Draft':'🗄 Archived'),
-                el('span',{style:{background:'rgba(59,130,246,.1)',color:'#93c5fd',border:'1px solid rgba(59,130,246,.2)',borderRadius:4,padding:'2px 8px',fontSize:11,fontWeight:600}},sop.dept),
+                ...((sop.depts||[sop.dept]).filter(Boolean).map(d=>el('span',{key:d,style:{background:'rgba(59,130,246,.1)',color:'#93c5fd',border:'1px solid rgba(59,130,246,.2)',borderRadius:4,padding:'2px 8px',fontSize:11,fontWeight:600}},d))),
                 el('span',{style:{background:'var(--surface2)',color:'var(--text2)',border:'1px solid var(--border)',borderRadius:4,padding:'2px 8px',fontSize:11}},`v${sop.version}`),
                 !acked&&sop.status==='published'&&el('span',{style:{background:'rgba(239,68,68,.1)',color:'var(--red)',border:'1px solid rgba(239,68,68,.2)',borderRadius:4,padding:'2px 8px',fontSize:11,fontWeight:700}},'⚠ Needs Ack'),
                 acked&&el('span',{style:{background:'rgba(16,185,129,.1)',color:'var(--green)',border:'1px solid rgba(16,185,129,.2)',borderRadius:4,padding:'2px 8px',fontSize:11,fontWeight:700}},'✓ Acknowledged'),
@@ -2400,10 +2618,19 @@ function SOPs({sops,setSops,cu,users}){
           el('div',{className:'fg'},el('label',null,'Title *'),el('input',{placeholder:'e.g. Cart Filling Standard Procedure',value:f.title,onChange:ev=>setF(p=>({...p,title:ev.target.value})),autoFocus:true})),
           el('div',{className:'g2'},
             el('div',{className:'fg',style:{marginBottom:0}},
-              el('label',null,'Department'),
-              el('select',{value:f.dept,onChange:ev=>setF(p=>({...p,dept:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
-                DEPTS.map(d=>el('option',{key:d,value:d},d))
-              )
+              el('label',null,'Departments (select all that apply)'),
+              el('div',{style:{display:'flex',flexWrap:'wrap',gap:5,marginTop:4}},
+                Object.keys(DEPT_TREE).map(gm=>el('div',{key:gm,
+                  onClick:()=>setF(p=>{const cur=new Set(p.depts);cur.has(gm)?cur.delete(gm):cur.add(gm);return{...p,depts:[...cur]};}),
+                  style:{padding:'5px 12px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:600,cursor:'pointer',userSelect:'none',
+                    background:(f.depts||[]).includes(gm)?'var(--accent)':'var(--surface2)',
+                    color:(f.depts||[]).includes(gm)?'#0a0f1e':'var(--text2)',
+                    borderColor:(f.depts||[]).includes(gm)?'var(--accent)':'var(--border)',
+                    transition:'all .15s',
+                  }
+                },gm))
+              ),
+              (f.depts||[]).length===0&&el('div',{style:{fontSize:11,color:'var(--red)',marginTop:4}},'Select at least one department'),
             ),
             el('div',{className:'g2',style:{marginBottom:0}},
               el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Version'),el('input',{value:f.version,onChange:ev=>setF(p=>({...p,version:ev.target.value})),placeholder:'1.0'})),
@@ -2460,7 +2687,7 @@ function SOPs({sops,setSops,cu,users}){
           el('div',{style:{flex:1}},
             el('div',{style:{display:'flex',gap:6,marginBottom:8,flexWrap:'wrap'}},
               el('span',{className:`badge ${statusBg[sel.status]}`},sel.status==='published'?'✅ Published':sel.status==='draft'?'📝 Draft':'🗄 Archived'),
-              el('span',{style:{background:'rgba(59,130,246,.1)',color:'#93c5fd',border:'1px solid rgba(59,130,246,.2)',borderRadius:4,padding:'2px 8px',fontSize:11,fontWeight:600}},sel.dept),
+              ...((sel.depts||[sel.dept]).filter(Boolean).map(d=>el('span',{key:d,style:{background:'rgba(59,130,246,.1)',color:'#93c5fd',border:'1px solid rgba(59,130,246,.2)',borderRadius:4,padding:'2px 8px',fontSize:11,fontWeight:600}},d))),
               el('span',{style:{background:'var(--surface2)',color:'var(--text2)',border:'1px solid var(--border)',borderRadius:4,padding:'2px 8px',fontSize:11}},`v${sel.version}`),
             ),
             el('div',{style:{fontSize:17,fontWeight:700}},sel.title),
@@ -2978,6 +3205,7 @@ function App(){
     {id:'calendar',ico:'📅',label:'Calendar'},
     (cu.role==='admin'||cu.dept==='Sales'||cu.dept==='Marketing')&&{id:'sales',ico:'🏪',label:'Sales & Marketing'},
     {id:'sops',ico:'📋',label:'SOPs'},
+    {id:'scores',ico:'🏆',label:'Scoreboard'},
     isAdmin&&{id:'team',ico:'👥',label:'Team & Access',badge:pending||null},
   ].filter(Boolean);
 
@@ -3058,6 +3286,7 @@ function App(){
         el('span',{className:'mnav-ico'},typeof Notification!=='undefined'&&Notification.permission==='granted'?'🔔':'🔕'),'Alerts'
       ),
       el('button',{className:`mnav-btn${page==='sops'?' on':''}`,onClick:()=>setPage('sops')},el('span',{className:'mnav-ico'},'📋'),'SOPs'),
+      el('button',{className:`mnav-btn${page==='scores'?' on':''}`,onClick:()=>setPage('scores')},el('span',{className:'mnav-ico'},'🏆'),'Scores'),
       el('button',{className:'mnav-btn',onClick:()=>{if(window.confirm('Sign out?')){localStorage.removeItem('pf_session');window.location.reload();}}},el('span',{className:'mnav-ico'},'⏻'),'Sign Out'),
     ),
     el('div',{className:'main'},
@@ -3065,6 +3294,7 @@ function App(){
       page==='calendar'&&el(Calendar,{events,setEvents,tasks,cu,users,locFilter,meetingNotes,setMeetingNotes,onJoinCall:(room,title,meetLink)=>setActiveCall({room,title,meetLink})}),
       page==='sales'&&el(SalesMarketing,{salesTasks,setSalesTasks,cu,users,locFilter}),
       page==='sops'&&el(SOPs,{sops,setSops,cu,users}),
+      page==='scores'&&el(Scoreboard,{tasks,cu,users}),
       page==='team'&&isAdmin&&el(Team,{users,setUsers,cu}),
     )
   );
