@@ -2622,19 +2622,73 @@ function SOPs({sops,setSops,cu,users}){
           el('div',{className:'fg'},el('label',null,'Title *'),el('input',{placeholder:'e.g. Cart Filling Standard Procedure',value:f.title,onChange:ev=>setF(p=>({...p,title:ev.target.value})),autoFocus:true})),
           el('div',{className:'g2'},
             el('div',{className:'fg',style:{marginBottom:0}},
-              el('label',null,'Departments (select all that apply)'),
-              el('div',{style:{display:'flex',flexWrap:'wrap',gap:5,marginTop:4}},
-                Object.keys(DEPT_TREE).map(gm=>el('div',{key:gm,
-                  onClick:()=>setF(p=>{const cur=new Set(p.depts);cur.has(gm)?cur.delete(gm):cur.add(gm);return{...p,depts:[...cur]};}),
-                  style:{padding:'5px 12px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:600,cursor:'pointer',userSelect:'none',
-                    background:(f.depts||[]).includes(gm)?'var(--accent)':'var(--surface2)',
-                    color:(f.depts||[]).includes(gm)?'#0a0f1e':'var(--text2)',
-                    borderColor:(f.depts||[]).includes(gm)?'var(--accent)':'var(--border)',
-                    transition:'all .15s',
-                  }
-                },gm))
+              el('label',null,'Departments'),
+              el('div',{style:{position:'relative'}},
+                // Custom multi-select dropdown
+                el('div',{
+                  style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontSize:13,cursor:'pointer',minHeight:42,display:'flex',alignItems:'center',justifyContent:'space-between',userSelect:'none'},
+                  onClick:()=>setF(p=>({...p,_deptOpen:!p._deptOpen})),
+                },
+                  el('div',{style:{flex:1,display:'flex',flexWrap:'wrap',gap:4}},
+                    (f.depts||[]).length===0
+                      ?el('span',{style:{color:'var(--text3)'}},'Select departments...')
+                      :(f.depts||[]).map(d=>el('span',{key:d,style:{background:'var(--accent)',color:'#0a0f1e',borderRadius:4,padding:'2px 8px',fontSize:11,fontWeight:700,display:'flex',alignItems:'center',gap:4}},
+                          d,
+                          el('span',{style:{cursor:'pointer',fontWeight:900,marginLeft:2},onClick:ev=>{ev.stopPropagation();setF(p=>{const cur=new Set(p.depts);cur.delete(d);return{...p,depts:[...cur]};})}},'×')
+                        ))
+                  ),
+                  el('span',{style:{color:'var(--text3)',fontSize:10,marginLeft:8}},f._deptOpen?'▲':'▼'),
+                ),
+                f._deptOpen&&el('div',{style:{position:'absolute',top:'100%',left:0,right:0,background:'var(--surface)',border:'1px solid var(--border)',borderRadius:'var(--rs)',zIndex:999,maxHeight:320,overflowY:'auto',boxShadow:'0 8px 24px rgba(0,0,0,.4)',marginTop:2}},
+                  // Render full tree: grandmother → mother → child
+                  Object.entries(DEPT_TREE).map(([gm,mothers])=>[
+                    // Grandmother row
+                    el('div',{key:gm,
+                      onClick:()=>setF(p=>{const cur=new Set(p.depts);cur.has(gm)?cur.delete(gm):cur.add(gm);return{...p,depts:[...cur]};}),
+                      style:{display:'flex',alignItems:'center',gap:8,padding:'9px 14px',cursor:'pointer',background:(f.depts||[]).includes(gm)?'rgba(245,166,35,.1)':'transparent',borderBottom:'1px solid var(--border)',transition:'background .1s'},
+                      onMouseEnter:ev=>ev.currentTarget.style.background=(f.depts||[]).includes(gm)?'rgba(245,166,35,.15)':'var(--surface2)',
+                      onMouseLeave:ev=>ev.currentTarget.style.background=(f.depts||[]).includes(gm)?'rgba(245,166,35,.1)':'transparent',
+                    },
+                      el('div',{style:{width:16,height:16,borderRadius:3,border:'2px solid',borderColor:(f.depts||[]).includes(gm)?'var(--accent)':'var(--text3)',background:(f.depts||[]).includes(gm)?'var(--accent)':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}},
+                        (f.depts||[]).includes(gm)&&el('span',{style:{color:'#0a0f1e',fontSize:9,fontWeight:900}},'✓')
+                      ),
+                      el('span',{style:{fontWeight:700,fontSize:13,color:(f.depts||[]).includes(gm)?'var(--accent)':'var(--text)'}},'🏭 '+gm),
+                    ),
+                    // Mother rows
+                    ...Object.entries(mothers).map(([mother,children])=>[
+                      el('div',{key:mother,
+                        onClick:()=>setF(p=>{const cur=new Set(p.depts);cur.has(mother)?cur.delete(mother):cur.add(mother);return{...p,depts:[...cur]};}),
+                        style:{display:'flex',alignItems:'center',gap:8,padding:'7px 14px 7px 28px',cursor:'pointer',background:(f.depts||[]).includes(mother)?'rgba(59,130,246,.08)':'transparent',transition:'background .1s'},
+                        onMouseEnter:ev=>ev.currentTarget.style.background=(f.depts||[]).includes(mother)?'rgba(59,130,246,.12)':'var(--surface2)',
+                        onMouseLeave:ev=>ev.currentTarget.style.background=(f.depts||[]).includes(mother)?'rgba(59,130,246,.08)':'transparent',
+                      },
+                        el('div',{style:{width:14,height:14,borderRadius:3,border:'1.5px solid',borderColor:(f.depts||[]).includes(mother)?'#93c5fd':'var(--text3)',background:(f.depts||[]).includes(mother)?'rgba(59,130,246,.3)':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}},
+                          (f.depts||[]).includes(mother)&&el('span',{style:{color:'#93c5fd',fontSize:8,fontWeight:900}},'✓')
+                        ),
+                        el('span',{style:{fontSize:12,fontWeight:600,color:(f.depts||[]).includes(mother)?'#93c5fd':'var(--text2)'}},'↳ '+mother),
+                      ),
+                      // Child rows
+                      ...children.map(child=>
+                        el('div',{key:child,
+                          onClick:()=>setF(p=>{const cur=new Set(p.depts);cur.has(child)?cur.delete(child):cur.add(child);return{...p,depts:[...cur]};}),
+                          style:{display:'flex',alignItems:'center',gap:8,padding:'6px 14px 6px 44px',cursor:'pointer',background:(f.depts||[]).includes(child)?'rgba(16,185,129,.06)':'transparent',transition:'background .1s'},
+                          onMouseEnter:ev=>ev.currentTarget.style.background=(f.depts||[]).includes(child)?'rgba(16,185,129,.1)':'var(--surface2)',
+                          onMouseLeave:ev=>ev.currentTarget.style.background=(f.depts||[]).includes(child)?'rgba(16,185,129,.06)':'transparent',
+                        },
+                          el('div',{style:{width:10,height:10,borderRadius:'50%',background:(f.depts||[]).includes(child)?'var(--green)':'var(--text3)',flexShrink:0}}),
+                          el('span',{style:{fontSize:11,color:(f.depts||[]).includes(child)?'var(--green)':'var(--text3)'}},'↳ '+child),
+                        )
+                      ),
+                    ]).flat(),
+                  ]).flat(),
+                  // Close button
+                  el('div',{style:{padding:'8px 14px',borderTop:'1px solid var(--border)',display:'flex',justifyContent:'space-between',alignItems:'center'}},
+                    el('span',{style:{fontSize:11,color:'var(--text3)'}},(f.depts||[]).length+' selected'),
+                    el('button',{onClick:ev=>{ev.stopPropagation();setF(p=>({...p,_deptOpen:false}));},style:{background:'var(--accent)',color:'#0a0f1e',border:'none',borderRadius:6,padding:'4px 12px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}},'Done'),
+                  ),
+                ),
               ),
-              (f.depts||[]).length===0&&el('div',{style:{fontSize:11,color:'var(--red)',marginTop:4}},'Select at least one department'),
+              (f.depts||[]).length===0&&el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:4}},'Select at least one department'),
             ),
             el('div',{className:'g2',style:{marginBottom:0}},
               el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Version'),el('input',{value:f.version,onChange:ev=>setF(p=>({...p,version:ev.target.value})),placeholder:'1.0'})),
