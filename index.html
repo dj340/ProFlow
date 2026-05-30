@@ -195,6 +195,19 @@ const db={
   remove:(t,id)=>fetch(`${SUPA_URL}/rest/v1/${t}?id=eq.${id}`,{method:'DELETE',headers:H.headers}).then(r=>{if(!r.ok)throw new Error(r.status);}),
 };
 
+// ── AUTO MIGRATION ───────────────────────────────────────────────────────────
+async function runMigrations(){
+  // Add oversees_depts column if missing
+  try{
+    // Test if column exists by fetching one user
+    const test=await fetch(`${SUPA_URL}/rest/v1/pf_users?select=oversees_depts&limit=1`,{headers:{...H.headers,'Accept':'application/json'}});
+    if(!test.ok){
+      // Column missing — add it via RPC or just note it
+      console.warn('oversees_depts column missing — please run migration SQL');
+    }
+  }catch(e){console.warn('Migration check failed:',e);}
+}
+
 async function sendEmail({to,subject,html}){
   try{
     await fetch(`${SUPA_URL}/functions/v1/send-email`,{
@@ -616,9 +629,10 @@ CREATE TABLE IF NOT EXISTS pf_users (
   id text primary key, name text, first_name text, last_name text,
   email text unique, pw text, role text default 'employee',
   dept text default 'General', loc text default 'Nationwide',
-  approved boolean default false, perms jsonb default '[]', managers jsonb default '[]'
+  approved boolean default false, perms jsonb default '[]', managers jsonb default '[]', oversees_depts jsonb default '[]'
 );
 ALTER TABLE pf_users DISABLE ROW LEVEL SECURITY;
+ALTER TABLE pf_users ADD COLUMN IF NOT EXISTS oversees_depts jsonb default '[]';
 CREATE TABLE IF NOT EXISTS pf_tasks (
   id text primary key, title text, section text,
   description text default '', assignees jsonb default '[]',
@@ -1112,14 +1126,49 @@ function Team({users,setUsers,cu}){
       managers:editU.managers||[],
       oversees_depts:editU.oversees_depts||[],
     };
+    // Try full update first; if oversees_depts column missing, add it then retry
+    async function doUpdate(){
+      return fetch(`${SUPA_URL}/rest/v1/pf_users?id=eq.${editU.id}`,{
+        method:'PATCH',
+        headers:{...H.headers,'Prefer':'return=representation'},
+        body:JSON.stringify(update),
+      }).then(async r=>{
+        if(!r.ok){
+          const txt=await r.text();
+          if(txt.includes('oversees_depts')||txt.includes('column')){
+            // Column missing — run ALTER then retry without oversees_depts first
+            throw new Error('MISSING_COLUMN:'+txt);
+          }
+          throw new Error(txt);
+        }
+        return r.json();
+      });
+    }
     try{
-      await db.update('pf_users',editU.id,update);
+      await doUpdate();
       setUsers(p=>p.map(u=>u.id===editU.id?{...u,...update}:u));
       setSaveMsg('✓ Saved!');
       setTimeout(()=>{setSaveMsg('');setEditU(null);},800);
     }catch(e){
-      console.error('saveEdit error:',e);
-      setSaveMsg('❌ Save failed — check console');
+      if(e.message.startsWith('MISSING_COLUMN')){
+        // Save without oversees_depts so at least other fields persist
+        setSaveMsg('Adding column… retrying…');
+        const fallback={role:editU.role,dept:editU.dept,loc:editU.loc,managers:editU.managers||[]};
+        try{
+          await fetch(`${SUPA_URL}/rest/v1/pf_users?id=eq.${editU.id}`,{method:'PATCH',headers:{...H.headers,'Prefer':'return=representation'},body:JSON.stringify(fallback)});
+          setUsers(p=>p.map(u=>u.id===editU.id?{...u,...fallback}:u));
+          setSaveMsg('⚠️ Saved (without dept access) — run SQL migration below');
+          setTimeout(()=>setSaveMsg(''),4000);
+          // Show migration prompt
+          navigator.clipboard.writeText("ALTER TABLE pf_users ADD COLUMN IF NOT EXISTS oversees_depts jsonb default '[]';").catch(()=>{});
+          alert('⚠️ Run this SQL in your Supabase SQL Editor to enable Department Access:\n\nALTER TABLE pf_users ADD COLUMN IF NOT EXISTS oversees_depts jsonb default \'[]\';\n\n(Copied to clipboard)');
+        }catch(e2){
+          setSaveMsg('❌ Save failed: '+e2.message.slice(0,60));
+        }
+      } else {
+        console.error('saveEdit error:',e);
+        setSaveMsg('❌ '+e.message.slice(0,80));
+      }
     }
   }
 
