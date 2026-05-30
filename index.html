@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
 <meta name="theme-color" content="#f5a623"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
@@ -181,6 +181,21 @@ tr:hover td{background:rgba(245,166,35,.02);}
 @media(max-width:1100px){.board{grid-template-columns:repeat(2,1fr);}}
 @media(max-width:900px){.sb{display:none;}.main{margin-left:0;padding:16px;}.board{grid-template-columns:1fr;}.g4{grid-template-columns:repeat(2,1fr);}}
 @media(max-width:600px){.g4,.g2{grid-template-columns:1fr;}}
+
+/* Mobile bottom nav */
+.mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:8px 0 calc(8px + env(safe-area-inset-bottom));z-index:200;grid-template-columns:repeat(3,1fr);}
+.mnav-btn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px;background:none;border:none;color:var(--text2);font-family:inherit;font-size:10px;font-weight:600;cursor:pointer;transition:color .15s;}
+.mnav-btn.on{color:var(--accent);}
+.mnav-ico{font-size:20px;line-height:1;}
+.mnav-dot{position:absolute;top:-2px;right:-2px;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 4px;border-radius:8px;}
+@media(max-width:900px){
+  .mobile-nav{display:grid;}
+  .main{margin-left:0;padding:16px 14px 90px;} /* extra bottom padding for nav */
+  .board{grid-template-columns:1fr;}
+  .g4{grid-template-columns:repeat(2,1fr);}
+  /* Update banner */
+  .update-banner{position:fixed;top:0;left:0;right:0;background:var(--accent);color:#0a0f1e;padding:12px 16px;text-align:center;font-size:13px;font-weight:700;z-index:9999;display:flex;justify-content:space-between;align-items:center;}
+}
 </style>
 </head>
 <body>
@@ -1020,6 +1035,11 @@ function App(){
         },'⏻  Sign Out'),
       )
     ),
+    // Update available banner
+    el('div',{id:'update-banner',style:{display:'none'},className:'update-banner'},
+      el('span',null,'🆕 New version available!'),
+      el('button',{onClick:()=>window.location.reload(true),style:{background:'rgba(0,0,0,.2)',border:'none',borderRadius:6,padding:'5px 14px',color:'#0a0f1e',fontFamily:'inherit',fontSize:12,fontWeight:700,cursor:'pointer'}},'Update Now'),
+    ),
     holdAlert&&el('div',{className:'on-hold-alert',onClick:()=>setHoldAlert(null)},
       el('div',{className:'on-hold-banner'},
         el('div',{style:{fontSize:40,marginBottom:12}},'🚨'),
@@ -1029,6 +1049,26 @@ function App(){
         el('div',{style:{fontSize:13,opacity:.8,marginBottom:20}},'Placed on hold by '+holdAlert.hold_by),
         el('button',{onClick:()=>{sessionStorage.setItem('hold-dismissed-'+holdAlert.id,'1');setHoldAlert(null);},style:{background:'rgba(255,255,255,.2)',border:'2px solid rgba(255,255,255,.5)',borderRadius:10,padding:'10px 28px',color:'#fff',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer'}},'I Understand'),
       )
+    ),
+    // Mobile bottom nav
+    el('div',{className:'mobile-nav'},
+      el('button',{className:`mnav-btn${page==='board'?' on':''}`,onClick:()=>setPage('board')},
+        el('div',{style:{position:'relative',display:'inline-block'}},
+          el('span',{className:'mnav-ico'},'⬛'),
+        ),
+        'Board'
+      ),
+      cu.role==='admin'&&el('button',{className:`mnav-btn${page==='team'?' on':''}`,onClick:()=>setPage('team')},
+        el('div',{style:{position:'relative',display:'inline-block'}},
+          el('span',{className:'mnav-ico'},'👥'),
+          pending>0&&el('span',{className:'mnav-dot'},pending),
+        ),
+        'Team'
+      ),
+      el('button',{className:'mnav-btn',onClick:()=>requestPushPermission(cu.id)},
+        el('span',{className:'mnav-ico'},'🔔'),
+        'Alerts'
+      ),
     ),
     el('div',{className:'main'},
       page==='board'&&el(Board,{tasks,setTasks,cu,users,locFilter,setLocFilter}),
@@ -1043,8 +1083,30 @@ ReactDOM.createRoot(document.getElementById('root')).render(el(App));
 if('serviceWorker' in navigator){
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/ProFlow/sw.js')
-      .then(r => console.log('SW registered'))
+      .then(reg => {
+        console.log('SW registered');
+        // Check for updates every 30 minutes
+        setInterval(() => reg.update(), 30 * 60 * 1000);
+        // Listen for new SW waiting
+        reg.addEventListener('updatefound', () => {
+          const newSW = reg.installing;
+          newSW.addEventListener('statechange', () => {
+            if(newSW.state === 'installed' && navigator.serviceWorker.controller) {
+              // New version available — show update banner
+              const banner = document.getElementById('update-banner');
+              if(banner) banner.style.display = 'flex';
+            }
+          });
+        });
+      })
       .catch(e => console.log('SW failed:', e));
+    // Listen for SW messages (auto reload on update)
+    navigator.serviceWorker.addEventListener('message', ev => {
+      if(ev.data?.type === 'SW_UPDATED') {
+        const banner = document.getElementById('update-banner');
+        if(banner) banner.style.display = 'flex';
+      }
+    });
   });
 }
 // PWA install prompt
