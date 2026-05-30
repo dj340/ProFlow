@@ -183,7 +183,7 @@ tr:hover td{background:rgba(245,166,35,.02);}
 @media(max-width:600px){.g4,.g2{grid-template-columns:1fr;}}
 
 /* Mobile bottom nav */
-.mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:8px 0 calc(8px + env(safe-area-inset-bottom));z-index:200;grid-template-columns:repeat(3,1fr);}
+.mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:8px 0 calc(8px + env(safe-area-inset-bottom));z-index:200;grid-template-columns:repeat(4,1fr);}
 .mnav-btn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px;background:none;border:none;color:var(--text2);font-family:inherit;font-size:10px;font-weight:600;cursor:pointer;transition:color .15s;}
 .mnav-btn.on{color:var(--accent);}
 .mnav-ico{font-size:20px;line-height:1;}
@@ -668,10 +668,17 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter}){
       ),
     ),
 
-    // Stats
-    el('div',{className:'g4'},
-      [{l:'My Tasks',v:myTasks.length,c:'#3b82f6'},{l:'Due Today',v:dueToday.length,c:dueToday.length>0?'#ef4444':'#4a5068'},{l:'Overdue',v:overdue.length,c:overdue.length>0?'#ef4444':'#4a5068'},{l:'In Review',v:inReview.length,c:inReview.length>0?'#f59e0b':'#4a5068'}]
-        .map(({l,v,c})=>el('div',{key:l,className:'stat'},el('div',{className:'sl'},l),el('div',{className:'sv',style:{color:c}},v)))
+    // Stats — clean 4-card row
+    el('div',{className:'g4',style:{marginBottom:20}},
+      [
+        {l:'My Tasks',v:myTasks.length,c:'var(--accent)',ico:'📋'},
+        {l:'Due Today',v:dueToday.length,c:dueToday.length>0?'var(--red)':'var(--text3)',ico:'🔴'},
+        {l:'Overdue',v:overdue.length,c:overdue.length>0?'var(--red)':'var(--text3)',ico:'⚠️'},
+        {l:'In Review',v:inReview.length,c:inReview.length>0?'var(--yellow)':'var(--text3)',ico:'👁'},
+      ].map(({l,v,c,ico})=>el('div',{key:l,className:'stat',style:{display:'flex',alignItems:'center',gap:14}},
+        el('div',{style:{fontSize:28}},ico),
+        el('div',null,el('div',{className:'sl'},l),el('div',{className:'sv',style:{color:c,fontSize:24}},v)),
+      ))
     ),
 
     // Location + Section filters
@@ -937,6 +944,17 @@ function App(){
   const[dbReady,setDbReady]=useState(null);
   const[page,setPage]=useState('board');
   const[holdAlert,setHoldAlert]=useState(null);
+  const[refreshKey,setRefreshKey]=useState(0);
+
+  const doRefresh=useCallback(()=>{
+    if(!cu||!dbReady)return;
+    Promise.all([
+      db.get('pf_tasks','order=created_at.desc').catch(()=>[]),
+      db.get('pf_users').catch(()=>[]),
+    ]).then(([t,u])=>{setTasks(t||[]);setUsers(u||[]);});
+  },[cu,dbReady]);
+
+  usePullToRefresh(doRefresh);
   const[locFilter,setLocFilter]=useState(()=>{try{const s=localStorage.getItem('pf_session');const u=s?JSON.parse(s):null;return u?.loc||'Nationwide';}catch{return 'Nationwide';}});
 
   useEffect(()=>{
@@ -1025,16 +1043,28 @@ function App(){
         el('div',{className:'sb-name'},cu.name),
         el('div',{className:'sb-role'},`${RLABEL[cu.role]||cu.role} · ${cu.dept}`),
         el('div',{className:'sb-role',style:{marginTop:2}},cu.loc),
-        el('button',{
-          onClick:()=>requestPushPermission(cu.id),
-          style:{marginTop:8,width:'100%',background:'rgba(245,166,35,.06)',border:'1px solid rgba(245,166,35,.2)',borderRadius:'var(--rs)',padding:'8px',color:'var(--accent)',fontFamily:'inherit',fontSize:12,fontWeight:600,cursor:'pointer',transition:'all .15s',letterSpacing:'.3px'}
-        },'🔔  Enable Notifications'),
+          el('button',{
+          onClick:async()=>{
+            if(!('Notification' in window)){alert('Notifications not supported on this browser.');return;}
+            if(Notification.permission==='granted'){alert('Notifications already enabled! ✓');return;}
+            const perm=await Notification.requestPermission();
+            if(perm==='granted'){
+              requestPushPermission(cu.id);
+              new Notification('Hendrix TMS',{body:'Notifications enabled! You will now receive task alerts.',icon:'/ProFlow/icon-192.png'});
+            } else if(perm==='denied'){
+              alert('Notifications blocked. Go to your browser settings → Site Settings → Notifications → Allow dj340.github.io');
+            }
+          },
+          style:{marginTop:8,width:'100%',background:typeof Notification!=='undefined'&&Notification.permission==='granted'?'rgba(16,185,129,.08)':'rgba(245,166,35,.06)',border:'1px solid',borderColor:typeof Notification!=='undefined'&&Notification.permission==='granted'?'rgba(16,185,129,.2)':'rgba(245,166,35,.2)',borderRadius:'var(--rs)',padding:'8px',color:typeof Notification!=='undefined'&&Notification.permission==='granted'?'var(--green)':'var(--accent)',fontFamily:'inherit',fontSize:12,fontWeight:600,cursor:'pointer',transition:'all .15s',letterSpacing:'.3px'}
+        },typeof Notification!=='undefined'&&Notification.permission==='granted'?'🔔 Notifications On ✓':'🔔 Enable Notifications'),
         el('button',{
           onClick:()=>{localStorage.removeItem('pf_session');setCu(null);},
           style:{marginTop:6,width:'100%',background:'rgba(239,68,68,.08)',border:'1px solid rgba(239,68,68,.2)',borderRadius:'var(--rs)',padding:'8px',color:'var(--red)',fontFamily:'inherit',fontSize:12,fontWeight:600,cursor:'pointer',transition:'all .15s',letterSpacing:'.3px'}
         },'⏻  Sign Out'),
       )
     ),
+    // Pull to refresh indicator
+    el('div',{id:'ptr-indicator',style:{display:'none',position:'fixed',top:10,left:'50%',transform:'translateX(-50%)',background:'var(--surface)',border:'1px solid var(--border)',borderRadius:20,padding:'8px 16px',zIndex:9998,alignItems:'center',gap:8,fontSize:12,color:'var(--text2)',boxShadow:'0 4px 12px rgba(0,0,0,.3)'}},'↓ Pull to refresh'),
     // Update available banner
     el('div',{id:'update-banner',style:{display:'none'},className:'update-banner'},
       el('span',null,'🆕 New version available!'),
@@ -1065,9 +1095,19 @@ function App(){
         ),
         'Team'
       ),
-      el('button',{className:'mnav-btn',onClick:()=>requestPushPermission(cu.id)},
-        el('span',{className:'mnav-ico'},'🔔'),
+      el('button',{className:'mnav-btn',onClick:async()=>{
+          if(!('Notification' in window)){alert('Not supported');return;}
+          if(Notification.permission==='granted'){alert('Notifications already enabled ✓');return;}
+          const p=await Notification.requestPermission();
+          if(p==='granted'){requestPushPermission(cu.id);new Notification('Hendrix TMS',{body:'Notifications enabled!',icon:'/ProFlow/icon-192.png'});}
+          else alert('Blocked — go to browser settings to allow notifications');
+        }},
+        el('span',{className:'mnav-ico'},typeof Notification!=='undefined'&&Notification.permission==='granted'?'🔔':'🔕'),
         'Alerts'
+      ),
+      el('button',{className:'mnav-btn',onClick:()=>{if(window.confirm('Sign out?')){localStorage.removeItem('pf_session');window.location.reload();}}},
+        el('span',{className:'mnav-ico'},'⏻'),
+        'Sign Out'
       ),
     ),
     el('div',{className:'main'},
