@@ -579,6 +579,8 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter}){
     const task={id:'task-'+Date.now(),...f,status:'not_started',created_by:cu.name,created_by_id:cu.id,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),updated_by:cu.name,notes:[],attachments:[]};
     try{await db.insert('pf_tasks',task);}catch(e){console.error(e);setSaving(false);return;}
     setTasks(p=>[task,...p]);
+    // Send local notification to creator immediately
+    sendLocalNotification('✅ Task Created',`"${f.title}" created and assigned`).catch(()=>{});
     // Notify assignees and their managers
     const allNotify=[];
     f.assignees.forEach(a=>{
@@ -613,7 +615,16 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter}){
   const inReview=filtered.filter(t=>t.status==='review');
 
   // Available users to assign (filter by location)
-  const assignableUsers=users.filter(u=>u.approved);
+  const assignableUsers=useMemo(()=>{
+    if(isAdmin) return users.filter(u=>u.approved);
+    // Can assign to yourself
+    // Can assign to anyone who has you set as one of their managers
+    return users.filter(u=>{
+      if(!u.approved) return false;
+      if(u.id===cu.id) return true; // yourself
+      return (u.managers||[]).some(m=>m.id===cu.id); // reports to you
+    });
+  },[users,cu,isAdmin]);
 
   return el('div',null,
     // Header
@@ -624,7 +635,7 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter}){
           el('button',{className:`vbtn${view==='board'?' on':''}`,onClick:()=>setView('board')},'⬛ Board'),
           el('button',{className:`vbtn${view==='list'?' on':''}`,onClick:()=>setView('list')},'☰ List'),
         ),
-        isAdmin&&el('button',{className:'btn b-blue',onClick:()=>setNew(true)},'+ New Task'),
+        el('button',{className:'btn b-blue',onClick:()=>setNew(true)},'+ New Task'),
       ),
     ),
 
@@ -658,7 +669,7 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter}){
               col.label,
               el('div',{className:'col-count'},colTasks.length),
             ),
-            isAdmin&&el('button',{onClick:()=>{setF(p=>({...p,status:col.id}));setNew(true);},style:{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:20,lineHeight:1,padding:'0 4px'}},'＋'),
+            el('button',{onClick:()=>{setF(p=>({...p,status:col.id}));setNew(true);},style:{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:20,lineHeight:1,padding:'0 4px'}},'＋'),
           ),
           colTasks.length===0?
             el('div',{style:{border:'2px dashed var(--border)',borderRadius:8,padding:'24px 12px',textAlign:'center',color:'var(--text3)',fontSize:12}},'Empty'):
@@ -716,7 +727,7 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter}){
           el('div',{className:'fg'},
             el('label',null,'Assign To * (required)'),
             el('select',{value:'',onChange:ev=>{const u=assignableUsers.find(x=>x.id===ev.target.value);if(u&&!f.assignees.find(a=>a.id===u.id))setF(p=>({...p,assignees:[...p.assignees,{id:u.id,name:u.name,email:u.email,dept:u.dept,loc:u.loc}]}));ev.target.value='';},style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
-              el('option',{value:''},'+ Add person...'),
+              el('option',{value:''},assignableUsers.length<=1?'Only yourself — ask admin to set up reports':'+ Add person...'),
               ...assignableUsers.filter(u=>!f.assignees.find(a=>a.id===u.id)).map(u=>el('option',{key:u.id,value:u.id},`${u.name} — ${u.dept} — ${u.loc}`))
             ),
             f.assignees.length>0&&el('div',{style:{display:'flex',flexWrap:'wrap',gap:6,marginTop:8}},
@@ -903,6 +914,8 @@ function App(){
 
   useEffect(()=>{
     if(!cu||!dbReady)return;
+    // Request push notification permission
+    setTimeout(()=>requestPushPermission(cu.id),2000);
     setLoading(true);
     Promise.all([
       db.get('pf_tasks','order=created_at.desc').catch(()=>[]),
