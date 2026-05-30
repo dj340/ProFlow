@@ -2327,6 +2327,7 @@ function App(){
       page==='calendar'&&el(Calendar,{events,setEvents,tasks,cu,users,locFilter,meetingNotes,setMeetingNotes,onJoinCall:(room,title,meetLink)=>setActiveCall({room,title,meetLink})}),
       page==='sales'&&el(SalesMarketing,{salesTasks,setSalesTasks,cu,users,locFilter}),
       page==='team'&&isAdmin&&el(Team,{users,setUsers,cu}),
+      page==='team'&&isAdmin&&el(Team,{users,setUsers,cu}),
     )
   );
 }
