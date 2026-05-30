@@ -283,6 +283,22 @@ ALTER TABLE pf_tasks DISABLE ROW LEVEL SECURITY;
 ALTER TABLE pf_tasks ADD COLUMN IF NOT EXISTS hold_reason text;
 ALTER TABLE pf_tasks ADD COLUMN IF NOT EXISTS hold_by text;
 ALTER TABLE pf_tasks ADD COLUMN IF NOT EXISTS hold_at text;
+
+CREATE TABLE IF NOT EXISTS pf_events (
+  id text primary key,
+  title text, description text,
+  type text default 'event',
+  date text, start_time text, end_time text,
+  all_day boolean default false,
+  attendees jsonb default '[]',
+  location text, meet_link text,
+  color text default '#f5a623',
+  created_by text, created_by_id text,
+  created_at text, updated_at text,
+  loc text default 'Nationwide',
+  personal boolean default false
+);
+ALTER TABLE pf_events DISABLE ROW LEVEL SECURITY;
 `;
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
@@ -935,6 +951,344 @@ function Team({users,setUsers,cu}){
   );
 }
 
+// ── CALENDAR ──────────────────────────────────────────────────────────────────
+const EVENT_COLORS=['#f5a623','#3b82f6','#10b981','#ef4444','#8b5cf6','#f97316','#06b6d4','#ec4899'];
+const EVENT_TYPES={event:{label:'Event',ico:'📌'},meeting:{label:'Meeting',ico:'🤝'},task:{label:'Task Due',ico:'✅'},personal:{label:'Personal',ico:'👤'},schedule:{label:'Work Schedule',ico:'🏭'}};
+
+function getMeetLink(){
+  const id=Math.random().toString(36).slice(2,12);
+  return`https://meet.jit.si/hendrix-${id}`;
+}
+
+function Calendar({events,setEvents,tasks,cu,users,locFilter}){
+  const[view,setView]=useState('month'); // month | week | day | list
+  const[cur,setCur]=useState(new Date());
+  const[showNew,setNew]=useState(false);
+  const[sel,setSel]=useState(null);
+  const[saving,setSaving]=useState(false);
+  const[f,setF]=useState({title:'',type:'event',date:'',start_time:'09:00',end_time:'10:00',all_day:false,description:'',location:'',attendees:[],color:'#f5a623',personal:false,loc:'Nationwide',meet_link:''});
+
+  const today=new Date().toISOString().slice(0,10);
+
+  // Merge events + task due dates
+  const allEvents=useMemo(()=>{
+    const evts=[...(events||[])];
+    // Add tasks with due dates as events
+    (tasks||[]).forEach(t=>{
+      if(t.due_date&&(t.assignees||[]).some(a=>a.id===cu.id)||cu.role==='admin'||cu.role==='manager'){
+        evts.push({id:'task-'+t.id,title:t.title,date:t.due_date,type:'task',color:'#ef4444',_task:true,status:t.status});
+      }
+    });
+    // Filter by location
+    return evts.filter(e=>{
+      if(e._task) return true;
+      if(e.personal&&e.created_by_id!==cu.id) return false;
+      if(locFilter&&locFilter!=='Nationwide'&&e.loc&&e.loc!=='Nationwide'&&e.loc!==locFilter) return false;
+      return true;
+    });
+  },[events,tasks,cu,locFilter]);
+
+  // Get days in month
+  function getDaysInMonth(date){
+    const year=date.getFullYear(),month=date.getMonth();
+    const first=new Date(year,month,1);
+    const last=new Date(year,month+1,0);
+    const days=[];
+    // Pad start
+    for(let i=0;i<first.getDay();i++) days.push(null);
+    for(let d=1;d<=last.getDate();d++) days.push(new Date(year,month,d));
+    return days;
+  }
+
+  function getEventsForDate(date){
+    if(!date) return[];
+    const ds=date.toISOString().slice(0,10);
+    return allEvents.filter(e=>e.date===ds);
+  }
+
+  function formatDate(d){
+    return new Date(d+'T00:00:00').toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  }
+
+  function prevMonth(){setCur(d=>new Date(d.getFullYear(),d.getMonth()-1,1));}
+  function nextMonth(){setCur(d=>new Date(d.getFullYear(),d.getMonth()+1,1));}
+
+  async function createEvent(){
+    if(!f.title||!f.date)return;
+    setSaving(true);
+    const meetLink=f.type==='meeting'?getMeetLink():f.meet_link||'';
+    const ev={id:'ev-'+Date.now(),...f,meet_link:meetLink,created_by:cu.name,created_by_id:cu.id,created_at:new Date().toISOString(),updated_at:new Date().toISOString()};
+    try{await db.insert('pf_events',ev);}catch(e){console.error(e);}
+    setEvents(p=>[...p,ev]);
+    // Notify attendees
+    if(f.attendees.length>0&&f.type==='meeting'){
+      f.attendees.filter(a=>a.email&&a.id!==cu.id).forEach(a=>{
+        sendEmail({
+          to:a.email,
+          subject:`📅 Meeting invite: "${f.title}"`,
+          html:`<div style="font-family:sans-serif;background:#0a0f1e;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
+            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:4px">📅 Hendrix TMS</div>
+            <div style="font-size:13px;color:#7b8db8;margin-bottom:20px">Meeting Invitation</div>
+            <div style="font-size:18px;font-weight:700;margin-bottom:16px">${f.title}</div>
+            <div style="background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.2);border-radius:10px;padding:16px;margin-bottom:20px">
+              <div style="display:flex;gap:8px;margin-bottom:8px"><span>📅</span><span>${f.date}${f.start_time?' at '+f.start_time:''}</span></div>
+              ${f.location?`<div style="display:flex;gap:8px;margin-bottom:8px"><span>📍</span><span>${f.location}</span></div>`:''}
+              ${meetLink?`<div style="display:flex;gap:8px"><span>🎥</span><a href="${meetLink}" style="color:#f5a623">${meetLink}</a></div>`:''}
+            </div>
+            ${f.description?`<p style="color:#7b8db8;margin-bottom:20px">${f.description}</p>`:''}
+            <div style="display:flex;gap:10px">
+              ${meetLink?`<a href="${meetLink}" style="background:#f5a623;color:#0a0f1e;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:700">🎥 Join Meeting</a>`:''}
+              <a href="${APP_URL}" style="background:rgba(245,166,35,.1);color:#f5a623;border:1px solid rgba(245,166,35,.3);padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:700">View in App</a>
+            </div>
+          </div>`
+        });
+      });
+    }
+    // Send local notification
+    sendLocalNotification('📅 Event Created',f.title+' on '+f.date);
+    setF({title:'',type:'event',date:'',start_time:'09:00',end_time:'10:00',all_day:false,description:'',location:'',attendees:[],color:'#f5a623',personal:false,loc:'Nationwide',meet_link:''});
+    setNew(false);setSaving(false);
+  }
+
+  async function deleteEvent(id){
+    if(!window.confirm('Delete this event?'))return;
+    try{await db.remove('pf_events',id);}catch(e){console.error(e);}
+    setEvents(p=>p.filter(e=>e.id!==id));
+    setSel(null);
+  }
+
+  const days=getDaysInMonth(cur);
+  const monthLabel=cur.toLocaleDateString('en-US',{month:'long',year:'numeric'});
+  const WEEKDAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+  // List view — upcoming events
+  const upcoming=allEvents.filter(e=>e.date>=today).sort((a,b)=>a.date.localeCompare(b.date));
+
+  return el('div',null,
+    // Header
+    el('div',{className:'ph'},
+      el('div',null,el('div',{className:'pt'},'Calendar'),el('div',{className:'ps'},'Tasks, meetings, events and schedules')),
+      el('div',{style:{display:'flex',gap:8,alignItems:'center'}},
+        el('div',{className:'view-toggle'},
+          [{id:'month',l:'Month'},{id:'week',l:'Week'},{id:'list',l:'List'}].map(v=>
+            el('button',{key:v.id,className:`vbtn${view===v.id?' on':''}`,onClick:()=>setView(v.id)},v.l)
+          )
+        ),
+        el('button',{className:'btn b-blue',onClick:()=>setNew(true)},'+ New Event'),
+      ),
+    ),
+
+    // MONTH VIEW
+    view==='month'&&el('div',null,
+      // Nav
+      el('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}},
+        el('button',{className:'btn b-ghost',onClick:prevMonth},'←'),
+        el('div',{style:{fontSize:18,fontWeight:700}},monthLabel),
+        el('div',{style:{display:'flex',gap:8}},
+          el('button',{className:'btn b-ghost btn-sm',onClick:()=>{setCur(new Date());}}, 'Today'),
+          el('button',{className:'btn b-ghost',onClick:nextMonth},'→'),
+        ),
+      ),
+      // Weekday headers
+      el('div',{style:{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:2,marginBottom:4}},
+        WEEKDAYS.map(d=>el('div',{key:d,style:{textAlign:'center',fontSize:11,fontWeight:700,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'.8px',padding:'6px 0'}},d))
+      ),
+      // Days grid
+      el('div',{style:{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:2}},
+        days.map((day,i)=>{
+          if(!day) return el('div',{key:'empty-'+i,style:{minHeight:80,background:'var(--surface2)',borderRadius:6,opacity:.3}});
+          const ds=day.toISOString().slice(0,10);
+          const dayEvts=getEventsForDate(day);
+          const isToday=ds===today;
+          const isPast=ds<today;
+          return el('div',{key:ds,
+            onClick:()=>{setF(p=>({...p,date:ds}));setNew(true);},
+            style:{minHeight:80,background:isToday?'rgba(245,166,35,.08)':'var(--surface)',border:`1px solid ${isToday?'rgba(245,166,35,.4)':'var(--border)'}`,borderRadius:8,padding:'6px',cursor:'pointer',opacity:isPast?.7:1,transition:'all .15s'},
+            onMouseEnter:ev=>ev.currentTarget.style.borderColor='rgba(245,166,35,.3)',
+            onMouseLeave:ev=>ev.currentTarget.style.borderColor=isToday?'rgba(245,166,35,.4)':'var(--border)',
+          },
+            el('div',{style:{fontWeight:isToday?700:500,fontSize:13,color:isToday?'var(--accent)':'var(--text)',marginBottom:4,width:22,height:22,borderRadius:'50%',background:isToday?'var(--accent)':'transparent',display:'flex',alignItems:'center',justifyContent:'center',color:isToday?'#0a0f1e':'var(--text)'}},day.getDate()),
+            dayEvts.slice(0,3).map(ev=>el('div',{key:ev.id,
+              onClick:e=>{e.stopPropagation();setSel(ev);},
+              style:{fontSize:10,fontWeight:600,color:'#fff',background:ev.color||'#f5a623',borderRadius:4,padding:'1px 5px',marginBottom:2,overflow:'hidden',whiteSpace:'nowrap',textOverflow:'ellipsis'}
+            },ev.title)),
+            dayEvts.length>3&&el('div',{style:{fontSize:10,color:'var(--text2)'}},`+${dayEvts.length-3} more`),
+          );
+        })
+      ),
+    ),
+
+    // WEEK VIEW
+    view==='week'&&el('div',null,
+      el('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}},
+        el('button',{className:'btn b-ghost',onClick:()=>setCur(d=>{const n=new Date(d);n.setDate(n.getDate()-7);return n;})},'←'),
+        el('div',{style:{fontSize:16,fontWeight:700}},(()=>{
+          const start=new Date(cur);start.setDate(start.getDate()-start.getDay());
+          const end=new Date(start);end.setDate(end.getDate()+6);
+          return start.toLocaleDateString('en-US',{month:'short',day:'numeric'})+' — '+end.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+        })()),
+        el('button',{className:'btn b-ghost',onClick:()=>setCur(d=>{const n=new Date(d);n.setDate(n.getDate()+7);return n;})},'→'),
+      ),
+      el('div',{style:{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:8}},
+        Array.from({length:7},(_,i)=>{
+          const d=new Date(cur);d.setDate(d.getDate()-d.getDay()+i);
+          const ds=d.toISOString().slice(0,10);
+          const dayEvts=allEvents.filter(e=>e.date===ds);
+          const isToday=ds===today;
+          return el('div',{key:ds,style:{background:isToday?'rgba(245,166,35,.06)':'var(--surface)',border:`1px solid ${isToday?'rgba(245,166,35,.3)':'var(--border)'}`,borderRadius:10,padding:10,minHeight:120}},
+            el('div',{style:{fontSize:12,fontWeight:700,color:isToday?'var(--accent)':'var(--text2)',marginBottom:8}},d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})),
+            dayEvts.map(ev=>el('div',{key:ev.id,onClick:()=>setSel(ev),style:{fontSize:11,fontWeight:600,color:'#fff',background:ev.color||'var(--accent)',borderRadius:5,padding:'4px 7px',marginBottom:4,cursor:'pointer'}},
+              (ev.start_time?ev.start_time+' ':'')+ev.title
+            )),
+            el('button',{onClick:()=>{setF(p=>({...p,date:ds}));setNew(true);},style:{width:'100%',background:'none',border:'1px dashed var(--border)',borderRadius:6,padding:'4px',color:'var(--text3)',cursor:'pointer',fontSize:11,marginTop:4}},'+ Add'),
+          );
+        })
+      ),
+    ),
+
+    // LIST VIEW
+    view==='list'&&el('div',null,
+      el('div',{style:{fontWeight:700,marginBottom:14,fontSize:14}},'Upcoming Events & Meetings'),
+      upcoming.length===0?el('div',{className:'empty'},el('div',{className:'eico'},'📅'),el('div',{className:'etxt'},'No upcoming events')):
+      upcoming.map(ev=>el('div',{key:ev.id,
+        onClick:()=>setSel(ev),
+        style:{background:'var(--surface)',border:'1px solid var(--border)',borderLeft:`3px solid ${ev.color||'var(--accent)'}`,borderRadius:10,padding:'14px 16px',marginBottom:8,cursor:'pointer',transition:'all .15s'},
+        onMouseEnter:ev2=>ev2.currentTarget.style.borderColor='rgba(245,166,35,.3)',
+        onMouseLeave:ev2=>ev2.currentTarget.style.borderColor='var(--border)',
+      },
+        el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},
+          el('div',null,
+            el('div',{style:{display:'flex',gap:6,marginBottom:5}},
+              el('span',{style:{fontSize:11,fontWeight:700,color:ev.color||'var(--accent)',background:(ev.color||'#f5a623')+'22',borderRadius:4,padding:'2px 8px'}},(ev._task?'✅ Task Due':ev.type==='meeting'?'🤝 Meeting':ev.type==='personal'?'👤 Personal':'📌 Event')),
+              ev.personal&&el('span',{style:{fontSize:11,color:'var(--text3)'}},'Private'),
+            ),
+            el('div',{style:{fontWeight:700,fontSize:14}},ev.title),
+            el('div',{style:{fontSize:12,color:'var(--text2)',marginTop:4}},formatDate(ev.date)+(ev.start_time?' · '+ev.start_time+(ev.end_time?' - '+ev.end_time:''):'')),
+            ev.location&&el('div',{style:{fontSize:12,color:'var(--text2)',marginTop:2}},'📍 '+ev.location),
+          ),
+          ev.meet_link&&el('a',{href:ev.meet_link,target:'_blank',onClick:e=>e.stopPropagation(),style:{background:'#10b981',color:'#fff',padding:'7px 14px',borderRadius:8,textDecoration:'none',fontSize:12,fontWeight:700,flexShrink:0}},'🎥 Join'),
+        ),
+        (ev.attendees||[]).length>0&&el('div',{style:{display:'flex',gap:4,marginTop:8}},
+          (ev.attendees||[]).slice(0,5).map((a,i)=>el('div',{key:a.id,className:'avatar',title:a.name,style:{background:`hsl(${(a.name.charCodeAt(0)*47)%360},50%,35%)`,width:22,height:22,fontSize:9,marginLeft:i>0?-4:0}},a.name.charAt(0).toUpperCase())),
+          (ev.attendees||[]).length>5&&el('span',{style:{fontSize:11,color:'var(--text2)',marginLeft:6}},`+${(ev.attendees||[]).length-5} more`),
+        ),
+      ))
+    ),
+
+    // NEW EVENT MODAL
+    showNew&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setNew(false)},
+      el('div',{className:'md',style:{width:600}},
+        el('div',{className:'mh'},el('div',{className:'mt2'},'New Event'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
+        el('div',{className:'mbd'},
+          el('div',{className:'fg'},el('label',null,'Title *'),el('input',{placeholder:'Event title...',value:f.title,onChange:ev=>setF(p=>({...p,title:ev.target.value})),autoFocus:true})),
+          el('div',{className:'g2'},
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Type'),el('select',{value:f.type,onChange:ev=>setF(p=>({...p,type:ev.target.value,meet_link:ev.target.value==='meeting'?getMeetLink():''}))},
+              [{v:'event',l:'📌 Event'},{v:'meeting',l:'🤝 Meeting'},{v:'personal',l:'👤 Personal'},{v:'schedule',l:'🏭 Work Schedule'}].map(t=>el('option',{key:t.v,value:t.v},t.l))
+            )),
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Color'),el('div',{style:{display:'flex',gap:6,flexWrap:'wrap',marginTop:4}},
+              EVENT_COLORS.map(c=>el('div',{key:c,onClick:()=>setF(p=>({...p,color:c})),style:{width:24,height:24,borderRadius:'50%',background:c,cursor:'pointer',border:f.color===c?'3px solid #fff':'2px solid transparent',transition:'all .15s'}}))
+            )),
+          ),
+          el('div',{className:'g2',style:{marginTop:13}},
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Date *'),el('input',{type:'date',value:f.date,onChange:ev=>setF(p=>({...p,date:ev.target.value}))})),
+            el('div',{className:'fg',style:{marginBottom:0}},
+              el('label',null,'All Day'),
+              el('div',{style:{display:'flex',alignItems:'center',gap:10,marginTop:10}},
+                el('label',{className:'toggle'},el('input',{type:'checkbox',checked:f.all_day,onChange:ev=>setF(p=>({...p,all_day:ev.target.checked}))}),el('span',{className:'tslider'})),
+                el('span',{style:{fontSize:13,color:'var(--text2)'}},f.all_day?'All day event':'Set times'),
+              ),
+            ),
+          ),
+          !f.all_day&&el('div',{className:'g2',style:{marginTop:13}},
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Start Time'),el('input',{type:'time',value:f.start_time,onChange:ev=>setF(p=>({...p,start_time:ev.target.value}))})),
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'End Time'),el('input',{type:'time',value:f.end_time,onChange:ev=>setF(p=>({...p,end_time:ev.target.value}))})),
+          ),
+          el('div',{className:'fg',style:{marginTop:13}},el('label',null,'Location / Address'),el('input',{placeholder:'Office, Zoom, or address...',value:f.location,onChange:ev=>setF(p=>({...p,location:ev.target.value}))})),
+          f.type==='meeting'&&el('div',{className:'fg'},
+            el('label',null,'Video Meeting Link'),
+            el('div',{style:{display:'flex',gap:8}},
+              el('input',{value:f.meet_link,onChange:ev=>setF(p=>({...p,meet_link:ev.target.value})),placeholder:'Auto-generated Jitsi link'}),
+              el('button',{className:'btn b-ghost btn-sm',onClick:()=>setF(p=>({...p,meet_link:getMeetLink()}))},'New Link'),
+            ),
+            f.meet_link&&el('a',{href:f.meet_link,target:'_blank',style:{fontSize:11,color:'var(--green)',marginTop:4,display:'block'}},'🎥 Test link: '+f.meet_link),
+          ),
+          el('div',{className:'fg'},el('label',null,'Description'),el('textarea',{placeholder:'More details...',value:f.description,onChange:ev=>setF(p=>({...p,description:ev.target.value}))})),
+          // Attendees
+          el('div',{className:'fg'},
+            el('label',null,'Invite People'),
+            el('select',{value:'',onChange:ev=>{const u=users.find(x=>x.id===ev.target.value);if(u&&!f.attendees.find(a=>a.id===u.id))setF(p=>({...p,attendees:[...p.attendees,{id:u.id,name:u.name,email:u.email}]}));ev.target.value='';},style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+              el('option',{value:''},'+ Invite person...'),
+              ...users.filter(u=>u.approved&&!f.attendees.find(a=>a.id===u.id)).map(u=>el('option',{key:u.id,value:u.id},u.name+' — '+u.dept))
+            ),
+            f.attendees.length>0&&el('div',{style:{display:'flex',flexWrap:'wrap',gap:6,marginTop:8}},
+              f.attendees.map(a=>el('div',{key:a.id,style:{display:'flex',alignItems:'center',gap:6,background:'var(--surface2)',borderRadius:20,padding:'4px 12px',fontSize:12}},
+                el('div',{className:'avatar',style:{background:`hsl(${(a.name.charCodeAt(0)*47)%360},50%,35%)`,width:18,height:18,fontSize:9}},a.name.charAt(0).toUpperCase()),
+                a.name,
+                el('span',{style:{cursor:'pointer',color:'var(--text3)',marginLeft:4},onClick:()=>setF(p=>({...p,attendees:p.attendees.filter(x=>x.id!==a.id)}))},'×'),
+              ))
+            ),
+          ),
+          el('div',{className:'fg'},
+            el('label',null,'Location Filter'),
+            el('select',{value:f.loc,onChange:ev=>setF(p=>({...p,loc:ev.target.value}))},['Nationwide','Michigan','Missouri'].map(l=>el('option',{key:l,value:l},l))),
+          ),
+        ),
+        el('div',{className:'mf'},
+          el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),
+          el('button',{className:'btn b-blue',onClick:createEvent,disabled:saving||!f.title||!f.date},saving?'Saving...':f.type==='meeting'?'Create & Send Invites':'Create Event'),
+        ),
+      )
+    ),
+
+    // EVENT DETAIL MODAL
+    sel&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setSel(null)},
+      el('div',{className:'md',style:{width:560}},
+        el('div',{className:'mh',style:{borderLeft:`4px solid ${sel.color||'var(--accent)'}`,paddingLeft:20}},
+          el('div',{style:{flex:1}},
+            el('div',{style:{display:'flex',gap:6,marginBottom:6}},
+              el('span',{style:{fontSize:11,fontWeight:700,color:sel.color||'var(--accent)',background:(sel.color||'#f5a623')+'22',borderRadius:4,padding:'2px 8px'}},(sel._task?'✅ Task':sel.type==='meeting'?'🤝 Meeting':sel.type==='personal'?'👤 Personal':'📌 Event')),
+            ),
+            el('div',{style:{fontSize:16,fontWeight:700}},sel.title),
+          ),
+          el('button',{className:'mc',onClick:()=>setSel(null)},'×'),
+        ),
+        el('div',{className:'mbd'},
+          el('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:16}},
+            el('div',null,el('div',{style:{fontSize:11,color:'var(--text3)',marginBottom:4,fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px'}},'Date'),el('div',{style:{fontSize:14,fontWeight:600}},formatDate(sel.date))),
+            !sel.all_day&&(sel.start_time||sel.end_time)&&el('div',null,el('div',{style:{fontSize:11,color:'var(--text3)',marginBottom:4,fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px'}},'Time'),el('div',{style:{fontSize:14,fontWeight:600}},(sel.start_time||'')+(sel.end_time?' — '+sel.end_time:''))),
+          ),
+          sel.location&&el('div',{style:{marginBottom:12}},el('div',{style:{fontSize:11,color:'var(--text3)',marginBottom:4,fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px'}},'Location'),el('div',{style:{fontSize:14}},sel.location)),
+          sel.description&&el('div',{style:{marginBottom:12,background:'var(--surface2)',borderRadius:8,padding:12}},el('div',{style:{fontSize:13,lineHeight:1.6,color:'var(--text2)'}},sel.description)),
+          sel.meet_link&&el('div',{style:{marginBottom:16}},
+            el('div',{style:{fontSize:11,color:'var(--text3)',marginBottom:8,fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px'}},'Video Meeting'),
+            el('a',{href:sel.meet_link,target:'_blank',style:{display:'inline-flex',alignItems:'center',gap:8,background:'#10b981',color:'#fff',padding:'11px 20px',borderRadius:10,textDecoration:'none',fontWeight:700,fontSize:14}},'🎥 Join Meeting Now'),
+            el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:6}},sel.meet_link),
+          ),
+          (sel.attendees||[]).length>0&&el('div',{marginBottom:12},
+            el('div',{style:{fontSize:11,color:'var(--text3)',marginBottom:8,fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px'}},'Attendees ('+sel.attendees.length+')'),
+            el('div',{style:{display:'flex',flexDirection:'column',gap:6}},
+              (sel.attendees||[]).map(a=>el('div',{key:a.id,style:{display:'flex',alignItems:'center',gap:8}},
+                el('div',{className:'avatar',style:{background:`hsl(${(a.name.charCodeAt(0)*47)%360},50%,35%)`}},a.name.charAt(0).toUpperCase()),
+                el('span',{style:{fontSize:13}},a.name),
+              ))
+            ),
+          ),
+        ),
+        el('div',{className:'mf',style:{justifyContent:'space-between'}},
+          el('div',null,
+            !sel._task&&(sel.created_by_id===cu.id||cu.role==='admin')&&el('button',{className:'btn b-red',onClick:()=>deleteEvent(sel.id)},'Delete'),
+          ),
+          el('div',{style:{display:'flex',gap:8}},
+            sel.meet_link&&el('a',{href:sel.meet_link,target:'_blank',style:{background:'#10b981',color:'#fff',padding:'9px 16px',borderRadius:8,textDecoration:'none',fontWeight:700,fontSize:13,display:'inline-flex',alignItems:'center',gap:6}},'🎥 Join'),
+            el('button',{className:'btn b-ghost',onClick:()=>setSel(null)},'Close'),
+          ),
+        ),
+      )
+    ),
+  );
+}
+
+
 // ── PULL TO REFRESH ──────────────────────────────────────────────────────────
 function usePullToRefresh(onRefresh){
   useEffect(()=>{
@@ -980,6 +1334,7 @@ function usePullToRefresh(onRefresh){
 function App(){
   const[cu,setCu]=useState(()=>{try{const s=localStorage.getItem('pf_session');return s?JSON.parse(s):null;}catch{return null;}});
   const[tasks,setTasks]=useState([]);
+  const[events,setEvents]=useState([]);
   const[users,setUsers]=useState([]);
   const[loading,setLoading]=useState(false);
   const[dbReady,setDbReady]=useState(null);
@@ -992,7 +1347,8 @@ function App(){
     Promise.all([
       db.get('pf_tasks','order=created_at.desc').catch(()=>[]),
       db.get('pf_users').catch(()=>[]),
-    ]).then(([t,u])=>{setTasks(t||[]);setUsers(u||[]);});
+      db.get('pf_events','order=date.asc').catch(()=>[]),
+    ]).then(([t,u,ev])=>{setTasks(t||[]);setUsers(u||[]);});
   },[cu,dbReady]);
 
   usePullToRefresh(doRefresh);
@@ -1028,9 +1384,11 @@ function App(){
     Promise.all([
       db.get('pf_tasks','order=created_at.desc').catch(()=>[]),
       db.get('pf_users').catch(()=>[]),
-    ]).then(([t,u])=>{
+      db.get('pf_events','order=date.asc').catch(()=>[]),
+    ]).then(([t,u,ev])=>{
       setTasks(t||[]);
       setUsers(u||[]);
+      setEvents(ev||[]);
     }).catch(console.error).finally(()=>setLoading(false));
     // Check for tasks placed on hold for this user
     db.get('pf_tasks','status=eq.on_hold&order=updated_at.desc').then(held=>{
@@ -1052,6 +1410,7 @@ function App(){
 
   const nav=[
     {id:'board',ico:'⬛',label:'Task Board'},
+    {id:'calendar',ico:'📅',label:'Calendar'},
     isAdmin&&{id:'team',ico:'👥',label:'Team & Access',badge:pending||null},
   ].filter(Boolean);
 
@@ -1124,10 +1483,10 @@ function App(){
     // Mobile bottom nav
     el('div',{className:'mobile-nav'},
       el('button',{className:`mnav-btn${page==='board'?' on':''}`,onClick:()=>setPage('board')},
-        el('div',{style:{position:'relative',display:'inline-block'}},
-          el('span',{className:'mnav-ico'},'⬛'),
-        ),
-        'Board'
+        el('span',{className:'mnav-ico'},'⬛'),'Board'
+      ),
+      el('button',{className:`mnav-btn${page==='calendar'?' on':''}`,onClick:()=>setPage('calendar')},
+        el('span',{className:'mnav-ico'},'📅'),'Calendar'
       ),
       cu.role==='admin'&&el('button',{className:`mnav-btn${page==='team'?' on':''}`,onClick:()=>setPage('team')},
         el('div',{style:{position:'relative',display:'inline-block'}},
@@ -1153,6 +1512,7 @@ function App(){
     ),
     el('div',{className:'main'},
       page==='board'&&el(Board,{tasks,setTasks,cu,users,locFilter,setLocFilter}),
+      page==='calendar'&&el(Calendar,{events,setEvents,tasks,cu,users,locFilter}),
       page==='team'&&isAdmin&&el(Team,{users,setUsers,cu}),
     )
   );
