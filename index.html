@@ -1608,6 +1608,10 @@ function SalesMarketing({salesTasks,setSalesTasks,cu,users,locFilter}){
   const[sel,setSel]=useState(null);
   const[newNote,setNewNote]=useState('');
   const[saving,setSaving]=useState(false);
+  const[cancelAlert,setCancelAlert]=useState(null);
+  const[showCancelModal,setShowCancelModal]=useState(false);
+  const[cancelReason,setCancelReason]=useState('');
+  const[cancelTarget,setCancelTarget]=useState(null);
   const[f,setF]=useState({
     type:'Retail Visit',title:'',description:'',
     assigned_to:'',assigned_id:'',
