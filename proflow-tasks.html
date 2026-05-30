@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="theme-color" content="#f5a623"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Hendrix TMS"/>
+<link rel="manifest" href="manifest.json"/>
+<link rel="apple-touch-icon" href="icon-192.png"/>
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png"/>
+<title>Hendrix Task Management</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+:root{
+  --bg:#050c1a;
+  --surface:#0a1628;
+  --surface2:#0f1e38;
+  --surface3:#162440;
+  --border:#1a2d4f;
+  --border2:#243a60;
+  --accent:#f5a623;
+  --accent2:#ffbf4d;
+  --accent-dim:rgba(245,166,35,.12);
+  --green:#10b981;
+  --red:#ef4444;
+  --blue:#3b82f6;
+  --purple:#8b5cf6;
+  --text:#eef2ff;
+  --text2:#7b92c8;
+  --text3:#3a4f7a;
+  --r:14px;--rs:10px;
+  --glow:0 0 40px rgba(245,166,35,.06);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* Subtle grid background */
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(245,166,35,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(245,166,35,.02) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+
+/* AUTH */
+.auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;z-index:1;}
+.auth-box{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:44px 40px;width:440px;max-width:95vw;box-shadow:var(--glow),inset 0 1px 0 rgba(255,255,255,.04);}
+.logo{font-size:26px;font-weight:800;color:var(--accent);letter-spacing:-1px;}
+.logo span{color:var(--text2);font-weight:400;}
+.auth-sub{color:var(--text2);font-size:13px;margin-top:3px;margin-bottom:28px;letter-spacing:.3px;}
+.auth-tabs{display:flex;gap:3px;background:var(--bg);border-radius:var(--rs);padding:3px;margin-bottom:24px;border:1px solid var(--border);}
+.atab{flex:1;padding:8px;text-align:center;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text2);border:none;background:none;font-family:inherit;transition:all .15s;}
+.atab.on{background:var(--surface2);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.4);}
+.fg{margin-bottom:14px;}
+.fg label{display:block;font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;}
+.fg input,.fg select,.fg textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);padding:11px 14px;color:var(--text);font-family:inherit;font-size:13px;outline:none;transition:border-color .2s,box-shadow .2s;}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(245,166,35,.1);}
+.fg select option{background:var(--surface);}
+.fg textarea{resize:vertical;min-height:80px;}
+.btn-primary{width:100%;background:var(--accent);color:#0a0f1e;border:none;border-radius:var(--rs);padding:12px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px;transition:all .15s;letter-spacing:.3px;}
+.btn-primary:hover{background:var(--accent2);transform:translateY(-1px);}
+.btn-primary:active{transform:translateY(0);}
+.auth-note{font-size:11px;color:var(--text3);text-align:center;margin-top:12px;}
+.pending-box{background:rgba(245,166,35,.06);border:1px solid rgba(245,166,35,.2);border-radius:var(--rs);padding:28px;text-align:center;}
+
+/* APP */
+.app{display:flex;min-height:100vh;position:relative;z-index:1;}
+.sb{width:248px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:20px 14px;position:fixed;top:0;left:0;bottom:0;z-index:100;overflow-y:auto;}
+.sb::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(245,166,35,.3),transparent);}
+.sb-logo{font-size:20px;font-weight:800;color:var(--accent);letter-spacing:-1px;padding:4px 8px;margin-bottom:28px;}
+.sb-logo span{color:var(--text2);font-weight:400;font-size:16px;}
+.sb-label{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;padding:0 8px;margin-bottom:6px;}
+.nav{display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:var(--rs);cursor:pointer;font-size:13px;font-weight:500;color:var(--text2);border:none;background:none;width:100%;text-align:left;position:relative;transition:all .15s;}
+.nav:hover{background:var(--surface2);color:var(--text);}
+.nav.on{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(245,166,35,.15);}
+.nav .dot{position:absolute;right:10px;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;}
+.sb-user{margin-top:auto;padding:13px;background:var(--surface2);border-radius:var(--r);border:1px solid var(--border);}
+.sb-name{font-size:13px;font-weight:700;color:var(--text);}
+.sb-role{font-size:11px;color:var(--text3);margin-top:3px;}
+.sb-out{margin-top:8px;font-size:12px;color:var(--text3);cursor:pointer;background:none;border:none;font-family:inherit;padding:0;transition:color .15s;}
+.sb-out:hover{color:var(--red);}
+.main{margin-left:248px;flex:1;padding:28px 32px;max-width:1400px;}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:var(--rs);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .15s;}
+.b-blue{background:var(--accent);color:#0a0f1e;}.b-blue:hover{background:var(--accent2);transform:translateY(-1px);}
+.b-ghost{background:transparent;color:var(--text2);border:1px solid var(--border);}.b-ghost:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim);}
+.b-red{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.2);}.b-red:hover{background:rgba(239,68,68,.15);}
+.b-green{background:rgba(16,185,129,.1);color:var(--green);border:1px solid rgba(16,185,129,.2);}
+.btn-sm{padding:5px 11px;font-size:12px;}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important;}
+
+/* MODAL */
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(4px);z-index:999;display:flex;align-items:center;justify-content:center;padding:20px;}
+.md{background:var(--surface);border:1px solid var(--border2);border-radius:20px;width:600px;max-width:100%;max-height:92vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.6),var(--glow);}
+.mh{padding:22px 26px 15px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
+.mt2{font-size:16px;font-weight:700;color:var(--text);}
+.mc{background:none;border:none;color:var(--text3);cursor:pointer;font-size:22px;line-height:1;transition:color .15s;}
+.mc:hover{color:var(--text);}
+.mbd{padding:22px 26px;}
+.mf{padding:14px 26px 22px;display:flex;gap:9px;justify-content:flex-end;border-top:1px solid var(--border);}
+
+/* TASK BOARD */
+.board{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;align-items:start;}
+.col{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;transition:border-color .2s;}
+.col-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border);}
+.col-title{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;}
+.col-dot{width:8px;height:8px;border-radius:50%;}
+.col-count{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:2px 8px;font-size:11px;color:var(--text2);font-weight:700;}
+.task-card{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:8px;cursor:pointer;transition:all .15s;}
+.task-card:hover{border-color:var(--accent);background:var(--surface3);transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,0,0,.3);}
+.task-card.overdue{border-color:rgba(239,68,68,.3);}
+.pri-bar{width:3px;border-radius:4px;flex-shrink:0;align-self:stretch;min-height:40px;}
+.tag{background:rgba(245,166,35,.1);color:var(--accent);border:1px solid rgba(245,166,35,.2);border-radius:5px;padding:2px 8px;font-size:10px;font-weight:700;letter-spacing:.3px;}
+.section-tag{background:var(--surface3);color:var(--text2);border:1px solid var(--border);border-radius:5px;padding:2px 8px;font-size:10px;font-weight:600;}
+.avatar{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;border:2px solid var(--surface2);flex-shrink:0;}
+
+/* STATUS PIPELINE */
+.pipeline{display:flex;gap:4px;margin-bottom:18px;}
+.pipe-btn{flex:1;padding:8px 4px;border-radius:9px;border:1px solid var(--border);background:transparent;color:var(--text3);cursor:pointer;font-size:11px;font-weight:700;transition:all .15s;font-family:inherit;text-transform:uppercase;letter-spacing:.5px;}
+.pipe-btn.active{color:#0a0f1e;font-weight:800;}
+.pipe-btn:hover:not(:disabled){border-color:rgba(245,166,35,.4);color:var(--text);}
+.pipe-btn:disabled{opacity:.3;cursor:not-allowed;}
+
+/* MISC */
+.ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;gap:12px;flex-wrap:wrap;}
+.pt{font-size:22px;font-weight:800;letter-spacing:-.5px;color:var(--text);}
+.ps{font-size:13px;color:var(--text2);margin-top:4px;}
+.divider{height:1px;background:var(--border);margin:16px 0;}
+.empty{text-align:center;padding:50px 20px;color:var(--text3);}
+.eico{font-size:36px;margin-bottom:12px;}
+.etxt{font-size:14px;color:var(--text2);}
+.g2{display:grid;grid-template-columns:repeat(2,1fr);gap:13px;}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin-bottom:22px;}
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+.bb-blue{background:rgba(245,166,35,.1);color:var(--accent);border:1px solid rgba(245,166,35,.2);}
+.bb-green{background:rgba(16,185,129,.1);color:var(--green);}
+.bb-yellow{background:rgba(245,166,35,.1);color:var(--accent);}
+.bb-red{background:rgba(239,68,68,.1);color:var(--red);}
+.bb-gray{background:var(--surface2);color:var(--text2);border:1px solid var(--border);}
+.bb-purple{background:rgba(139,92,246,.1);color:var(--purple);}
+.alert{display:flex;align-items:flex-start;gap:9px;padding:12px 14px;border-radius:var(--rs);margin-bottom:10px;font-size:13px;}
+.al-yellow{background:rgba(245,166,35,.06);border:1px solid rgba(245,166,35,.2);color:var(--accent2);}
+.al-blue{background:rgba(245,166,35,.06);border:1px solid rgba(245,166,35,.15);color:var(--accent);}
+.loading{display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:14px;color:var(--text2);font-size:14px;position:relative;z-index:1;}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.tabs{display:flex;gap:3px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:3px;margin-bottom:18px;width:fit-content;}
+.tab{padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;color:var(--text2);border:none;background:none;font-family:inherit;transition:all .15s;}
+.tab.on{background:var(--surface3);color:var(--text);border:1px solid var(--border2);}
+.view-toggle{display:flex;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:3px;gap:2px;}
+.vbtn{padding:6px 13px;border-radius:8px;border:none;background:transparent;color:var(--text2);cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;transition:all .15s;}
+.vbtn.on{background:var(--surface3);color:var(--text);border:1px solid var(--border2);}
+.tw{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;}
+th{text-align:left;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;padding:10px 14px;border-bottom:1px solid var(--border);}
+td{padding:12px 14px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(245,166,35,.02);}
+/* STAT CARDS */
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px 22px;transition:border-color .2s,transform .15s;}
+.stat:hover{border-color:rgba(245,166,35,.2);transform:translateY(-1px);}
+.sl{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:9px;}
+.sv{font-size:28px;font-weight:800;letter-spacing:-.5px;}
+/* CARD */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px;}
+/* PERM */
+.perm-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:5px;}
+.perm-item{display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border-radius:8px;padding:9px 12px;}
+.perm-label{font-size:12px;font-weight:500;}
+.toggle{position:relative;width:36px;height:20px;flex-shrink:0;}
+.toggle input{opacity:0;width:0;height:0;position:absolute;}
+.tslider{position:absolute;inset:0;background:var(--border2);border-radius:20px;cursor:pointer;transition:.2s;}
+.tslider:before{content:'';position:absolute;width:14px;height:14px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s;}
+.toggle input:checked+.tslider{background:var(--accent);}
+.toggle input:checked+.tslider:before{transform:translateX(16px);}
+
+@media(max-width:1100px){.board{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:900px){.sb{display:none;}.main{margin-left:0;padding:16px;}.board{grid-template-columns:1fr;}.g4{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:600px){.g4,.g2{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script>
+const {useState,useEffect,useMemo,useCallback}=React;
+const el=React.createElement;
+
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+const SUPA_URL='https://exaluooarsrlvhptvnhu.supabase.co';
+const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV4YWx1b29hcnNybHZocHR2bmh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4MDcxOTksImV4cCI6MjA5NTM4MzE5OX0.mPOc6d1e8pjLNv2enJvFm_ABl96U53PEw64NJ96diIE';
+const RESEND_KEY='re_Nmj7QRRH_7LJh3wXf5rnNfkjJGzYxzhQV';
+const APP_URL='https://dj340.github.io/ProFlow';
+const H={headers:{'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}};
+
+const db={
+  get:(t,q='')=>fetch(`${SUPA_URL}/rest/v1/${t}${q?'?'+q:''}`,{headers:{...H.headers,'Accept':'application/json'}}).then(r=>r.ok?r.json():r.text().then(e=>{throw new Error(e);})),
+  insert:(t,d)=>fetch(`${SUPA_URL}/rest/v1/${t}`,{method:'POST',headers:{...H.headers,'Prefer':'return=representation'},body:JSON.stringify(d)}).then(r=>r.ok?r.json():r.text().then(e=>{throw new Error(e);})),
+  update:(t,id,d)=>fetch(`${SUPA_URL}/rest/v1/${t}?id=eq.${id}`,{method:'PATCH',headers:{...H.headers,'Prefer':'return=representation'},body:JSON.stringify(d)}).then(r=>r.ok?r.json():r.text().then(e=>{throw new Error(e);})),
+  remove:(t,id)=>fetch(`${SUPA_URL}/rest/v1/${t}?id=eq.${id}`,{method:'DELETE',headers:H.headers}).then(r=>{if(!r.ok)throw new Error(r.status);}),
+};
+
+async function sendEmail({to,subject,html}){
+  try{
+    await fetch(`${SUPA_URL}/functions/v1/send-email`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPA_KEY},
+      body:JSON.stringify({to,subject,html}),
+    });
+  }catch(e){console.error('Email:',e);}
+}
+
+// ── CONSTANTS ─────────────────────────────────────────────────────────────────
+const LOCS=['Nationwide','Michigan','Missouri'];
+const DEPTS=['Gummy','Cartridge','Pre-Roll','QC','Distribution','Warehouse','Facility','HR','Management','Extraction','Testing','Waste','Purchasing','Biomass','Shipping','Receiving'];
+const ROLES=['employee','lead','supervisor','manager','admin'];
+const RLABEL={employee:'Employee',lead:'Lead',supervisor:'Supervisor',manager:'Manager',admin:'Admin'};
+const RCOLOR={employee:'bb-gray',lead:'bb-blue',supervisor:'bb-purple',manager:'bb-yellow',admin:'bb-red'};
+
+const SECTIONS=['R&D','Special Projects','Production Investigation','HR','General','Michigan Production','Missouri Production','Extraction','Testing','Waste','Inventory Check','Purchasing','Biomass','Shipping','Receiving'];
+
+const COLS=[
+  {id:'not_started',label:'Not Started',color:'#4a5068'},
+  {id:'in_progress',label:'In Progress',color:'#f5a623'},
+  {id:'review',label:'In Review',color:'#f59e0b'},
+  {id:'done',label:'Done',color:'#22c55e'},
+];
+
+const PRI={
+  low:{label:'Low',color:'#6b7280'},
+  medium:{label:'Medium',color:'#f5a623'},
+  high:{label:'High',color:'#f59e0b'},
+  urgent:{label:'Urgent',color:'#ef4444'},
+};
+
+function avatarColor(name){return`hsl(${(name.charCodeAt(0)*47)%360},50%,35%)`;}
+
+// ── SETUP SQL ─────────────────────────────────────────────────────────────────
+const SETUP_SQL=`
+-- Run in Supabase SQL Editor
+
+CREATE TABLE IF NOT EXISTS pf_users (
+  id text primary key, name text, first_name text, last_name text,
+  email text unique, pw text, role text default 'employee',
+  dept text default 'General', loc text default 'Nationwide',
+  approved boolean default false, perms jsonb default '[]', managers jsonb default '[]'
+);
+ALTER TABLE pf_users DISABLE ROW LEVEL SECURITY;
+
+CREATE TABLE IF NOT EXISTS pf_tasks (
+  id text primary key, title text, section text,
+  description text default '', assignees jsonb default '[]',
+  due_date text, priority text default 'medium',
+  status text default 'not_started', loc text default 'Nationwide',
+  tags jsonb default '[]', notes jsonb default '[]',
+  attachments jsonb default '[]', created_by text,
+  created_by_id text, created_at text, updated_at text,
+  updated_by text, completed_at text, approved_by text,
+  archived_at text
+);
+ALTER TABLE pf_tasks DISABLE ROW LEVEL SECURITY;
+`;
+
+// ── AUTH ──────────────────────────────────────────────────────────────────────
+function Auth({onLogin}){
+  const[tab,setTab]=useState('login');
+  const[f,setF]=useState({firstName:'',lastName:'',email:'',pw:'',dept:'Management',loc:'Nationwide'});
+  const[msg,setMsg]=useState('');
+  const[pend,setPend]=useState(false);
+  const[loading,setLoading]=useState(false);
+
+  async function login(){
+    setLoading(true);setMsg('');
+    try{
+      const users=await db.get('pf_users',`email=eq.${encodeURIComponent(f.email)}`);
+      if(!users.length||users[0].pw!==f.pw){setMsg('Invalid email or password.');setLoading(false);return;}
+      const u=users[0];
+      if(!u.approved){setPend(true);setLoading(false);return;}
+      localStorage.setItem('pf_session',JSON.stringify(u));
+      onLogin(u);
+    }catch(e){setMsg('Connection error.');console.error(e);}
+    setLoading(false);
+  }
+
+  async function register(){
+    if(!f.firstName||!f.lastName||!f.email||!f.pw){setMsg('Please fill all fields.');return;}
+    setLoading(true);setMsg('');
+    try{
+      const exists=await db.get('pf_users',`email=eq.${encodeURIComponent(f.email)}`);
+      if(exists.length){setMsg('Email already registered.');setLoading(false);return;}
+      const fullName=f.firstName.trim()+' '+f.lastName.trim();
+      await db.insert('pf_users',{id:'u'+Date.now(),name:fullName,first_name:f.firstName,last_name:f.lastName,email:f.email,pw:f.pw,role:'employee',dept:f.dept,loc:f.loc,approved:false,perms:[]});
+      setPend(true);
+    }catch(e){setMsg('Error. Please try again.');console.error(e);}
+    setLoading(false);
+  }
+
+  if(pend)return el('div',{className:'auth-wrap'},el('div',{className:'auth-box'},
+    el('div',{className:'logo'},'Hendrix',el('span',null,' TMS')),
+    el('div',{className:'pending-box',style:{marginTop:16}},
+      el('div',{style:{fontSize:32,marginBottom:10}},'⏳'),
+      el('div',{style:{fontWeight:700,fontSize:15,marginBottom:8}},'Account Pending Approval'),
+      el('div',{style:{fontSize:13,color:'#fcd34d',lineHeight:1.5}},'An administrator will review and approve your account.'),
+    ),
+    el('button',{className:'btn-primary',style:{marginTop:16},onClick:()=>{setPend(false);setTab('login');}},'Back to Sign In'),
+  ));
+
+  return el('div',{className:'auth-wrap'},el('div',{className:'auth-box'},
+    el('div',{className:'logo'},'Hendrix',el('span',null,' TMS')),
+    el('div',{className:'auth-sub'},'Task Management System'),
+    el('div',{className:'auth-tabs'},
+      el('button',{className:`atab ${tab==='login'?'on':''}`,onClick:()=>{setTab('login');setMsg('');}}, 'Sign In'),
+      el('button',{className:`atab ${tab==='reg'?'on':''}`,onClick:()=>{setTab('reg');setMsg('');}}, 'Register'),
+    ),
+    msg&&el('div',{style:{background:'rgba(239,68,68,.1)',border:'1px solid rgba(239,68,68,.3)',borderRadius:8,padding:'10px 13px',marginBottom:12,fontSize:13,color:'#fca5a5'}},msg),
+    tab==='login'?el('div',null,
+      el('div',{className:'fg'},el('label',null,'Email'),el('input',{type:'email',placeholder:'you@company.com',value:f.email,onChange:ev=>setF(p=>({...p,email:ev.target.value}))})),
+      el('div',{className:'fg'},el('label',null,'Password'),el('input',{type:'password',placeholder:'••••••••',value:f.pw,onChange:ev=>setF(p=>({...p,pw:ev.target.value})),onKeyDown:ev=>ev.key==='Enter'&&login()})),
+      el('button',{className:'btn-primary',onClick:login,disabled:loading},loading?'Signing in...':'Sign In'),
+    ):el('div',null,
+      el('div',{className:'g2'},
+        el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'First Name'),el('input',{placeholder:'Sam',value:f.firstName,onChange:ev=>setF(p=>({...p,firstName:ev.target.value}))})),
+        el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Last Name'),el('input',{placeholder:'Salari',value:f.lastName,onChange:ev=>setF(p=>({...p,lastName:ev.target.value}))})),
+      ),
+      el('div',{className:'fg'},el('label',null,'Email'),el('input',{type:'email',value:f.email,onChange:ev=>setF(p=>({...p,email:ev.target.value}))})),
+      el('div',{className:'fg'},el('label',null,'Password'),el('input',{type:'password',value:f.pw,onChange:ev=>setF(p=>({...p,pw:ev.target.value}))})),
+      el('div',{className:'g2'},
+        el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Location'),el('select',{value:f.loc,onChange:ev=>setF(p=>({...p,loc:ev.target.value}))},LOCS.map(l=>el('option',{key:l,value:l},l)))),
+        el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Department'),el('select',{value:f.dept,onChange:ev=>setF(p=>({...p,dept:ev.target.value}))},DEPTS.map(d=>el('option',{key:d,value:d},d)))),
+      ),
+      el('button',{className:'btn-primary',onClick:register,disabled:loading},loading?'Submitting...':'Request Access'),
+      el('div',{className:'auth-note'},'Admin will approve your account before you can log in.'),
+    )
+  ));
+}
+
+// ── SETUP SCREEN ──────────────────────────────────────────────────────────────
+function SetupScreen({onDone}){
+  const[copied,setCopied]=useState(false);
+  function copy(){navigator.clipboard.writeText(SETUP_SQL.trim()).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);});}
+  return el('div',{className:'auth-wrap'},
+    el('div',{className:'auth-box',style:{width:540}},
+      el('div',{className:'logo'},'Hendrix',el('span',null,' TMS')),
+      el('div',{className:'auth-sub'},'One-time setup required'),
+      el('div',{style:{background:'var(--bg)',border:'1px solid var(--border)',borderRadius:8,padding:12,marginBottom:14,maxHeight:180,overflowY:'auto'}},
+        el('pre',{style:{fontSize:11,color:'var(--text2)',whiteSpace:'pre-wrap',fontFamily:'DM Mono, monospace',lineHeight:1.5}},SETUP_SQL.trim())
+      ),
+      el('button',{className:'btn b-blue',style:{width:'100%',display:'block',marginBottom:10,border:'none'},onClick:copy},copied?'✓ Copied!':'Copy SQL'),
+      el('button',{className:'btn-primary',onClick:onDone},'Done — Tables Created'),
+    )
+  );
+}
+
+// ── TASK CARD ─────────────────────────────────────────────────────────────────
+function TaskCard({task,onClick}){
+  const today=new Date().toISOString().slice(0,10);
+  const overdue=task.due_date&&task.due_date<today&&task.status!=='done'&&task.status!=='archived';
+  const pri=PRI[task.priority]||PRI.medium;
+  return el('div',{className:`task-card${overdue?' overdue':''}`,onClick},
+    el('div',{style:{display:'flex',gap:10}},
+      el('div',{className:'pri-bar',style:{background:pri.color,minHeight:40}}),
+      el('div',{style:{flex:1,minWidth:0}},
+        el('div',{style:{display:'flex',gap:5,marginBottom:6,flexWrap:'wrap'}},
+          el('span',{className:'section-tag'},task.section),
+          (task.tags||[]).map(tag=>el('span',{key:tag,className:'tag'},tag)),
+        ),
+        el('div',{style:{fontSize:13,fontWeight:600,marginBottom:8,lineHeight:1.4,color:task.status==='done'?'var(--text2)':'var(--text)'}},task.title),
+        el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center'}},
+          el('div',{style:{display:'flex'}},
+            (task.assignees||[]).slice(0,4).map((a,i)=>
+              el('div',{key:a.id,className:'avatar',title:a.name,style:{background:avatarColor(a.name),marginLeft:i>0?-6:0}},a.name.charAt(0).toUpperCase())
+            ),
+            (task.assignees||[]).length>4&&el('div',{className:'avatar',style:{background:'var(--surface2)',color:'var(--text2)',marginLeft:-6}},'+'+((task.assignees||[]).length-4)),
+          ),
+          el('div',{style:{display:'flex',gap:6,alignItems:'center'}},
+            (task.notes||[]).length>0&&el('span',{style:{fontSize:11,color:'var(--text3)'}},`💬${(task.notes||[]).length}`),
+            (task.attachments||[]).length>0&&el('span',{style:{fontSize:11,color:'var(--text3)'}},`📎${(task.attachments||[]).length}`),
+            task.due_date&&el('span',{style:{fontSize:11,fontWeight:600,color:overdue?'var(--red)':task.due_date===today?'var(--yellow)':'var(--text3)'}},overdue?'⚠ '+task.due_date:task.due_date),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+// ── TASK DETAIL MODAL ─────────────────────────────────────────────────────────
+function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
+  const[newNote,setNewNote]=useState('');
+  const[saving,setSaving]=useState(false);
+  const today=new Date().toISOString().slice(0,10);
+
+  const isAdmin=cu.role==='admin';
+  const isManager=cu.role==='manager'||cu.role==='admin';
+  const isAssigned=(task.assignees||[]).some(a=>a.id===cu.id);
+  const isCreator=task.created_by_id===cu.id;
+  const canEdit=isAdmin||isCreator;
+  const canMove=isAssigned||isManager||isCreator;
+  const canApprove=isManager||isCreator;
+
+  async function changeStatus(s){
+    const update={status:s,updated_at:new Date().toISOString(),updated_by:cu.name};
+    if(s==='done') update.completed_at=new Date().toISOString();
+    if(s==='archived') update.archived_at=new Date().toISOString();
+    if(s==='approved') update.approved_by=cu.name;
+    try{await db.update('pf_tasks',task.id,update);}catch(e){console.error(e);}
+    onUpdate({...task,...update});
+    // Notify creator when moved to review
+    if(s==='review'){
+      const creator=users.find(u=>u.id===task.created_by_id);
+      if(creator?.email&&creator.id!==cu.id){
+        sendEmail({to:creator.email,subject:`Task ready for review: "${task.title}"`,html:`<div style="font-family:sans-serif;background:#0f1117;color:#e8eaf0;padding:24px;border-radius:12px;max-width:500px"><div style="color:#f5a623;font-size:20px;font-weight:700;margin-bottom:12px">ProFlow</div><p><strong>${cu.name}</strong> marked <strong>"${task.title}"</strong> as ready for review.</p><a href="${APP_URL}" style="display:inline-block;background:#f59e0b;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600;margin-top:12px">Review Now →</a></div>`});
+      }
+    }
+  }
+
+  async function updateField(field,value){
+    const update={[field]:value,updated_at:new Date().toISOString(),updated_by:cu.name};
+    try{await db.update('pf_tasks',task.id,update);}catch(e){console.error(e);}
+    onUpdate({...task,...update});
+  }
+
+  async function postNote(){
+    if(!newNote.trim())return;
+    setSaving(true);
+    const note={id:'n'+Date.now(),text:newNote,by:cu.name,by_id:cu.id,at:new Date().toISOString()};
+    const notes=[...(task.notes||[]),note];
+    try{await db.update('pf_tasks',task.id,{notes,updated_at:new Date().toISOString(),updated_by:cu.name});}catch(e){console.error(e);}
+    onUpdate({...task,notes,updated_at:new Date().toISOString(),updated_by:cu.name});
+    setNewNote('');setSaving(false);
+  }
+
+  const overdue=task.due_date&&task.due_date<today;
+  const pri=PRI[task.priority]||PRI.medium;
+
+  return el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&onClose()},
+    el('div',{className:'md',style:{width:700,maxHeight:'92vh'}},
+      // Header
+      el('div',{className:'mh'},
+        el('div',{style:{flex:1}},
+          el('div',{style:{display:'flex',gap:6,flexWrap:'wrap',marginBottom:8}},
+            el('span',{style:{background:pri.color+'22',color:pri.color,borderRadius:4,padding:'2px 8px',fontSize:11,fontWeight:600}},pri.label),
+            el('span',{className:'section-tag'},task.section),
+            el('span',{className:`badge ${task.status==='done'?'bb-green':task.status==='review'?'bb-yellow':task.status==='in_progress'?'bb-blue':task.status==='archived'?'bb-gray':'bb-gray'}`},COLS.find(c=>c.id===task.status)?.label||task.status),
+            (task.tags||[]).map(tag=>el('span',{key:tag,className:'tag'},tag)),
+          ),
+          el('div',{style:{fontSize:16,fontWeight:700}},task.title),
+        ),
+        el('button',{className:'mc',onClick:onClose},'×'),
+      ),
+      el('div',{className:'mbd'},
+        // Status pipeline
+        el('div',{className:'pipeline'},
+          COLS.map(col=>{
+            const isActive=task.status===col.id;
+            const allowed=canMove||(col.id==='review'&&isAssigned)||(col.id==='done'&&canApprove);
+            return el('button',{key:col.id,className:`pipe-btn${isActive?' active':''}`,
+              disabled:!allowed,
+              onClick:()=>allowed&&changeStatus(col.id),
+              style:{borderColor:isActive?col.color:'var(--border)',background:isActive?col.color+'22':'transparent',color:isActive?col.color:'var(--text2)'}},
+              col.label
+            );
+          })
+        ),
+        // Meta row
+        el('div',{className:'g2',style:{marginBottom:16}},
+          el('div',null,
+            el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:8}},'Assignees'),
+            (task.assignees||[]).length===0?el('div',{style:{fontSize:12,color:'var(--text3)'}},'None'):
+            el('div',{style:{display:'flex',flexDirection:'column',gap:6}},
+              (task.assignees||[]).map(a=>el('div',{key:a.id,style:{display:'flex',alignItems:'center',gap:8}},
+                el('div',{className:'avatar',style:{background:avatarColor(a.name)}},a.name.charAt(0).toUpperCase()),
+                el('div',null,el('div',{style:{fontSize:12,fontWeight:600}},a.name),el('div',{style:{fontSize:11,color:'var(--text2)'}},a.dept+' · '+a.loc)),
+              ))
+            ),
+          ),
+          el('div',null,
+            el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:8}},'Due Date'),
+            isAdmin||isCreator?el('input',{type:'date',value:task.due_date||'',onChange:ev=>updateField('due_date',ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px',color:overdue?'var(--red)':'var(--text)',fontFamily:'inherit',fontSize:13}}):
+            el('div',{style:{fontSize:13,fontWeight:600,color:overdue?'var(--red)':'var(--text)'}},task.due_date||'—'),
+            el('div',{style:{marginTop:10,display:'flex',alignItems:'center',gap:6}},
+              el('span',{style:{fontSize:11,color:'var(--text3)'}},'Created by'),
+              el('span',{style:{fontSize:11,fontWeight:700,color:'var(--accent)'}},task.created_by),
+            ),
+            !isCreator&&!isAdmin&&el('div',{style:{marginTop:6,background:'rgba(245,166,35,.06)',border:'1px solid rgba(245,166,35,.15)',borderRadius:6,padding:'5px 10px',fontSize:11,color:'var(--accent)'}},'👁 View only — only the creator can edit this task'),
+            el('div',{style:{fontSize:11,color:'var(--text3)'}},task.created_at?.slice(0,10)),
+          ),
+        ),
+        // Description
+        el('div',{className:'fg'},
+          el('label',null,'Description'),
+          isAdmin||isCreator?
+            el('textarea',{value:task.description||'',placeholder:'Add description...',onChange:ev=>updateField('description',ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:80,resize:'vertical'}}):
+            el('div',{style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'10px 14px',fontSize:13,color:'var(--text2)',lineHeight:1.6,minHeight:60}},task.description||'No description.'),
+        ),
+        // Attachments
+        canEdit&&el('div',{className:'fg'},
+          el('label',null,'Attach File'),
+          el('input',{type:'file',accept:'.pdf,.doc,.docx,.png,.jpg,.xlsx,.csv',onChange:async ev=>{
+            const file=ev.target.files[0];if(!file)return;
+            const reader=new FileReader();
+            reader.onload=async re=>{
+              const att={id:'att-'+Date.now(),name:file.name,data:re.target.result,by:cu.name,at:new Date().toISOString()};
+              await updateField('attachments',[...(task.attachments||[]),att]);
+            };
+            reader.readAsDataURL(file);
+          },style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px',color:'var(--text)',fontFamily:'inherit',fontSize:13}}),
+        ),
+        (task.attachments||[]).length>0&&el('div',{style:{marginBottom:14}},
+          (task.attachments||[]).map(att=>el('div',{key:att.id,style:{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'7px 10px',background:'var(--surface2)',borderRadius:6,marginBottom:5}},
+            el('span',{style:{fontSize:12}},`📎 ${att.name} — uploaded by ${att.by}`),
+            el('button',{className:'btn b-ghost btn-sm',onClick:()=>{const a=document.createElement('a');a.href=att.data;a.download=att.name;a.click();}},'Download'),
+          ))
+        ),
+        el('div',{className:'divider'}),
+        // Comments
+        el('div',{style:{fontWeight:600,marginBottom:14}},`Comments (${(task.notes||[]).length})`),
+        (task.notes||[]).map(note=>el('div',{key:note.id,style:{display:'flex',gap:10,marginBottom:12}},
+          el('div',{className:'avatar',style:{background:avatarColor(note.by),flexShrink:0}},note.by.charAt(0).toUpperCase()),
+          el('div',{style:{flex:1,background:'var(--surface2)',borderRadius:'0 10px 10px 10px',padding:'9px 13px'}},
+            el('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:5}},el('span',{style:{fontSize:12,fontWeight:600}},note.by),el('span',{style:{fontSize:11,color:'var(--text2)'}},note.at.slice(0,16).replace('T',' '))),
+            el('div',{style:{fontSize:13,lineHeight:1.5}},note.text),
+          ),
+        )),
+        el('div',{style:{display:'flex',gap:10,alignItems:'flex-start'}},
+          el('div',{className:'avatar',style:{background:avatarColor(cu.name),flexShrink:0,marginTop:4}},cu.name.charAt(0).toUpperCase()),
+          el('div',{style:{flex:1}},
+            el('textarea',{placeholder:'Write a comment... (Enter to post)',value:newNote,onChange:ev=>setNewNote(ev.target.value),onKeyDown:ev=>ev.key==='Enter'&&!ev.shiftKey&&(ev.preventDefault(),postNote()),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:60,resize:'none'}}),
+            el('button',{className:'btn b-blue btn-sm',style:{marginTop:6},onClick:postNote,disabled:!newNote.trim()||saving},'Post'),
+          ),
+        ),
+      ),
+      el('div',{className:'mf',style:{justifyContent:'space-between'}},
+        el('div',null,
+          canEdit&&el('button',{className:'btn b-red',onClick:async()=>{if(!window.confirm('Delete this task?'))return;await db.remove('pf_tasks',task.id).catch(console.error);onDelete(task.id);onClose();}},'Delete'),
+        ),
+        el('button',{className:'btn b-ghost',onClick:onClose},'Close'),
+      ),
+    )
+  );
+}
+
+// ── BOARD PAGE ────────────────────────────────────────────────────────────────
+function Board({tasks,setTasks,cu,users,locFilter,setLocFilter}){
+  const[view,setView]=useState('board');
+  const[section,setSection]=useState('All');
+  const[showNew,setNew]=useState(false);
+  const[selected,setSelected]=useState(null);
+  const[tagInput,setTagInput]=useState('');
+  const[saving,setSaving]=useState(false);
+  const[f,setF]=useState({title:'',section:'General',description:'',assignees:[],due_date:'',priority:'medium',loc:locFilter==='Nationwide'?'Nationwide':locFilter,tags:[]});
+  const today=new Date().toISOString().slice(0,10);
+
+  const isAdmin=cu.role==='admin';
+  const isManager=cu.role==='manager'||cu.role==='admin';
+
+  const filtered=useMemo(()=>{
+    let list=tasks;
+    if(locFilter&&locFilter!=='Nationwide') list=list.filter(t=>!t.loc||t.loc===locFilter||t.loc==='Nationwide');
+    if(section!=='All') list=list.filter(t=>t.section===section);
+    if(!isManager){
+      // Non-admin/manager: see tasks they created, are assigned to, OR are a manager of an assignee
+      list=list.filter(t=>{
+        if(t.created_by_id===cu.id) return true;
+        if((t.assignees||[]).some(a=>a.id===cu.id)) return true;
+        // Check if cu is a manager of any assignee
+        return (t.assignees||[]).some(a=>{
+          const assigneeUser=users.find(u=>u.id===a.id);
+          return (assigneeUser?.managers||[]).some(m=>m.id===cu.id);
+        });
+      });
+    }
+    return list;
+  },[tasks,locFilter,section,cu,isManager,users]);
+
+  async function createTask(){
+    if(!f.title||f.assignees.length===0)return;
+    setSaving(true);
+    const task={id:'task-'+Date.now(),...f,status:'not_started',created_by:cu.name,created_by_id:cu.id,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),updated_by:cu.name,notes:[],attachments:[]};
+    try{await db.insert('pf_tasks',task);}catch(e){console.error(e);setSaving(false);return;}
+    setTasks(p=>[task,...p]);
+    // Notify assignees and their managers
+    const allNotify=[];
+    f.assignees.forEach(a=>{
+      if(a.email) allNotify.push({email:a.email,name:a.name,role:'assignee'});
+      // Get managers of this assignee
+      const assigneeUser=users.find(u=>u.id===a.id);
+      (assigneeUser?.managers||[]).forEach(m=>{
+        if(m.email&&!allNotify.find(x=>x.email===m.email))
+          allNotify.push({email:m.email,name:m.name,role:'manager'});
+      });
+    });
+    allNotify.filter(a=>a.email).forEach(a=>{
+      sendEmail({to:a.email,subject:`New task assigned: "${f.title}"`,
+        html:`<div style="font-family:sans-serif;background:#0f1117;color:#e8eaf0;padding:24px;border-radius:12px;max-width:500px"><div style="color:#f5a623;font-size:20px;font-weight:700;margin-bottom:12px">ProFlow</div><p>Hi ${a.name},</p><p style="margin:10px 0"><strong>${cu.name}</strong> assigned you a task:</p><div style="background:#181b23;border-radius:8px;padding:16px;margin:16px 0"><strong style="font-size:15px">${f.title}</strong>${f.description?`<p style="color:#8b92a8;margin:8px 0 0;font-size:13px">${f.description}</p>`:''}<p style="color:#f59e0b;margin:8px 0 0;font-size:13px">${f.due_date?'Due: '+f.due_date:''}</p></div><a href="${APP_URL}" style="display:inline-block;background:#f5a623;color:#0a0f1e;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:600">Open ProFlow →</a></div>`
+      });
+    });
+    setF({title:'',section:'General',description:'',assignees:[],due_date:'',priority:'medium',loc:locFilter==='Nationwide'?'Nationwide':locFilter,tags:[]});
+    setNew(false);setSaving(false);
+  }
+
+  function handleUpdate(updated){
+    setTasks(p=>p.map(t=>t.id===updated.id?updated:t));
+    setSelected(updated);
+  }
+
+  function handleDelete(id){setTasks(p=>p.filter(t=>t.id!==id));}
+
+  // Stats
+  const myTasks=filtered.filter(t=>!['archived'].includes(t.status)&&(t.assignees||[]).some(a=>a.id===cu.id));
+  const overdue=filtered.filter(t=>!['done','archived'].includes(t.status)&&t.due_date&&t.due_date<today);
+  const dueToday=filtered.filter(t=>!['done','archived'].includes(t.status)&&t.due_date===today);
+  const inReview=filtered.filter(t=>t.status==='review');
+
+  // Available users to assign (filter by location)
+  const assignableUsers=users.filter(u=>u.approved);
+
+  return el('div',null,
+    // Header
+    el('div',{className:'ph'},
+      el('div',null,el('div',{className:'pt'},'Task Board'),el('div',{className:'ps'},'Manage and track tasks across your team')),
+      el('div',{style:{display:'flex',gap:8,alignItems:'center'}},
+        el('div',{className:'view-toggle'},
+          el('button',{className:`vbtn${view==='board'?' on':''}`,onClick:()=>setView('board')},'⬛ Board'),
+          el('button',{className:`vbtn${view==='list'?' on':''}`,onClick:()=>setView('list')},'☰ List'),
+        ),
+        isAdmin&&el('button',{className:'btn b-blue',onClick:()=>setNew(true)},'+ New Task'),
+      ),
+    ),
+
+    // Stats
+    el('div',{className:'g4'},
+      [{l:'My Tasks',v:myTasks.length,c:'#3b82f6'},{l:'Due Today',v:dueToday.length,c:dueToday.length>0?'#ef4444':'#4a5068'},{l:'Overdue',v:overdue.length,c:overdue.length>0?'#ef4444':'#4a5068'},{l:'In Review',v:inReview.length,c:inReview.length>0?'#f59e0b':'#4a5068'}]
+        .map(({l,v,c})=>el('div',{key:l,className:'stat'},el('div',{className:'sl'},l),el('div',{className:'sv',style:{color:c}},v)))
+    ),
+
+    // Location + Section filters
+    el('div',{style:{display:'flex',gap:16,marginBottom:16,flexWrap:'wrap',alignItems:'center'}},
+      el('div',{style:{display:'flex',gap:6}},
+        LOCS.filter(l=>cu.role==='admin'||l===cu.loc||cu.loc==='Nationwide').map(l=>
+          el('button',{key:l,onClick:()=>setLocFilter(l),style:{padding:'5px 14px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:500,cursor:'pointer',background:locFilter===l?'var(--accent)':'transparent',color:locFilter===l?'#fff':'var(--text2)',borderColor:locFilter===l?'var(--accent)':'var(--border)'}},l==='Nationwide'?'🌐 All':l==='Michigan'?'🏭 Michigan':'🏗 Missouri')
+        )
+      ),
+      el('div',{style:{width:1,height:20,background:'var(--border)'}}),
+      el('div',{style:{display:'flex',gap:6,flexWrap:'wrap'}},
+        ['All',...SECTIONS].map(s=>el('button',{key:s,onClick:()=>setSection(s),style:{padding:'4px 12px',borderRadius:20,border:'1px solid',fontSize:11,fontWeight:500,cursor:'pointer',background:section===s?'var(--surface2)':'transparent',color:section===s?'var(--text)':'var(--text3)',borderColor:section===s?'var(--border)':'transparent'}},s))
+      ),
+    ),
+
+    // BOARD
+    view==='board'&&el('div',{className:'board'},
+      COLS.map(col=>{
+        const colTasks=filtered.filter(t=>t.status===col.id);
+        return el('div',{key:col.id,className:'col'},
+          el('div',{className:'col-header'},
+            el('div',{className:'col-title'},
+              el('div',{className:'col-dot',style:{background:col.color}}),
+              col.label,
+              el('div',{className:'col-count'},colTasks.length),
+            ),
+            isAdmin&&el('button',{onClick:()=>{setF(p=>({...p,status:col.id}));setNew(true);},style:{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:20,lineHeight:1,padding:'0 4px'}},'＋'),
+          ),
+          colTasks.length===0?
+            el('div',{style:{border:'2px dashed var(--border)',borderRadius:8,padding:'24px 12px',textAlign:'center',color:'var(--text3)',fontSize:12}},'Empty'):
+            colTasks.map(task=>el(TaskCard,{key:task.id,task,onClick:()=>setSelected(task)})),
+        );
+      })
+    ),
+
+    // LIST
+    view==='list'&&el('div',null,
+      COLS.map(col=>{
+        const colTasks=filtered.filter(t=>t.status===col.id);
+        if(!colTasks.length) return null;
+        return el('div',{key:col.id,style:{marginBottom:20}},
+          el('div',{style:{display:'flex',alignItems:'center',gap:10,padding:'8px 0',borderBottom:'2px solid var(--border)',marginBottom:8}},
+            el('div',{style:{width:10,height:10,borderRadius:'50%',background:col.color}}),
+            el('div',{style:{fontWeight:700,fontSize:13}},col.label),
+            el('span',{style:{background:'var(--surface2)',borderRadius:10,padding:'1px 8px',fontSize:11,color:'var(--text2)'}},colTasks.length),
+          ),
+          el('div',{className:'card',style:{padding:0}},
+            colTasks.map((task,i)=>el('div',{key:task.id,
+              style:{display:'flex',alignItems:'center',gap:12,padding:'12px 16px',borderBottom:i<colTasks.length-1?'1px solid var(--border)':'none',cursor:'pointer'},
+              onClick:()=>setSelected(task)},
+              el('div',{style:{width:3,height:32,borderRadius:4,background:PRI[task.priority]?.color||'#6b7280',flexShrink:0}}),
+              el('div',{style:{flex:1,minWidth:0}},
+                el('div',{style:{fontSize:13,fontWeight:600}},task.title),
+                el('div',{style:{fontSize:11,color:'var(--text2)',marginTop:2}},task.section+' · Created by '+task.created_by+(task.loc&&task.loc!=='Nationwide'?' · '+task.loc:'')),
+              ),
+              el('div',{style:{display:'flex',gap:6,alignItems:'center',flexShrink:0}},
+                (task.assignees||[]).slice(0,3).map((a,i)=>el('div',{key:a.id,className:'avatar',title:a.name,style:{background:avatarColor(a.name),marginLeft:i>0?-6:0,width:22,height:22,fontSize:9}},a.name.charAt(0).toUpperCase())),
+                task.due_date&&el('span',{style:{fontSize:11,color:task.due_date<today?'var(--red)':task.due_date===today?'var(--yellow)':'var(--text3)',whiteSpace:'nowrap',marginLeft:6}},task.due_date),
+              ),
+            ))
+          ),
+        );
+      })
+    ),
+
+    // NEW TASK MODAL
+    showNew&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setNew(false)},
+      el('div',{className:'md',style:{width:640}},
+        el('div',{className:'mh'},el('div',{className:'mt2'},'New Task'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
+        el('div',{className:'mbd'},
+          el('div',{className:'fg'},el('label',null,'Title *'),el('input',{placeholder:'What needs to be done?',value:f.title,onChange:ev=>setF(p=>({...p,title:ev.target.value})),autoFocus:true})),
+          el('div',{className:'g2'},
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Section'),el('select',{value:f.section,onChange:ev=>setF(p=>({...p,section:ev.target.value}))},SECTIONS.map(s=>el('option',{key:s,value:s},s)))),
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Priority'),el('select',{value:f.priority,onChange:ev=>setF(p=>({...p,priority:ev.target.value}))},Object.entries(PRI).map(([k,{label}])=>el('option',{key:k,value:k},label)))),
+          ),
+          el('div',{className:'g2',style:{marginTop:13}},
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Due Date'),el('input',{type:'date',value:f.due_date,onChange:ev=>setF(p=>({...p,due_date:ev.target.value}))})),
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Location'),el('select',{value:f.loc,onChange:ev=>setF(p=>({...p,loc:ev.target.value}))},LOCS.map(l=>el('option',{key:l,value:l},l)))),
+          ),
+          el('div',{className:'fg'},el('label',null,'Description'),el('textarea',{placeholder:'More details...',value:f.description,onChange:ev=>setF(p=>({...p,description:ev.target.value}))})),
+          // Multi-assign
+          el('div',{className:'fg'},
+            el('label',null,'Assign To * (required)'),
+            el('select',{value:'',onChange:ev=>{const u=assignableUsers.find(x=>x.id===ev.target.value);if(u&&!f.assignees.find(a=>a.id===u.id))setF(p=>({...p,assignees:[...p.assignees,{id:u.id,name:u.name,email:u.email,dept:u.dept,loc:u.loc}]}));ev.target.value='';},style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+              el('option',{value:''},'+ Add person...'),
+              ...assignableUsers.filter(u=>!f.assignees.find(a=>a.id===u.id)).map(u=>el('option',{key:u.id,value:u.id},`${u.name} — ${u.dept} — ${u.loc}`))
+            ),
+            f.assignees.length>0&&el('div',{style:{display:'flex',flexWrap:'wrap',gap:6,marginTop:8}},
+              f.assignees.map(a=>el('div',{key:a.id,style:{display:'flex',alignItems:'center',gap:6,background:'var(--surface2)',borderRadius:20,padding:'5px 12px',fontSize:12}},
+                el('div',{className:'avatar',style:{background:avatarColor(a.name),width:20,height:20,fontSize:9}},a.name.charAt(0).toUpperCase()),
+                a.name,
+                el('span',{style:{cursor:'pointer',color:'var(--text3)',marginLeft:4},onClick:()=>setF(p=>({...p,assignees:p.assignees.filter(x=>x.id!==a.id)}))},'×'),
+              ))
+            ),
+          ),
+          // Tags
+          el('div',{className:'fg'},
+            el('label',null,'Tags'),
+            el('div',{style:{display:'flex',gap:8}},
+              el('input',{placeholder:'Type tag, press Enter',value:tagInput,onChange:ev=>setTagInput(ev.target.value),onKeyDown:ev=>{if(ev.key==='Enter'&&ev.target.value.trim()){setF(p=>({...p,tags:[...new Set([...p.tags,ev.target.value.trim()])]}));setTagInput('');}}}),
+            ),
+            f.tags.length>0&&el('div',{style:{display:'flex',flexWrap:'wrap',gap:6,marginTop:8}},
+              f.tags.map(tag=>el('div',{key:tag,style:{display:'flex',alignItems:'center',gap:4,background:'rgba(245,166,35,.15)',color:'var(--accent)',borderRadius:20,padding:'3px 10px',fontSize:12}},
+                tag,el('span',{style:{cursor:'pointer',marginLeft:4,color:'var(--accent)'},onClick:()=>setF(p=>({...p,tags:p.tags.filter(t=>t!==tag)}))},'×'),
+              ))
+            ),
+          ),
+        ),
+        el('div',{className:'mf'},
+          el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),
+          el('button',{className:'btn b-blue',onClick:createTask,disabled:saving||!f.title||f.assignees.length===0},saving?'Creating...':'Create & Notify'),
+        ),
+      )
+    ),
+
+    // TASK DETAIL
+    selected&&el(TaskModal,{task:selected,cu,users,onClose:()=>setSelected(null),onUpdate:handleUpdate,onDelete:handleDelete}),
+  );
+}
+
+// ── TEAM PAGE ─────────────────────────────────────────────────────────────────
+function Team({users,setUsers,cu}){
+  const[editU,setEditU]=useState(null);
+  const[showAdd,setAdd]=useState(false);
+  const[af,setAf]=useState({firstName:'',lastName:'',email:'',pw:'',role:'employee',dept:'General',loc:'Nationwide'});
+  const pending=users.filter(u=>!u.approved);
+  const approved=users.filter(u=>u.approved);
+
+  async function approve(id,role){
+    const r=role||'employee';
+    await db.update('pf_users',id,{approved:true,role:r});
+    setUsers(p=>p.map(u=>u.id===id?{...u,approved:true,role:r}:u));
+    const user=users.find(u=>u.id===id);
+    if(user?.email){
+      sendEmail({to:user.email,subject:'Your ProFlow account is approved',html:`<div style="font-family:sans-serif;background:#0f1117;color:#e8eaf0;padding:24px;border-radius:12px;max-width:500px"><div style="color:#f5a623;font-size:20px;font-weight:700;margin-bottom:12px">ProFlow</div><p>Hi ${user.name}, your account has been approved. You can now sign in.</p><a href="${APP_URL}" style="display:inline-block;background:#f5a623;color:#0a0f1e;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:600;margin-top:12px">Sign In →</a></div>`});
+    }
+  }
+
+  async function reject(id){if(!window.confirm('Reject this request?'))return;await db.remove('pf_users',id);setUsers(p=>p.filter(u=>u.id!==id));}
+  async function remove(id){if(id===cu.id||!window.confirm('Remove this user?'))return;await db.remove('pf_users',id);setUsers(p=>p.filter(u=>u.id!==id));}
+
+  async function saveEdit(){
+    const update={role:editU.role,dept:editU.dept,loc:editU.loc,managers:editU.managers||[]};
+    await db.update('pf_users',editU.id,update);
+    setUsers(p=>p.map(u=>u.id===editU.id?{...u,...update}:u));
+    setEditU(null);
+  }
+
+  async function addUser(){
+    if(!af.firstName||!af.email||!af.pw)return;
+    const fullName=af.firstName.trim()+' '+(af.lastName||'').trim();
+    const nu={id:'u'+Date.now(),name:fullName,first_name:af.firstName,last_name:af.lastName||'',email:af.email,pw:af.pw,role:af.role,dept:af.dept,loc:af.loc,approved:true,perms:[]};
+    await db.insert('pf_users',nu);
+    setUsers(p=>[...p,nu]);
+    setAdd(false);setAf({firstName:'',lastName:'',email:'',pw:'',role:'employee',dept:'General',loc:'Nationwide'});
+  }
+
+  return el('div',null,
+    el('div',{className:'ph'},el('div',null,el('div',{className:'pt'},'Team & Access'),el('div',{className:'ps'},'Manage users and permissions')),el('button',{className:'btn b-blue',onClick:()=>setAdd(true)},'+ Add User')),
+    pending.length>0&&el('div',{className:'card',style:{marginBottom:18,borderColor:'rgba(245,158,11,.3)'}},
+      el('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:12}},el('span',{className:'badge bb-yellow'},'⏳ Pending'),el('span',{style:{fontSize:12,color:'var(--text2)'}}),`${pending.length} waiting for approval`),
+      pending.map(u=>el('div',{key:u.id,style:{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 0',borderBottom:'1px solid var(--border)',gap:12,flexWrap:'wrap'}},
+        el('div',null,el('div',{style:{fontWeight:600,fontSize:13}},u.name),el('div',{style:{fontSize:12,color:'var(--text2)'}},`${u.email} · ${u.dept} · ${u.loc}`)),
+        el('div',{style:{display:'flex',gap:8,alignItems:'center'}},
+          el('select',{defaultValue:u.role||'employee',onChange:ev=>setUsers(p=>p.map(x=>x.id===u.id?{...x,role:ev.target.value}:x)),style:{background:'var(--bg)',border:'1px solid var(--border)',borderRadius:6,padding:'6px 9px',color:'var(--text)',fontFamily:'inherit',fontSize:12}},ROLES.map(r=>el('option',{key:r,value:r},RLABEL[r]))),
+          el('button',{className:'btn b-green btn-sm',onClick:()=>approve(u.id)},'✓ Approve'),
+          el('button',{className:'btn b-red btn-sm',onClick:()=>reject(u.id)},'✗ Reject'),
+        ),
+      ))
+    ),
+    el('div',{className:'card',style:{padding:0}},
+      el('div',{className:'tw'},
+        el('table',null,
+          el('thead',null,el('tr',null,['Name','Email','Role','Dept','Location','Managers',''].map(h=>el('th',{key:h},h)))),
+          el('tbody',null,approved.map(u=>el('tr',{key:u.id},
+            el('td',null,el('div',{style:{display:'flex',alignItems:'center',gap:8}},el('div',{className:'avatar',style:{background:avatarColor(u.name),width:28,height:28,fontSize:11}},u.name.charAt(0).toUpperCase()),el('span',{style:{fontWeight:600,fontSize:13}},u.name))),
+            el('td',null,el('span',{style:{fontSize:12,color:'var(--text2)'}},' '+u.email)),
+            el('td',null,el('span',{className:`badge ${RCOLOR[u.role]||'bb-gray'}`},RLABEL[u.role]||u.role)),
+            el('td',null,el('span',{style:{fontSize:12,color:'var(--text2)'}},u.dept)),
+            el('td',null,el('span',{style:{fontSize:12,color:'var(--text2)'}},u.loc)),
+            el('td',null,
+              (u.managers||[]).length===0?el('span',{style:{fontSize:12,color:'var(--text3)'}},'—'):
+              el('div',{style:{display:'flex',flexDirection:'column',gap:3}},
+                (u.managers||[]).map((m,i)=>el('div',{key:m.id,style:{display:'flex',alignItems:'center',gap:5}},
+                  el('span',{style:{background:'var(--accent-dim)',color:'var(--accent)',border:'1px solid rgba(245,166,35,.2)',borderRadius:4,padding:'1px 6px',fontSize:9,fontWeight:800}},'M'+(i+1)),
+                  el('span',{style:{fontSize:12}},m.name),
+                ))
+              )
+            ),
+            el('td',null,
+              el('button',{className:'btn b-ghost btn-sm',onClick:()=>setEditU({...u})},'Edit'),
+              u.id!==cu.id&&el('button',{className:'btn b-red btn-sm',style:{marginLeft:6},onClick:()=>remove(u.id)},'Remove'),
+            ),
+          )))
+        )
+      )
+    ),
+    editU&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setEditU(null)},
+      el('div',{className:'md'},
+        el('div',{className:'mh'},el('div',{className:'mt2'},'Edit — '+editU.name),el('button',{className:'mc',onClick:()=>setEditU(null)},'×')),
+        el('div',{className:'mbd'},
+          el('div',{className:'fg'},el('label',null,'Role'),el('select',{value:editU.role,onChange:ev=>setEditU(p=>({...p,role:ev.target.value}))},ROLES.map(r=>el('option',{key:r,value:r},RLABEL[r])))),
+          el('div',{className:'fg'},el('label',null,'Department'),el('select',{value:editU.dept,onChange:ev=>setEditU(p=>({...p,dept:ev.target.value}))},DEPTS.map(d=>el('option',{key:d,value:d},d)))),
+          el('div',{className:'fg'},el('label',null,'Location'),el('select',{value:editU.loc,onChange:ev=>setEditU(p=>({...p,loc:ev.target.value}))},LOCS.map(l=>el('option',{key:l,value:l},l)))),
+          el('div',{className:'fg'},
+            el('label',null,'Managers (up to 3)'),
+            el('select',{value:'',onChange:ev=>{
+              const u=users.find(x=>x.id===ev.target.value);
+              if(!u)return;
+              const mgrs=editU.managers||[];
+              if(mgrs.length>=3){alert('Max 3 managers per person.');return;}
+              if(mgrs.find(m=>m.id===u.id))return;
+              setEditU(p=>({...p,managers:[...mgrs,{id:u.id,name:u.name,email:u.email,role:u.role}]}));
+              ev.target.value='';
+            },style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+              el('option',{value:''},'+ Add manager...'),
+              ...users.filter(u=>u.approved&&u.id!==editU.id&&!(editU.managers||[]).find(m=>m.id===u.id)).map(u=>el('option',{key:u.id,value:u.id},`${u.name} — ${RLABEL[u.role]||u.role} — ${u.loc}`))
+            ),
+            (editU.managers||[]).length>0&&el('div',{style:{marginTop:8,display:'flex',flexDirection:'column',gap:6}},
+              (editU.managers||[]).map((m,i)=>el('div',{key:m.id,style:{display:'flex',alignItems:'center',justifyContent:'space-between',background:'var(--surface2)',borderRadius:8,padding:'8px 12px'}},
+                el('div',{style:{display:'flex',alignItems:'center',gap:8}},
+                  el('div',{style:{background:'var(--accent)',color:'#0a0f1e',borderRadius:5,padding:'2px 7px',fontSize:10,fontWeight:800}},'MGR '+(i+1)),
+                  el('div',null,el('div',{style:{fontSize:12,fontWeight:600}},m.name),el('div',{style:{fontSize:11,color:'var(--text2)'}},m.role)),
+                ),
+                el('button',{style:{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:16},onClick:()=>setEditU(p=>({...p,managers:p.managers.filter(x=>x.id!==m.id)}))    },'×'),
+              ))
+            ),
+            (editU.managers||[]).length===0&&el('div',{style:{fontSize:12,color:'var(--text3)',marginTop:6}},'No managers assigned yet'),
+          ),
+        ),
+        el('div',{className:'mf'},el('button',{className:'btn b-ghost',onClick:()=>setEditU(null)},'Cancel'),el('button',{className:'btn b-blue',onClick:saveEdit},'Save')),
+      )
+    ),
+    showAdd&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setAdd(false)},
+      el('div',{className:'md'},
+        el('div',{className:'mh'},el('div',{className:'mt2'},'Add Team Member'),el('button',{className:'mc',onClick:()=>setAdd(false)},'×')),
+        el('div',{className:'mbd'},
+          el('div',{className:'g2'},
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'First Name'),el('input',{value:af.firstName,onChange:ev=>setAf(p=>({...p,firstName:ev.target.value}))})),
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Last Name'),el('input',{value:af.lastName,onChange:ev=>setAf(p=>({...p,lastName:ev.target.value}))})),
+          ),
+          el('div',{className:'fg'},el('label',null,'Email'),el('input',{type:'email',value:af.email,onChange:ev=>setAf(p=>({...p,email:ev.target.value}))})),
+          el('div',{className:'fg'},el('label',null,'Password'),el('input',{type:'password',value:af.pw,onChange:ev=>setAf(p=>({...p,pw:ev.target.value}))})),
+          el('div',{className:'g2'},
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Role'),el('select',{value:af.role,onChange:ev=>setAf(p=>({...p,role:ev.target.value}))},ROLES.map(r=>el('option',{key:r,value:r},RLABEL[r])))),
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Location'),el('select',{value:af.loc,onChange:ev=>setAf(p=>({...p,loc:ev.target.value}))},LOCS.map(l=>el('option',{key:l,value:l},l)))),
+          ),
+          el('div',{className:'fg'},el('label',null,'Department'),el('select',{value:af.dept,onChange:ev=>setAf(p=>({...p,dept:ev.target.value}))},DEPTS.map(d=>el('option',{key:d,value:d},d)))),
+        ),
+        el('div',{className:'mf'},el('button',{className:'btn b-ghost',onClick:()=>setAdd(false)},'Cancel'),el('button',{className:'btn b-blue',onClick:addUser},'Add & Approve')),
+      )
+    ),
+  );
+}
+
+// ── APP ───────────────────────────────────────────────────────────────────────
+function App(){
+  const[cu,setCu]=useState(()=>{try{const s=localStorage.getItem('pf_session');return s?JSON.parse(s):null;}catch{return null;}});
+  const[tasks,setTasks]=useState([]);
+  const[users,setUsers]=useState([]);
+  const[loading,setLoading]=useState(false);
+  const[dbReady,setDbReady]=useState(null);
+  const[page,setPage]=useState('board');
+  const[locFilter,setLocFilter]=useState(()=>{try{const s=localStorage.getItem('pf_session');const u=s?JSON.parse(s):null;return u?.loc||'Nationwide';}catch{return 'Nationwide';}});
+
+  useEffect(()=>{
+    db.get('pf_users','limit=1').then(()=>setDbReady(true)).catch(()=>setDbReady(false));
+  },[]);
+
+  useEffect(()=>{
+    if(!cu||!dbReady)return;
+    setLoading(true);
+    Promise.all([
+      db.get('pf_tasks','order=created_at.desc').catch(()=>[]),
+      db.get('pf_users').catch(()=>[]),
+    ]).then(([t,u])=>{
+      setTasks(t||[]);
+      setUsers(u||[]);
+    }).catch(console.error).finally(()=>setLoading(false));
+  },[cu,dbReady]);
+
+  if(dbReady===null) return el('div',{className:'loading'},el('div',{className:'spinner'}),el('div',null,'Connecting...'));
+  if(dbReady===false) return el(SetupScreen,{onDone:()=>setDbReady(true)});
+  if(!cu) return el(Auth,{onLogin:u=>{setCu(u);setLocFilter(u.loc||'Nationwide');}});
+  if(loading) return el('div',{className:'loading'},el('div',{className:'spinner'}),el('div',null,'Loading...'));
+
+  const pending=users.filter(u=>!u.approved).length;
+  const isAdmin=cu.role==='admin';
+  const today=new Date().toISOString().slice(0,10);
+  const myTasks=tasks.filter(t=>(t.assignees||[]).some(a=>a.id===cu.id)&&!['archived'].includes(t.status));
+  const overdueCt=tasks.filter(t=>!['done','archived'].includes(t.status)&&t.due_date&&t.due_date<today).length;
+
+  const nav=[
+    {id:'board',ico:'⬛',label:'Task Board'},
+    isAdmin&&{id:'team',ico:'👥',label:'Team & Access',badge:pending||null},
+  ].filter(Boolean);
+
+  return el('div',{className:'app'},
+    el('div',{className:'sb'},
+      el('div',{className:'sb-logo'},'Hendrix',el('span',null,' TMS')),
+      el('div',{style:{marginBottom:16}},
+        el('div',{className:'sb-label',style:{marginBottom:8}},'Location'),
+        LOCS.filter(l=>isAdmin||l===cu.loc||cu.loc==='Nationwide').map(l=>
+          el('button',{key:l,className:`nav${locFilter===l?' on':''}`,onClick:()=>setLocFilter(l)},
+            el('span',null,l==='Nationwide'?'🌐':l==='Michigan'?'🏭':'🏗'),l
+          )
+        )
+      ),
+      el('div',{className:'sb-label',style:{marginBottom:8}},'Navigation'),
+      nav.map(item=>el('button',{key:item.id,className:`nav${page===item.id?' on':''}`,onClick:()=>setPage(item.id)},
+        el('span',null,item.ico),item.label,item.badge&&el('span',{className:'dot'},item.badge)
+      )),
+      // Quick stats in sidebar
+      el('div',{style:{margin:'16px 0',padding:'12px',background:'var(--surface2)',borderRadius:'var(--rs)'}},
+        el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.8px',marginBottom:10}},'Quick Stats'),
+        [{l:'My Tasks',v:myTasks.length,c:'var(--accent)'},{l:'Overdue',v:overdueCt,c:overdueCt>0?'var(--red)':'var(--text3)'}].map(({l,v,c})=>
+          el('div',{key:l,style:{display:'flex',justifyContent:'space-between',marginBottom:6}},
+            el('span',{style:{fontSize:12,color:'var(--text2)'}},' '+l),
+            el('span',{style:{fontSize:13,fontWeight:700,color:c}},v),
+          )
+        )
+      ),
+      el('div',{className:'sb-user'},
+        el('div',{className:'sb-name'},cu.name),
+        el('div',{className:'sb-role'},`${RLABEL[cu.role]||cu.role} · ${cu.dept}`),
+        el('div',{className:'sb-role',style:{marginTop:2}},cu.loc),
+        el('button',{className:'sb-out',onClick:()=>{localStorage.removeItem('pf_session');setCu(null);}},'Sign out'),
+      )
+    ),
+    el('div',{className:'main'},
+      page==='board'&&el(Board,{tasks,setTasks,cu,users,locFilter,setLocFilter}),
+      page==='team'&&isAdmin&&el(Team,{users,setUsers,cu}),
+    )
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(el(App));
+</script>
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/ProFlow/sw.js')
+      .then(r => console.log('SW registered'))
+      .catch(e => console.log('SW failed:', e));
+  });
+}
+// PWA install prompt
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  // Show install banner after 3 seconds if not installed
+  setTimeout(() => {
+    if(deferredPrompt) {
+      const banner = document.createElement('div');
+      banner.id = 'install-banner';
+      banner.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#f5a623;color:#0a0f1e;padding:12px 20px;border-radius:12px;font-family:Inter,sans-serif;font-size:13px;font-weight:700;cursor:pointer;z-index:9999;box-shadow:0 8px 24px rgba(245,166,35,.4);display:flex;align-items:center;gap:10px;';
+      banner.innerHTML = '<span>📱</span><span>Add Hendrix TMS to Home Screen</span><span style="margin-left:8px;opacity:.6">×</span>';
+      banner.onclick = (e) => {
+        if(e.target.textContent === '×') { banner.remove(); return; }
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then(() => { deferredPrompt = null; banner.remove(); });
+      };
+      document.body.appendChild(banner);
+    }
+  }, 3000);
+});
+</script>
+</body>
+</html>
