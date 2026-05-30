@@ -1,0 +1,80 @@
+
+===========================================================================
+HENDRIX TMS — TWO FIXES TO APPLY IN index.html ON GITHUB
+===========================================================================
+
+─────────────────────────────────────────────────────────────────────────
+FIX 1: Promise.all destructuring (Team & Access users not loading)
+─────────────────────────────────────────────────────────────────────────
+
+FIND THIS (exact text, appears once around line ~900 in the useEffect):
+
+    ]).then(([t,u,ev,mn,st])=>{
+      setTasks(t||[]);
+      setUsers(u||[]);
+      setEvents(ev||[]);
+      setMeetingNotes(mn||[]);
+      setSalesTasks(st||[]);
+
+REPLACE WITH:
+
+    ]).then(([_tasks,_sales,_users,_events,_notes])=>{
+      setTasks(_tasks||[]);
+      setSalesTasks(_sales||[]);
+      setUsers(_users||[]);
+      setEvents(_events||[]);
+      setMeetingNotes(_notes||[]);
+
+─────────────────────────────────────────────────────────────────────────
+FIX 2: doRefresh function (same bug, second occurrence)
+─────────────────────────────────────────────────────────────────────────
+
+FIND THIS (in the doRefresh useCallback):
+
+    ]).then(([t,u,ev,mn,st])=>{setTasks(t||[]);setUsers(u||[]);});
+
+REPLACE WITH:
+
+    ]).then(([_tasks,_sales,_users,_events,_notes])=>{setTasks(_tasks||[]);setSalesTasks(_sales||[]);setUsers(_users||[]);setEvents(_events||[]);setMeetingNotes(_notes||[]);});
+
+─────────────────────────────────────────────────────────────────────────
+FIX 3: RETAIL_BRANDS — flat Michigan array (see retail_brands_update.js)
+─────────────────────────────────────────────────────────────────────────
+
+FIND THIS ENTIRE BLOCK:
+
+// ── RETAIL BRANDS & LOCATIONS ─────────────────────────────────────────────────
+const RETAIL_BRANDS={
+  'Ascend Cannabis':{
+    Michigan:[
+      'Ascend Cannabis - Battle Creek',
+      'Ascend Cannabis - Detroit',
+      'Ascend Cannabis - East Lansing',
+      'Ascend Cannabis - Grand Rapids 28th Street',
+      'Ascend Cannabis - Grand Rapids Century',
+      'Ascend Cannabis - Grand Rapids Scribner',
+      'Ascend Cannabis - Morenci',
+    ],
+    Missouri:[]
+  },
+};
+
+REPLACE WITH: (copy from retail_brands_update.js, the const RETAIL_BRANDS={...}; block)
+
+─────────────────────────────────────────────────────────────────────────
+FIX 4: Update the SalesMarketing component brand location lookup
+─────────────────────────────────────────────────────────────────────────
+
+FIND THIS (in SalesMarketing function):
+
+  const brandLocations=f.brand&&RETAIL_BRANDS[f.brand]?
+    (RETAIL_BRANDS[f.brand][f.state]||[]):[];
+
+REPLACE WITH:
+
+  const brandLocations=f.brand&&RETAIL_BRANDS[f.brand]?
+    RETAIL_BRANDS[f.brand]:[];
+
+(Because now brands are flat arrays, not nested by state)
+
+===========================================================================
