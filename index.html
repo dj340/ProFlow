@@ -37,11 +37,7 @@
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
-
-/* Subtle grid background */
 body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(245,166,35,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(245,166,35,.02) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
-
-/* AUTH */
 .auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;z-index:1;}
 .auth-box{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:44px 40px;width:440px;max-width:95vw;box-shadow:var(--glow),inset 0 1px 0 rgba(255,255,255,.04);}
 .logo{font-size:26px;font-weight:800;color:var(--accent);letter-spacing:-1px;}
@@ -61,8 +57,6 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .btn-primary:active{transform:translateY(0);}
 .auth-note{font-size:11px;color:var(--text3);text-align:center;margin-top:12px;}
 .pending-box{background:rgba(245,166,35,.06);border:1px solid rgba(245,166,35,.2);border-radius:var(--rs);padding:28px;text-align:center;}
-
-/* APP */
 .app{display:flex;min-height:100vh;position:relative;z-index:1;}
 .sb{width:248px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:20px 14px;position:fixed;top:0;left:0;bottom:0;z-index:100;overflow-y:auto;}
 .sb::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(245,166,35,.3),transparent);}
@@ -79,8 +73,6 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .sb-out{margin-top:8px;font-size:12px;color:var(--text3);cursor:pointer;background:none;border:none;font-family:inherit;padding:0;transition:color .15s;}
 .sb-out:hover{color:var(--red);}
 .main{margin-left:248px;flex:1;padding:28px 32px;max-width:1400px;}
-
-/* BUTTONS */
 .btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:var(--rs);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .15s;}
 .b-blue{background:var(--accent);color:#0a0f1e;}.b-blue:hover{background:var(--accent2);transform:translateY(-1px);}
 .b-ghost{background:transparent;color:var(--text2);border:1px solid var(--border);}.b-ghost:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim);}
@@ -88,8 +80,6 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .b-green{background:rgba(16,185,129,.1);color:var(--green);border:1px solid rgba(16,185,129,.2);}
 .btn-sm{padding:5px 11px;font-size:12px;}
 .btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important;}
-
-/* MODAL */
 .mo{position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(4px);z-index:999;display:flex;align-items:center;justify-content:center;padding:20px;}
 .md{background:var(--surface);border:1px solid var(--border2);border-radius:20px;width:600px;max-width:100%;max-height:92vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.6),var(--glow);}
 .mh{padding:22px 26px 15px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
@@ -98,8 +88,6 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .mc:hover{color:var(--text);}
 .mbd{padding:22px 26px;}
 .mf{padding:14px 26px 22px;display:flex;gap:9px;justify-content:flex-end;border-top:1px solid var(--border);}
-
-/* TASK BOARD */
 .board{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;align-items:start;}
 .col{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;transition:border-color .2s;}
 .col-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border);}
@@ -113,15 +101,11 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .tag{background:rgba(245,166,35,.1);color:var(--accent);border:1px solid rgba(245,166,35,.2);border-radius:5px;padding:2px 8px;font-size:10px;font-weight:700;letter-spacing:.3px;}
 .section-tag{background:var(--surface3);color:var(--text2);border:1px solid var(--border);border-radius:5px;padding:2px 8px;font-size:10px;font-weight:600;}
 .avatar{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;border:2px solid var(--surface2);flex-shrink:0;}
-
-/* STATUS PIPELINE */
 .pipeline{display:flex;gap:4px;margin-bottom:18px;}
 .pipe-btn{flex:1;padding:8px 4px;border-radius:9px;border:1px solid var(--border);background:transparent;color:var(--text3);cursor:pointer;font-size:11px;font-weight:700;transition:all .15s;font-family:inherit;text-transform:uppercase;letter-spacing:.5px;}
 .pipe-btn.active{color:#0a0f1e;font-weight:800;}
 .pipe-btn:hover:not(:disabled){border-color:rgba(245,166,35,.4);color:var(--text);}
 .pipe-btn:disabled{opacity:.3;cursor:not-allowed;}
-
-/* MISC */
 .ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;gap:12px;flex-wrap:wrap;}
 .pt{font-size:22px;font-weight:800;letter-spacing:-.5px;color:var(--text);}
 .ps{font-size:13px;color:var(--text2);margin-top:4px;}
@@ -144,7 +128,6 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .loading{display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:14px;color:var(--text2);font-size:14px;position:relative;z-index:1;}
 .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
-
 @keyframes shake{0%,100%{transform:translateX(0)}10%,30%,50%,70%,90%{transform:translateX(-8px)}20%,40%,60%,80%{transform:translateX(8px)}}
 @keyframes pulse-red{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.4)}50%{box-shadow:0 0 0 20px rgba(239,68,68,0)}}
 .on-hold-alert{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(239,68,68,.15);backdrop-filter:blur(2px);animation:shake .5s ease 0s 3;}
@@ -161,14 +144,11 @@ th{text-align:left;font-size:10px;font-weight:700;color:var(--text3);text-transf
 td{padding:12px 14px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:middle;}
 tr:last-child td{border-bottom:none;}
 tr:hover td{background:rgba(245,166,35,.02);}
-/* STAT CARDS */
 .stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px 22px;transition:border-color .2s,transform .15s;}
 .stat:hover{border-color:rgba(245,166,35,.2);transform:translateY(-1px);}
 .sl{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:9px;}
 .sv{font-size:28px;font-weight:800;letter-spacing:-.5px;}
-/* CARD */
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px;}
-/* PERM */
 .perm-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:5px;}
 .perm-item{display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border-radius:8px;padding:9px 12px;}
 .perm-label{font-size:12px;font-weight:500;}
@@ -178,12 +158,9 @@ tr:hover td{background:rgba(245,166,35,.02);}
 .tslider:before{content:'';position:absolute;width:14px;height:14px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s;}
 .toggle input:checked+.tslider{background:var(--accent);}
 .toggle input:checked+.tslider:before{transform:translateX(16px);}
-
 @media(max-width:1100px){.board{grid-template-columns:repeat(2,1fr);}}
 @media(max-width:900px){.sb{display:none;}.main{margin-left:0;padding:16px;}.board{grid-template-columns:1fr;}.g4{grid-template-columns:repeat(2,1fr);}}
 @media(max-width:600px){.g4,.g2{grid-template-columns:1fr;}}
-
-/* Mobile bottom nav */
 .mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:8px 0 calc(8px + env(safe-area-inset-bottom));z-index:200;grid-template-columns:repeat(4,1fr);}
 .mnav-btn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px;background:none;border:none;color:var(--text2);font-family:inherit;font-size:10px;font-weight:600;cursor:pointer;transition:color .15s;}
 .mnav-btn.on{color:var(--accent);}
@@ -191,10 +168,7 @@ tr:hover td{background:rgba(245,166,35,.02);}
 .mnav-dot{position:absolute;top:-2px;right:-2px;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 4px;border-radius:8px;}
 @media(max-width:900px){
   .mobile-nav{display:grid;}
-  .main{margin-left:0;padding:16px 14px 90px;} /* extra bottom padding for nav */
-  .board{grid-template-columns:1fr;}
-  .g4{grid-template-columns:repeat(2,1fr);}
-  /* Update banner */
+  .main{margin-left:0;padding:16px 14px 90px;}
   .update-banner{position:fixed;top:0;left:0;right:0;background:var(--accent);color:#0a0f1e;padding:12px 16px;text-align:center;font-size:13px;font-weight:700;z-index:9999;display:flex;justify-content:space-between;align-items:center;}
 }
 </style>
@@ -237,29 +211,191 @@ const DEPTS=['Gummy','Cartridge','Pre-Roll','QC','Distribution','Warehouse','Fac
 const ROLES=['employee','lead','supervisor','manager','admin'];
 const RLABEL={employee:'Employee',lead:'Lead',supervisor:'Supervisor',manager:'Manager',admin:'Admin'};
 const RCOLOR={employee:'bb-gray',lead:'bb-blue',supervisor:'bb-purple',manager:'bb-yellow',admin:'bb-red'};
-
 const SECTIONS=['R&D','Special Projects','Production Investigation','HR','General','Michigan Production','Missouri Production','Extraction','Testing','Waste','Inventory Check','Purchasing','Biomass','Shipping','Receiving'];
 
 // ── RETAIL BRANDS & LOCATIONS ─────────────────────────────────────────────────
 const RETAIL_BRANDS={
-  'Ascend Cannabis':{
-    Michigan:[
-      'Ascend Cannabis - Battle Creek',
-      'Ascend Cannabis - Detroit',
-      'Ascend Cannabis - East Lansing',
-      'Ascend Cannabis - Grand Rapids 28th Street',
-      'Ascend Cannabis - Grand Rapids Century',
-      'Ascend Cannabis - Grand Rapids Scribner',
-      'Ascend Cannabis - Morenci',
-    ],
-    Missouri:[]
-  },
+  '20 Past 4':['20 Past 4 Jackson','20 Past 4 Stockbridge'],
+  '420 Dank':['420 Dank','420 Dank Detroit'],
+  '420 Factory':['420 Factory'],
+  'Smilez':['Allegan-Smilez','Burton-Smilez','Quincy-Smilez','Reading-Smilez','Sturgis-Smilez','Three Rivers-Smilez','Wayne-Smilez'],
+  'Altered State':['Altered State'],
+  'Altitude Cannabis Co':['Altitude Cannabis Co'],
+  'American Grown':['American Grown - Tawas'],
+  'Ascend Cannabis':['Ascend Cannabis - Battle Creek','Ascend Cannabis - Detroit','Ascend Cannabis - East Lansing','Ascend Cannabis - Grand Rapids 28th Street','Ascend Cannabis - Grand Rapids Century','Ascend Cannabis - Grand Rapids Scribner','Ascend Cannabis - Morenci'],
+  'Backpack Boyz':['Backpack Boyz - Detroit','Backpack Boyz - Monroe REC'],
+  'Bank of Buds':['Bank of Buds'],
+  'Best Budz Outlet':['Best Budz Outlet'],
+  'Blow Cannabis':['Blow Cannabis'],
+  'Blue Sky Cannabis Co.':['Blue Sky Cannabis Co.'],
+  'Border Buds - New Buffalo':['Border Buds - New Buffalo'],
+  'BOWDEGA':['BOWDEGA - NEW BUFFALO','Bowdega Cannabis Store - Utica'],
+  'Bowz Cannabis':['Bowz Cannabis'],
+  'Burn Cannabis Roseville':['Burn Cannabis Roseville'],
+  'California Michigan Cannabis Company':['California Michigan Cannabis Company - Montgomery'],
+  'Canna Plug':['Canna Plug','Canna Plug MI'],
+  'Canna Vibes Emporium':['Canna Vibes Emporium'],
+  'Cannabis King':['Cannabis King'],
+  'Cannavista Wellness':['Cannavista Wellness'],
+  'CHO':['CHO - Saranac','CHO - Stanton'],
+  'Clarity':['Clarity'],
+  'Cloud Cannabis':['Cloud Cannabis - Detroit - REC 21+'],
+  'Cookies':['Cookies - Ann St'],
+  'Craft Leaf':['Craft Leaf'],
+  'Crave Cannabis (Monroe)':['Crave Cannabis (Monroe)'],
+  'Da Plugg Cannabis Co':['Da Plugg Cannabis Co'],
+  'DACUT':['DACUT - Detroit','DACUT - Flint','DACUT - Monroe'],
+  'Dank Garden':['Dank Garden'],
+  'Depot Dispo':['Depot Dispo'],
+  'Dispo':['Dispo Bay City North','Dispo Hazel Park','Dispo Romeo','Dispo Whitmore Lake'],
+  'Dort Hwy Dispo':['Dort Hwy Dispo'],
+  'Elevated Exotics':['Elevated Exotics','Elevated Exotics - Escanaba (Rec)','Elevated Exotics - Menominee (Rec)','Elevated Exotics - Republic (Rec)'],
+  'Eleven Cannabis Company':['Eleven Cannabis Company'],
+  'Elite Cannabis':['Elite Cannabis - Bay City','Elite Cannabis - Mt. Morris'],
+  'Endo':['Endo - Adrian','Endo Houghton Lake','EndoVibe - Ypsi'],
+  'Essence':['Essence HW - Retail','Essence Provisioning Center'],
+  'Exclusive':['Exclusive Ann Arbor','Exclusive Cold Water','Exclusive Grand Rapids','Exclusive Kalamazoo','Exclusive Lowell','Exclusive Monroe','Exclusive Muskegon'],
+  'Exhibit':['Exhibit - Lansing','Exhibit Dispensary - Port Huron'],
+  'Exotics':['Exotics Adrian','Exotics Cannabis','Exotics Cannabis - Saginaw','Exotics of Pontiac'],
+  'Fire Creek':['Fire Creek Battle Creek'],
+  'Fire Island':['Fire Island'],
+  'First Class':['First Class - Camden','First Class - Lansing'],
+  'Flavors':['Flavors Detroit - Detroit - 5730 E 8 Mile RD'],
+  'Flora Cannabis':['Flora Cannabis - East Lansing'],
+  'HOUSE OF DANK':['Fly Shifter Recreational Cannabis - Detroit'],
+  'Gardens Dispensary':['Gardens Dispensary Bay City - Rec','Gardens Dispensary Saginaw Courtside - Rec','Gardens Dispensary Urban Kalamazoo'],
+  'Gas Station':['Gas Station - Wayland'],
+  'Gatsby Cannabis':['Gatsby Cannabis - Battle Creek','Gatsby Cannabis - Royal Oak'],
+  'Gazzz Cannabis Co.':['Gazzz Cannabis Co.'],
+  'Good Vibes':['Good Vibes Cannabis Co.','Good Vibes Port Huron'],
+  'Gramz':['Gramz - Hazel Park','Gramz - Lapeer','Gramz Cannabis - Detroit','Gramz Cannabis - Mount Morris','Gramz Cannabis - Romeo','Gramz Cannabis - Three Rivers'],
+  'Great Lakes Holistics':['Great Lakes Holistics - Battle Creek - RRH','Great Lakes Holistics - Muskegon - RRH'],
+  'Green Acres':['Green Acres - Ann Arbor','Green Acres - Detroit','Green Acres - Ecorse REC','Green Acres - Inkster','Green Acres - Michigan Ave','Green Acres - Riverview','Green Acres - Washtenaw Ave','Green Acres - Westland'],
+  'Green Buddha':['Green Buddha - Ferndale (REC)'],
+  'Green Eden':['Green Eden - Portage'],
+  'Green Genie':['Green Genie Dearborn Heights','Green Genie Redford'],
+  'Green Pharm':['Green Pharm - Camden','Green Pharm - Detroit','Green Pharm - Hazel Park REC','Green Pharm - Iron River REC','Green Pharm - Kalkaska REC','Green Pharm - Mancelona REC','Green Pharm - Menominee REC','Green Pharm - Traverse City REC','Green Pharm Bay City REC'],
+  'Green Tree Relief':['Green Tree Relief - Coldwater','Green Tree Relief Reading','GreenGold Dispensary'],
+  'Happy Daze':['Happy Daze','Happy Daze - Monroe'],
+  'Harbor Farmz':['Harbor Farmz','Harbor Farmz Provisioning'],
+  'Hasheesh':['Hasheesh'],
+  'Herbana':['Herbana (Ann Arbor)','Herbana (Haslett)','Herbana (Kalamazoo)','Herbana (Lansing)'],
+  'Herbology Cannabis Co':['Herbology Cannabis Co. - Coldwater','Herbology Cannabis Co. - River Rouge'],
+  'High Club':['High Club - Port Huron','High Club Cannabis Detroit'],
+  'High In The Pines':['High In The Pines'],
+  'High Profile':['High Profile - Buchanan','High Profile - Constantine','High Profile - Grand Rapids - 44th St','High Profile - Grand Rapids - Leonard St','High Profile - Grant','High Profile - Ironwood','High Profile - Kalamazoo','High Profile - Luna Pier','High Profile - Muskegon','High Profile - Webberville'],
+  'High Q Cannabis':['High Q Cannabis'],
+  'High Society':['High Society - Charlotte','High Society - New Buffalo','High Society (Big Rapids)','High Society (Birch Run)','High Society (East Lansing)','High Society (Lenox)','High Society (Mount Pleasant)','High Society (Saline)'],
+  'High Society Wellness':['High Society Wellness'],
+  'High Standard':['High Standard - Greenville','High Standard Cannabis - Sparta'],
+  'Hikers':['Hikers'],
+  'Hollywood Jacks (Rec)':['Hollywood Jacks (Rec)'],
+  'Homegrown':['Homegrown - Lansing'],
+  'House of Dank':['House of Dank Recreational Cannabis - 8 Mile','House of Dank Recreational Cannabis - Ann Arbor','House of Dank Recreational Cannabis - Center Line','House of Dank Recreational Cannabis - Fort St','House of Dank Recreational Cannabis - Garden City','House of Dank Recreational Cannabis - Grand Rapids','House of Dank Recreational Cannabis - Gratiot','House of Dank Recreational Cannabis - Kalamazoo','House of Dank Recreational Cannabis - Lansing','House of Dank Recreational Cannabis - Lapeer','House of Dank Recreational Cannabis - Monroe','House of Dank Recreational Cannabis - New Buffalo','House of Dank Recreational Cannabis - Saginaw','House of Dank Recreational Cannabis - Traverse City','House of Dank Recreational Cannabis - Ypsilanti'],
+  'House Of Zen':['House Of Zen'],
+  'Hyde Cannabis Co.':['Hyde Cannabis Co.'],
+  'HydroBudz':['HydroBudz'],
+  'Jailhouse Cannabis':['Jailhouse Cannabis - Kalkaska','Jailhouse Cannabis - Mancelona'],
+  'JARS Cannabis':['JARS Cannabis - Chesterfield/New Baltimore','JARS Cannabis - Flint','JARS Cannabis - Grand Rapids 40th St','JARS Cannabis - Hazel Park','JARS Cannabis - Iron River','JARS Cannabis - Jackson','JARS Cannabis - Madison Heights','JARS Cannabis - Milan','JARS Cannabis - New Buffalo Exit 1','JARS Cannabis - New Buffalo US-12','JARS Cannabis - Okemos','JARS Cannabis - Port Huron','JARS Cannabis - Riverview','JARS Cannabis - Saginaw','JARS Cannabis - Wayland','JARS Cannabis – Ann Arbor','JARS Cannabis – Battle Creek','JARS Cannabis – Center Line','JARS Cannabis – East Detroit','JARS Cannabis – Grand Rapids Alpine','JARS Cannabis – Lansing','JARS Cannabis – Monroe','JARS Cannabis – Mt Clemens','JARS Cannabis – Mt Morris','JARS Cannabis – Mt Pleasant','JARS Cannabis – Muskegon','JARS Cannabis – Owosso','JARS Cannabis – Oxford','JARS Cannabis – River Rouge','JARS Cannabis – Saugatuck','JARS Cannabis – West Detroit'],
+  'Joyology':['Joyology - Centerline','Joyology Monroe','Joyology Orion'],
+  'King of Budz':['King of Budz - Detroit','King of Budz - Ferndale','King of Budz - Inkster','King of Budz - Monroe','King of Budz - New Buffalo','King of Budz - Roseville','King of Budz - Taylor'],
+  'Krewe Cannabis Co.':['Krewe Cannabis Co.'],
+  'Kush E Mart':['Kush E Mart - New Buffalo'],
+  'Lettuce':['Lettuce'],
+  'Levels':['Levels - New Buffalo I','Levels – Adrian','Levels – Grand Haven','Levels – Kalamazoo','Levels – Niles','Levels – Waterford','Levels Cannabis - Ironwood'],
+  'Light Em Up - Detroit':['Light Em Up - Detroit'],
+  'Lighthouse Traverse City':['Lighthouse Traverse City'],
+  'LIV Cannabis':['LIV Cannabis (Ferndale)','LIV Cannabis (Lake Orion)','LIV Cannabis (Lansing)','LIV Cannabis (Westland)'],
+  'Local Roots Cannabis':['Local Roots Cannabis - Laingsburg','Local Roots Cannabis - Perry'],
+  'Love Cannabis Co.':['Love Cannabis Co.'],
+  'Lumberjacks':['Lumberjacks - Dowling'],
+  'Lume Cannabis Co':['Lume Cannabis Co (Morenci)','Lume Cannabis Co. (Adrian)','Lume Cannabis Co. (Ann Arbor)','Lume Cannabis Co. (Bear Creek)','Lume Cannabis Co. (Berkley)','Lume Cannabis Co. (Big Rapids)','Lume Cannabis Co. (Birch Run)','Lume Cannabis Co. (Cadillac)','Lume Cannabis Co. (Cedar Springs)','Lume Cannabis Co. (Coldwater)','Lume Cannabis Co. (Escanaba)','Lume Cannabis Co. (Evart)','Lume Cannabis Co. (Gaylord)','Lume Cannabis Co. (Grand Rapids Beltline)','Lume Cannabis Co. (Grand Rapids)','Lume Cannabis Co. (Holly)','Lume Cannabis Co. (Honor)','Lume Cannabis Co. (Houghton)','Lume Cannabis Co. (Iron Mountain)','Lume Cannabis Co. (Jackson)','Lume Cannabis Co. (Kalamazoo)','Lume Cannabis Co. (Lowell)','Lume Cannabis Co. (Mackinaw City)','Lume Cannabis Co. (Manistique)','Lume Cannabis Co. (Menominee)','Lume Cannabis Co. (Monroe)','Lume Cannabis Co. (Mount Pleasant Broomfield)','Lume Cannabis Co. (Negaunee)','Lume Cannabis Co. (New Buffalo)','Lume Cannabis Co. (Owosso)','Lume Cannabis Co. (Oxford)','Lume Cannabis Co. (Petersburg)','Lume Cannabis Co. (Petoskey)','Lume Cannabis Co. (Portage)','Lume Cannabis Co. (Saginaw)','Lume Cannabis Co. (Sault Ste. Marie)','Lume Cannabis Co. (Southfield)','Lume Cannabis Co. (Traverse City Munson)','Lume Cannabis Co. (Traverse City)','Lume Cannabis Co. (Walled Lake)'],
+  'Mango Cannabis':['Mango Cannabis Lansing','Mango Cannabis New Buffalo'],
+  'Michigan\'s Finest':['Michigan\'s Finest'],
+  'Mindright':['Mindright'],
+  'Mint Cannabis':['Mint Cannabis – Buchanan'],
+  'Mood':['Mood (Center Line)','Mood (Jackson)'],
+  'Moses Roses':['Moses Roses - Chesaning REC','Moses Roses - Lincoln Park','Moses Roses - Port Huron REC','Moses Roses - Waterford'],
+  'Mt. Clemens':['Mt. Clemens (Malow Street)'],
+  'Muha Meds':['Muha Meds - Harper Ave','Muha Meds - Michigan Ave','Muha Meds - Ypsilanti'],
+  'Mystic Cannabis':['Mystic Cannabis - Memphis'],
+  'NAR':['NAR Inkster','NAR Monroe','NAR New Buffalo'],
+  'Cannabis Club':['New Buffalo - Cannabis Club'],
+  'Nirvana Cannabis':['Nirvana Cannabis - Center Line','Nirvana Cannabis - Coldwater','Nirvana Cannabis - Escanaba','Nirvana Cannabis - Lowell','Nirvana Cannabis - Menominee','Nirvana Cannabis - Sault Ste. Marie','Nirvana Cannabis Houghton - Rec'],
+  'Nobody\'s Home':['Nobody\'s Home'],
+  'Noggin Shop - Rec':['Noggin Shop - Rec'],
+  'NOXX':['NOXX - 28th St.','NOXX - Plainfield Ave.','NOXX - Woodward'],
+  'Olswell Cannabis Co.':['Olswell Cannabis Co. (Adrian)','Olswell Cannabis Co. (Grand Rapids)','Olswell Cannabis Co. (Kalkaska)','Olswell Cannabis Co. (Traverse City)'],
+  'OUI-D Shop Menominee':['OUI-D Shop Menominee'],
+  'Outpost':['Outpost (Crystal Falls)','Outpost (Marquette)'],
+  'Parc Cannabis - Alpena REC':['Parc Cannabis - Alpena REC'],
+  'Planet Purple':['Planet Purple'],
+  'Planted Provisioning':['Planted Provisioning','Planted Provisioning - Bay City (REC)'],
+  'Premier Cannabis':['Premier Cannabis - Caro (REC)','Premier Cannabis - Saginaw (REC)','Premier Cannabis - Saginaw West (REC)','Premier Cannabis - Vassar (REC)'],
+  'Premiere Provisions - Big Rapids':['Premiere Provisions - Big Rapids'],
+  'Proper Leaf Cannabis Co':['Proper Leaf Cannabis Co'],
+  'Prosper Cannabis Company - REC':['Prosper Cannabis Company - REC'],
+  'Puff Cannabis':['Puff Cannabis: Hamtramck - RRH'],
+  'Pure':['Pure - Chesterfield/New Baltimore','Pure - Monroe','Pure - Oxford REC','Pure Lapeer','Pure New Buffalo'],
+  'Pure Options':['Pure Options - Detroit | 106','Pure Options - East Lansing | 100','Pure Options - Lansing Midtown | 103','Pure Options - Lansing South | 101','Pure Options - Mt. Pleasant | 104','Pure Options - Muskegon Township | 201','Quest Cannabis (REC)'],
+  'Rave Cannabis':['Rave Cannabis'],
+  'ReLeaf Center':['ReLeaf Center - Niles REC'],
+  'Riverside Provisioning':['Riverside Provisioning'],
+  'Royal Treatment':['Royal Treatment'],
+  'Royal Weed Cannabis Co.':['Royal Weed Cannabis Co.'],
+  'Rush Cannabis':['Rush Cannabis - Hazel Park','Rush Cannabis - Oxford','Rush Cannabis - Saline'],
+  'Sam\'s Exotics':['Sam\'s Exotics'],
+  'Sapura - Coldwater - Adult Use':['Sapura - Coldwater - Adult Use'],
+  'SFP Cannabis - Flint REC':['SFP Cannabis - Flint REC'],
+  'Simply Loud':['Simply Loud'],
+  'SKUNKZ Cannabis':['SKUNKZ Cannabis'],
+  'Smok':['Smok'],
+  'Smooch Cannabis':['Smooch Cannabis'],
+  'Space Station Cannabis Center':['Space Station Cannabis Center'],
+  'Spark Cannabis Co.':['Spark Cannabis Co.'],
+  'Star Budz - Flint':['Star Budz - Flint','Star Budz - Mt Morris'],
+  'Stash House':['Stash House - Traverse City'],
+  'Stoney Leaf - Detroit':['Stoney Leaf - Detroit'],
+  'Strange Rootz Cedar Springs':['Strange Rootz Cedar Springs'],
+  'Sunset Coast':['Sunset Coast'],
+  'Supergood':['Supergood (Pentwater MI)','Supergood Grand Haven','Supergood New Buffalo - New Buffalo - 13992 Grand AVE'],
+  'The Bloomery':['The Bloomery – Mt.Clemens','The Bloomery – New Buffalo','The Botanical Co. - Middleville'],
+  'The Cake House':['The Cake House - Ann Arbor','The Cake House - Battlecreek','The Cake House - Detroit','The Cake House - Lansing','The Cake House - Pleasant Ridge'],
+  'he Clinic':['The Clinic Detroit','The Clinic Riverview','The Clinic Ypsilanti'],
+  'The Dude Abides':['The Dude Abides - Coldwater','The Dude Abides - Constantine','The Dude Abides - Mottville','The Dude Abides - Sturgis'],
+  'The Flower Bowl':['The Flower Bowl','The Flower Bowl - Cherry Hill','The Flower Bowl - Corktown','The Flower Bowl - Ecorse','The Flower Bowl - New Buffalo','The Flower Bowl - River Rouge','The Flower Bowl - West Warren'],
+  'The Green Door':['The Green Door Bangor - REC','The Green Door South Haven - REC','The Green Door Watervliet - REC'],
+  'The Grove':['The Grove (Center Line)'],
+  'The House of Mary Jane':['The House of Mary Jane'],
+  'The Hub':['The Hub - Saginaw'],
+  'The Jungle House':['The Jungle House (Rec)'],
+  'The Mint':['The Mint - Coldwater','The Mint - Kalamazoo','The Mint - Monroe','The Mint - New Buffalo','The Mint - Portage','The Mint - Roseville'],
+  'The Plug New Buffalo':['The Plug New Buffalo'],
+  'The Refinery':['The Refinery - New Buffalo','The Refinery (Kalamazoo)','The Refinery Detroit'],
+  'The Trap Cannabis Co.':['The Trap Cannabis Co.'],
+  'The WellFlower (Manistee)':['The WellFlower (Manistee)'],
+  'Timber Cannabis Co.':['Timber Cannabis Co. - New Buffalo'],
+  'Top Cannabis Outlet':['Top Cannabis Outlet - Bay City','Top Cannabis Outlet - NOW OPEN!','Top Cannabis Outlet - Saginaw'],
+  'Trap Kingz Cannabis':['Trap Kingz Cannabis','Trap Kingz Cannabis'],
+  'First Class Ann Arbor':['Treez Management LLC DBA: First Class Ann Arbor','Trikhoma LLC Allegan Rec'],
+  'True Leaf':['True Leaf - Lawrence','True Leaf - Sturgis'],
+  'Twisted Bee - REC':['Twisted Bee - REC'],
+  'Ultra Cannabis - Eight Mile (Rec)':['Ultra Cannabis - Eight Mile (Rec)'],
+  'Uniq Cannabis':['Uniq Cannabis','Uniq Cannabis New Buffalo'],
+  'URB Cannabis':['URB Cannabis - Detroit','URB Cannabis - Mt Pleasant','URB Cannabis - New Buffalo','URB Cannabis - Sturgis','URB Cannabis - Vassar','URB Cannabis Flint - Mt Morris','URB Cannabis Monroe'],
+  'Vibe':['Vibe - Inkster','Vibe - Quincy','Vibe New Buffalo'],
+  'Vive Cannabis Co. REC':['Vive Cannabis Co. REC'],
+  'Wacky Jackz':['Wacky Jackz - Gladstone','Wacky Jackz Cannabis - Rapid River'],
+  'Weed Mart':['Weed Mart - Hamtramck','Weed Mart- New Buffalo'],
+  'Weedy\'s':['Weedy\'s'],
+  'Xplore Cannabis':['Xplore Cannabis'],
+  'Zaza Recreational':['Zaza Recreational'],
+  'Zazen Dispensary - Redford':['Zazen Dispensary - Redford'],
+  'Zoo Zoo Farms':['Zoo Zoo Farms'],
 };
 
 const SALES_TASK_TYPES=['Retail Visit','Budtender Training','Product Demo','Pop-up Event','Marketing Drop','Account Check-in','New Account Setup','Promotional Event','Other'];
-
 const SALES_ROLES=['Director of Sales & Marketing','Sales & Marketing Manager','Sales Rep','Marketing Rep'];
-
 const COLS=[
   {id:'not_started',label:'Not Started',color:'#4a5068'},
   {id:'in_progress',label:'In Progress',color:'#f5a623'},
@@ -267,89 +403,32 @@ const COLS=[
   {id:'on_hold',label:'On Hold',color:'#ef4444'},
   {id:'done',label:'Done',color:'#22c55e'},
 ];
-
 const PRI={
   low:{label:'Low',color:'#6b7280'},
   medium:{label:'Medium',color:'#f5a623'},
   high:{label:'High',color:'#f59e0b'},
   urgent:{label:'Urgent',color:'#ef4444'},
 };
-
 function avatarColor(name){return`hsl(${(name.charCodeAt(0)*47)%360},50%,35%)`;}
 
-// ── SETUP SQL ─────────────────────────────────────────────────────────────────
-const SETUP_SQL=`
--- Run in Supabase SQL Editor
+// Push notifications
+async function sendLocalNotification(title,body){
+  if(!('Notification' in window))return;
+  if(Notification.permission==='granted'){
+    try{
+      const reg=await navigator.serviceWorker.getRegistration();
+      if(reg){await reg.showNotification(title,{body,icon:'/ProFlow/icon-192.png',badge:'/ProFlow/icon-192.png'});}
+      else{new Notification(title,{body,icon:'/ProFlow/icon-192.png'});}
+    }catch(e){new Notification(title,{body});}
+  }
+}
 
-CREATE TABLE IF NOT EXISTS pf_users (
-  id text primary key, name text, first_name text, last_name text,
-  email text unique, pw text, role text default 'employee',
-  dept text default 'General', loc text default 'Nationwide',
-  approved boolean default false, perms jsonb default '[]', managers jsonb default '[]'
-);
-ALTER TABLE pf_users DISABLE ROW LEVEL SECURITY;
-
-CREATE TABLE IF NOT EXISTS pf_tasks (
-  id text primary key, title text, section text,
-  description text default '', assignees jsonb default '[]',
-  due_date text, priority text default 'medium',
-  status text default 'not_started', loc text default 'Nationwide',
-  tags jsonb default '[]', notes jsonb default '[]',
-  attachments jsonb default '[]', created_by text,
-  created_by_id text, created_at text, updated_at text,
-  updated_by text, completed_at text, approved_by text,
-  archived_at text, hold_reason text, hold_by text, hold_at text, cc jsonb default '[]'
-);
-ALTER TABLE pf_tasks DISABLE ROW LEVEL SECURITY;
-ALTER TABLE pf_tasks ADD COLUMN IF NOT EXISTS hold_reason text;
-ALTER TABLE pf_tasks ADD COLUMN IF NOT EXISTS hold_by text;
-ALTER TABLE pf_tasks ADD COLUMN IF NOT EXISTS hold_at text;
-
-CREATE TABLE IF NOT EXISTS pf_events (
-  id text primary key,
-  title text, description text,
-  type text default 'event',
-  date text, start_time text, end_time text,
-  all_day boolean default false,
-  attendees jsonb default '[]',
-  location text, meet_link text,
-  color text default '#f5a623',
-  created_by text, created_by_id text,
-  created_at text, updated_at text,
-  loc text default 'Nationwide',
-  personal boolean default false
-);
-ALTER TABLE pf_events DISABLE ROW LEVEL SECURITY;
-
-CREATE TABLE IF NOT EXISTS pf_meeting_notes (
-  id text primary key,
-  event_id text, title text,
-  transcript text default '',
-  summary text default '',
-  action_items jsonb default '[]',
-  decisions jsonb default '[]',
-  attendees jsonb default '[]',
-  created_by text, created_by_id text,
-  created_at text, updated_at text
-);
-ALTER TABLE pf_meeting_notes DISABLE ROW LEVEL SECURITY;
-
-CREATE TABLE IF NOT EXISTS pf_sales_tasks (
-  id text primary key,
-  type text, title text, description text,
-  assigned_to text, assigned_id text,
-  date text, time text,
-  state text, brand text, location text,
-  status text default 'pending',
-  priority text default 'medium',
-  notes jsonb default '[]',
-  attachments jsonb default '[]',
-  report text default '',
-  created_by text, created_by_id text,
-  created_at text, updated_at text
-);
-ALTER TABLE pf_sales_tasks DISABLE ROW LEVEL SECURITY;
-`;
+async function requestPushPermission(userId){
+  if(!('Notification' in window))return;
+  if(Notification.permission==='default'){
+    await Notification.requestPermission();
+  }
+}
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
 function Auth({onLogin}){
@@ -424,7 +503,55 @@ function Auth({onLogin}){
   ));
 }
 
-// ── SETUP SCREEN ──────────────────────────────────────────────────────────────
+// ── SETUP SQL ─────────────────────────────────────────────────────────────────
+const SETUP_SQL=`
+CREATE TABLE IF NOT EXISTS pf_users (
+  id text primary key, name text, first_name text, last_name text,
+  email text unique, pw text, role text default 'employee',
+  dept text default 'General', loc text default 'Nationwide',
+  approved boolean default false, perms jsonb default '[]', managers jsonb default '[]'
+);
+ALTER TABLE pf_users DISABLE ROW LEVEL SECURITY;
+CREATE TABLE IF NOT EXISTS pf_tasks (
+  id text primary key, title text, section text,
+  description text default '', assignees jsonb default '[]',
+  due_date text, priority text default 'medium',
+  status text default 'not_started', loc text default 'Nationwide',
+  tags jsonb default '[]', notes jsonb default '[]',
+  attachments jsonb default '[]', created_by text,
+  created_by_id text, created_at text, updated_at text,
+  updated_by text, completed_at text, approved_by text,
+  archived_at text, hold_reason text, hold_by text, hold_at text, cc jsonb default '[]'
+);
+ALTER TABLE pf_tasks DISABLE ROW LEVEL SECURITY;
+CREATE TABLE IF NOT EXISTS pf_events (
+  id text primary key, title text, description text,
+  type text default 'event', date text, start_time text, end_time text,
+  all_day boolean default false, attendees jsonb default '[]',
+  location text, meet_link text, color text default '#f5a623',
+  created_by text, created_by_id text, created_at text, updated_at text,
+  loc text default 'Nationwide', personal boolean default false
+);
+ALTER TABLE pf_events DISABLE ROW LEVEL SECURITY;
+CREATE TABLE IF NOT EXISTS pf_meeting_notes (
+  id text primary key, event_id text, title text,
+  transcript text default '', summary text default '',
+  action_items jsonb default '[]', decisions jsonb default '[]',
+  attendees jsonb default '[]', created_by text, created_by_id text,
+  created_at text, updated_at text
+);
+ALTER TABLE pf_meeting_notes DISABLE ROW LEVEL SECURITY;
+CREATE TABLE IF NOT EXISTS pf_sales_tasks (
+  id text primary key, type text, title text, description text,
+  assigned_to text, assigned_id text, date text, time text,
+  state text, brand text, location text, status text default 'pending',
+  priority text default 'medium', notes jsonb default '[]',
+  attachments jsonb default '[]', report text default '',
+  created_by text, created_by_id text, created_at text, updated_at text
+);
+ALTER TABLE pf_sales_tasks DISABLE ROW LEVEL SECURITY;
+`;
+
 function SetupScreen({onDone}){
   const[copied,setCopied]=useState(false);
   function copy(){navigator.clipboard.writeText(SETUP_SQL.trim()).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);});}
@@ -455,7 +582,7 @@ function TaskCard({task,onClick}){
           (task.tags||[]).map(tag=>el('span',{key:tag,className:'tag'},tag)),
         ),
         el('div',{style:{fontSize:13,fontWeight:600,marginBottom:task.status==='on_hold'?4:8,lineHeight:1.4,color:task.status==='done'?'var(--text2)':'var(--text)'}},task.title),
-      task.status==='on_hold'&&el('div',{style:{fontSize:11,color:'var(--red)',fontWeight:600,marginBottom:4,display:'flex',alignItems:'center',gap:4}},'🚨 ON HOLD'+(task.hold_reason?' — '+task.hold_reason.slice(0,40)+(task.hold_reason.length>40?'...':''):'')),
+        task.status==='on_hold'&&el('div',{style:{fontSize:11,color:'var(--red)',fontWeight:600,marginBottom:4,display:'flex',alignItems:'center',gap:4}},'🚨 ON HOLD'+(task.hold_reason?' — '+task.hold_reason.slice(0,40)+(task.hold_reason.length>40?'...':''):'')),
         el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center'}},
           el('div',{style:{display:'flex'}},
             (task.assignees||[]).slice(0,4).map((a,i)=>
@@ -479,13 +606,12 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
   const[newNote,setNewNote]=useState('');
   const[saving,setSaving]=useState(false);
   const today=new Date().toISOString().slice(0,10);
-
   const isAdmin=cu.role==='admin';
   const isAssigned=(task.assignees||[]).some(a=>a.id===cu.id);
   const isCreator=task.created_by_id===cu.id;
   const isCC=(task.cc||[]).some(c=>c.id===cu.id);
   const canEdit=isAdmin||isCreator;
-  const canMove=isAssigned||canEdit; // CC can only view
+  const canMove=isAssigned||canEdit;
   const canApprove=isAdmin||isCreator;
 
   async function changeStatus(s){
@@ -495,11 +621,10 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
     if(s==='approved') update.approved_by=cu.name;
     try{await db.update('pf_tasks',task.id,update);}catch(e){console.error(e);}
     onUpdate({...task,...update});
-    // Notify creator when moved to review
     if(s==='review'){
       const creator=users.find(u=>u.id===task.created_by_id);
       if(creator?.email&&creator.id!==cu.id){
-        sendEmail({to:creator.email,subject:`Task ready for review: "${task.title}"`,html:`<div style="font-family:sans-serif;background:#0f1117;color:#e8eaf0;padding:24px;border-radius:12px;max-width:500px"><div style="color:#f5a623;font-size:20px;font-weight:700;margin-bottom:12px">ProFlow</div><p><strong>${cu.name}</strong> marked <strong>"${task.title}"</strong> as ready for review.</p><a href="${APP_URL}" style="display:inline-block;background:#f59e0b;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600;margin-top:12px">Review Now →</a></div>`});
+        sendEmail({to:creator.email,subject:`Task ready for review: "${task.title}"`,html:`<div style="font-family:sans-serif;background:#0f1117;color:#e8eaf0;padding:24px;border-radius:12px;max-width:500px"><div style="color:#f5a623;font-size:20px;font-weight:700;margin-bottom:12px">Hendrix TMS</div><p><strong>${cu.name}</strong> marked <strong>"${task.title}"</strong> as ready for review.</p><a href="${APP_URL}" style="display:inline-block;background:#f59e0b;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600;margin-top:12px">Review Now →</a></div>`});
       }
     }
   }
@@ -525,7 +650,6 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
 
   return el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&onClose()},
     el('div',{className:'md',style:{width:700,maxHeight:'92vh'}},
-      // Header
       el('div',{className:'mh'},
         el('div',{style:{flex:1}},
           el('div',{style:{display:'flex',gap:6,flexWrap:'wrap',marginBottom:8}},
@@ -539,17 +663,16 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
         el('button',{className:'mc',onClick:onClose},'×'),
       ),
       el('div',{className:'mbd'},
-        // Status pipeline
         el('div',{className:'pipeline'},
           COLS.map(col=>{
             const isActive=task.status===col.id;
             const allowed=(()=>{
-        if(col.id==='on_hold') return canEdit;
-        if(col.id==='done'||col.id==='archived'||col.id==='approved') return canApprove;
-        if(col.id==='review') return isAssigned||canEdit;
-        if(isCC) return false; // CC users cannot change status
-        return canMove;
-      })();
+              if(col.id==='on_hold') return canEdit;
+              if(col.id==='done'||col.id==='archived'||col.id==='approved') return canApprove;
+              if(col.id==='review') return isAssigned||canEdit;
+              if(isCC) return false;
+              return canMove;
+            })();
             return el('button',{key:col.id,className:`pipe-btn${isActive?' active':''}`,
               disabled:!allowed,
               onClick:()=>allowed&&changeStatus(col.id),
@@ -558,7 +681,6 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
             );
           })
         ),
-        // Meta row
         el('div',{className:'g2',style:{marginBottom:16}},
           el('div',null,
             el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:8}},'Assignees'),
@@ -583,14 +705,12 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
             el('div',{style:{fontSize:11,color:'var(--text3)'}},task.created_at?.slice(0,10)),
           ),
         ),
-        // Description
         el('div',{className:'fg'},
           el('label',null,'Description'),
           isAdmin||isCreator?
             el('textarea',{value:task.description||'',placeholder:'Add description...',onChange:ev=>updateField('description',ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:80,resize:'vertical'}}):
             el('div',{style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'10px 14px',fontSize:13,color:'var(--text2)',lineHeight:1.6,minHeight:60}},task.description||'No description.'),
         ),
-        // Attachments
         canEdit&&el('div',{className:'fg'},
           el('label',null,'Attach File'),
           el('input',{type:'file',accept:'.pdf,.doc,.docx,.png,.jpg,.xlsx,.csv',onChange:async ev=>{
@@ -610,7 +730,6 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
           ))
         ),
         el('div',{className:'divider'}),
-        // Comments
         el('div',{style:{fontWeight:600,marginBottom:14}},`Comments (${(task.notes||[]).length})`),
         (task.notes||[]).map(note=>el('div',{key:note.id,style:{display:'flex',gap:10,marginBottom:12}},
           el('div',{className:'avatar',style:{background:avatarColor(note.by),flexShrink:0}},note.by.charAt(0).toUpperCase()),
@@ -647,15 +766,12 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter}){
   const[saving,setSaving]=useState(false);
   const[f,setF]=useState({title:'',section:'General',description:'',assignees:[],due_date:'',priority:'medium',loc:locFilter==='Nationwide'?'Nationwide':locFilter,tags:[]});
   const today=new Date().toISOString().slice(0,10);
-
   const isAdmin=cu.role==='admin';
 
   const filtered=useMemo(()=>{
     let list=tasks;
     if(locFilter&&locFilter!=='Nationwide') list=list.filter(t=>!t.loc||t.loc===locFilter||t.loc==='Nationwide');
     if(section!=='All') list=list.filter(t=>t.section===section);
-    // Everyone only sees tasks where they are creator, assignee, or CC'd
-    // Admin sees all
     if(cu.role!=='admin'){
       list=list.filter(t=>{
         if(t.created_by_id===cu.id) return true;
@@ -673,13 +789,10 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter}){
     const task={id:'task-'+Date.now(),...f,status:'not_started',created_by:cu.name,created_by_id:cu.id,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),updated_by:cu.name,notes:[],attachments:[]};
     try{await db.insert('pf_tasks',task);}catch(e){console.error(e);setSaving(false);return;}
     setTasks(p=>[task,...p]);
-    // Send local notification to creator immediately
     sendLocalNotification('✅ Task Created',`"${f.title}" created and assigned`).catch(()=>{});
-    // Notify assignees and their managers
     const allNotify=[];
     f.assignees.forEach(a=>{
       if(a.email) allNotify.push({email:a.email,name:a.name,role:'assignee'});
-      // Get managers of this assignee
       const assigneeUser=users.find(u=>u.id===a.id);
       (assigneeUser?.managers||[]).forEach(m=>{
         if(m.email&&!allNotify.find(x=>x.email===m.email))
@@ -688,40 +801,31 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter}){
     });
     allNotify.filter(a=>a.email).forEach(a=>{
       sendEmail({to:a.email,subject:`New task assigned: "${f.title}"`,
-        html:`<div style="font-family:sans-serif;background:#0f1117;color:#e8eaf0;padding:24px;border-radius:12px;max-width:500px"><div style="color:#f5a623;font-size:20px;font-weight:700;margin-bottom:12px">ProFlow</div><p>Hi ${a.name},</p><p style="margin:10px 0"><strong>${cu.name}</strong> assigned you a task:</p><div style="background:#181b23;border-radius:8px;padding:16px;margin:16px 0"><strong style="font-size:15px">${f.title}</strong>${f.description?`<p style="color:#8b92a8;margin:8px 0 0;font-size:13px">${f.description}</p>`:''}<p style="color:#f59e0b;margin:8px 0 0;font-size:13px">${f.due_date?'Due: '+f.due_date:''}</p></div><a href="${APP_URL}" style="display:inline-block;background:#f5a623;color:#0a0f1e;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:600">Open ProFlow →</a></div>`
+        html:`<div style="font-family:sans-serif;background:#0f1117;color:#e8eaf0;padding:24px;border-radius:12px;max-width:500px"><div style="color:#f5a623;font-size:20px;font-weight:700;margin-bottom:12px">Hendrix TMS</div><p>Hi ${a.name},</p><p style="margin:10px 0"><strong>${cu.name}</strong> assigned you a task:</p><div style="background:#181b23;border-radius:8px;padding:16px;margin:16px 0"><strong style="font-size:15px">${f.title}</strong>${f.description?`<p style="color:#8b92a8;margin:8px 0 0;font-size:13px">${f.description}</p>`:''}<p style="color:#f59e0b;margin:8px 0 0;font-size:13px">${f.due_date?'Due: '+f.due_date:''}</p></div><a href="${APP_URL}" style="display:inline-block;background:#f5a623;color:#0a0f1e;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:600">Open Hendrix TMS →</a></div>`
       });
     });
     setF({title:'',section:'General',description:'',assignees:[],due_date:'',priority:'medium',loc:locFilter==='Nationwide'?'Nationwide':locFilter,tags:[]});
     setNew(false);setSaving(false);
   }
 
-  function handleUpdate(updated){
-    setTasks(p=>p.map(t=>t.id===updated.id?updated:t));
-    setSelected(updated);
-  }
-
+  function handleUpdate(updated){setTasks(p=>p.map(t=>t.id===updated.id?updated:t));setSelected(updated);}
   function handleDelete(id){setTasks(p=>p.filter(t=>t.id!==id));}
 
-  // Stats
   const myTasks=filtered.filter(t=>!['archived'].includes(t.status)&&(t.assignees||[]).some(a=>a.id===cu.id));
   const overdue=filtered.filter(t=>!['done','archived'].includes(t.status)&&t.due_date&&t.due_date<today);
   const dueToday=filtered.filter(t=>!['done','archived'].includes(t.status)&&t.due_date===today);
   const inReview=filtered.filter(t=>t.status==='review');
 
-  // Available users to assign (filter by location)
   const assignableUsers=useMemo(()=>{
     if(isAdmin) return users.filter(u=>u.approved);
-    // Can assign to yourself
-    // Can assign to anyone who has you set as one of their managers
     return users.filter(u=>{
       if(!u.approved) return false;
-      if(u.id===cu.id) return true; // yourself
-      return (u.managers||[]).some(m=>m.id===cu.id); // reports to you
+      if(u.id===cu.id) return true;
+      return (u.managers||[]).some(m=>m.id===cu.id);
     });
   },[users,cu,isAdmin]);
 
   return el('div',null,
-    // Header
     el('div',{className:'ph'},
       el('div',null,el('div',{className:'pt'},'Task Board'),el('div',{className:'ps'},'Manage and track tasks across your team')),
       el('div',{style:{display:'flex',gap:8,alignItems:'center'}},
@@ -732,21 +836,13 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter}){
         el('button',{className:'btn b-blue',onClick:()=>setNew(true)},'+ New Task'),
       ),
     ),
-
-    // Stats — clean 4-card row
     el('div',{className:'g4',style:{marginBottom:20}},
-      [
-        {l:'My Tasks',v:myTasks.length,c:'var(--accent)',ico:'📋'},
-        {l:'Due Today',v:dueToday.length,c:dueToday.length>0?'var(--red)':'var(--text3)',ico:'🔴'},
-        {l:'Overdue',v:overdue.length,c:overdue.length>0?'var(--red)':'var(--text3)',ico:'⚠️'},
-        {l:'In Review',v:inReview.length,c:inReview.length>0?'var(--yellow)':'var(--text3)',ico:'👁'},
-      ].map(({l,v,c,ico})=>el('div',{key:l,className:'stat',style:{display:'flex',alignItems:'center',gap:14}},
-        el('div',{style:{fontSize:28}},ico),
-        el('div',null,el('div',{className:'sl'},l),el('div',{className:'sv',style:{color:c,fontSize:24}},v)),
-      ))
+      [{l:'My Tasks',v:myTasks.length,c:'var(--accent)',ico:'📋'},{l:'Due Today',v:dueToday.length,c:dueToday.length>0?'var(--red)':'var(--text3)',ico:'🔴'},{l:'Overdue',v:overdue.length,c:overdue.length>0?'var(--red)':'var(--text3)',ico:'⚠️'},{l:'In Review',v:inReview.length,c:inReview.length>0?'var(--yellow)':'var(--text3)',ico:'👁'}]
+        .map(({l,v,c,ico})=>el('div',{key:l,className:'stat',style:{display:'flex',alignItems:'center',gap:14}},
+          el('div',{style:{fontSize:28}},ico),
+          el('div',null,el('div',{className:'sl'},l),el('div',{className:'sv',style:{color:c,fontSize:24}},v)),
+        ))
     ),
-
-    // Location + Section filters
     el('div',{style:{display:'flex',gap:16,marginBottom:16,flexWrap:'wrap',alignItems:'center'}},
       el('div',{style:{display:'flex',gap:6}},
         LOCS.filter(l=>cu.role==='admin'||l===cu.loc||cu.loc==='Nationwide').map(l=>
@@ -758,18 +854,12 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter}){
         ['All',...SECTIONS].map(s=>el('button',{key:s,onClick:()=>setSection(s),style:{padding:'4px 12px',borderRadius:20,border:'1px solid',fontSize:11,fontWeight:500,cursor:'pointer',background:section===s?'var(--surface2)':'transparent',color:section===s?'var(--text)':'var(--text3)',borderColor:section===s?'var(--border)':'transparent'}},s))
       ),
     ),
-
-    // BOARD
     view==='board'&&el('div',{className:'board'},
       COLS.map(col=>{
         const colTasks=filtered.filter(t=>t.status===col.id);
         return el('div',{key:col.id,className:'col'},
           el('div',{className:'col-header'},
-            el('div',{className:'col-title'},
-              el('div',{className:'col-dot',style:{background:col.color}}),
-              col.label,
-              el('div',{className:'col-count'},colTasks.length),
-            ),
+            el('div',{className:'col-title'},el('div',{className:'col-dot',style:{background:col.color}}),col.label,el('div',{className:'col-count'},colTasks.length)),
             el('button',{onClick:()=>{setF(p=>({...p,status:col.id}));setNew(true);},style:{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:20,lineHeight:1,padding:'0 4px'}},'＋'),
           ),
           colTasks.length===0?
@@ -778,8 +868,6 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter}){
         );
       })
     ),
-
-    // LIST
     view==='list'&&el('div',null,
       COLS.map(col=>{
         const colTasks=filtered.filter(t=>t.status===col.id);
@@ -798,7 +886,7 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter}){
               el('div',{style:{flex:1,minWidth:0}},
                 el('div',{style:{fontSize:13,fontWeight:600}},task.title),
                 el('div',{style:{fontSize:11,color:'var(--text2)',marginTop:2}},task.section+' · Created by '+task.created_by+(task.loc&&task.loc!=='Nationwide'?' · '+task.loc:'')),
-              task.status==='on_hold'&&el('div',{style:{fontSize:11,color:'var(--red)',fontWeight:700,marginTop:2}},'🚨 ON HOLD — '+task.hold_reason?.slice(0,50)),
+                task.status==='on_hold'&&el('div',{style:{fontSize:11,color:'var(--red)',fontWeight:700,marginTop:2}},'🚨 ON HOLD — '+task.hold_reason?.slice(0,50)),
               ),
               el('div',{style:{display:'flex',gap:6,alignItems:'center',flexShrink:0}},
                 (task.assignees||[]).slice(0,3).map((a,i)=>el('div',{key:a.id,className:'avatar',title:a.name,style:{background:avatarColor(a.name),marginLeft:i>0?-6:0,width:22,height:22,fontSize:9}},a.name.charAt(0).toUpperCase())),
@@ -809,8 +897,6 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter}){
         );
       })
     ),
-
-    // NEW TASK MODAL
     showNew&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setNew(false)},
       el('div',{className:'md',style:{width:640}},
         el('div',{className:'mh'},el('div',{className:'mt2'},'New Task'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
@@ -825,7 +911,6 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter}){
             el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Location'),el('select',{value:f.loc,onChange:ev=>setF(p=>({...p,loc:ev.target.value}))},LOCS.map(l=>el('option',{key:l,value:l},l)))),
           ),
           el('div',{className:'fg'},el('label',null,'Description'),el('textarea',{placeholder:'More details...',value:f.description,onChange:ev=>setF(p=>({...p,description:ev.target.value}))})),
-          // Multi-assign
           el('div',{className:'fg'},
             el('label',null,'Assign To * (required)'),
             el('select',{value:'',onChange:ev=>{const u=assignableUsers.find(x=>x.id===ev.target.value);if(u&&!f.assignees.find(a=>a.id===u.id))setF(p=>({...p,assignees:[...p.assignees,{id:u.id,name:u.name,email:u.email,dept:u.dept,loc:u.loc}]}));ev.target.value='';},style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
@@ -840,7 +925,6 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter}){
               ))
             ),
           ),
-          // CC — view only access
           el('div',{className:'fg'},
             el('label',null,'CC — View Access Only'),
             el('select',{value:'',onChange:ev=>{const u=users.find(x=>x.id===ev.target.value);if(u&&!f.cc?.find(a=>a.id===u.id))setF(p=>({...p,cc:[...(p.cc||[]),{id:u.id,name:u.name,email:u.email,dept:u.dept}]}));ev.target.value='';},style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
@@ -857,7 +941,6 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter}){
             ),
             el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:6}},'CC people can see this task but cannot change its status'),
           ),
-          // Tags
           el('div',{className:'fg'},
             el('label',null,'Tags'),
             el('div',{style:{display:'flex',gap:8}},
@@ -876,8 +959,6 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter}){
         ),
       )
     ),
-
-    // TASK DETAIL
     selected&&el(TaskModal,{task:selected,cu,users,onClose:()=>setSelected(null),onUpdate:handleUpdate,onDelete:handleDelete}),
   );
 }
@@ -896,7 +977,7 @@ function Team({users,setUsers,cu}){
     setUsers(p=>p.map(u=>u.id===id?{...u,approved:true,role:r}:u));
     const user=users.find(u=>u.id===id);
     if(user?.email){
-      sendEmail({to:user.email,subject:'Your ProFlow account is approved',html:`<div style="font-family:sans-serif;background:#0f1117;color:#e8eaf0;padding:24px;border-radius:12px;max-width:500px"><div style="color:#f5a623;font-size:20px;font-weight:700;margin-bottom:12px">ProFlow</div><p>Hi ${user.name}, your account has been approved. You can now sign in.</p><a href="${APP_URL}" style="display:inline-block;background:#f5a623;color:#0a0f1e;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:600;margin-top:12px">Sign In →</a></div>`});
+      sendEmail({to:user.email,subject:'Your Hendrix TMS account is approved',html:`<div style="font-family:sans-serif;background:#0f1117;color:#e8eaf0;padding:24px;border-radius:12px;max-width:500px"><div style="color:#f5a623;font-size:20px;font-weight:700;margin-bottom:12px">Hendrix TMS</div><p>Hi ${user.name}, your account has been approved. You can now sign in.</p><a href="${APP_URL}" style="display:inline-block;background:#f5a623;color:#0a0f1e;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:600;margin-top:12px">Sign In →</a></div>`});
     }
   }
 
@@ -938,7 +1019,7 @@ function Team({users,setUsers,cu}){
           el('thead',null,el('tr',null,['Name','Email','Role','Dept','Location','Managers',''].map(h=>el('th',{key:h},h)))),
           el('tbody',null,approved.map(u=>el('tr',{key:u.id},
             el('td',null,el('div',{style:{display:'flex',alignItems:'center',gap:8}},el('div',{className:'avatar',style:{background:avatarColor(u.name),width:28,height:28,fontSize:11}},u.name.charAt(0).toUpperCase()),el('span',{style:{fontWeight:600,fontSize:13}},u.name))),
-            el('td',null,el('span',{style:{fontSize:12,color:'var(--text2)'}},' '+u.email)),
+            el('td',null,el('span',{style:{fontSize:12,color:'var(--text2)'}},u.email)),
             el('td',null,el('span',{className:`badge ${RCOLOR[u.role]||'bb-gray'}`},RLABEL[u.role]||u.role)),
             el('td',null,el('span',{style:{fontSize:12,color:'var(--text2)'}},u.dept)),
             el('td',null,el('span',{style:{fontSize:12,color:'var(--text2)'}},u.loc)),
@@ -986,7 +1067,7 @@ function Team({users,setUsers,cu}){
                   el('div',{style:{background:'var(--accent)',color:'#0a0f1e',borderRadius:5,padding:'2px 7px',fontSize:10,fontWeight:800}},'MGR '+(i+1)),
                   el('div',null,el('div',{style:{fontSize:12,fontWeight:600}},m.name),el('div',{style:{fontSize:11,color:'var(--text2)'}},m.role)),
                 ),
-                el('button',{style:{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:16},onClick:()=>setEditU(p=>({...p,managers:p.managers.filter(x=>x.id!==m.id)}))    },'×'),
+                el('button',{style:{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:16},onClick:()=>setEditU(p=>({...p,managers:p.managers.filter(x=>x.id!==m.id)}))},'×'),
               ))
             ),
             (editU.managers||[]).length===0&&el('div',{style:{fontSize:12,color:'var(--text3)',marginTop:6}},'No managers assigned yet'),
@@ -1020,20 +1101,18 @@ function Team({users,setUsers,cu}){
 // ── VIDEO CALL ───────────────────────────────────────────────────────────────
 function VideoCall({room,displayName,meetLink,onEnd}){
   useEffect(()=>{
-    // Open in new tab — no time limits, no demo restrictions
     const url=meetLink||'https://meet.jit.si/'+room;
     window.open(url,'_blank');
-    onEnd(); // Close overlay immediately
+    onEnd();
   },[]);
   return null;
 }
 
 // ── SALES & MARKETING ─────────────────────────────────────────────────────────
 function SalesMarketing({salesTasks,setSalesTasks,cu,users,locFilter}){
-  const[view,setView]=useState('board'); // board | list
+  const[view,setView]=useState('board');
   const[showNew,setNew]=useState(false);
   const[sel,setSel]=useState(null);
-  const[tab,setTab]=useState('open');
   const[newNote,setNewNote]=useState('');
   const[saving,setSaving]=useState(false);
   const[f,setF]=useState({
@@ -1041,14 +1120,12 @@ function SalesMarketing({salesTasks,setSalesTasks,cu,users,locFilter}){
     assigned_to:'',assigned_id:'',
     date:'',time:'',
     state:'Michigan',brand:'',location:'',
-    priority:'medium',
-    report:'',
+    priority:'medium',report:'',
   });
 
   const isSalesAdmin=cu.role==='admin'||cu.dept==='Sales'||cu.dept==='Marketing'||SALES_ROLES.includes(cu.position)||SALES_ROLES.includes(cu.role);
   const today=new Date().toISOString().slice(0,10);
 
-  // Filter tasks
   const filtered=salesTasks.filter(t=>{
     if(locFilter&&locFilter!=='Nationwide'&&t.state&&t.state!==locFilter) return false;
     if(!isSalesAdmin) return t.created_by_id===cu.id||t.assigned_id===cu.id;
@@ -1069,33 +1146,27 @@ function SalesMarketing({salesTasks,setSalesTasks,cu,users,locFilter}){
     {id:'reported',label:'Reported',color:'#8b5cf6'},
   ];
 
-  // Assignable users — sales/marketing team only for non-admins
   const assignable=users.filter(u=>{
     if(!u.approved) return false;
     if(cu.role==='admin') return true;
     return u.dept==='Sales'||u.dept==='Marketing'||SALES_ROLES.includes(u.position)||u.id===cu.id;
   });
 
-  // Brand locations filtered by state
-  const brandLocations=f.brand&&RETAIL_BRANDS[f.brand]?
-    (RETAIL_BRANDS[f.brand][f.state]||[]):[];
+  // FIX 4: flat array lookup — no more [f.state] nesting
+  const brandLocations=f.brand&&RETAIL_BRANDS[f.brand]?RETAIL_BRANDS[f.brand]:[];
 
   async function create(){
     if(!f.title&&!f.type) return;
     setSaving(true);
     const task={
-      id:'st-'+Date.now(),
-      ...f,
+      id:'st-'+Date.now(),...f,
       title:f.title||f.type+' — '+f.brand+(f.location?' ('+f.location+')':''),
-      status:'pending',
-      notes:[],attachments:[],
+      status:'pending',notes:[],attachments:[],
       created_by:cu.name,created_by_id:cu.id,
-      created_at:new Date().toISOString(),
-      updated_at:new Date().toISOString(),
+      created_at:new Date().toISOString(),updated_at:new Date().toISOString(),
     };
     try{await db.insert('pf_sales_tasks',task);}catch(e){console.error(e);setSaving(false);return;}
     setSalesTasks(p=>[task,...p]);
-    // Notify assigned person
     const assignee=users.find(u=>u.id===f.assigned_id);
     if(assignee?.email){
       sendEmail({
@@ -1142,7 +1213,6 @@ function SalesMarketing({salesTasks,setSalesTasks,cu,users,locFilter}){
     try{await db.update('pf_sales_tasks',sel.id,update);}catch(e){console.error(e);}
     setSalesTasks(p=>p.map(t=>t.id===sel.id?{...t,...update}:t));
     setSel(s=>({...s,...update}));
-    // Notify creator
     const creator=users.find(u=>u.id===sel.created_by_id);
     if(creator?.email&&creator.id!==cu.id){
       sendEmail({
@@ -1161,19 +1231,14 @@ function SalesMarketing({salesTasks,setSalesTasks,cu,users,locFilter}){
     }
   }
 
-  // Stats
   const total=filtered.length;
-  const pending=filtered.filter(t=>t.status==='pending').length;
+  const pendingCt=filtered.filter(t=>t.status==='pending').length;
   const done=filtered.filter(t=>t.status==='completed'||t.status==='reported').length;
   const today_tasks=filtered.filter(t=>t.date===today).length;
 
   return el('div',null,
-    // Header
     el('div',{className:'ph'},
-      el('div',null,
-        el('div',{className:'pt'},'Sales & Marketing'),
-        el('div',{className:'ps'},'Retail visits, brand activations and field tasks'),
-      ),
+      el('div',null,el('div',{className:'pt'},'Sales & Marketing'),el('div',{className:'ps'},'Retail visits, brand activations and field tasks')),
       el('div',{style:{display:'flex',gap:8}},
         el('div',{className:'view-toggle'},
           el('button',{className:`vbtn${view==='board'?' on':''}`,onClick:()=>setView('board')},'⬛ Board'),
@@ -1182,17 +1247,13 @@ function SalesMarketing({salesTasks,setSalesTasks,cu,users,locFilter}){
         el('button',{className:'btn b-blue',onClick:()=>setNew(true)},'+ New Task'),
       ),
     ),
-
-    // Stats
     el('div',{className:'g4',style:{marginBottom:20}},
-      [{l:'Total',v:total,c:'var(--text)',ico:'📋'},{l:'Pending',v:pending,c:'var(--accent)',ico:'⏳'},{l:'Today',v:today_tasks,c:today_tasks>0?'var(--red)':'var(--text3)',ico:'📅'},{l:'Completed',v:done,c:'var(--green)',ico:'✅'}]
+      [{l:'Total',v:total,c:'var(--text)',ico:'📋'},{l:'Pending',v:pendingCt,c:'var(--accent)',ico:'⏳'},{l:'Today',v:today_tasks,c:today_tasks>0?'var(--red)':'var(--text3)',ico:'📅'},{l:'Completed',v:done,c:'var(--green)',ico:'✅'}]
         .map(({l,v,c,ico})=>el('div',{key:l,className:'stat',style:{display:'flex',alignItems:'center',gap:14}},
           el('div',{style:{fontSize:28}},ico),
           el('div',null,el('div',{className:'sl'},l),el('div',{className:'sv',style:{color:c,fontSize:24}},v)),
         ))
     ),
-
-    // BOARD VIEW
     view==='board'&&el('div',{style:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:14}},
       statusCols.map(col=>el('div',{key:col.id,className:'col'},
         el('div',{className:'col-header'},
@@ -1227,8 +1288,6 @@ function SalesMarketing({salesTasks,setSalesTasks,cu,users,locFilter}){
         ))
       ))
     ),
-
-    // LIST VIEW
     view==='list'&&el('div',{className:'card',style:{padding:0}},
       el('div',{className:'tw'},
         el('table',null,
@@ -1245,20 +1304,15 @@ function SalesMarketing({salesTasks,setSalesTasks,cu,users,locFilter}){
         )
       )
     ),
-
-    // NEW TASK MODAL
     showNew&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setNew(false)},
       el('div',{className:'md',style:{width:620}},
         el('div',{className:'mh'},el('div',{className:'mt2'},'New Sales & Marketing Task'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
         el('div',{className:'mbd'},
-          // Type + Priority
           el('div',{className:'g2'},
             el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Task Type'),el('select',{value:f.type,onChange:ev=>setF(p=>({...p,type:ev.target.value}))},SALES_TASK_TYPES.map(t=>el('option',{key:t,value:t},t)))),
             el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Priority'),el('select',{value:f.priority,onChange:ev=>setF(p=>({...p,priority:ev.target.value}))},Object.entries(PRI).map(([k,{label}])=>el('option',{key:k,value:k},label)))),
           ),
-          // Title (optional)
-          el('div',{className:'fg'},el('label',null,'Title (optional — auto-generated if blank)'),el('input',{placeholder:'e.g. Q4 Promo Drop at Ascend Detroit...',value:f.title,onChange:ev=>setF(p=>({...p,title:ev.target.value}))})),
-          // Assign person
+          el('div',{className:'fg'},el('label',null,'Title (optional)'),el('input',{placeholder:'e.g. Q4 Promo Drop at Ascend Detroit...',value:f.title,onChange:ev=>setF(p=>({...p,title:ev.target.value}))})),
           el('div',{className:'fg'},
             el('label',null,'Assign To *'),
             el('select',{value:f.assigned_id,onChange:ev=>{const u=users.find(x=>x.id===ev.target.value);setF(p=>({...p,assigned_id:ev.target.value,assigned_to:u?.name||''}));},style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
@@ -1266,27 +1320,23 @@ function SalesMarketing({salesTasks,setSalesTasks,cu,users,locFilter}){
               ...assignable.map(u=>el('option',{key:u.id,value:u.id},`${u.name} — ${u.dept} — ${u.loc}`))
             ),
           ),
-          // Date + Time
           el('div',{className:'g2'},
             el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Date *'),el('input',{type:'date',value:f.date,onChange:ev=>setF(p=>({...p,date:ev.target.value}))})),
             el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Time'),el('input',{type:'time',value:f.time,onChange:ev=>setF(p=>({...p,time:ev.target.value}))})),
           ),
-          // State
           el('div',{className:'fg',style:{marginTop:13}},
             el('label',null,'State'),
             el('div',{style:{display:'flex',gap:8,marginTop:4}},
               ['Michigan','Missouri'].map(s=>el('button',{key:s,onClick:()=>setF(p=>({...p,state:s,brand:'',location:''})),style:{flex:1,padding:'9px',borderRadius:'var(--rs)',border:'2px solid',borderColor:f.state===s?'var(--accent)':'var(--border)',background:f.state===s?'rgba(245,166,35,.1)':'transparent',color:f.state===s?'var(--accent)':'var(--text2)',fontFamily:'inherit',fontWeight:600,fontSize:13,cursor:'pointer',transition:'all .15s'}},'🗺 '+s))
             ),
           ),
-          // Retail Brand dropdown
           el('div',{className:'fg'},
             el('label',null,'Retail Brand'),
             el('select',{value:f.brand,onChange:ev=>setF(p=>({...p,brand:ev.target.value,location:''})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
               el('option',{value:''},'— Select Brand —'),
-              ...Object.keys(RETAIL_BRANDS).map(b=>el('option',{key:b,value:b},b))
+              ...Object.keys(RETAIL_BRANDS).sort().map(b=>el('option',{key:b,value:b},b))
             ),
           ),
-          // Brand Location dropdown — shows after brand selected
           f.brand&&el('div',{className:'fg'},
             el('label',null,f.brand+' — Location'),
             brandLocations.length>0?
@@ -1294,9 +1344,8 @@ function SalesMarketing({salesTasks,setSalesTasks,cu,users,locFilter}){
                 el('option',{value:''},'— Select Location —'),
                 ...brandLocations.map(l=>el('option',{key:l,value:l},l))
               ):
-              el('div',{style:{background:'rgba(245,166,35,.06)',border:'1px solid rgba(245,166,35,.2)',borderRadius:8,padding:'10px 12px',fontSize:12,color:'var(--accent)'}},'No '+f.state+' locations for this brand yet. You can add them later.'),
+              el('div',{style:{background:'rgba(245,166,35,.06)',border:'1px solid rgba(245,166,35,.2)',borderRadius:8,padding:'10px 12px',fontSize:12,color:'var(--accent)'}},'No locations listed for this brand.'),
           ),
-          // Description
           el('div',{className:'fg'},el('label',null,'Description / Notes'),el('textarea',{placeholder:'Details about this task...',value:f.description,onChange:ev=>setF(p=>({...p,description:ev.target.value}))})),
         ),
         el('div',{className:'mf'},
@@ -1305,8 +1354,6 @@ function SalesMarketing({salesTasks,setSalesTasks,cu,users,locFilter}){
         ),
       )
     ),
-
-    // TASK DETAIL MODAL
     sel&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setSel(null)},
       el('div',{className:'md',style:{width:660}},
         el('div',{className:'mh'},
@@ -1321,7 +1368,6 @@ function SalesMarketing({salesTasks,setSalesTasks,cu,users,locFilter}){
           el('button',{className:'mc',onClick:()=>setSel(null)},'×'),
         ),
         el('div',{className:'mbd'},
-          // Status pipeline
           el('div',{style:{display:'flex',gap:4,marginBottom:16}},
             statusCols.map(col=>{
               const isActive=sel.status===col.id;
@@ -1329,7 +1375,6 @@ function SalesMarketing({salesTasks,setSalesTasks,cu,users,locFilter}){
               return el('button',{key:col.id,onClick:()=>canChange&&updateStatus(sel,col.id),style:{flex:1,padding:'7px 4px',borderRadius:8,border:`2px solid ${isActive?col.color:'var(--border)'}`,background:isActive?col.color+'22':'transparent',color:isActive?col.color:'var(--text2)',cursor:canChange?'pointer':'not-allowed',fontSize:11,fontWeight:600,transition:'all .15s',fontFamily:'inherit'}},col.label);
             })
           ),
-          // Details grid
           el('div',{style:{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12,marginBottom:16}},
             [['Assigned To',sel.assigned_to||'—'],['Date',sel.date||'—'],['Time',sel.time||'—'],['State',sel.state||'—'],['Brand',sel.brand||'—'],['Created By',sel.created_by]].map(([k,v])=>
               el('div',{key:k,style:{background:'var(--surface2)',borderRadius:8,padding:'10px 12px'}},
@@ -1338,24 +1383,20 @@ function SalesMarketing({salesTasks,setSalesTasks,cu,users,locFilter}){
               )
             )
           ),
-          // Location
           sel.location&&el('div',{style:{background:'rgba(245,166,35,.06)',border:'1px solid rgba(245,166,35,.2)',borderRadius:8,padding:'10px 14px',marginBottom:16,display:'flex',alignItems:'center',gap:8}},
             el('span',{style:{fontSize:16}},'📍'),
             el('div',null,el('div',{style:{fontSize:11,color:'var(--accent)',fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px'}},'Location'),el('div',{style:{fontSize:14,fontWeight:600}},sel.location)),
           ),
-          // Description
           sel.description&&el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:12,marginBottom:14}},el('div',{style:{fontSize:11,color:'var(--text3)',marginBottom:4,fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px'}},'Description'),el('div',{style:{fontSize:13,lineHeight:1.6}},sel.description)),
-          // Report section
           el('div',{className:'divider'}),
           el('div',{style:{fontWeight:700,marginBottom:10,fontSize:14}},'📋 Visit Report'),
           sel.assigned_id===cu.id||cu.role==='admin'?
             el('div',null,
-              el('textarea',{value:sel.report||'',placeholder:'Write your visit report here...\n\nWhat happened? What was discussed? Any issues? Next steps?',onChange:ev=>{setSel(s=>({...s,report:ev.target.value}));},style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'11px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:100,resize:'vertical',lineHeight:1.6}}),
+              el('textarea',{value:sel.report||'',placeholder:'Write your visit report here...',onChange:ev=>{setSel(s=>({...s,report:ev.target.value}));},style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'11px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:100,resize:'vertical',lineHeight:1.6}}),
               el('button',{onClick:()=>saveReport(sel.report),disabled:!sel.report?.trim(),style:{marginTop:8,background:sel.report?.trim()?'var(--purple)':'rgba(139,92,246,.2)',color:sel.report?.trim()?'#fff':'var(--text3)',border:'none',borderRadius:'var(--rs)',padding:'8px 18px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:sel.report?.trim()?'pointer':'not-allowed'}},'📤 Submit Report'),
             ):
             sel.report?el('div',{style:{background:'rgba(139,92,246,.06)',border:'1px solid rgba(139,92,246,.2)',borderRadius:8,padding:12}},el('div',{style:{fontSize:13,lineHeight:1.6}},sel.report)):
             el('div',{style:{fontSize:12,color:'var(--text3)',fontStyle:'italic'}},'No report submitted yet'),
-          // File upload
           el('div',{className:'divider'}),
           el('div',{className:'fg'},
             el('label',null,'Upload Files / Photos'),
@@ -1381,7 +1422,6 @@ function SalesMarketing({salesTasks,setSalesTasks,cu,users,locFilter}){
             ))
           ),
           el('div',{className:'divider'}),
-          // Comments
           el('div',{style:{fontWeight:600,marginBottom:12}},'Comments'),
           (sel.notes||[]).map(note=>el('div',{key:note.id,style:{display:'flex',gap:10,marginBottom:10}},
             el('div',{className:'avatar',style:{background:avatarColor(note.by),flexShrink:0}},note.by.charAt(0).toUpperCase()),
@@ -1407,7 +1447,6 @@ function SalesMarketing({salesTasks,setSalesTasks,cu,users,locFilter}){
   );
 }
 
-
 // ── AI MEETING NOTES ──────────────────────────────────────────────────────────
 function MeetingNotesModal({event,cu,users,meetingNotes,setMeetingNotes,onClose}){
   const existingNote=meetingNotes.find(n=>n.event_id===event.id);
@@ -1420,145 +1459,79 @@ function MeetingNotesModal({event,cu,users,meetingNotes,setMeetingNotes,onClose}
   const[interimText,setInterimText]=useState('');
   const[saved,setSaved]=useState(false);
 
-  // Check if attendee
-  const isAttendee=(event.attendees||[]).some(a=>a.id===cu.id)||event.created_by_id===cu.id||cu.role==='admin';
-
-  // ── SPEECH RECOGNITION ───────────────────────────────────────────────────────
   function startListening(){
     if(!('webkitSpeechRecognition' in window)&&!('SpeechRecognition' in window)){
-      alert('Speech recognition not supported. Use Chrome on desktop or Android.\n\nYou can also type or paste the transcript manually.');
-      return;
+      alert('Speech recognition not supported. Use Chrome.\n\nYou can also type or paste the transcript manually.');return;
     }
     const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
     const rec=new SR();
-    rec.continuous=true;
-    rec.interimResults=true;
-    rec.lang='en-US';
+    rec.continuous=true;rec.interimResults=true;rec.lang='en-US';
     rec.onresult=ev=>{
-      let interim='';
-      let final='';
+      let interim='',final='';
       for(let i=ev.resultIndex;i<ev.results.length;i++){
-        if(ev.results[i].isFinal){
-          final+=ev.results[i][0].transcript+' ';
-        } else {
-          interim+=ev.results[i][0].transcript;
-        }
+        if(ev.results[i].isFinal){final+=ev.results[i][0].transcript+' ';}
+        else{interim+=ev.results[i][0].transcript;}
       }
       if(final) setTranscript(p=>p+final);
       setInterimText(interim);
     };
-    rec.onerror=ev=>{
-      console.error('Speech error:',ev.error);
-      setListening(false);
-      if(ev.error==='not-allowed') alert('Microphone access denied. Please allow microphone access in your browser settings.');
-    };
+    rec.onerror=ev=>{console.error('Speech error:',ev.error);setListening(false);};
     rec.onend=()=>setListening(false);
-    rec.start();
-    setRecognition(rec);
-    setListening(true);
+    rec.start();setRecognition(rec);setListening(true);
   }
 
-  function stopListening(){
-    if(recognition){recognition.stop();setRecognition(null);}
-    setListening(false);
-    setInterimText('');
-  }
+  function stopListening(){if(recognition){recognition.stop();setRecognition(null);}setListening(false);setInterimText('');}
 
-  // ── AI PROCESSING ─────────────────────────────────────────────────────────────
   async function processWithAI(){
-    if(!transcript.trim()){alert('Please add a transcript first — either by recording or typing/pasting.');return;}
+    if(!transcript.trim()){alert('Please add a transcript first.');return;}
     setProcessing(true);
     try{
       const attendeeNames=(event.attendees||[]).map(a=>a.name).join(', ')||'Not specified';
       const prompt=`You are an expert meeting notes assistant. Analyze this meeting transcript and create structured meeting notes.
-
 Meeting: ${event.title}
 Date: ${event.date}
 Attendees: ${attendeeNames}
 Created by: ${event.created_by}
-
 TRANSCRIPT:
 ${transcript}
-
 Create comprehensive meeting notes in this EXACT JSON format (no markdown, just JSON):
-{
-  "summary": "2-3 sentence executive summary of the meeting",
-  "key_points": ["point 1", "point 2", "point 3"],
-  "action_items": [
-    {"item": "description of action", "owner": "person name or team", "due": "date or timeframe if mentioned"},
-    {"item": "description", "owner": "person", "due": "timeframe"}
-  ],
-  "decisions": ["decision 1", "decision 2"],
-  "follow_up": ["follow up item 1", "follow up item 2"],
-  "sentiment": "productive|needs-follow-up|inconclusive"
-}
-
-Be specific and actionable. Extract real names when mentioned. If no action items/decisions mentioned, return empty arrays.`;
-
+{"summary":"2-3 sentence executive summary","key_points":["point 1","point 2"],"action_items":[{"item":"description","owner":"person","due":"timeframe"}],"decisions":["decision 1"],"follow_up":["follow up 1"],"sentiment":"productive|needs-follow-up|inconclusive"}`;
       const res=await fetch('https://api.anthropic.com/v1/messages',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({
-          model:'claude-sonnet-4-20250514',
-          max_tokens:1500,
-          messages:[{role:'user',content:prompt}]
-        })
+        body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1500,messages:[{role:'user',content:prompt}]})
       });
       const data=await res.json();
       const text=data.content?.[0]?.text||'';
       let parsed;
-      try{
-        const clean=text.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
-        parsed=JSON.parse(clean);
-      }catch(e){
-        parsed={summary:text,key_points:[],action_items:[],decisions:[],follow_up:[],sentiment:'productive'};
-      }
-      setNotes(p=>({...p,...parsed}));
-      setTab('notes');
-    }catch(e){
-      console.error('AI error:',e);
-      alert('AI processing failed. Check your connection and try again.');
-    }
+      try{parsed=JSON.parse(text.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim());}
+      catch(e){parsed={summary:text,key_points:[],action_items:[],decisions:[],follow_up:[],sentiment:'productive'};}
+      setNotes(p=>({...p,...parsed}));setTab('notes');
+    }catch(e){console.error('AI error:',e);alert('AI processing failed. Check your connection.');}
     setProcessing(false);
   }
 
-  // ── SAVE & SHARE ─────────────────────────────────────────────────────────────
   async function saveAndShare(){
     const noteObj={
-      id:existingNote?.id||'mn-'+Date.now(),
-      event_id:event.id,
-      title:'Meeting Notes: '+event.title,
-      transcript,
-      summary:notes?.summary||'',
-      action_items:notes?.action_items||[],
-      decisions:notes?.decisions||[],
-      key_points:notes?.key_points||[],
-      follow_up:notes?.follow_up||[],
-      sentiment:notes?.sentiment||'productive',
-      attendees:event.attendees||[],
-      created_by:cu.name,
-      created_by_id:cu.id,
-      created_at:existingNote?.created_at||new Date().toISOString(),
-      updated_at:new Date().toISOString(),
+      id:existingNote?.id||'mn-'+Date.now(),event_id:event.id,
+      title:'Meeting Notes: '+event.title,transcript,
+      summary:notes?.summary||'',action_items:notes?.action_items||[],
+      decisions:notes?.decisions||[],key_points:notes?.key_points||[],
+      follow_up:notes?.follow_up||[],sentiment:notes?.sentiment||'productive',
+      attendees:event.attendees||[],created_by:cu.name,created_by_id:cu.id,
+      created_at:existingNote?.created_at||new Date().toISOString(),updated_at:new Date().toISOString(),
     };
     try{
       if(existingNote){await db.update('pf_meeting_notes',existingNote.id,noteObj);}
       else{await db.insert('pf_meeting_notes',noteObj);}
       setMeetingNotes(p=>existingNote?p.map(n=>n.id===existingNote.id?noteObj:n):[noteObj,...p]);
     }catch(e){console.error(e);}
-
-    // Email notes to attendees only
     const recipients=(event.attendees||[]).filter(a=>a.email&&a.id!==cu.id);
     if(recipients.length>0&&notes){
-      const actionItemsHtml=(notes.action_items||[]).map(a=>`<li style="margin-bottom:6px"><strong>${a.owner||'Team'}:</strong> ${a.item}${a.due?' <em>(${a.due})</em>':''}</li>`).join('');
-      const decisionsHtml=(notes.decisions||[]).map(d=>`<li style="margin-bottom:6px">${d}</li>`).join('');
-      const keyPointsHtml=(notes.key_points||[]).map(k=>`<li style="margin-bottom:6px">${k}</li>`).join('');
-      const followUpHtml=(notes.follow_up||[]).map(f=>`<li style="margin-bottom:6px">${f}</li>`).join('');
-
+      const actionItemsHtml=(notes.action_items||[]).map(a=>`<li><strong>${a.owner||'Team'}:</strong> ${a.item}</li>`).join('');
+      const decisionsHtml=(notes.decisions||[]).map(d=>`<li>${d}</li>`).join('');
       recipients.forEach(a=>{
-        sendEmail({
-          to:a.email,
-          subject:`📋 Meeting Notes: ${event.title} — ${event.date}`,
+        sendEmail({to:a.email,subject:`📋 Meeting Notes: ${event.title} — ${event.date}`,
           html:`<div style="font-family:sans-serif;background:#0a0f1e;color:#e8edf8;padding:32px;border-radius:12px;max-width:620px;border:1px solid #1a2d4f">
             <div style="color:#f5a623;font-size:22px;font-weight:800;margin-bottom:4px">📋 Hendrix TMS</div>
             <div style="font-size:13px;color:#7b8db8;margin-bottom:24px">AI-Generated Meeting Notes</div>
@@ -1568,17 +1541,14 @@ Be specific and actionable. Extract real names when mentioned. If no action item
               <div style="font-size:11px;font-weight:700;color:#f5a623;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Summary</div>
               <div style="font-size:14px;line-height:1.6">${notes?.summary||''}</div>
             </div>
-            ${keyPointsHtml?`<div style="margin-bottom:20px"><div style="font-size:11px;font-weight:700;color:#f5a623;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Key Points</div><ul style="padding-left:20px;color:#e8edf8">${keyPointsHtml}</ul></div>`:''}
             ${actionItemsHtml?`<div style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:16px;margin-bottom:20px"><div style="font-size:11px;font-weight:700;color:#ef4444;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Action Items</div><ul style="padding-left:20px;color:#e8edf8">${actionItemsHtml}</ul></div>`:''}
             ${decisionsHtml?`<div style="margin-bottom:20px"><div style="font-size:11px;font-weight:700;color:#10b981;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Decisions Made</div><ul style="padding-left:20px;color:#e8edf8">${decisionsHtml}</ul></div>`:''}
-            ${followUpHtml?`<div style="margin-bottom:20px"><div style="font-size:11px;font-weight:700;color:#3b82f6;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Follow Up</div><ul style="padding-left:20px;color:#e8edf8">${followUpHtml}</ul></div>`:''}
-            <div style="margin-top:24px;padding-top:16px;border-top:1px solid #1a2d4f;font-size:11px;color:#3a4f7a">These notes were AI-generated from the meeting transcript and shared only with meeting attendees.</div>
+            <a href="${APP_URL}" style="background:#f5a623;color:#0a0f1e;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">View in App →</a>
           </div>`
         });
       });
     }
-    setSaved(true);
-    setTimeout(()=>onClose(),1200);
+    setSaved(true);setTimeout(()=>onClose(),1200);
   }
 
   const sentimentColors={productive:'var(--green)',inconclusive:'var(--yellow)','needs-follow-up':'var(--red)'};
@@ -1588,55 +1558,34 @@ Be specific and actionable. Extract real names when mentioned. If no action item
     el('div',{className:'md',style:{width:720,maxHeight:'92vh'}},
       el('div',{className:'mh'},
         el('div',{style:{flex:1}},
-          el('div',{style:{display:'flex',gap:8,alignItems:'center',marginBottom:6}},
-            el('span',{style:{fontSize:20}},'🤖'),
-            el('div',{className:'mt2'},'AI Meeting Notes'),
-          ),
+          el('div',{style:{display:'flex',gap:8,alignItems:'center',marginBottom:6}},el('span',{style:{fontSize:20}},'🤖'),el('div',{className:'mt2'},'AI Meeting Notes')),
           el('div',{style:{fontSize:12,color:'var(--text2)'}},'Meeting: '+event.title+' · '+event.date),
         ),
         el('button',{className:'mc',onClick:onClose},'×'),
       ),
-      // Tabs
       el('div',{style:{display:'flex',gap:3,background:'var(--surface2)',padding:4,margin:'0 24px 0',borderRadius:'var(--rs)',border:'1px solid var(--border)'}},
         [{id:'record',label:'🎙 Record / Transcript'},{id:'notes',label:'📋 AI Notes',disabled:!notes&&!existingNote}].map(t=>
           el('button',{key:t.id,onClick:()=>!t.disabled&&setTab(t.id),style:{flex:1,padding:'7px',borderRadius:8,border:'none',background:tab===t.id?'var(--surface)':'transparent',color:tab===t.id?'var(--text)':t.disabled?'var(--text3)':'var(--text2)',cursor:t.disabled?'not-allowed':'pointer',fontFamily:'inherit',fontSize:12,fontWeight:600,transition:'all .15s'}},t.label)
         )
       ),
       el('div',{className:'mbd'},
-
-        // ── RECORD TAB ──────────────────────────────────────────────────────────
         tab==='record'&&el('div',null,
-          // Recording controls
           el('div',{style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:12,padding:20,marginBottom:16,textAlign:'center'}},
             el('div',{style:{fontSize:13,color:'var(--text2)',marginBottom:14}},'Use live transcription during your meeting or paste/type the transcript below'),
             el('div',{style:{display:'flex',gap:10,justifyContent:'center',flexWrap:'wrap'}},
               !listening?
-                el('button',{onClick:startListening,style:{background:'var(--red)',color:'#fff',border:'none',borderRadius:10,padding:'12px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:8}},
-                  el('div',{style:{width:10,height:10,borderRadius:'50%',background:'#fff'}}),
-                  'Start Recording'
-                ):
-                el('button',{onClick:stopListening,style:{background:'rgba(239,68,68,.15)',color:'var(--red)',border:'2px solid var(--red)',borderRadius:10,padding:'12px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:8}},
-                  el('div',{style:{width:10,height:10,borderRadius:'50%',background:'var(--red)',animation:'pulse-red 1s infinite'}}),
-                  'Stop Recording'
-                ),
+                el('button',{onClick:startListening,style:{background:'var(--red)',color:'#fff',border:'none',borderRadius:10,padding:'12px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:8}},el('div',{style:{width:10,height:10,borderRadius:'50%',background:'#fff'}}),'Start Recording'):
+                el('button',{onClick:stopListening,style:{background:'rgba(239,68,68,.15)',color:'var(--red)',border:'2px solid var(--red)',borderRadius:10,padding:'12px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:8}},el('div',{style:{width:10,height:10,borderRadius:'50%',background:'var(--red)',animation:'pulse-red 1s infinite'}}),'Stop Recording'),
               el('button',{onClick:()=>setTranscript(''),style:{background:'transparent',color:'var(--text3)',border:'1px solid var(--border)',borderRadius:10,padding:'12px 20px',fontFamily:'inherit',fontSize:13,cursor:'pointer'}},'Clear'),
             ),
             listening&&el('div',{style:{marginTop:12,fontSize:12,color:'var(--red)',fontWeight:600,display:'flex',alignItems:'center',gap:6,justifyContent:'center'}},
-              el('div',{style:{width:8,height:8,borderRadius:'50%',background:'var(--red)',animation:'pulse-red 1s infinite'}}),
-              'Listening...'+(interimText?' — "'+interimText+'"':''),
+              el('div',{style:{width:8,height:8,borderRadius:'50%',background:'var(--red)',animation:'pulse-red 1s infinite'}}),'Listening...'+(interimText?' — "'+interimText+'"':''),
             ),
           ),
-          // Transcript area
           el('div',{className:'fg'},
             el('label',null,'Transcript ('+(transcript.split(' ').filter(Boolean).length)+' words)'),
-            el('textarea',{
-              value:transcript+(interimText?' ['+interimText+']':''),
-              onChange:ev=>setTranscript(ev.target.value),
-              placeholder:'Transcript will appear here as you speak...\n\nOr paste/type the meeting transcript manually.\n\nTip: You can also take rough notes and the AI will clean them up.',
-              style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:200,resize:'vertical',lineHeight:1.6}
-            }),
+            el('textarea',{value:transcript+(interimText?' ['+interimText+']':''),onChange:ev=>setTranscript(ev.target.value),placeholder:'Transcript will appear here as you speak...\n\nOr paste/type the meeting transcript manually.',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:200,resize:'vertical',lineHeight:1.6}}),
           ),
-          // Process button
           el('div',{style:{display:'flex',gap:10,justifyContent:'flex-end',marginTop:8}},
             el('button',{onClick:processWithAI,disabled:processing||!transcript.trim(),style:{background:transcript.trim()&&!processing?'var(--accent)':'rgba(245,166,35,.2)',color:transcript.trim()&&!processing?'#0a0f1e':'var(--text3)',border:'none',borderRadius:10,padding:'12px 28px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:transcript.trim()&&!processing?'pointer':'not-allowed',display:'flex',alignItems:'center',gap:8,transition:'all .2s'}},
               processing?el('div',{style:{width:16,height:16,border:'2px solid rgba(0,0,0,.3)',borderTopColor:'#000',borderRadius:'50%',animation:'spin .6s linear infinite'}}):'🤖',
@@ -1644,19 +1593,14 @@ Be specific and actionable. Extract real names when mentioned. If no action item
             ),
           ),
         ),
-
-        // ── NOTES TAB ──────────────────────────────────────────────────────────
         tab==='notes'&&notes&&el('div',null,
-          // Sentiment badge
           notes.sentiment&&el('div',{style:{display:'flex',justifyContent:'flex-end',marginBottom:12}},
             el('span',{style:{background:sentimentColors[notes.sentiment]+'22',color:sentimentColors[notes.sentiment],border:'1px solid '+sentimentColors[notes.sentiment]+'44',borderRadius:20,padding:'4px 14px',fontSize:12,fontWeight:700}},sentimentLabels[notes.sentiment]||notes.sentiment),
           ),
-          // Summary
           notes.summary&&el('div',{style:{background:'rgba(245,166,35,.06)',border:'1px solid rgba(245,166,35,.2)',borderRadius:12,padding:16,marginBottom:16}},
             el('div',{style:{fontSize:11,fontWeight:700,color:'var(--accent)',textTransform:'uppercase',letterSpacing:'1px',marginBottom:8}},'Summary'),
             el('div',{style:{fontSize:14,lineHeight:1.7,color:'var(--text)'}},notes.summary),
           ),
-          // Key Points
           (notes.key_points||[]).length>0&&el('div',{style:{marginBottom:16}},
             el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'1px',marginBottom:10}},'Key Points'),
             (notes.key_points||[]).map((p,i)=>el('div',{key:i,style:{display:'flex',gap:10,marginBottom:8,alignItems:'flex-start'}},
@@ -1664,7 +1608,6 @@ Be specific and actionable. Extract real names when mentioned. If no action item
               el('div',{style:{fontSize:13,lineHeight:1.5}},p),
             )),
           ),
-          // Action Items
           (notes.action_items||[]).length>0&&el('div',{style:{background:'rgba(239,68,68,.04)',border:'1px solid rgba(239,68,68,.15)',borderRadius:12,padding:16,marginBottom:16}},
             el('div',{style:{fontSize:11,fontWeight:700,color:'var(--red)',textTransform:'uppercase',letterSpacing:'1px',marginBottom:12}},'🔴 Action Items'),
             (notes.action_items||[]).map((a,i)=>el('div',{key:i,style:{display:'flex',gap:12,marginBottom:10,alignItems:'flex-start',paddingBottom:10,borderBottom:i<notes.action_items.length-1?'1px solid rgba(239,68,68,.1)':'none'}},
@@ -1678,7 +1621,6 @@ Be specific and actionable. Extract real names when mentioned. If no action item
               ),
             )),
           ),
-          // Decisions
           (notes.decisions||[]).length>0&&el('div',{style:{marginBottom:16}},
             el('div',{style:{fontSize:11,fontWeight:700,color:'var(--green)',textTransform:'uppercase',letterSpacing:'1px',marginBottom:10}},'✅ Decisions Made'),
             (notes.decisions||[]).map((d,i)=>el('div',{key:i,style:{display:'flex',gap:10,marginBottom:8}},
@@ -1686,15 +1628,6 @@ Be specific and actionable. Extract real names when mentioned. If no action item
               el('div',{style:{fontSize:13,lineHeight:1.5}},d),
             )),
           ),
-          // Follow Up
-          (notes.follow_up||[]).length>0&&el('div',{style:{marginBottom:16}},
-            el('div',{style:{fontSize:11,fontWeight:700,color:'var(--blue)',textTransform:'uppercase',letterSpacing:'1px',marginBottom:10}},'🔵 Follow Up'),
-            (notes.follow_up||[]).map((f,i)=>el('div',{key:i,style:{display:'flex',gap:10,marginBottom:8}},
-              el('div',{style:{color:'var(--blue)',fontSize:16,flexShrink:0}},'→'),
-              el('div',{style:{fontSize:13,lineHeight:1.5}},f),
-            )),
-          ),
-          // Attendees
           el('div',{style:{display:'flex',gap:6,flexWrap:'wrap',marginBottom:16}},
             el('div',{style:{fontSize:11,color:'var(--text3)',marginRight:4,alignSelf:'center'}},'Shared with:'),
             (event.attendees||[]).map(a=>el('div',{key:a.id,style:{display:'flex',alignItems:'center',gap:5,background:'var(--surface2)',borderRadius:20,padding:'3px 10px',fontSize:11}},
@@ -1717,15 +1650,9 @@ Be specific and actionable. Extract real names when mentioned. If no action item
   );
 }
 
-
 // ── CALENDAR ──────────────────────────────────────────────────────────────────
 const EVENT_COLORS=['#f5a623','#3b82f6','#10b981','#ef4444','#8b5cf6','#f97316','#06b6d4','#ec4899'];
-const EVENT_TYPES={event:{label:'Event',ico:'📌'},meeting:{label:'Meeting',ico:'🤝'},task:{label:'Task Due',ico:'✅'},personal:{label:'Personal',ico:'👤'},schedule:{label:'Work Schedule',ico:'🏭'}};
-
-function getMeetLink(){
-  const id=Math.random().toString(36).slice(2,12);
-  return'https://meet.jit.si/hendrix-'+id;
-}
+function getMeetLink(){return'https://meet.jit.si/hendrix-'+Math.random().toString(36).slice(2,12);}
 
 function Calendar({events,setEvents,tasks,cu,users,locFilter,meetingNotes,setMeetingNotes,onJoinCall}){
   const[view,setView]=useState('month');
@@ -1735,19 +1662,15 @@ function Calendar({events,setEvents,tasks,cu,users,locFilter,meetingNotes,setMee
   const[sel,setSel]=useState(null);
   const[saving,setSaving]=useState(false);
   const[f,setF]=useState({title:'',type:'event',date:'',start_time:'09:00',end_time:'10:00',all_day:false,description:'',location:'',attendees:[],color:'#f5a623',personal:false,loc:'Nationwide',meet_link:''});
-
   const today=new Date().toISOString().slice(0,10);
 
-  // Merge events + task due dates
   const allEvents=useMemo(()=>{
     const evts=[...(events||[])];
-    // Add tasks with due dates as events
     (tasks||[]).forEach(t=>{
-      if(t.due_date&&(t.assignees||[]).some(a=>a.id===cu.id)||cu.role==='admin'||cu.role==='manager'){
+      if(t.due_date&&((t.assignees||[]).some(a=>a.id===cu.id)||cu.role==='admin'||cu.role==='manager')){
         evts.push({id:'task-'+t.id,title:t.title,date:t.due_date,type:'task',color:'#ef4444',_task:true,status:t.status});
       }
     });
-    // Filter by location
     return evts.filter(e=>{
       if(e._task) return true;
       if(e.personal&&e.created_by_id!==cu.id) return false;
@@ -1756,13 +1679,10 @@ function Calendar({events,setEvents,tasks,cu,users,locFilter,meetingNotes,setMee
     });
   },[events,tasks,cu,locFilter]);
 
-  // Get days in month
   function getDaysInMonth(date){
     const year=date.getFullYear(),month=date.getMonth();
-    const first=new Date(year,month,1);
-    const last=new Date(year,month+1,0);
+    const first=new Date(year,month,1),last=new Date(year,month+1,0);
     const days=[];
-    // Pad start
     for(let i=0;i<first.getDay();i++) days.push(null);
     for(let d=1;d<=last.getDate();d++) days.push(new Date(year,month,d));
     return days;
@@ -1774,12 +1694,7 @@ function Calendar({events,setEvents,tasks,cu,users,locFilter,meetingNotes,setMee
     return allEvents.filter(e=>e.date===ds);
   }
 
-  function formatDate(d){
-    return new Date(d+'T00:00:00').toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
-  }
-
-  function prevMonth(){setCur(d=>new Date(d.getFullYear(),d.getMonth()-1,1));}
-  function nextMonth(){setCur(d=>new Date(d.getFullYear(),d.getMonth()+1,1));}
+  function formatDate(d){return new Date(d+'T00:00:00').toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});}
 
   async function createEvent(){
     if(!f.title||!f.date)return;
@@ -1788,38 +1703,25 @@ function Calendar({events,setEvents,tasks,cu,users,locFilter,meetingNotes,setMee
     const ev={id:'ev-'+Date.now(),...f,meet_link:meetLink,created_by:cu.name,created_by_id:cu.id,created_at:new Date().toISOString(),updated_at:new Date().toISOString()};
     try{await db.insert('pf_events',ev);}catch(e){console.error(e);}
     setEvents(p=>[...p,ev]);
-    // Notify attendees
     if(f.attendees.length>0&&f.type==='meeting'){
       f.attendees.filter(a=>a.email&&a.id!==cu.id).forEach(a=>{
-        sendEmail({
-          to:a.email,
-          subject:`📅 Meeting invite: "${f.title}"`,
+        sendEmail({to:a.email,subject:`📅 Meeting invite: "${f.title}"`,
           html:`<div style="font-family:sans-serif;background:#0a0f1e;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
             <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:4px">📅 Hendrix TMS</div>
-            <div style="font-size:13px;color:#7b8db8;margin-bottom:20px">Meeting Invitation</div>
             <div style="font-size:18px;font-weight:700;margin-bottom:16px">${f.title}</div>
             <div style="background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.2);border-radius:10px;padding:16px;margin-bottom:20px">
-              <div style="display:flex;gap:8px;margin-bottom:8px"><span>📅</span><span>${f.date}${f.start_time?' at '+f.start_time:''}</span></div>
-              ${f.location?`<div style="display:flex;gap:8px;margin-bottom:8px"><span>📍</span><span>${f.location}</span></div>`:''}
-              ${meetLink?`<div style="display:flex;gap:8px"><span>🎥</span><a href="${meetLink}" style="color:#f5a623">${meetLink}</a></div>`:''}
+              <div style="margin-bottom:8px">📅 ${f.date}${f.start_time?' at '+f.start_time:''}</div>
+              ${f.location?`<div style="margin-bottom:8px">📍 ${f.location}</div>`:''}
+              ${meetLink?`<div>🎥 <a href="${meetLink}" style="color:#f5a623">${meetLink}</a></div>`:''}
             </div>
-            ${f.description?`<p style="color:#7b8db8;margin-bottom:20px">${f.description}</p>`:''}
-            <div style="display:flex;gap:10px">
-              ${meetLink?`<a href="${meetLink}" style="background:#f5a623;color:#0a0f1e;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:700">🎥 Join Meeting</a>`:''}
-              <a href="${APP_URL}" style="background:rgba(245,166,35,.1);color:#f5a623;border:1px solid rgba(245,166,35,.3);padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:700">View in App</a>
-            </div>
+            ${meetLink?`<a href="${meetLink}" style="background:#f5a623;color:#0a0f1e;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:700">🎥 Join Meeting</a>`:''}
           </div>`
         });
       });
     }
-    // Send local notification
     sendLocalNotification('📅 Event Created',f.title+' on '+f.date);
     if(meetLink){
-      setTimeout(()=>{
-        if(window.confirm('Meeting created!\n\nLink:\n'+meetLink+'\n\nCopy to clipboard?')){
-          navigator.clipboard.writeText(meetLink).catch(()=>{});
-        }
-      },300);
+      setTimeout(()=>{if(window.confirm('Meeting created!\n\nLink:\n'+meetLink+'\n\nCopy to clipboard?')){navigator.clipboard.writeText(meetLink).catch(()=>{}); }},300);
     }
     setF({title:'',type:'event',date:'',start_time:'09:00',end_time:'10:00',all_day:false,description:'',location:'',attendees:[],color:'#f5a623',personal:false,loc:'Nationwide',meet_link:''});
     setNew(false);setSaving(false);
@@ -1828,48 +1730,37 @@ function Calendar({events,setEvents,tasks,cu,users,locFilter,meetingNotes,setMee
   async function deleteEvent(id){
     if(!window.confirm('Delete this event?'))return;
     try{await db.remove('pf_events',id);}catch(e){console.error(e);}
-    setEvents(p=>p.filter(e=>e.id!==id));
-    setSel(null);
+    setEvents(p=>p.filter(e=>e.id!==id));setSel(null);
   }
 
   const days=getDaysInMonth(cur);
   const monthLabel=cur.toLocaleDateString('en-US',{month:'long',year:'numeric'});
   const WEEKDAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-
-  // List view — upcoming events
   const upcoming=allEvents.filter(e=>e.date>=today).sort((a,b)=>a.date.localeCompare(b.date));
 
   return el('div',null,
-    // Header
     el('div',{className:'ph'},
       el('div',null,el('div',{className:'pt'},'Calendar'),el('div',{className:'ps'},'Tasks, meetings, events and schedules')),
       el('div',{style:{display:'flex',gap:8,alignItems:'center'}},
         el('div',{className:'view-toggle'},
-          [{id:'month',l:'Month'},{id:'week',l:'Week'},{id:'list',l:'List'}].map(v=>
-            el('button',{key:v.id,className:`vbtn${view===v.id?' on':''}`,onClick:()=>setView(v.id)},v.l)
-          )
+          [{id:'month',l:'Month'},{id:'week',l:'Week'},{id:'list',l:'List'}].map(v=>el('button',{key:v.id,className:`vbtn${view===v.id?' on':''}`,onClick:()=>setView(v.id)},v.l))
         ),
         el('button',{onClick:()=>{const room='hendrix-'+Math.random().toString(36).slice(2,10);const link='https://meet.jit.si/'+room;onJoinCall(room,'Instant Meeting',link);},style:{background:'#10b981',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'9px 16px',fontFamily:'inherit',fontSize:13,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',gap:6}},'🎥 Instant Meeting'),
         el('button',{className:'btn b-blue',onClick:()=>setNew(true)},'+ New Event'),
       ),
     ),
-
-    // MONTH VIEW
     view==='month'&&el('div',null,
-      // Nav
       el('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}},
-        el('button',{className:'btn b-ghost',onClick:prevMonth},'←'),
+        el('button',{className:'btn b-ghost',onClick:()=>setCur(d=>new Date(d.getFullYear(),d.getMonth()-1,1))},'←'),
         el('div',{style:{fontSize:18,fontWeight:700}},monthLabel),
         el('div',{style:{display:'flex',gap:8}},
-          el('button',{className:'btn b-ghost btn-sm',onClick:()=>{setCur(new Date());}}, 'Today'),
-          el('button',{className:'btn b-ghost',onClick:nextMonth},'→'),
+          el('button',{className:'btn b-ghost btn-sm',onClick:()=>setCur(new Date())},'Today'),
+          el('button',{className:'btn b-ghost',onClick:()=>setCur(d=>new Date(d.getFullYear(),d.getMonth()+1,1))},'→'),
         ),
       ),
-      // Weekday headers
       el('div',{style:{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:2,marginBottom:4}},
         WEEKDAYS.map(d=>el('div',{key:d,style:{textAlign:'center',fontSize:11,fontWeight:700,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'.8px',padding:'6px 0'}},d))
       ),
-      // Days grid
       el('div',{style:{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:2}},
         days.map((day,i)=>{
           if(!day) return el('div',{key:'empty-'+i,style:{minHeight:80,background:'var(--surface2)',borderRadius:6,opacity:.3}});
@@ -1883,18 +1774,13 @@ function Calendar({events,setEvents,tasks,cu,users,locFilter,meetingNotes,setMee
             onMouseEnter:ev=>ev.currentTarget.style.borderColor='rgba(245,166,35,.3)',
             onMouseLeave:ev=>ev.currentTarget.style.borderColor=isToday?'rgba(245,166,35,.4)':'var(--border)',
           },
-            el('div',{style:{fontWeight:isToday?700:500,fontSize:13,color:isToday?'var(--accent)':'var(--text)',marginBottom:4,width:22,height:22,borderRadius:'50%',background:isToday?'var(--accent)':'transparent',display:'flex',alignItems:'center',justifyContent:'center',color:isToday?'#0a0f1e':'var(--text)'}},day.getDate()),
-            dayEvts.slice(0,3).map(ev=>el('div',{key:ev.id,
-              onClick:e=>{e.stopPropagation();setSel(ev);},
-              style:{fontSize:10,fontWeight:600,color:'#fff',background:ev.color||'#f5a623',borderRadius:4,padding:'1px 5px',marginBottom:2,overflow:'hidden',whiteSpace:'nowrap',textOverflow:'ellipsis'}
-            },ev.title)),
+            el('div',{style:{fontWeight:isToday?700:500,fontSize:13,width:22,height:22,borderRadius:'50%',background:isToday?'var(--accent)':'transparent',display:'flex',alignItems:'center',justifyContent:'center',color:isToday?'#0a0f1e':'var(--text)',marginBottom:4}},day.getDate()),
+            dayEvts.slice(0,3).map(ev=>el('div',{key:ev.id,onClick:e=>{e.stopPropagation();setSel(ev);},style:{fontSize:10,fontWeight:600,color:'#fff',background:ev.color||'#f5a623',borderRadius:4,padding:'1px 5px',marginBottom:2,overflow:'hidden',whiteSpace:'nowrap',textOverflow:'ellipsis'}},ev.title)),
             dayEvts.length>3&&el('div',{style:{fontSize:10,color:'var(--text2)'}},`+${dayEvts.length-3} more`),
           );
         })
       ),
     ),
-
-    // WEEK VIEW
     view==='week'&&el('div',null,
       el('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}},
         el('button',{className:'btn b-ghost',onClick:()=>setCur(d=>{const n=new Date(d);n.setDate(n.getDate()-7);return n;})},'←'),
@@ -1913,16 +1799,12 @@ function Calendar({events,setEvents,tasks,cu,users,locFilter,meetingNotes,setMee
           const isToday=ds===today;
           return el('div',{key:ds,style:{background:isToday?'rgba(245,166,35,.06)':'var(--surface)',border:`1px solid ${isToday?'rgba(245,166,35,.3)':'var(--border)'}`,borderRadius:10,padding:10,minHeight:120}},
             el('div',{style:{fontSize:12,fontWeight:700,color:isToday?'var(--accent)':'var(--text2)',marginBottom:8}},d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})),
-            dayEvts.map(ev=>el('div',{key:ev.id,onClick:()=>setSel(ev),style:{fontSize:11,fontWeight:600,color:'#fff',background:ev.color||'var(--accent)',borderRadius:5,padding:'4px 7px',marginBottom:4,cursor:'pointer'}},
-              (ev.start_time?ev.start_time+' ':'')+ev.title
-            )),
+            dayEvts.map(ev=>el('div',{key:ev.id,onClick:()=>setSel(ev),style:{fontSize:11,fontWeight:600,color:'#fff',background:ev.color||'var(--accent)',borderRadius:5,padding:'4px 7px',marginBottom:4,cursor:'pointer'}},(ev.start_time?ev.start_time+' ':'')+ev.title)),
             el('button',{onClick:()=>{setF(p=>({...p,date:ds}));setNew(true);},style:{width:'100%',background:'none',border:'1px dashed var(--border)',borderRadius:6,padding:'4px',color:'var(--text3)',cursor:'pointer',fontSize:11,marginTop:4}},'+ Add'),
           );
         })
       ),
     ),
-
-    // LIST VIEW
     view==='list'&&el('div',null,
       el('div',{style:{fontWeight:700,marginBottom:14,fontSize:14}},'Upcoming Events & Meetings'),
       upcoming.length===0?el('div',{className:'empty'},el('div',{className:'eico'},'📅'),el('div',{className:'etxt'},'No upcoming events')):
@@ -1936,7 +1818,6 @@ function Calendar({events,setEvents,tasks,cu,users,locFilter,meetingNotes,setMee
           el('div',null,
             el('div',{style:{display:'flex',gap:6,marginBottom:5}},
               el('span',{style:{fontSize:11,fontWeight:700,color:ev.color||'var(--accent)',background:(ev.color||'#f5a623')+'22',borderRadius:4,padding:'2px 8px'}},(ev._task?'✅ Task Due':ev.type==='meeting'?'🤝 Meeting':ev.type==='personal'?'👤 Personal':'📌 Event')),
-              ev.personal&&el('span',{style:{fontSize:11,color:'var(--text3)'}},'Private'),
             ),
             el('div',{style:{fontWeight:700,fontSize:14}},ev.title),
             el('div',{style:{fontSize:12,color:'var(--text2)',marginTop:4}},formatDate(ev.date)+(ev.start_time?' · '+ev.start_time+(ev.end_time?' - '+ev.end_time:''):'')),
@@ -1944,7 +1825,6 @@ function Calendar({events,setEvents,tasks,cu,users,locFilter,meetingNotes,setMee
           ),
           el('div',{style:{display:'flex',gap:6,flexShrink:0},onClick:e=>e.stopPropagation()},
             ev.meet_link&&!ev._task&&el('button',{onClick:e=>{e.stopPropagation();onJoinCall(ev.meet_link.split('/').pop(),ev.title,ev.meet_link);},style:{background:'#10b981',color:'#fff',padding:'7px 14px',borderRadius:8,border:'none',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}},'🎥 Join'),
-            ev.meet_link&&!ev._task&&el('button',{onClick:e=>{e.stopPropagation();navigator.clipboard.writeText(ev.meet_link);alert('Link copied!');},style:{background:'rgba(16,185,129,.1)',color:'#10b981',border:'1px solid rgba(16,185,129,.3)',padding:'7px 12px',borderRadius:8,fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}},'🔗'),
             !ev._task&&el('button',{onClick:e=>{e.stopPropagation();setNotesEvent(ev);},style:{background:'rgba(245,166,35,.1)',color:'var(--accent)',border:'1px solid rgba(245,166,35,.2)',padding:'7px 12px',borderRadius:8,fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}},'🤖'),
           ),
         ),
@@ -1954,8 +1834,6 @@ function Calendar({events,setEvents,tasks,cu,users,locFilter,meetingNotes,setMee
         ),
       ))
     ),
-
-    // NEW EVENT MODAL
     showNew&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setNew(false)},
       el('div',{className:'md',style:{width:600}},
         el('div',{className:'mh'},el('div',{className:'mt2'},'New Event'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
@@ -1993,7 +1871,6 @@ function Calendar({events,setEvents,tasks,cu,users,locFilter,meetingNotes,setMee
             f.meet_link&&el('a',{href:f.meet_link,target:'_blank',style:{fontSize:11,color:'var(--green)',marginTop:4,display:'block'}},'🎥 Test link: '+f.meet_link),
           ),
           el('div',{className:'fg'},el('label',null,'Description'),el('textarea',{placeholder:'More details...',value:f.description,onChange:ev=>setF(p=>({...p,description:ev.target.value}))})),
-          // Attendees
           el('div',{className:'fg'},
             el('label',null,'Invite People'),
             el('select',{value:'',onChange:ev=>{const u=users.find(x=>x.id===ev.target.value);if(u&&!f.attendees.find(a=>a.id===u.id))setF(p=>({...p,attendees:[...p.attendees,{id:u.id,name:u.name,email:u.email}]}));ev.target.value='';},style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
@@ -2008,10 +1885,7 @@ function Calendar({events,setEvents,tasks,cu,users,locFilter,meetingNotes,setMee
               ))
             ),
           ),
-          el('div',{className:'fg'},
-            el('label',null,'Location Filter'),
-            el('select',{value:f.loc,onChange:ev=>setF(p=>({...p,loc:ev.target.value}))},['Nationwide','Michigan','Missouri'].map(l=>el('option',{key:l,value:l},l))),
-          ),
+          el('div',{className:'fg'},el('label',null,'Location Filter'),el('select',{value:f.loc,onChange:ev=>setF(p=>({...p,loc:ev.target.value}))},['Nationwide','Michigan','Missouri'].map(l=>el('option',{key:l,value:l},l)))),
         ),
         el('div',{className:'mf'},
           el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),
@@ -2019,8 +1893,6 @@ function Calendar({events,setEvents,tasks,cu,users,locFilter,meetingNotes,setMee
         ),
       )
     ),
-
-    // EVENT DETAIL MODAL
     sel&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setSel(null)},
       el('div',{className:'md',style:{width:560}},
         el('div',{className:'mh',style:{borderLeft:`4px solid ${sel.color||'var(--accent)'}`,paddingLeft:20}},
@@ -2041,21 +1913,19 @@ function Calendar({events,setEvents,tasks,cu,users,locFilter,meetingNotes,setMee
           sel.description&&el('div',{style:{marginBottom:12,background:'var(--surface2)',borderRadius:8,padding:12}},el('div',{style:{fontSize:13,lineHeight:1.6,color:'var(--text2)'}},sel.description)),
           sel.meet_link&&!sel._task&&el('div',{style:{marginBottom:16}},
             el('div',{style:{fontSize:11,color:'var(--text3)',marginBottom:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px'}},'Video Meeting'),
-            // Google Meet style link box
             el('div',{style:{background:'rgba(16,185,129,.06)',border:'1px solid rgba(16,185,129,.25)',borderRadius:12,padding:'14px 16px',marginBottom:12}},
-              el('div',{style:{fontSize:11,color:'#10b981',fontWeight:700,marginBottom:8,textTransform:'uppercase',letterSpacing:'.5px'}},'🔗 Meeting Link — Share this with anyone'),
+              el('div',{style:{fontSize:11,color:'#10b981',fontWeight:700,marginBottom:8,textTransform:'uppercase',letterSpacing:'.5px'}},'🔗 Meeting Link'),
               el('div',{style:{display:'flex',gap:8,alignItems:'center'}},
                 el('div',{style:{flex:1,background:'var(--bg)',border:'1px solid var(--border)',borderRadius:8,padding:'9px 12px',fontSize:12,color:'var(--text2)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',fontFamily:'DM Mono,monospace'}},sel.meet_link),
                 el('button',{onClick:()=>{navigator.clipboard.writeText(sel.meet_link);alert('Link copied!');},style:{background:'rgba(16,185,129,.15)',color:'#10b981',border:'1px solid rgba(16,185,129,.3)',borderRadius:8,padding:'9px 14px',cursor:'pointer',fontFamily:'inherit',fontSize:12,fontWeight:700,whiteSpace:'nowrap'}},'📋 Copy'),
               ),
             ),
-            // Join buttons
-            el('div',{style:{display:'flex',gap:8,flexWrap:'wrap'}},
+            el('div',{style:{display:'flex',gap:8}},
               el('button',{onClick:()=>{setSel(null);onJoinCall(sel.meet_link.split('/').pop(),sel.title,sel.meet_link);},style:{flex:1,display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,background:'#10b981',color:'#fff',padding:'12px 20px',borderRadius:10,border:'none',fontWeight:700,fontSize:14,cursor:'pointer',fontFamily:'inherit'}},'🎥 Join Now'),
               el('a',{href:sel.meet_link,target:'_blank',style:{display:'inline-flex',alignItems:'center',gap:8,background:'rgba(16,185,129,.1)',color:'#10b981',border:'1px solid rgba(16,185,129,.3)',padding:'12px 16px',borderRadius:10,textDecoration:'none',fontWeight:700,fontSize:13}},'↗ Browser'),
             ),
           ),
-          (sel.attendees||[]).length>0&&el('div',{marginBottom:12},
+          (sel.attendees||[]).length>0&&el('div',{style:{marginBottom:12}},
             el('div',{style:{fontSize:11,color:'var(--text3)',marginBottom:8,fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px'}},'Attendees ('+sel.attendees.length+')'),
             el('div',{style:{display:'flex',flexDirection:'column',gap:6}},
               (sel.attendees||[]).map(a=>el('div',{key:a.id,style:{display:'flex',alignItems:'center',gap:8}},
@@ -2066,9 +1936,7 @@ function Calendar({events,setEvents,tasks,cu,users,locFilter,meetingNotes,setMee
           ),
         ),
         el('div',{className:'mf',style:{justifyContent:'space-between'}},
-          el('div',null,
-            !sel._task&&(sel.created_by_id===cu.id||cu.role==='admin')&&el('button',{className:'btn b-red',onClick:()=>deleteEvent(sel.id)},'Delete'),
-          ),
+          el('div',null,!sel._task&&(sel.created_by_id===cu.id||cu.role==='admin')&&el('button',{className:'btn b-red',onClick:()=>deleteEvent(sel.id)},'Delete')),
           el('div',{style:{display:'flex',gap:8,flexWrap:'wrap'}},
             sel.meet_link&&!sel._task&&el('button',{onClick:()=>{setSel(null);onJoinCall(sel.meet_link.split('/').pop(),sel.title,sel.meet_link);},style:{background:'#10b981',color:'#fff',padding:'9px 16px',borderRadius:8,border:'none',fontWeight:700,fontSize:13,display:'inline-flex',alignItems:'center',gap:6,cursor:'pointer',fontFamily:'inherit'}},'🎥 Join'),
             !sel._task&&(sel.type==='meeting'||(sel.attendees||[]).length>0)&&el('button',{onClick:()=>{setSel(null);setNotesEvent(sel);},style:{background:'rgba(245,166,35,.1)',color:'var(--accent)',border:'1px solid rgba(245,166,35,.3)',padding:'9px 16px',borderRadius:8,fontWeight:700,fontSize:13,cursor:'pointer',fontFamily:'inherit',display:'inline-flex',alignItems:'center',gap:6}},'🤖 AI Notes'+(meetingNotes?.find(n=>n.event_id===sel.id)?' ✓':'')),
@@ -2077,9 +1945,9 @@ function Calendar({events,setEvents,tasks,cu,users,locFilter,meetingNotes,setMee
         ),
       )
     ),
+    notesEvent&&el(MeetingNotesModal,{event:notesEvent,cu,users,meetingNotes,setMeetingNotes,onClose:()=>setNotesEvent(null)}),
   );
 }
-
 
 // ── PULL TO REFRESH ──────────────────────────────────────────────────────────
 function usePullToRefresh(onRefresh){
@@ -2090,39 +1958,27 @@ function usePullToRefresh(onRefresh){
       if(!startY)return;
       const dy=e.touches[0].clientY-startY;
       const ind=document.getElementById('ptr-indicator');
-      if(dy>10&&dy<100&&ind){
-        pulling=true;
-        ind.style.display='flex';
-        ind.style.opacity=String(Math.min(dy/60,1));
-        ind.style.transform='translateY('+Math.min(dy-10,50)+'px)';
-      }
+      if(dy>10&&dy<100&&ind){pulling=true;ind.style.display='flex';ind.style.opacity=String(Math.min(dy/60,1));ind.style.transform='translateY('+Math.min(dy-10,50)+'px)';}
     }
     function touchEnd(){
       const ind=document.getElementById('ptr-indicator');
       if(pulling&&ind){
-        const t=ind.style.transform||'';
-        const dy=parseInt(t.replace('translateY(','').replace('px)',''))||0;
+        const dy=parseInt((ind.style.transform||'').replace('translateY(','').replace('px)',''))||0;
         if(dy>35){
           ind.innerHTML='<div style="animation:spin .6s linear infinite;width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%"></div><span style="margin-left:8px">Refreshing...</span>';
           setTimeout(()=>{onRefresh();ind.style.display='none';ind.style.opacity='0';},600);
-        } else {
-          ind.style.display='none';
-        }
+        }else{ind.style.display='none';}
       }
       startY=0;pulling=false;
     }
     document.addEventListener('touchstart',touchStart,{passive:true});
     document.addEventListener('touchmove',touchMove,{passive:true});
     document.addEventListener('touchend',touchEnd);
-    return()=>{
-      document.removeEventListener('touchstart',touchStart);
-      document.removeEventListener('touchmove',touchMove);
-      document.removeEventListener('touchend',touchEnd);
-    };
+    return()=>{document.removeEventListener('touchstart',touchStart);document.removeEventListener('touchmove',touchMove);document.removeEventListener('touchend',touchEnd);};
   },[onRefresh]);
 }
 
-// ── APP ───────────────────────────────────────────────────────────────────────
+// ── APP ─── FIX 1+2: Corrected Promise.all destructuring ─────────────────────
 function App(){
   const[cu,setCu]=useState(()=>{try{const s=localStorage.getItem('pf_session');return s?JSON.parse(s):null;}catch{return null;}});
   const[tasks,setTasks]=useState([]);
@@ -2134,9 +1990,10 @@ function App(){
   const[dbReady,setDbReady]=useState(null);
   const[page,setPage]=useState('board');
   const[holdAlert,setHoldAlert]=useState(null);
-  const[activeCall,setActiveCall]=useState(null); // {room, title}
-  const[refreshKey,setRefreshKey]=useState(0);
+  const[activeCall,setActiveCall]=useState(null);
+  const[locFilter,setLocFilter]=useState(()=>{try{const s=localStorage.getItem('pf_session');const u=s?JSON.parse(s):null;return u?.loc||'Nationwide';}catch{return 'Nationwide';}});
 
+  // FIX 2: doRefresh with correct destructuring
   const doRefresh=useCallback(()=>{
     if(!cu||!dbReady)return;
     Promise.all([
@@ -2145,37 +2002,37 @@ function App(){
       db.get('pf_users').catch(()=>[]),
       db.get('pf_events','order=date.asc').catch(()=>[]),
       db.get('pf_meeting_notes','order=created_at.desc').catch(()=>[]),
-    ]).then(([t,u,ev,mn,st])=>{setTasks(t||[]);setUsers(u||[]);});
+    ]).then(([_tasks,_sales,_users,_events,_notes])=>{
+      setTasks(_tasks||[]);
+      setSalesTasks(_sales||[]);
+      setUsers(_users||[]);
+      setEvents(_events||[]);
+      setMeetingNotes(_notes||[]);
+    });
   },[cu,dbReady]);
 
   usePullToRefresh(doRefresh);
-  const[locFilter,setLocFilter]=useState(()=>{try{const s=localStorage.getItem('pf_session');const u=s?JSON.parse(s):null;return u?.loc||'Nationwide';}catch{return 'Nationwide';}});
 
   useEffect(()=>{
     db.get('pf_users','limit=1').then(()=>setDbReady(true)).catch(()=>setDbReady(false));
   },[]);
 
-  // Auto sign-out after 5 minutes of inactivity
   useEffect(()=>{
     if(!cu)return;
     let timer;
     const reset=()=>{
       clearTimeout(timer);
-      timer=setTimeout(()=>{
-        localStorage.removeItem('pf_session');
-        setCu(null);
-        alert('You have been signed out due to inactivity.');
-      },5*60*1000); // 5 minutes
+      timer=setTimeout(()=>{localStorage.removeItem('pf_session');setCu(null);alert('You have been signed out due to inactivity.');},5*60*1000);
     };
-    const events=['mousemove','keydown','click','touchstart','scroll'];
-    events.forEach(e=>window.addEventListener(e,reset,{passive:true}));
-    reset(); // start timer
-    return()=>{clearTimeout(timer);events.forEach(e=>window.removeEventListener(e,reset));};
+    const evts=['mousemove','keydown','click','touchstart','scroll'];
+    evts.forEach(e=>window.addEventListener(e,reset,{passive:true}));
+    reset();
+    return()=>{clearTimeout(timer);evts.forEach(e=>window.removeEventListener(e,reset));};
   },[cu]);
 
+  // FIX 1: main data load with correct destructuring
   useEffect(()=>{
     if(!cu||!dbReady)return;
-    // Request push notification permission
     setTimeout(()=>requestPushPermission(cu.id),2000);
     setLoading(true);
     Promise.all([
@@ -2184,14 +2041,13 @@ function App(){
       db.get('pf_users').catch(()=>[]),
       db.get('pf_events','order=date.asc').catch(()=>[]),
       db.get('pf_meeting_notes','order=created_at.desc').catch(()=>[]),
-    ]).then(([t,u,ev,mn,st])=>{
-      setTasks(t||[]);
-      setUsers(u||[]);
-      setEvents(ev||[]);
-      setMeetingNotes(mn||[]);
-      setSalesTasks(st||[]);
+    ]).then(([_tasks,_sales,_users,_events,_notes])=>{
+      setTasks(_tasks||[]);
+      setSalesTasks(_sales||[]);
+      setUsers(_users||[]);
+      setEvents(_events||[]);
+      setMeetingNotes(_notes||[]);
     }).catch(console.error).finally(()=>setLoading(false));
-    // Check for tasks placed on hold for this user
     db.get('pf_tasks','status=eq.on_hold&order=updated_at.desc').then(held=>{
       const myHeld=(held||[]).filter(t=>(t.assignees||[]).some(a=>a.id===cu?.id)&&!sessionStorage.getItem('hold-dismissed-'+t.id));
       if(myHeld.length>0) setHoldAlert(myHeld[0]);
@@ -2231,12 +2087,11 @@ function App(){
       nav.map(item=>el('button',{key:item.id,className:`nav${page===item.id?' on':''}`,onClick:()=>setPage(item.id)},
         el('span',null,item.ico),item.label,item.badge&&el('span',{className:'dot'},item.badge)
       )),
-      // Quick stats in sidebar
       el('div',{style:{margin:'16px 0',padding:'12px',background:'var(--surface2)',borderRadius:'var(--rs)'}},
         el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.8px',marginBottom:10}},'Quick Stats'),
         [{l:'My Tasks',v:myTasks.length,c:'var(--accent)'},{l:'Overdue',v:overdueCt,c:overdueCt>0?'var(--red)':'var(--text3)'}].map(({l,v,c})=>
           el('div',{key:l,style:{display:'flex',justifyContent:'space-between',marginBottom:6}},
-            el('span',{style:{fontSize:12,color:'var(--text2)'}},' '+l),
+            el('span',{style:{fontSize:12,color:'var(--text2)'}},l),
             el('span',{style:{fontSize:13,fontWeight:700,color:c}},v),
           )
         )
@@ -2245,17 +2100,13 @@ function App(){
         el('div',{className:'sb-name'},cu.name),
         el('div',{className:'sb-role'},`${RLABEL[cu.role]||cu.role} · ${cu.dept}`),
         el('div',{className:'sb-role',style:{marginTop:2}},cu.loc),
-          el('button',{
+        el('button',{
           onClick:async()=>{
             if(!('Notification' in window)){alert('Notifications not supported on this browser.');return;}
             if(Notification.permission==='granted'){alert('Notifications already enabled! ✓');return;}
             const perm=await Notification.requestPermission();
-            if(perm==='granted'){
-              requestPushPermission(cu.id);
-              new Notification('Hendrix TMS',{body:'Notifications enabled! You will now receive task alerts.',icon:'/ProFlow/icon-192.png'});
-            } else if(perm==='denied'){
-              alert('Notifications blocked. Go to your browser settings → Site Settings → Notifications → Allow dj340.github.io');
-            }
+            if(perm==='granted'){requestPushPermission(cu.id);new Notification('Hendrix TMS',{body:'Notifications enabled!',icon:'/ProFlow/icon-192.png'});}
+            else if(perm==='denied'){alert('Notifications blocked. Go to browser settings → Site Settings → Notifications → Allow.');}
           },
           style:{marginTop:8,width:'100%',background:typeof Notification!=='undefined'&&Notification.permission==='granted'?'rgba(16,185,129,.08)':'rgba(245,166,35,.06)',border:'1px solid',borderColor:typeof Notification!=='undefined'&&Notification.permission==='granted'?'rgba(16,185,129,.2)':'rgba(245,166,35,.2)',borderRadius:'var(--rs)',padding:'8px',color:typeof Notification!=='undefined'&&Notification.permission==='granted'?'var(--green)':'var(--accent)',fontFamily:'inherit',fontSize:12,fontWeight:600,cursor:'pointer',transition:'all .15s',letterSpacing:'.3px'}
         },typeof Notification!=='undefined'&&Notification.permission==='granted'?'🔔 Notifications On ✓':'🔔 Enable Notifications'),
@@ -2265,16 +2116,8 @@ function App(){
         },'⏻  Sign Out'),
       )
     ),
-    // Active video call overlay
-    activeCall&&el(VideoCall,{
-      room:activeCall.room,
-      meetLink:activeCall.meetLink,
-      displayName:cu.name,
-      onEnd:()=>setActiveCall(null),
-    }),
-    // Pull to refresh indicator
+    activeCall&&el(VideoCall,{room:activeCall.room,meetLink:activeCall.meetLink,displayName:cu.name,onEnd:()=>setActiveCall(null)}),
     el('div',{id:'ptr-indicator',style:{display:'none',position:'fixed',top:10,left:'50%',transform:'translateX(-50%)',background:'var(--surface)',border:'1px solid var(--border)',borderRadius:20,padding:'8px 16px',zIndex:9998,alignItems:'center',gap:8,fontSize:12,color:'var(--text2)',boxShadow:'0 4px 12px rgba(0,0,0,.3)'}},'↓ Pull to refresh'),
-    // Update available banner
     el('div',{id:'update-banner',style:{display:'none'},className:'update-banner'},
       el('span',null,'🆕 New version available!'),
       el('button',{onClick:()=>window.location.reload(true),style:{background:'rgba(0,0,0,.2)',border:'none',borderRadius:6,padding:'5px 14px',color:'#0a0f1e',fontFamily:'inherit',fontSize:12,fontWeight:700,cursor:'pointer'}},'Update Now'),
@@ -2289,23 +2132,12 @@ function App(){
         el('button',{onClick:()=>{sessionStorage.setItem('hold-dismissed-'+holdAlert.id,'1');setHoldAlert(null);},style:{background:'rgba(255,255,255,.2)',border:'2px solid rgba(255,255,255,.5)',borderRadius:10,padding:'10px 28px',color:'#fff',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer'}},'I Understand'),
       )
     ),
-    // Mobile bottom nav
     el('div',{className:'mobile-nav'},
-      el('button',{className:`mnav-btn${page==='board'?' on':''}`,onClick:()=>setPage('board')},
-        el('span',{className:'mnav-ico'},'⬛'),'Board'
-      ),
-      el('button',{className:`mnav-btn${page==='sales'?' on':''}`,onClick:()=>setPage('sales')},
-        el('span',{className:'mnav-ico'},'🏪'),'Sales'
-      ),
-      el('button',{className:`mnav-btn${page==='calendar'?' on':''}`,onClick:()=>setPage('calendar')},
-        el('span',{className:'mnav-ico'},'📅'),'Calendar'
-      ),
+      el('button',{className:`mnav-btn${page==='board'?' on':''}`,onClick:()=>setPage('board')},el('span',{className:'mnav-ico'},'⬛'),'Board'),
+      el('button',{className:`mnav-btn${page==='sales'?' on':''}`,onClick:()=>setPage('sales')},el('span',{className:'mnav-ico'},'🏪'),'Sales'),
+      el('button',{className:`mnav-btn${page==='calendar'?' on':''}`,onClick:()=>setPage('calendar')},el('span',{className:'mnav-ico'},'📅'),'Calendar'),
       cu.role==='admin'&&el('button',{className:`mnav-btn${page==='team'?' on':''}`,onClick:()=>setPage('team')},
-        el('div',{style:{position:'relative',display:'inline-block'}},
-          el('span',{className:'mnav-ico'},'👥'),
-          pending>0&&el('span',{className:'mnav-dot'},pending),
-        ),
-        'Team'
+        el('div',{style:{position:'relative',display:'inline-block'}},el('span',{className:'mnav-ico'},'👥'),pending>0&&el('span',{className:'mnav-dot'},pending)),'Team'
       ),
       el('button',{className:'mnav-btn',onClick:async()=>{
           if(!('Notification' in window)){alert('Not supported');return;}
@@ -2314,13 +2146,9 @@ function App(){
           if(p==='granted'){requestPushPermission(cu.id);new Notification('Hendrix TMS',{body:'Notifications enabled!',icon:'/ProFlow/icon-192.png'});}
           else alert('Blocked — go to browser settings to allow notifications');
         }},
-        el('span',{className:'mnav-ico'},typeof Notification!=='undefined'&&Notification.permission==='granted'?'🔔':'🔕'),
-        'Alerts'
+        el('span',{className:'mnav-ico'},typeof Notification!=='undefined'&&Notification.permission==='granted'?'🔔':'🔕'),'Alerts'
       ),
-      el('button',{className:'mnav-btn',onClick:()=>{if(window.confirm('Sign out?')){localStorage.removeItem('pf_session');window.location.reload();}}},
-        el('span',{className:'mnav-ico'},'⏻'),
-        'Sign Out'
-      ),
+      el('button',{className:'mnav-btn',onClick:()=>{if(window.confirm('Sign out?')){localStorage.removeItem('pf_session');window.location.reload();}}},el('span',{className:'mnav-ico'},'⏻'),'Sign Out'),
     ),
     el('div',{className:'main'},
       page==='board'&&el(Board,{tasks,setTasks,cu,users,locFilter,setLocFilter}),
@@ -2339,14 +2167,11 @@ if('serviceWorker' in navigator && window.location.hostname !== 'www.claudeuserc
     navigator.serviceWorker.register('/ProFlow/sw.js')
       .then(reg => {
         console.log('SW registered');
-        // Check for updates every 30 minutes
         setInterval(() => reg.update(), 30 * 60 * 1000);
-        // Listen for new SW waiting
         reg.addEventListener('updatefound', () => {
           const newSW = reg.installing;
           newSW.addEventListener('statechange', () => {
             if(newSW.state === 'installed' && navigator.serviceWorker.controller) {
-              // New version available — show update banner
               const banner = document.getElementById('update-banner');
               if(banner) banner.style.display = 'flex';
             }
@@ -2354,7 +2179,6 @@ if('serviceWorker' in navigator && window.location.hostname !== 'www.claudeuserc
         });
       })
       .catch(e => console.log('SW failed:', e));
-    // Listen for SW messages (auto reload on update)
     navigator.serviceWorker.addEventListener('message', ev => {
       if(ev.data?.type === 'SW_UPDATED') {
         const banner = document.getElementById('update-banner');
@@ -2363,12 +2187,10 @@ if('serviceWorker' in navigator && window.location.hostname !== 'www.claudeuserc
     });
   });
 }
-// PWA install prompt
 let deferredPrompt;
 window.addEventListener('beforeinstallprompt', e => {
   e.preventDefault();
   deferredPrompt = e;
-  // Show install banner after 3 seconds if not installed
   setTimeout(() => {
     if(deferredPrompt) {
       const banner = document.createElement('div');
