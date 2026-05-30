@@ -132,6 +132,8 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 @keyframes pulse-red{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.4)}50%{box-shadow:0 0 0 20px rgba(239,68,68,0)}}
 .on-hold-alert{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(239,68,68,.15);backdrop-filter:blur(2px);animation:shake .5s ease 0s 3;}
 .on-hold-banner{background:#ef4444;color:#fff;padding:32px 40px;border-radius:16px;text-align:center;max-width:420px;box-shadow:0 0 60px rgba(239,68,68,.6);animation:pulse-red 1s infinite;}
+.cancelled-alert{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(239,68,68,.15);backdrop-filter:blur(2px);animation:shake .5s ease 0s 3;}
+.cancelled-banner{background:linear-gradient(135deg,#b91c1c,#ef4444);color:#fff;padding:32px 40px;border-radius:16px;text-align:center;max-width:440px;box-shadow:0 0 60px rgba(239,68,68,.6);animation:pulse-red 1s infinite;}
 .tabs{display:flex;gap:3px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:3px;margin-bottom:18px;width:fit-content;}
 .tab{padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;color:var(--text2);border:none;background:none;font-family:inherit;transition:all .15s;}
 .tab.on{background:var(--surface3);color:var(--text);border:1px solid var(--border2);}
@@ -885,6 +887,9 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter}){
   const[selected,setSelected]=useState(null);
   const[tagInput,setTagInput]=useState('');
   const[saving,setSaving]=useState(false);
+  const[colOrder,setColOrder]=useState(()=>{try{const s=localStorage.getItem('pf_col_order');return s?JSON.parse(s):COLS.map(c=>c.id);}catch{return COLS.map(c=>c.id);}});
+  const[dragCol,setDragCol]=useState(null);
+  const[dragOver,setDragOver]=useState(null);
   const[f,setF]=useState({title:'',section:'General',description:'',assignees:[],due_date:'',priority:'medium',loc:locFilter==='Nationwide'?'Nationwide':locFilter,tags:[]});
   const today=new Date().toISOString().slice(0,10);
   const isAdmin=cu.role==='admin';
@@ -932,6 +937,21 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter}){
   function handleUpdate(updated){setTasks(p=>p.map(t=>t.id===updated.id?updated:t));setSelected(updated);}
   function handleDelete(id){setTasks(p=>p.filter(t=>t.id!==id));}
 
+  function onDragStart(colId){setDragCol(colId);}
+  function onDragOver(ev,colId){ev.preventDefault();setDragOver(colId);}
+  function onDrop(colId){
+    if(!dragCol||dragCol===colId)return;
+    const order=[...colOrder];
+    const from=order.indexOf(dragCol);
+    const to=order.indexOf(colId);
+    order.splice(from,1);order.splice(to,0,dragCol);
+    setColOrder(order);
+    localStorage.setItem('pf_col_order',JSON.stringify(order));
+    setDragCol(null);setDragOver(null);
+  }
+  function onDragEnd(){setDragCol(null);setDragOver(null);}
+  const orderedCols=colOrder.map(id=>COLS.find(c=>c.id===id)).filter(Boolean);
+
   const myTasks=filtered.filter(t=>!['archived'].includes(t.status)&&(t.assignees||[]).some(a=>a.id===cu.id));
   const overdue=filtered.filter(t=>!['done','archived'].includes(t.status)&&t.due_date&&t.due_date<today);
   const dueToday=filtered.filter(t=>!['done','archived'].includes(t.status)&&t.due_date===today);
@@ -949,11 +969,17 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter}){
   return el('div',null,
     el('div',{className:'ph'},
       el('div',null,el('div',{className:'pt'},'Task Board'),el('div',{className:'ps'},'Manage and track tasks across your team')),
-      el('div',{style:{display:'flex',gap:8,alignItems:'center'}},
+      el('div',{style:{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}},
         el('div',{className:'view-toggle'},
           el('button',{className:`vbtn${view==='board'?' on':''}`,onClick:()=>setView('board')},'⬛ Board'),
           el('button',{className:`vbtn${view==='list'?' on':''}`,onClick:()=>setView('list')},'☰ List'),
         ),
+        view==='board'&&el('button',{
+          className:'btn b-ghost btn-sm',
+          title:'Reset column order',
+          onClick:()=>{const def=COLS.map(c=>c.id);setColOrder(def);localStorage.setItem('pf_col_order',JSON.stringify(def));},
+          style:{fontSize:11,opacity:.7}
+        },'↺ Reset Layout'),
         el('button',{className:'btn b-blue',onClick:()=>setNew(true)},'+ New Task'),
       ),
     ),
@@ -976,15 +1002,37 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter}){
       ),
     ),
     view==='board'&&el('div',{className:'board'},
-      COLS.map(col=>{
+      orderedCols.map(col=>{
         const colTasks=filtered.filter(t=>t.status===col.id);
-        return el('div',{key:col.id,className:'col'},
+        const isDragOver=dragOver===col.id;
+        const isDragging=dragCol===col.id;
+        return el('div',{
+          key:col.id,
+          className:'col',
+          draggable:true,
+          onDragStart:()=>onDragStart(col.id),
+          onDragOver:ev=>onDragOver(ev,col.id),
+          onDrop:()=>onDrop(col.id),
+          onDragEnd:onDragEnd,
+          style:{
+            opacity:isDragging?.4:1,
+            border:isDragOver?'2px solid var(--accent)':'1px solid var(--border)',
+            transform:isDragOver?'scale(1.01)':'none',
+            transition:'transform .15s,border-color .15s,opacity .15s',
+            cursor:'grab',
+          },
+        },
           el('div',{className:'col-header'},
-            el('div',{className:'col-title'},el('div',{className:'col-dot',style:{background:col.color}}),col.label,el('div',{className:'col-count'},colTasks.length)),
-            el('button',{onClick:()=>{setF(p=>({...p,status:col.id}));setNew(true);},style:{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:20,lineHeight:1,padding:'0 4px'}},'＋'),
+            el('div',{className:'col-title'},
+              el('span',{style:{color:'var(--text3)',fontSize:12,cursor:'grab',marginRight:2}},'⠿'),
+              el('div',{className:'col-dot',style:{background:col.color}}),
+              col.label,
+              el('div',{className:'col-count'},colTasks.length)
+            ),
+            el('button',{onClick:ev=>{ev.stopPropagation();setF(p=>({...p,status:col.id}));setNew(true);},style:{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:20,lineHeight:1,padding:'0 4px'}},'＋'),
           ),
           colTasks.length===0?
-            el('div',{style:{border:'2px dashed var(--border)',borderRadius:8,padding:'24px 12px',textAlign:'center',color:'var(--text3)',fontSize:12}},'Empty'):
+            el('div',{style:{border:'2px dashed var(--border)',borderRadius:8,padding:'24px 12px',textAlign:'center',color:'var(--text3)',fontSize:12}},'Drop here'):
             colTasks.map(task=>el(TaskCard,{key:task.id,task,onClick:()=>setSelected(task)})),
         );
       })
@@ -1552,6 +1600,7 @@ function SalesMarketing({salesTasks,setSalesTasks,cu,users,locFilter}){
     {id:'in_progress',label:'In Progress',color:'#f5a623'},
     {id:'completed',label:'Completed',color:'#22c55e'},
     {id:'reported',label:'Reported',color:'#8b5cf6'},
+    {id:'cancelled',label:'Cancelled',color:'#ef4444'},
   ];
 
   const assignable=users.filter(u=>{
@@ -1598,11 +1647,38 @@ function SalesMarketing({salesTasks,setSalesTasks,cu,users,locFilter}){
     setNew(false);setSaving(false);
   }
 
-  async function updateStatus(task,status){
+  async function updateStatus(task,status,reason){
+    if(status==='cancelled'&&!reason){
+      setCancelTarget(task);setCancelReason('');setShowCancelModal(true);return;
+    }
     const update={status,updated_at:new Date().toISOString()};
+    if(status==='cancelled'&&reason) update.cancel_reason=reason;
     try{await db.update('pf_sales_tasks',task.id,update);}catch(e){console.error(e);}
     setSalesTasks(p=>p.map(t=>t.id===task.id?{...t,...update}:t));
     setSel(s=>s?{...s,...update}:null);
+    // Buzz + notify assignee if cancelled
+    if(status==='cancelled'){
+      sendLocalNotification('🚫 Sales Task Cancelled',task.title+(reason?' — '+reason:'')).catch(()=>{});
+      const assignee=users.find(u=>u.id===task.assigned_id);
+      if(assignee?.email){
+        sendEmail({to:assignee.email,subject:`🚫 Sales Task Cancelled: "${task.title}"`,
+          html:`<div style="font-family:sans-serif;background:#0a0f1e;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #7f1d1d">
+            <div style="background:#ef4444;color:#fff;padding:16px;border-radius:10px;margin-bottom:20px;text-align:center">
+              <div style="font-size:32px;margin-bottom:8px">🚫</div>
+              <div style="font-size:20px;font-weight:800">TASK CANCELLED</div>
+            </div>
+            <div style="font-size:16px;font-weight:700;margin-bottom:12px">${task.title}</div>
+            ${reason?`<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;color:#fca5a5"><strong>Reason:</strong> ${reason}</div>`:''}
+            <div style="font-size:12px;color:#7b8db8">Cancelled by ${cu.name}</div>
+            <a href="${APP_URL}" style="display:inline-block;margin-top:16px;background:#ef4444;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">View in App →</a>
+          </div>`
+        });
+      }
+      // Show buzz alert to current user if they're the assignee
+      if(task.assigned_id===cu.id||!task.assigned_id){
+        setCancelAlert({...task,...update,cancel_reason:reason});
+      }
+    }
   }
 
   async function addNote(){
@@ -1760,6 +1836,46 @@ function SalesMarketing({salesTasks,setSalesTasks,cu,users,locFilter}){
           el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),
           el('button',{className:'btn b-blue',onClick:create,disabled:saving||!f.assigned_id||!f.date},saving?'Saving...':'Create & Notify'),
         ),
+      )
+    ),
+    // ── CANCEL REASON MODAL ────────────────────────────────────────────────
+    showCancelModal&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setShowCancelModal(false)},
+      el('div',{className:'md',style:{width:480}},
+        el('div',{className:'mh'},
+          el('div',{className:'mt2',style:{color:'var(--red)'}},'🚫 Cancel Task'),
+          el('button',{className:'mc',onClick:()=>setShowCancelModal(false)},'×'),
+        ),
+        el('div',{className:'mbd'},
+          el('div',{style:{background:'rgba(239,68,68,.06)',border:'1px solid rgba(239,68,68,.2)',borderRadius:10,padding:'12px 16px',marginBottom:16,fontSize:13,fontWeight:600}},
+            cancelTarget?.title
+          ),
+          el('div',{className:'fg'},
+            el('label',null,'Reason for Cancellation *'),
+            el('textarea',{value:cancelReason,onChange:ev=>setCancelReason(ev.target.value),placeholder:'Explain why this task is being cancelled...',autoFocus:true,style:{width:'100%',background:'var(--bg)',border:'1px solid var(--red)',borderRadius:'var(--rs)',padding:'11px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:100,resize:'vertical'}}),
+          ),
+        ),
+        el('div',{className:'mf'},
+          el('button',{className:'btn b-ghost',onClick:()=>setShowCancelModal(false)},'Keep Task'),
+          el('button',{
+            onClick:async()=>{
+              if(!cancelReason.trim()){alert('Please enter a reason.');return;}
+              await updateStatus(cancelTarget,'cancelled',cancelReason.trim());
+              setShowCancelModal(false);setSel(null);
+            },
+            style:{background:'var(--red)',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'9px 20px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer'}
+          },'🚫 Confirm Cancel & Notify'),
+        ),
+      )
+    ),
+    // ── CANCELLED BUZZ ALERT ───────────────────────────────────────────────
+    cancelAlert&&el('div',{className:'cancelled-alert',onClick:()=>setCancelAlert(null)},
+      el('div',{className:'cancelled-banner'},
+        el('div',{style:{fontSize:40,marginBottom:12}},'🚫'),
+        el('div',{style:{fontSize:22,fontWeight:800,marginBottom:8,letterSpacing:'-.5px'}},'TASK CANCELLED'),
+        el('div',{style:{fontSize:16,fontWeight:700,marginBottom:12}},cancelAlert.title),
+        cancelAlert.cancel_reason&&el('div',{style:{fontSize:14,opacity:.9,marginBottom:16,lineHeight:1.5,background:'rgba(0,0,0,.2)',borderRadius:8,padding:'10px 14px'}},'"'+cancelAlert.cancel_reason+'"'),
+        el('div',{style:{fontSize:13,opacity:.8,marginBottom:20}},'Cancelled by '+cu.name),
+        el('button',{onClick:()=>setCancelAlert(null),style:{background:'rgba(255,255,255,.2)',border:'2px solid rgba(255,255,255,.5)',borderRadius:10,padding:'10px 28px',color:'#fff',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer'}},'Dismiss'),
       )
     ),
     sel&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setSel(null)},
