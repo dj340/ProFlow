@@ -144,6 +144,10 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .loading{display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:14px;color:var(--text2);font-size:14px;position:relative;z-index:1;}
 .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
+@keyframes shake{0%,100%{transform:translateX(0)}10%,30%,50%,70%,90%{transform:translateX(-8px)}20%,40%,60%,80%{transform:translateX(8px)}}
+@keyframes pulse-red{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.4)}50%{box-shadow:0 0 0 20px rgba(239,68,68,0)}}
+.on-hold-alert{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(239,68,68,.15);backdrop-filter:blur(2px);animation:shake .5s ease 0s 3;}
+.on-hold-banner{background:#ef4444;color:#fff;padding:32px 40px;border-radius:16px;text-align:center;max-width:420px;box-shadow:0 0 60px rgba(239,68,68,.6);animation:pulse-red 1s infinite;}
 .tabs{display:flex;gap:3px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:3px;margin-bottom:18px;width:fit-content;}
 .tab{padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;color:var(--text2);border:none;background:none;font-family:inherit;transition:all .15s;}
 .tab.on{background:var(--surface3);color:var(--text);border:1px solid var(--border2);}
@@ -223,7 +227,8 @@ const SECTIONS=['R&D','Special Projects','Production Investigation','HR','Genera
 const COLS=[
   {id:'not_started',label:'Not Started',color:'#4a5068'},
   {id:'in_progress',label:'In Progress',color:'#f5a623'},
-  {id:'review',label:'In Review',color:'#f59e0b'},
+  {id:'review',label:'In Review',color:'#3b82f6'},
+  {id:'on_hold',label:'On Hold',color:'#ef4444'},
   {id:'done',label:'Done',color:'#22c55e'},
 ];
 
@@ -257,9 +262,12 @@ CREATE TABLE IF NOT EXISTS pf_tasks (
   attachments jsonb default '[]', created_by text,
   created_by_id text, created_at text, updated_at text,
   updated_by text, completed_at text, approved_by text,
-  archived_at text
+  archived_at text, hold_reason text, hold_by text, hold_at text
 );
 ALTER TABLE pf_tasks DISABLE ROW LEVEL SECURITY;
+ALTER TABLE pf_tasks ADD COLUMN IF NOT EXISTS hold_reason text;
+ALTER TABLE pf_tasks ADD COLUMN IF NOT EXISTS hold_by text;
+ALTER TABLE pf_tasks ADD COLUMN IF NOT EXISTS hold_at text;
 `;
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
@@ -365,7 +373,8 @@ function TaskCard({task,onClick}){
           el('span',{className:'section-tag'},task.section),
           (task.tags||[]).map(tag=>el('span',{key:tag,className:'tag'},tag)),
         ),
-        el('div',{style:{fontSize:13,fontWeight:600,marginBottom:8,lineHeight:1.4,color:task.status==='done'?'var(--text2)':'var(--text)'}},task.title),
+        el('div',{style:{fontSize:13,fontWeight:600,marginBottom:task.status==='on_hold'?4:8,lineHeight:1.4,color:task.status==='done'?'var(--text2)':'var(--text)'}},task.title),
+      task.status==='on_hold'&&el('div',{style:{fontSize:11,color:'var(--red)',fontWeight:600,marginBottom:8,display:'flex',alignItems:'center',gap:4}},'🚨 ON HOLD'+(task.hold_reason?' — '+task.hold_reason.slice(0,40)+(task.hold_reason.length>40?'...':''):'')),
         el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center'}},
           el('div',{style:{display:'flex'}},
             (task.assignees||[]).slice(0,4).map((a,i)=>
@@ -453,12 +462,17 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
         el('div',{className:'pipeline'},
           COLS.map(col=>{
             const isActive=task.status===col.id;
-            const allowed=canMove||(col.id==='review'&&isAssigned)||(col.id==='done'&&canApprove);
+            const allowed=(()=>{
+        if(col.id==='on_hold') return canEdit; // only creator/admin can hold
+        if(col.id==='done'||col.id==='archived'||col.id==='approved') return canApprove;
+        if(col.id==='review') return isAssigned||canEdit;
+        return canMove;
+      })();
             return el('button',{key:col.id,className:`pipe-btn${isActive?' active':''}`,
               disabled:!allowed,
               onClick:()=>allowed&&changeStatus(col.id),
-              style:{borderColor:isActive?col.color:'var(--border)',background:isActive?col.color+'22':'transparent',color:isActive?col.color:'var(--text2)'}},
-              col.label
+              style:{borderColor:isActive?col.color:col.id==='on_hold'?'rgba(239,68,68,.2)':'var(--border)',background:isActive?col.color+'22':col.id==='on_hold'?'rgba(239,68,68,.04)':'transparent',color:isActive?col.color:col.id==='on_hold'?'var(--red)':'var(--text2)',fontWeight:col.id==='on_hold'?700:'inherit'}},
+              col.id==='on_hold'?'🚨 '+col.label:col.label
             );
           })
         ),
@@ -697,6 +711,7 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter}){
               el('div',{style:{flex:1,minWidth:0}},
                 el('div',{style:{fontSize:13,fontWeight:600}},task.title),
                 el('div',{style:{fontSize:11,color:'var(--text2)',marginTop:2}},task.section+' · Created by '+task.created_by+(task.loc&&task.loc!=='Nationwide'?' · '+task.loc:'')),
+              task.status==='on_hold'&&el('div',{style:{fontSize:11,color:'var(--red)',fontWeight:700,marginTop:2}},'🚨 ON HOLD — '+task.hold_reason?.slice(0,50)),
               ),
               el('div',{style:{display:'flex',gap:6,alignItems:'center',flexShrink:0}},
                 (task.assignees||[]).slice(0,3).map((a,i)=>el('div',{key:a.id,className:'avatar',title:a.name,style:{background:avatarColor(a.name),marginLeft:i>0?-6:0,width:22,height:22,fontSize:9}},a.name.charAt(0).toUpperCase())),
@@ -906,6 +921,7 @@ function App(){
   const[loading,setLoading]=useState(false);
   const[dbReady,setDbReady]=useState(null);
   const[page,setPage]=useState('board');
+  const[holdAlert,setHoldAlert]=useState(null);
   const[locFilter,setLocFilter]=useState(()=>{try{const s=localStorage.getItem('pf_session');const u=s?JSON.parse(s):null;return u?.loc||'Nationwide';}catch{return 'Nationwide';}});
 
   useEffect(()=>{
@@ -942,6 +958,11 @@ function App(){
       setTasks(t||[]);
       setUsers(u||[]);
     }).catch(console.error).finally(()=>setLoading(false));
+    // Check for tasks placed on hold for this user
+    db.get('pf_tasks','status=eq.on_hold&order=updated_at.desc').then(held=>{
+      const myHeld=(held||[]).filter(t=>(t.assignees||[]).some(a=>a.id===cu?.id)&&!sessionStorage.getItem('hold-dismissed-'+t.id));
+      if(myHeld.length>0) setHoldAlert(myHeld[0]);
+    }).catch(()=>{});
   },[cu,dbReady]);
 
   if(dbReady===null) return el('div',{className:'loading'},el('div',{className:'spinner'}),el('div',null,'Connecting...'));
@@ -993,6 +1014,16 @@ function App(){
           onClick:()=>{localStorage.removeItem('pf_session');setCu(null);},
           style:{marginTop:10,width:'100%',background:'rgba(239,68,68,.08)',border:'1px solid rgba(239,68,68,.2)',borderRadius:'var(--rs)',padding:'8px',color:'var(--red)',fontFamily:'inherit',fontSize:12,fontWeight:600,cursor:'pointer',transition:'all .15s',letterSpacing:'.3px'}
         },'⏻  Sign Out'),
+      )
+    ),
+    holdAlert&&el('div',{className:'on-hold-alert',onClick:()=>setHoldAlert(null)},
+      el('div',{className:'on-hold-banner'},
+        el('div',{style:{fontSize:40,marginBottom:12}},'🚨'),
+        el('div',{style:{fontSize:22,fontWeight:800,marginBottom:8,letterSpacing:'-.5px'}},'TASK ON HOLD'),
+        el('div',{style:{fontSize:16,fontWeight:700,marginBottom:12}},holdAlert.title),
+        holdAlert.hold_reason&&el('div',{style:{fontSize:14,opacity:.9,marginBottom:16,lineHeight:1.5}},'"'+holdAlert.hold_reason+'"'),
+        el('div',{style:{fontSize:13,opacity:.8,marginBottom:20}},'Placed on hold by '+holdAlert.hold_by),
+        el('button',{onClick:()=>{sessionStorage.setItem('hold-dismissed-'+holdAlert.id,'1');setHoldAlert(null);},style:{background:'rgba(255,255,255,.2)',border:'2px solid rgba(255,255,255,.5)',borderRadius:10,padding:'10px 28px',color:'#fff',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer'}},'I Understand'),
       )
     ),
     el('div',{className:'main'},
