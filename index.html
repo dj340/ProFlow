@@ -144,12 +144,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .loading{display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:14px;color:var(--text2);font-size:14px;position:relative;z-index:1;}
 .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
-/* VIDEO CALL */
-.video-overlay{position:fixed;inset:0;background:#000;z-index:9999;display:flex;flex-direction:column;}
-.video-header{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:rgba(0,0,0,.8);border-bottom:1px solid rgba(255,255,255,.1);}
-.video-title{font-size:15px;font-weight:700;color:#fff;}
-.video-end{background:#ef4444;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;}
-#jitsi-container{flex:1;width:100%;}
+
 @keyframes shake{0%,100%{transform:translateX(0)}10%,30%,50%,70%,90%{transform:translateX(-8px)}20%,40%,60%,80%{transform:translateX(8px)}}
 @keyframes pulse-red{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.4)}50%{box-shadow:0 0 0 20px rgba(239,68,68,0)}}
 .on-hold-alert{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(239,68,68,.15);backdrop-filter:blur(2px);animation:shake .5s ease 0s 3;}
@@ -206,7 +201,6 @@ tr:hover td{background:rgba(245,166,35,.02);}
 </head>
 <body>
 <div id="root"></div>
-<script src="https://meet.jit.si/external_api.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script>
@@ -975,51 +969,14 @@ function Team({users,setUsers,cu}){
 }
 
 // ── VIDEO CALL ───────────────────────────────────────────────────────────────
-function VideoCall({room,displayName,onEnd}){
+function VideoCall({room,displayName,meetLink,onEnd}){
   useEffect(()=>{
-    if(!window.JitsiMeetExternalAPI){
-      alert('Video call not available. Please try from the live site.');
-      onEnd();
-      return;
-    }
-    const domain='meet.jit.si';
-    const options={
-      roomName:room,
-      width:'100%',
-      height:'100%',
-      parentNode:document.getElementById('jitsi-container'),
-      userInfo:{displayName},
-      configOverwrite:{
-        startWithAudioMuted:false,
-        startWithVideoMuted:false,
-        disableDeepLinking:true,
-        enableWelcomePage:false,
-        prejoinPageEnabled:false,
-      },
-      interfaceConfigOverwrite:{
-        TOOLBAR_BUTTONS:['microphone','camera','chat','raisehand','tileview','hangup'],
-        SHOW_JITSI_WATERMARK:false,
-        SHOW_WATERMARK_FOR_GUESTS:false,
-        DEFAULT_BACKGROUND:'#050c1a',
-        MOBILE_APP_PROMO:false,
-      },
-    };
-    const api=new window.JitsiMeetExternalAPI(domain,options);
-    api.addEventListener('readyToClose',()=>onEnd());
-    api.addEventListener('videoConferenceLeft',()=>onEnd());
-    return()=>{try{api.dispose();}catch(e){}};
-  },[room,displayName,onEnd]);
-
-  return el('div',{className:'video-overlay'},
-    el('div',{className:'video-header'},
-      el('div',{style:{display:'flex',alignItems:'center',gap:10}},
-        el('div',{style:{width:8,height:8,borderRadius:'50%',background:'#10b981',animation:'pulse-red 1.5s infinite'}}),
-        el('div',{className:'video-title'},'Meeting in progress'),
-      ),
-      el('button',{className:'video-end',onClick:onEnd},'✕ End Call'),
-    ),
-    el('div',{id:'jitsi-container',style:{flex:1,width:'100%'}}),
-  );
+    // Open in new tab — no time limits, no demo restrictions
+    const url=meetLink||'https://meet.jit.si/'+room;
+    window.open(url,'_blank');
+    onEnd(); // Close overlay immediately
+  },[]);
+  return null;
 }
 
 // ── CALENDAR ──────────────────────────────────────────────────────────────────
@@ -1028,7 +985,7 @@ const EVENT_TYPES={event:{label:'Event',ico:'📌'},meeting:{label:'Meeting',ico
 
 function getMeetLink(){
   const id=Math.random().toString(36).slice(2,12);
-  return`https://meet.jit.si/hendrix-${id}`;
+  return'https://meet.jit.si/hendrix-'+id;
 }
 
 function Calendar({events,setEvents,tasks,cu,users,locFilter,onJoinCall}){
@@ -1152,7 +1109,7 @@ function Calendar({events,setEvents,tasks,cu,users,locFilter,onJoinCall}){
             el('button',{key:v.id,className:`vbtn${view===v.id?' on':''}`,onClick:()=>setView(v.id)},v.l)
           )
         ),
-        el('button',{onClick:()=>{const room='hendrix-'+Math.random().toString(36).slice(2,10);onJoinCall(room,'Instant Meeting');},style:{background:'#10b981',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'9px 16px',fontFamily:'inherit',fontSize:13,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',gap:6}},'🎥 Instant Meeting'),
+        el('button',{onClick:()=>{const room='hendrix-'+Math.random().toString(36).slice(2,10);const link='https://meet.jit.si/'+room;onJoinCall(room,'Instant Meeting',link);},style:{background:'#10b981',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'9px 16px',fontFamily:'inherit',fontSize:13,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',gap:6}},'🎥 Instant Meeting'),
         el('button',{className:'btn b-blue',onClick:()=>setNew(true)},'+ New Event'),
       ),
     ),
@@ -1246,7 +1203,7 @@ function Calendar({events,setEvents,tasks,cu,users,locFilter,onJoinCall}){
             ev.location&&el('div',{style:{fontSize:12,color:'var(--text2)',marginTop:2}},'📍 '+ev.location),
           ),
           ev.meet_link&&!ev._task&&el('div',{style:{display:'flex',gap:6,flexShrink:0},onClick:e=>e.stopPropagation()},
-            el('button',{onClick:e=>{e.stopPropagation();onJoinCall(ev.meet_link.split('/').pop(),ev.title);},style:{background:'#10b981',color:'#fff',padding:'7px 14px',borderRadius:8,border:'none',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}},'🎥 Join'),
+            el('button',{onClick:e=>{e.stopPropagation();onJoinCall(ev.meet_link.split('/').pop(),ev.title,ev.meet_link);},style:{background:'#10b981',color:'#fff',padding:'7px 14px',borderRadius:8,border:'none',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}},'🎥 Join'),
             el('button',{onClick:e=>{e.stopPropagation();navigator.clipboard.writeText(ev.meet_link);alert('Link copied!');},style:{background:'rgba(16,185,129,.1)',color:'#10b981',border:'1px solid rgba(16,185,129,.3)',padding:'7px 12px',borderRadius:8,fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}},'🔗'),
           ),
         ),
@@ -1353,7 +1310,7 @@ function Calendar({events,setEvents,tasks,cu,users,locFilter,onJoinCall}){
             ),
             // Join buttons
             el('div',{style:{display:'flex',gap:8,flexWrap:'wrap'}},
-              el('button',{onClick:()=>{setSel(null);onJoinCall(sel.meet_link.split('/').pop(),sel.title);},style:{flex:1,display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,background:'#10b981',color:'#fff',padding:'12px 20px',borderRadius:10,border:'none',fontWeight:700,fontSize:14,cursor:'pointer',fontFamily:'inherit'}},'🎥 Join Now'),
+              el('button',{onClick:()=>{setSel(null);onJoinCall(sel.meet_link.split('/').pop(),sel.title,sel.meet_link);},style:{flex:1,display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,background:'#10b981',color:'#fff',padding:'12px 20px',borderRadius:10,border:'none',fontWeight:700,fontSize:14,cursor:'pointer',fontFamily:'inherit'}},'🎥 Join Now'),
               el('a',{href:sel.meet_link,target:'_blank',style:{display:'inline-flex',alignItems:'center',gap:8,background:'rgba(16,185,129,.1)',color:'#10b981',border:'1px solid rgba(16,185,129,.3)',padding:'12px 16px',borderRadius:10,textDecoration:'none',fontWeight:700,fontSize:13}},'↗ Browser'),
             ),
           ),
@@ -1372,7 +1329,7 @@ function Calendar({events,setEvents,tasks,cu,users,locFilter,onJoinCall}){
             !sel._task&&(sel.created_by_id===cu.id||cu.role==='admin')&&el('button',{className:'btn b-red',onClick:()=>deleteEvent(sel.id)},'Delete'),
           ),
           el('div',{style:{display:'flex',gap:8}},
-            sel.meet_link&&!sel._task&&el('button',{onClick:()=>{setSel(null);onJoinCall(sel.meet_link.split('/').pop(),sel.title);},style:{background:'#10b981',color:'#fff',padding:'9px 16px',borderRadius:8,border:'none',fontWeight:700,fontSize:13,display:'inline-flex',alignItems:'center',gap:6,cursor:'pointer',fontFamily:'inherit'}},'🎥 Join'),
+            sel.meet_link&&!sel._task&&el('button',{onClick:()=>{setSel(null);onJoinCall(sel.meet_link.split('/').pop(),sel.title,sel.meet_link);},style:{background:'#10b981',color:'#fff',padding:'9px 16px',borderRadius:8,border:'none',fontWeight:700,fontSize:13,display:'inline-flex',alignItems:'center',gap:6,cursor:'pointer',fontFamily:'inherit'}},'🎥 Join'),
             el('button',{className:'btn b-ghost',onClick:()=>setSel(null)},'Close'),
           ),
         ),
@@ -1560,6 +1517,7 @@ function App(){
     // Active video call overlay
     activeCall&&el(VideoCall,{
       room:activeCall.room,
+      meetLink:activeCall.meetLink,
       displayName:cu.name,
       onEnd:()=>setActiveCall(null),
     }),
@@ -1612,7 +1570,7 @@ function App(){
     ),
     el('div',{className:'main'},
       page==='board'&&el(Board,{tasks,setTasks,cu,users,locFilter,setLocFilter}),
-      page==='calendar'&&el(Calendar,{events,setEvents,tasks,cu,users,locFilter,onJoinCall:(room,title)=>setActiveCall({room,title})}),
+      page==='calendar'&&el(Calendar,{events,setEvents,tasks,cu,users,locFilter,onJoinCall:(room,title,meetLink)=>setActiveCall({room,title,meetLink})}),
       page==='team'&&isAdmin&&el(Team,{users,setUsers,cu}),
     )
   );
