@@ -284,7 +284,7 @@ CREATE TABLE IF NOT EXISTS pf_tasks (
   attachments jsonb default '[]', created_by text,
   created_by_id text, created_at text, updated_at text,
   updated_by text, completed_at text, approved_by text,
-  archived_at text, hold_reason text, hold_by text, hold_at text
+  archived_at text, hold_reason text, hold_by text, hold_at text, cc jsonb default '[]'
 );
 ALTER TABLE pf_tasks DISABLE ROW LEVEL SECURITY;
 ALTER TABLE pf_tasks ADD COLUMN IF NOT EXISTS hold_reason text;
@@ -412,7 +412,7 @@ function TaskCard({task,onClick}){
           (task.tags||[]).map(tag=>el('span',{key:tag,className:'tag'},tag)),
         ),
         el('div',{style:{fontSize:13,fontWeight:600,marginBottom:task.status==='on_hold'?4:8,lineHeight:1.4,color:task.status==='done'?'var(--text2)':'var(--text)'}},task.title),
-      task.status==='on_hold'&&el('div',{style:{fontSize:11,color:'var(--red)',fontWeight:600,marginBottom:8,display:'flex',alignItems:'center',gap:4}},'🚨 ON HOLD'+(task.hold_reason?' — '+task.hold_reason.slice(0,40)+(task.hold_reason.length>40?'...':''):'')),
+      task.status==='on_hold'&&el('div',{style:{fontSize:11,color:'var(--red)',fontWeight:600,marginBottom:4,display:'flex',alignItems:'center',gap:4}},'🚨 ON HOLD'+(task.hold_reason?' — '+task.hold_reason.slice(0,40)+(task.hold_reason.length>40?'...':''):'')),
         el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center'}},
           el('div',{style:{display:'flex'}},
             (task.assignees||[]).slice(0,4).map((a,i)=>
@@ -438,12 +438,12 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
   const today=new Date().toISOString().slice(0,10);
 
   const isAdmin=cu.role==='admin';
-  const isManager=cu.role==='manager'||cu.role==='admin';
   const isAssigned=(task.assignees||[]).some(a=>a.id===cu.id);
   const isCreator=task.created_by_id===cu.id;
+  const isCC=(task.cc||[]).some(c=>c.id===cu.id);
   const canEdit=isAdmin||isCreator;
-  const canMove=isAssigned||isManager||isCreator;
-  const canApprove=isManager||isCreator;
+  const canMove=isAssigned||canEdit; // CC can only view
+  const canApprove=isAdmin||isCreator;
 
   async function changeStatus(s){
     const update={status:s,updated_at:new Date().toISOString(),updated_by:cu.name};
@@ -501,9 +501,10 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
           COLS.map(col=>{
             const isActive=task.status===col.id;
             const allowed=(()=>{
-        if(col.id==='on_hold') return canEdit; // only creator/admin can hold
+        if(col.id==='on_hold') return canEdit;
         if(col.id==='done'||col.id==='archived'||col.id==='approved') return canApprove;
         if(col.id==='review') return isAssigned||canEdit;
+        if(isCC) return false; // CC users cannot change status
         return canMove;
       })();
             return el('button',{key:col.id,className:`pipe-btn${isActive?' active':''}`,
@@ -534,7 +535,8 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
               el('span',{style:{fontSize:11,color:'var(--text3)'}},'Created by'),
               el('span',{style:{fontSize:11,fontWeight:700,color:'var(--accent)'}},task.created_by),
             ),
-            !isCreator&&!isAdmin&&el('div',{style:{marginTop:6,background:'rgba(245,166,35,.06)',border:'1px solid rgba(245,166,35,.15)',borderRadius:6,padding:'5px 10px',fontSize:11,color:'var(--accent)'}},'👁 View only — only the creator can edit this task'),
+            isCC&&el('div',{style:{marginTop:6,background:'rgba(139,92,246,.06)',border:'1px solid rgba(139,92,246,.2)',borderRadius:6,padding:'5px 10px',fontSize:11,color:'var(--purple)'}},'👁 CC — view only access'),
+            !isCreator&&!isAdmin&&!isCC&&el('div',{style:{marginTop:6,background:'rgba(245,166,35,.06)',border:'1px solid rgba(245,166,35,.15)',borderRadius:6,padding:'5px 10px',fontSize:11,color:'var(--accent)'}},'👁 View only — only the creator can edit this task'),
             el('div',{style:{fontSize:11,color:'var(--text3)'}},task.created_at?.slice(0,10)),
           ),
         ),
@@ -604,26 +606,23 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter}){
   const today=new Date().toISOString().slice(0,10);
 
   const isAdmin=cu.role==='admin';
-  const isManager=cu.role==='manager'||cu.role==='admin';
 
   const filtered=useMemo(()=>{
     let list=tasks;
     if(locFilter&&locFilter!=='Nationwide') list=list.filter(t=>!t.loc||t.loc===locFilter||t.loc==='Nationwide');
     if(section!=='All') list=list.filter(t=>t.section===section);
-    if(!isManager){
-      // Non-admin/manager: see tasks they created, are assigned to, OR are a manager of an assignee
+    // Everyone only sees tasks where they are creator, assignee, or CC'd
+    // Admin sees all
+    if(cu.role!=='admin'){
       list=list.filter(t=>{
         if(t.created_by_id===cu.id) return true;
         if((t.assignees||[]).some(a=>a.id===cu.id)) return true;
-        // Check if cu is a manager of any assignee
-        return (t.assignees||[]).some(a=>{
-          const assigneeUser=users.find(u=>u.id===a.id);
-          return (assigneeUser?.managers||[]).some(m=>m.id===cu.id);
-        });
+        if((t.cc||[]).some(c=>c.id===cu.id)) return true;
+        return false;
       });
     }
     return list;
-  },[tasks,locFilter,section,cu,isManager,users]);
+  },[tasks,locFilter,section,cu,users]);
 
   async function createTask(){
     if(!f.title||f.assignees.length===0)return;
@@ -797,6 +796,23 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter}){
                 el('span',{style:{cursor:'pointer',color:'var(--text3)',marginLeft:4},onClick:()=>setF(p=>({...p,assignees:p.assignees.filter(x=>x.id!==a.id)}))},'×'),
               ))
             ),
+          ),
+          // CC — view only access
+          el('div',{className:'fg'},
+            el('label',null,'CC — View Access Only'),
+            el('select',{value:'',onChange:ev=>{const u=users.find(x=>x.id===ev.target.value);if(u&&!f.cc?.find(a=>a.id===u.id))setF(p=>({...p,cc:[...(p.cc||[]),{id:u.id,name:u.name,email:u.email,dept:u.dept}]}));ev.target.value='';},style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+              el('option',{value:''},'+ Add person to CC...'),
+              ...users.filter(u=>u.approved&&!f.assignees?.find(a=>a.id===u.id)&&!f.cc?.find(a=>a.id===u.id)).map(u=>el('option',{key:u.id,value:u.id},`${u.name} — ${u.dept} — ${u.loc}`))
+            ),
+            (f.cc||[]).length>0&&el('div',{style:{display:'flex',flexWrap:'wrap',gap:6,marginTop:8}},
+              (f.cc||[]).map(a=>el('div',{key:a.id,style:{display:'flex',alignItems:'center',gap:6,background:'rgba(139,92,246,.1)',border:'1px solid rgba(139,92,246,.2)',borderRadius:20,padding:'4px 12px',fontSize:12}},
+                el('div',{className:'avatar',style:{background:`hsl(${(a.name.charCodeAt(0)*47)%360},50%,35%)`,width:18,height:18,fontSize:9}},a.name.charAt(0).toUpperCase()),
+                el('span',{style:{color:'var(--purple)'}},a.name),
+                el('span',{style:{fontSize:10,color:'var(--text3)',marginLeft:2}},'CC'),
+                el('span',{style:{cursor:'pointer',color:'var(--text3)',marginLeft:4},onClick:()=>setF(p=>({...p,cc:(p.cc||[]).filter(x=>x.id!==a.id)}))},'×'),
+              ))
+            ),
+            el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:6}},'CC people can see this task but cannot change its status'),
           ),
           // Tags
           el('div',{className:'fg'},
@@ -1101,6 +1117,13 @@ function Calendar({events,setEvents,tasks,cu,users,locFilter,onJoinCall}){
     }
     // Send local notification
     sendLocalNotification('📅 Event Created',f.title+' on '+f.date);
+    if(meetLink){
+      setTimeout(()=>{
+        if(window.confirm('Meeting created!\n\nLink:\n'+meetLink+'\n\nCopy to clipboard?')){
+          navigator.clipboard.writeText(meetLink).catch(()=>{});
+        }
+      },300);
+    }
     setF({title:'',type:'event',date:'',start_time:'09:00',end_time:'10:00',all_day:false,description:'',location:'',attendees:[],color:'#f5a623',personal:false,loc:'Nationwide',meet_link:''});
     setNew(false);setSaving(false);
   }
@@ -1222,7 +1245,10 @@ function Calendar({events,setEvents,tasks,cu,users,locFilter,onJoinCall}){
             el('div',{style:{fontSize:12,color:'var(--text2)',marginTop:4}},formatDate(ev.date)+(ev.start_time?' · '+ev.start_time+(ev.end_time?' - '+ev.end_time:''):'')),
             ev.location&&el('div',{style:{fontSize:12,color:'var(--text2)',marginTop:2}},'📍 '+ev.location),
           ),
-          ev.meet_link&&!ev._task&&el('button',{onClick:e=>{e.stopPropagation();onJoinCall(ev.meet_link.split('/').pop(),ev.title);},style:{background:'#10b981',color:'#fff',padding:'7px 14px',borderRadius:8,border:'none',fontSize:12,fontWeight:700,flexShrink:0,cursor:'pointer',fontFamily:'inherit'}},'🎥 Join'),
+          ev.meet_link&&!ev._task&&el('div',{style:{display:'flex',gap:6,flexShrink:0},onClick:e=>e.stopPropagation()},
+            el('button',{onClick:e=>{e.stopPropagation();onJoinCall(ev.meet_link.split('/').pop(),ev.title);},style:{background:'#10b981',color:'#fff',padding:'7px 14px',borderRadius:8,border:'none',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}},'🎥 Join'),
+            el('button',{onClick:e=>{e.stopPropagation();navigator.clipboard.writeText(ev.meet_link);alert('Link copied!');},style:{background:'rgba(16,185,129,.1)',color:'#10b981',border:'1px solid rgba(16,185,129,.3)',padding:'7px 12px',borderRadius:8,fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}},'🔗'),
+          ),
         ),
         (ev.attendees||[]).length>0&&el('div',{style:{display:'flex',gap:4,marginTop:8}},
           (ev.attendees||[]).slice(0,5).map((a,i)=>el('div',{key:a.id,className:'avatar',title:a.name,style:{background:`hsl(${(a.name.charCodeAt(0)*47)%360},50%,35%)`,width:22,height:22,fontSize:9,marginLeft:i>0?-4:0}},a.name.charAt(0).toUpperCase())),
@@ -1316,12 +1342,20 @@ function Calendar({events,setEvents,tasks,cu,users,locFilter,onJoinCall}){
           sel.location&&el('div',{style:{marginBottom:12}},el('div',{style:{fontSize:11,color:'var(--text3)',marginBottom:4,fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px'}},'Location'),el('div',{style:{fontSize:14}},sel.location)),
           sel.description&&el('div',{style:{marginBottom:12,background:'var(--surface2)',borderRadius:8,padding:12}},el('div',{style:{fontSize:13,lineHeight:1.6,color:'var(--text2)'}},sel.description)),
           sel.meet_link&&!sel._task&&el('div',{style:{marginBottom:16}},
-            el('div',{style:{fontSize:11,color:'var(--text3)',marginBottom:8,fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px'}},'Video Meeting'),
-            el('div',{style:{display:'flex',gap:8,flexWrap:'wrap'}},
-              el('button',{onClick:()=>{setSel(null);onJoinCall(sel.meet_link.split('/').pop(),sel.title);},style:{display:'inline-flex',alignItems:'center',gap:8,background:'#10b981',color:'#fff',padding:'11px 20px',borderRadius:10,border:'none',fontWeight:700,fontSize:14,cursor:'pointer',fontFamily:'inherit'}},'🎥 Join In-App'),
-              el('a',{href:sel.meet_link,target:'_blank',style:{display:'inline-flex',alignItems:'center',gap:8,background:'rgba(16,185,129,.1)',color:'#10b981',border:'1px solid rgba(16,185,129,.3)',padding:'11px 20px',borderRadius:10,textDecoration:'none',fontWeight:700,fontSize:14}},'↗ Open in Browser'),
+            el('div',{style:{fontSize:11,color:'var(--text3)',marginBottom:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px'}},'Video Meeting'),
+            // Google Meet style link box
+            el('div',{style:{background:'rgba(16,185,129,.06)',border:'1px solid rgba(16,185,129,.25)',borderRadius:12,padding:'14px 16px',marginBottom:12}},
+              el('div',{style:{fontSize:11,color:'#10b981',fontWeight:700,marginBottom:8,textTransform:'uppercase',letterSpacing:'.5px'}},'🔗 Meeting Link — Share this with anyone'),
+              el('div',{style:{display:'flex',gap:8,alignItems:'center'}},
+                el('div',{style:{flex:1,background:'var(--bg)',border:'1px solid var(--border)',borderRadius:8,padding:'9px 12px',fontSize:12,color:'var(--text2)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',fontFamily:'DM Mono,monospace'}},sel.meet_link),
+                el('button',{onClick:()=>{navigator.clipboard.writeText(sel.meet_link);alert('Link copied!');},style:{background:'rgba(16,185,129,.15)',color:'#10b981',border:'1px solid rgba(16,185,129,.3)',borderRadius:8,padding:'9px 14px',cursor:'pointer',fontFamily:'inherit',fontSize:12,fontWeight:700,whiteSpace:'nowrap'}},'📋 Copy'),
+              ),
             ),
-            el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:6}},sel.meet_link),
+            // Join buttons
+            el('div',{style:{display:'flex',gap:8,flexWrap:'wrap'}},
+              el('button',{onClick:()=>{setSel(null);onJoinCall(sel.meet_link.split('/').pop(),sel.title);},style:{flex:1,display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,background:'#10b981',color:'#fff',padding:'12px 20px',borderRadius:10,border:'none',fontWeight:700,fontSize:14,cursor:'pointer',fontFamily:'inherit'}},'🎥 Join Now'),
+              el('a',{href:sel.meet_link,target:'_blank',style:{display:'inline-flex',alignItems:'center',gap:8,background:'rgba(16,185,129,.1)',color:'#10b981',border:'1px solid rgba(16,185,129,.3)',padding:'12px 16px',borderRadius:10,textDecoration:'none',fontWeight:700,fontSize:13}},'↗ Browser'),
+            ),
           ),
           (sel.attendees||[]).length>0&&el('div',{marginBottom:12},
             el('div',{style:{fontSize:11,color:'var(--text3)',marginBottom:8,fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px'}},'Attendees ('+sel.attendees.length+')'),
