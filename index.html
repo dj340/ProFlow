@@ -233,12 +233,32 @@ async function sendEmail({to,subject,html}){
 
 // ── CONSTANTS ─────────────────────────────────────────────────────────────────
 const LOCS=['Nationwide','Michigan','Missouri'];
-const DEPTS=['Gummy','Cartridge','Pre-Roll','QC','Distribution','Warehouse','Facility','HR','Management','Extraction','Testing','Waste','Purchasing','Biomass','Shipping','Receiving'];
+const DEPTS=['Gummy','Cartridge','Pre-Roll','QC','Distribution','Warehouse','Facility','HR','Management','Extraction','Testing','Waste','Purchasing','Biomass','Shipping','Receiving','Sales','Marketing'];
 const ROLES=['employee','lead','supervisor','manager','admin'];
 const RLABEL={employee:'Employee',lead:'Lead',supervisor:'Supervisor',manager:'Manager',admin:'Admin'};
 const RCOLOR={employee:'bb-gray',lead:'bb-blue',supervisor:'bb-purple',manager:'bb-yellow',admin:'bb-red'};
 
 const SECTIONS=['R&D','Special Projects','Production Investigation','HR','General','Michigan Production','Missouri Production','Extraction','Testing','Waste','Inventory Check','Purchasing','Biomass','Shipping','Receiving'];
+
+// ── RETAIL BRANDS & LOCATIONS ─────────────────────────────────────────────────
+const RETAIL_BRANDS={
+  'Ascend Cannabis':{
+    Michigan:[
+      'Ascend Cannabis - Battle Creek',
+      'Ascend Cannabis - Detroit',
+      'Ascend Cannabis - East Lansing',
+      'Ascend Cannabis - Grand Rapids 28th Street',
+      'Ascend Cannabis - Grand Rapids Century',
+      'Ascend Cannabis - Grand Rapids Scribner',
+      'Ascend Cannabis - Morenci',
+    ],
+    Missouri:[]
+  },
+};
+
+const SALES_TASK_TYPES=['Retail Visit','Budtender Training','Product Demo','Pop-up Event','Marketing Drop','Account Check-in','New Account Setup','Promotional Event','Other'];
+
+const SALES_ROLES=['Director of Sales & Marketing','Sales & Marketing Manager','Sales Rep','Marketing Rep'];
 
 const COLS=[
   {id:'not_started',label:'Not Started',color:'#4a5068'},
@@ -300,6 +320,35 @@ CREATE TABLE IF NOT EXISTS pf_events (
   personal boolean default false
 );
 ALTER TABLE pf_events DISABLE ROW LEVEL SECURITY;
+
+CREATE TABLE IF NOT EXISTS pf_meeting_notes (
+  id text primary key,
+  event_id text, title text,
+  transcript text default '',
+  summary text default '',
+  action_items jsonb default '[]',
+  decisions jsonb default '[]',
+  attendees jsonb default '[]',
+  created_by text, created_by_id text,
+  created_at text, updated_at text
+);
+ALTER TABLE pf_meeting_notes DISABLE ROW LEVEL SECURITY;
+
+CREATE TABLE IF NOT EXISTS pf_sales_tasks (
+  id text primary key,
+  type text, title text, description text,
+  assigned_to text, assigned_id text,
+  date text, time text,
+  state text, brand text, location text,
+  status text default 'pending',
+  priority text default 'medium',
+  notes jsonb default '[]',
+  attachments jsonb default '[]',
+  report text default '',
+  created_by text, created_by_id text,
+  created_at text, updated_at text
+);
+ALTER TABLE pf_sales_tasks DISABLE ROW LEVEL SECURITY;
 `;
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
@@ -979,6 +1028,696 @@ function VideoCall({room,displayName,meetLink,onEnd}){
   return null;
 }
 
+// ── SALES & MARKETING ─────────────────────────────────────────────────────────
+function SalesMarketing({salesTasks,setSalesTasks,cu,users,locFilter}){
+  const[view,setView]=useState('board'); // board | list
+  const[showNew,setNew]=useState(false);
+  const[sel,setSel]=useState(null);
+  const[tab,setTab]=useState('open');
+  const[newNote,setNewNote]=useState('');
+  const[saving,setSaving]=useState(false);
+  const[f,setF]=useState({
+    type:'Retail Visit',title:'',description:'',
+    assigned_to:'',assigned_id:'',
+    date:'',time:'',
+    state:'Michigan',brand:'',location:'',
+    priority:'medium',
+    report:'',
+  });
+
+  const isSalesAdmin=cu.role==='admin'||cu.dept==='Sales'||cu.dept==='Marketing'||SALES_ROLES.includes(cu.position)||SALES_ROLES.includes(cu.role);
+  const today=new Date().toISOString().slice(0,10);
+
+  // Filter tasks
+  const filtered=salesTasks.filter(t=>{
+    if(locFilter&&locFilter!=='Nationwide'&&t.state&&t.state!==locFilter) return false;
+    if(!isSalesAdmin) return t.created_by_id===cu.id||t.assigned_id===cu.id;
+    return true;
+  });
+
+  const byStatus={
+    pending:filtered.filter(t=>t.status==='pending'),
+    in_progress:filtered.filter(t=>t.status==='in_progress'),
+    completed:filtered.filter(t=>t.status==='completed'),
+    reported:filtered.filter(t=>t.status==='reported'),
+  };
+
+  const statusCols=[
+    {id:'pending',label:'Pending',color:'#4a5068'},
+    {id:'in_progress',label:'In Progress',color:'#f5a623'},
+    {id:'completed',label:'Completed',color:'#22c55e'},
+    {id:'reported',label:'Reported',color:'#8b5cf6'},
+  ];
+
+  // Assignable users — sales/marketing team only for non-admins
+  const assignable=users.filter(u=>{
+    if(!u.approved) return false;
+    if(cu.role==='admin') return true;
+    return u.dept==='Sales'||u.dept==='Marketing'||SALES_ROLES.includes(u.position)||u.id===cu.id;
+  });
+
+  // Brand locations filtered by state
+  const brandLocations=f.brand&&RETAIL_BRANDS[f.brand]?
+    (RETAIL_BRANDS[f.brand][f.state]||[]):[];
+
+  async function create(){
+    if(!f.title&&!f.type) return;
+    setSaving(true);
+    const task={
+      id:'st-'+Date.now(),
+      ...f,
+      title:f.title||f.type+' — '+f.brand+(f.location?' ('+f.location+')':''),
+      status:'pending',
+      notes:[],attachments:[],
+      created_by:cu.name,created_by_id:cu.id,
+      created_at:new Date().toISOString(),
+      updated_at:new Date().toISOString(),
+    };
+    try{await db.insert('pf_sales_tasks',task);}catch(e){console.error(e);setSaving(false);return;}
+    setSalesTasks(p=>[task,...p]);
+    // Notify assigned person
+    const assignee=users.find(u=>u.id===f.assigned_id);
+    if(assignee?.email){
+      sendEmail({
+        to:assignee.email,
+        subject:`🏪 New Sales Task: "${task.title}"`,
+        html:`<div style="font-family:sans-serif;background:#0a0f1e;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
+          <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">🏪 Sales & Marketing Task</div>
+          <div style="font-size:17px;font-weight:700;margin-bottom:12px">${task.title}</div>
+          <div style="background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.2);border-radius:10px;padding:14px;margin-bottom:20px">
+            ${f.date?`<div style="margin-bottom:6px">📅 <strong>${f.date}${f.time?' at '+f.time:''}</strong></div>`:''}
+            ${f.brand?`<div style="margin-bottom:6px">🏪 <strong>${f.brand}</strong></div>`:''}
+            ${f.location?`<div style="margin-bottom:6px">📍 ${f.location}</div>`:''}
+            ${f.state?`<div>🗺 ${f.state}</div>`:''}
+          </div>
+          ${f.description?`<p style="color:#7b8db8;margin-bottom:20px">${f.description}</p>`:''}
+          <a href="${APP_URL}" style="background:#f5a623;color:#0a0f1e;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">View Task →</a>
+        </div>`
+      });
+    }
+    setF({type:'Retail Visit',title:'',description:'',assigned_to:'',assigned_id:'',date:'',time:'',state:'Michigan',brand:'',location:'',priority:'medium',report:''});
+    setNew(false);setSaving(false);
+  }
+
+  async function updateStatus(task,status){
+    const update={status,updated_at:new Date().toISOString()};
+    try{await db.update('pf_sales_tasks',task.id,update);}catch(e){console.error(e);}
+    setSalesTasks(p=>p.map(t=>t.id===task.id?{...t,...update}:t));
+    setSel(s=>s?{...s,...update}:null);
+  }
+
+  async function addNote(){
+    if(!newNote.trim()||!sel)return;
+    const note={id:'n'+Date.now(),text:newNote,by:cu.name,at:new Date().toISOString()};
+    const notes=[...(sel.notes||[]),note];
+    const update={notes,updated_at:new Date().toISOString()};
+    try{await db.update('pf_sales_tasks',sel.id,update);}catch(e){console.error(e);}
+    setSalesTasks(p=>p.map(t=>t.id===sel.id?{...t,...update}:t));
+    setSel(s=>({...s,...update}));
+    setNewNote('');
+  }
+
+  async function saveReport(report){
+    const update={report,status:'reported',updated_at:new Date().toISOString()};
+    try{await db.update('pf_sales_tasks',sel.id,update);}catch(e){console.error(e);}
+    setSalesTasks(p=>p.map(t=>t.id===sel.id?{...t,...update}:t));
+    setSel(s=>({...s,...update}));
+    // Notify creator
+    const creator=users.find(u=>u.id===sel.created_by_id);
+    if(creator?.email&&creator.id!==cu.id){
+      sendEmail({
+        to:creator.email,
+        subject:`📋 Report submitted: "${sel.title}"`,
+        html:`<div style="font-family:sans-serif;background:#0a0f1e;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
+          <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Visit Report Submitted</div>
+          <div style="font-size:16px;font-weight:700;margin-bottom:12px">${sel.title}</div>
+          <div style="background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.2);border-radius:10px;padding:14px;margin-bottom:20px">
+            <div style="font-size:13px;line-height:1.6">${report}</div>
+          </div>
+          <div style="font-size:12px;color:#7b8db8;">Submitted by ${cu.name}</div>
+          <a href="${APP_URL}" style="display:inline-block;margin-top:16px;background:#f5a623;color:#0a0f1e;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">View Report →</a>
+        </div>`
+      });
+    }
+  }
+
+  // Stats
+  const total=filtered.length;
+  const pending=filtered.filter(t=>t.status==='pending').length;
+  const done=filtered.filter(t=>t.status==='completed'||t.status==='reported').length;
+  const today_tasks=filtered.filter(t=>t.date===today).length;
+
+  return el('div',null,
+    // Header
+    el('div',{className:'ph'},
+      el('div',null,
+        el('div',{className:'pt'},'Sales & Marketing'),
+        el('div',{className:'ps'},'Retail visits, brand activations and field tasks'),
+      ),
+      el('div',{style:{display:'flex',gap:8}},
+        el('div',{className:'view-toggle'},
+          el('button',{className:`vbtn${view==='board'?' on':''}`,onClick:()=>setView('board')},'⬛ Board'),
+          el('button',{className:`vbtn${view==='list'?' on':''}`,onClick:()=>setView('list')},'☰ List'),
+        ),
+        el('button',{className:'btn b-blue',onClick:()=>setNew(true)},'+ New Task'),
+      ),
+    ),
+
+    // Stats
+    el('div',{className:'g4',style:{marginBottom:20}},
+      [{l:'Total',v:total,c:'var(--text)',ico:'📋'},{l:'Pending',v:pending,c:'var(--accent)',ico:'⏳'},{l:'Today',v:today_tasks,c:today_tasks>0?'var(--red)':'var(--text3)',ico:'📅'},{l:'Completed',v:done,c:'var(--green)',ico:'✅'}]
+        .map(({l,v,c,ico})=>el('div',{key:l,className:'stat',style:{display:'flex',alignItems:'center',gap:14}},
+          el('div',{style:{fontSize:28}},ico),
+          el('div',null,el('div',{className:'sl'},l),el('div',{className:'sv',style:{color:c,fontSize:24}},v)),
+        ))
+    ),
+
+    // BOARD VIEW
+    view==='board'&&el('div',{style:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:14}},
+      statusCols.map(col=>el('div',{key:col.id,className:'col'},
+        el('div',{className:'col-header'},
+          el('div',{className:'col-title'},el('div',{className:'col-dot',style:{background:col.color}}),col.label,el('div',{className:'col-count'},byStatus[col.id]?.length||0)),
+          el('button',{onClick:()=>setNew(true),style:{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:20,lineHeight:1,padding:'0 4px'}},'＋'),
+        ),
+        (byStatus[col.id]||[]).length===0?
+          el('div',{style:{border:'2px dashed var(--border)',borderRadius:8,padding:'20px',textAlign:'center',color:'var(--text3)',fontSize:12}},'Empty'):
+        (byStatus[col.id]||[]).map(task=>el('div',{key:task.id,className:'task-card',onClick:()=>setSel(task)},
+          el('div',{style:{display:'flex',gap:8}},
+            el('div',{className:'pri-bar',style:{background:PRI[task.priority]?.color||'#f5a623',minHeight:40}}),
+            el('div',{style:{flex:1}},
+              el('div',{style:{display:'flex',gap:5,marginBottom:5,flexWrap:'wrap'}},
+                el('span',{style:{background:'rgba(245,166,35,.12)',color:'var(--accent)',borderRadius:4,padding:'1px 7px',fontSize:10,fontWeight:700}},task.type),
+                task.state&&el('span',{style:{background:'var(--surface2)',color:'var(--text2)',borderRadius:4,padding:'1px 7px',fontSize:10,fontWeight:600}},task.state),
+              ),
+              el('div',{style:{fontSize:13,fontWeight:600,marginBottom:6,lineHeight:1.4}},task.title||(task.brand+' — '+task.location)),
+              task.brand&&el('div',{style:{fontSize:11,color:'var(--text2)',marginBottom:3}},'🏪 '+task.brand),
+              task.location&&el('div',{style:{fontSize:11,color:'var(--text2)',marginBottom:6}},'📍 '+task.location),
+              el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center'}},
+                el('div',{style:{display:'flex',alignItems:'center',gap:6}},
+                  task.assigned_to&&el('div',{className:'avatar',title:task.assigned_to,style:{background:avatarColor(task.assigned_to),width:20,height:20,fontSize:9}},task.assigned_to.charAt(0).toUpperCase()),
+                  task.assigned_to&&el('span',{style:{fontSize:11,color:'var(--text2)'}},task.assigned_to.split(' ')[0]),
+                ),
+                el('div',{style:{display:'flex',gap:6,alignItems:'center'}},
+                  task.date&&el('span',{style:{fontSize:10,color:task.date<today&&task.status==='pending'?'var(--red)':'var(--text3)'}},'📅 '+task.date+(task.time?' '+task.time:'')),
+                  (task.notes||[]).length>0&&el('span',{style:{fontSize:10,color:'var(--text3)'}},'💬'+(task.notes||[]).length),
+                ),
+              ),
+            ),
+          ),
+        ))
+      ))
+    ),
+
+    // LIST VIEW
+    view==='list'&&el('div',{className:'card',style:{padding:0}},
+      el('div',{className:'tw'},
+        el('table',null,
+          el('thead',null,el('tr',null,['Type','Title / Brand','Location','Assigned','Date & Time','Status',''].map(h=>el('th',{key:h},h)))),
+          el('tbody',null,filtered.map(task=>el('tr',{key:task.id},
+            el('td',null,el('span',{style:{background:'rgba(245,166,35,.12)',color:'var(--accent)',borderRadius:5,padding:'2px 8px',fontSize:11,fontWeight:700}},task.type)),
+            el('td',null,el('div',{style:{fontWeight:600,fontSize:13}},task.title||task.brand),el('div',{style:{fontSize:11,color:'var(--text2)',marginTop:2}},task.brand&&task.location?task.brand+' — '+task.location:task.brand||task.location||'')),
+            el('td',null,el('span',{style:{fontSize:12,color:'var(--text2)'}},task.state||'—')),
+            el('td',null,task.assigned_to&&el('div',{style:{display:'flex',alignItems:'center',gap:6}},el('div',{className:'avatar',style:{background:avatarColor(task.assigned_to),width:22,height:22,fontSize:9}},task.assigned_to.charAt(0).toUpperCase()),el('span',{style:{fontSize:12}},task.assigned_to))),
+            el('td',null,el('span',{style:{fontSize:12,color:'var(--text2)',whiteSpace:'nowrap'}},(task.date||'—')+(task.time?' '+task.time:''))),
+            el('td',null,el('span',{className:`badge ${task.status==='completed'||task.status==='reported'?'bb-green':task.status==='in_progress'?'bb-blue':'bb-gray'}`},task.status)),
+            el('td',null,el('button',{className:'btn b-ghost btn-sm',onClick:()=>setSel(task)},'View')),
+          )))
+        )
+      )
+    ),
+
+    // NEW TASK MODAL
+    showNew&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setNew(false)},
+      el('div',{className:'md',style:{width:620}},
+        el('div',{className:'mh'},el('div',{className:'mt2'},'New Sales & Marketing Task'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
+        el('div',{className:'mbd'},
+          // Type + Priority
+          el('div',{className:'g2'},
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Task Type'),el('select',{value:f.type,onChange:ev=>setF(p=>({...p,type:ev.target.value}))},SALES_TASK_TYPES.map(t=>el('option',{key:t,value:t},t)))),
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Priority'),el('select',{value:f.priority,onChange:ev=>setF(p=>({...p,priority:ev.target.value}))},Object.entries(PRI).map(([k,{label}])=>el('option',{key:k,value:k},label)))),
+          ),
+          // Title (optional)
+          el('div',{className:'fg'},el('label',null,'Title (optional — auto-generated if blank)'),el('input',{placeholder:'e.g. Q4 Promo Drop at Ascend Detroit...',value:f.title,onChange:ev=>setF(p=>({...p,title:ev.target.value}))})),
+          // Assign person
+          el('div',{className:'fg'},
+            el('label',null,'Assign To *'),
+            el('select',{value:f.assigned_id,onChange:ev=>{const u=users.find(x=>x.id===ev.target.value);setF(p=>({...p,assigned_id:ev.target.value,assigned_to:u?.name||''}));},style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+              el('option',{value:''},'— Select Person —'),
+              ...assignable.map(u=>el('option',{key:u.id,value:u.id},`${u.name} — ${u.dept} — ${u.loc}`))
+            ),
+          ),
+          // Date + Time
+          el('div',{className:'g2'},
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Date *'),el('input',{type:'date',value:f.date,onChange:ev=>setF(p=>({...p,date:ev.target.value}))})),
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Time'),el('input',{type:'time',value:f.time,onChange:ev=>setF(p=>({...p,time:ev.target.value}))})),
+          ),
+          // State
+          el('div',{className:'fg',style:{marginTop:13}},
+            el('label',null,'State'),
+            el('div',{style:{display:'flex',gap:8,marginTop:4}},
+              ['Michigan','Missouri'].map(s=>el('button',{key:s,onClick:()=>setF(p=>({...p,state:s,brand:'',location:''})),style:{flex:1,padding:'9px',borderRadius:'var(--rs)',border:'2px solid',borderColor:f.state===s?'var(--accent)':'var(--border)',background:f.state===s?'rgba(245,166,35,.1)':'transparent',color:f.state===s?'var(--accent)':'var(--text2)',fontFamily:'inherit',fontWeight:600,fontSize:13,cursor:'pointer',transition:'all .15s'}},'🗺 '+s))
+            ),
+          ),
+          // Retail Brand dropdown
+          el('div',{className:'fg'},
+            el('label',null,'Retail Brand'),
+            el('select',{value:f.brand,onChange:ev=>setF(p=>({...p,brand:ev.target.value,location:''})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+              el('option',{value:''},'— Select Brand —'),
+              ...Object.keys(RETAIL_BRANDS).map(b=>el('option',{key:b,value:b},b))
+            ),
+          ),
+          // Brand Location dropdown — shows after brand selected
+          f.brand&&el('div',{className:'fg'},
+            el('label',null,f.brand+' — Location'),
+            brandLocations.length>0?
+              el('select',{value:f.location,onChange:ev=>setF(p=>({...p,location:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+                el('option',{value:''},'— Select Location —'),
+                ...brandLocations.map(l=>el('option',{key:l,value:l},l))
+              ):
+              el('div',{style:{background:'rgba(245,166,35,.06)',border:'1px solid rgba(245,166,35,.2)',borderRadius:8,padding:'10px 12px',fontSize:12,color:'var(--accent)'}},'No '+f.state+' locations for this brand yet. You can add them later.'),
+          ),
+          // Description
+          el('div',{className:'fg'},el('label',null,'Description / Notes'),el('textarea',{placeholder:'Details about this task...',value:f.description,onChange:ev=>setF(p=>({...p,description:ev.target.value}))})),
+        ),
+        el('div',{className:'mf'},
+          el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),
+          el('button',{className:'btn b-blue',onClick:create,disabled:saving||!f.assigned_id||!f.date},saving?'Saving...':'Create & Notify'),
+        ),
+      )
+    ),
+
+    // TASK DETAIL MODAL
+    sel&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setSel(null)},
+      el('div',{className:'md',style:{width:660}},
+        el('div',{className:'mh'},
+          el('div',{style:{flex:1}},
+            el('div',{style:{display:'flex',gap:6,flexWrap:'wrap',marginBottom:8}},
+              el('span',{style:{background:'rgba(245,166,35,.12)',color:'var(--accent)',borderRadius:5,padding:'2px 10px',fontSize:11,fontWeight:700}},sel.type),
+              el('span',{className:`badge ${sel.status==='completed'||sel.status==='reported'?'bb-green':sel.status==='in_progress'?'bb-blue':'bb-gray'}`},sel.status),
+              el('span',{style:{background:PRI[sel.priority]?.color+'22',color:PRI[sel.priority]?.color,borderRadius:5,padding:'2px 8px',fontSize:11,fontWeight:600}},PRI[sel.priority]?.label),
+            ),
+            el('div',{style:{fontSize:16,fontWeight:700}},sel.title||(sel.brand+' — '+sel.location)),
+          ),
+          el('button',{className:'mc',onClick:()=>setSel(null)},'×'),
+        ),
+        el('div',{className:'mbd'},
+          // Status pipeline
+          el('div',{style:{display:'flex',gap:4,marginBottom:16}},
+            statusCols.map(col=>{
+              const isActive=sel.status===col.id;
+              const canChange=sel.assigned_id===cu.id||sel.created_by_id===cu.id||cu.role==='admin';
+              return el('button',{key:col.id,onClick:()=>canChange&&updateStatus(sel,col.id),style:{flex:1,padding:'7px 4px',borderRadius:8,border:`2px solid ${isActive?col.color:'var(--border)'}`,background:isActive?col.color+'22':'transparent',color:isActive?col.color:'var(--text2)',cursor:canChange?'pointer':'not-allowed',fontSize:11,fontWeight:600,transition:'all .15s',fontFamily:'inherit'}},col.label);
+            })
+          ),
+          // Details grid
+          el('div',{style:{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12,marginBottom:16}},
+            [['Assigned To',sel.assigned_to||'—'],['Date',sel.date||'—'],['Time',sel.time||'—'],['State',sel.state||'—'],['Brand',sel.brand||'—'],['Created By',sel.created_by]].map(([k,v])=>
+              el('div',{key:k,style:{background:'var(--surface2)',borderRadius:8,padding:'10px 12px'}},
+                el('div',{style:{fontSize:10,fontWeight:700,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'.8px',marginBottom:4}},k),
+                el('div',{style:{fontSize:13,fontWeight:600}},v),
+              )
+            )
+          ),
+          // Location
+          sel.location&&el('div',{style:{background:'rgba(245,166,35,.06)',border:'1px solid rgba(245,166,35,.2)',borderRadius:8,padding:'10px 14px',marginBottom:16,display:'flex',alignItems:'center',gap:8}},
+            el('span',{style:{fontSize:16}},'📍'),
+            el('div',null,el('div',{style:{fontSize:11,color:'var(--accent)',fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px'}},'Location'),el('div',{style:{fontSize:14,fontWeight:600}},sel.location)),
+          ),
+          // Description
+          sel.description&&el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:12,marginBottom:14}},el('div',{style:{fontSize:11,color:'var(--text3)',marginBottom:4,fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px'}},'Description'),el('div',{style:{fontSize:13,lineHeight:1.6}},sel.description)),
+          // Report section
+          el('div',{className:'divider'}),
+          el('div',{style:{fontWeight:700,marginBottom:10,fontSize:14}},'📋 Visit Report'),
+          sel.assigned_id===cu.id||cu.role==='admin'?
+            el('div',null,
+              el('textarea',{value:sel.report||'',placeholder:'Write your visit report here...\n\nWhat happened? What was discussed? Any issues? Next steps?',onChange:ev=>{setSel(s=>({...s,report:ev.target.value}));},style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'11px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:100,resize:'vertical',lineHeight:1.6}}),
+              el('button',{onClick:()=>saveReport(sel.report),disabled:!sel.report?.trim(),style:{marginTop:8,background:sel.report?.trim()?'var(--purple)':'rgba(139,92,246,.2)',color:sel.report?.trim()?'#fff':'var(--text3)',border:'none',borderRadius:'var(--rs)',padding:'8px 18px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:sel.report?.trim()?'pointer':'not-allowed'}},'📤 Submit Report'),
+            ):
+            sel.report?el('div',{style:{background:'rgba(139,92,246,.06)',border:'1px solid rgba(139,92,246,.2)',borderRadius:8,padding:12}},el('div',{style:{fontSize:13,lineHeight:1.6}},sel.report)):
+            el('div',{style:{fontSize:12,color:'var(--text3)',fontStyle:'italic'}},'No report submitted yet'),
+          // File upload
+          el('div',{className:'divider'}),
+          el('div',{className:'fg'},
+            el('label',null,'Upload Files / Photos'),
+            el('input',{type:'file',accept:'.pdf,.doc,.docx,.png,.jpg,.xlsx,.csv',multiple:true,onChange:async ev=>{
+              const files=Array.from(ev.target.files);
+              for(const file of files){
+                const reader=new FileReader();
+                reader.onload=async re=>{
+                  const att={id:'att-'+Date.now(),name:file.name,data:re.target.result,by:cu.name,at:new Date().toISOString()};
+                  const atts=[...(sel.attachments||[]),att];
+                  await db.update('pf_sales_tasks',sel.id,{attachments:atts,updated_at:new Date().toISOString()}).catch(console.error);
+                  setSalesTasks(p=>p.map(t=>t.id===sel.id?{...t,attachments:atts}:t));
+                  setSel(s=>({...s,attachments:atts}));
+                };
+                reader.readAsDataURL(file);
+              }
+            },style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px',color:'var(--text)',fontFamily:'inherit',fontSize:13}}),
+          ),
+          (sel.attachments||[]).length>0&&el('div',{style:{marginBottom:14}},
+            (sel.attachments||[]).map(att=>el('div',{key:att.id,style:{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'7px 10px',background:'var(--surface2)',borderRadius:6,marginBottom:5}},
+              el('span',{style:{fontSize:12}},`📎 ${att.name}`),
+              el('button',{className:'btn b-ghost btn-sm',onClick:()=>{const a=document.createElement('a');a.href=att.data;a.download=att.name;a.click();}},'Download'),
+            ))
+          ),
+          el('div',{className:'divider'}),
+          // Comments
+          el('div',{style:{fontWeight:600,marginBottom:12}},'Comments'),
+          (sel.notes||[]).map(note=>el('div',{key:note.id,style:{display:'flex',gap:10,marginBottom:10}},
+            el('div',{className:'avatar',style:{background:avatarColor(note.by),flexShrink:0}},note.by.charAt(0).toUpperCase()),
+            el('div',{style:{flex:1,background:'var(--surface2)',borderRadius:'0 10px 10px 10px',padding:'8px 12px'}},
+              el('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:4}},el('span',{style:{fontSize:12,fontWeight:600}},note.by),el('span',{style:{fontSize:11,color:'var(--text2)'}},note.at.slice(0,16).replace('T',' '))),
+              el('div',{style:{fontSize:13}},note.text),
+            ),
+          )),
+          el('div',{style:{display:'flex',gap:8}},
+            el('div',{className:'avatar',style:{background:avatarColor(cu.name),flexShrink:0,marginTop:2}},cu.name.charAt(0).toUpperCase()),
+            el('div',{style:{flex:1}},
+              el('input',{placeholder:'Add a comment...',value:newNote,onChange:ev=>setNewNote(ev.target.value),onKeyDown:ev=>ev.key==='Enter'&&addNote(),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none'}}),
+            ),
+            el('button',{className:'btn b-blue',onClick:addNote,disabled:!newNote.trim()},'Post'),
+          ),
+        ),
+        el('div',{className:'mf',style:{justifyContent:'space-between'}},
+          el('div',null,cu.role==='admin'&&el('button',{className:'btn b-red',onClick:async()=>{if(!window.confirm('Delete?'))return;await db.remove('pf_sales_tasks',sel.id).catch(console.error);setSalesTasks(p=>p.filter(t=>t.id!==sel.id));setSel(null);}},'Delete')),
+          el('button',{className:'btn b-ghost',onClick:()=>setSel(null)},'Close'),
+        ),
+      )
+    ),
+  );
+}
+
+
+// ── AI MEETING NOTES ──────────────────────────────────────────────────────────
+function MeetingNotesModal({event,cu,users,meetingNotes,setMeetingNotes,onClose}){
+  const existingNote=meetingNotes.find(n=>n.event_id===event.id);
+  const[tab,setTab]=useState(existingNote?'notes':'record');
+  const[transcript,setTranscript]=useState(existingNote?.transcript||'');
+  const[listening,setListening]=useState(false);
+  const[processing,setProcessing]=useState(false);
+  const[notes,setNotes]=useState(existingNote||null);
+  const[recognition,setRecognition]=useState(null);
+  const[interimText,setInterimText]=useState('');
+  const[saved,setSaved]=useState(false);
+
+  // Check if attendee
+  const isAttendee=(event.attendees||[]).some(a=>a.id===cu.id)||event.created_by_id===cu.id||cu.role==='admin';
+
+  // ── SPEECH RECOGNITION ───────────────────────────────────────────────────────
+  function startListening(){
+    if(!('webkitSpeechRecognition' in window)&&!('SpeechRecognition' in window)){
+      alert('Speech recognition not supported. Use Chrome on desktop or Android.\n\nYou can also type or paste the transcript manually.');
+      return;
+    }
+    const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+    const rec=new SR();
+    rec.continuous=true;
+    rec.interimResults=true;
+    rec.lang='en-US';
+    rec.onresult=ev=>{
+      let interim='';
+      let final='';
+      for(let i=ev.resultIndex;i<ev.results.length;i++){
+        if(ev.results[i].isFinal){
+          final+=ev.results[i][0].transcript+' ';
+        } else {
+          interim+=ev.results[i][0].transcript;
+        }
+      }
+      if(final) setTranscript(p=>p+final);
+      setInterimText(interim);
+    };
+    rec.onerror=ev=>{
+      console.error('Speech error:',ev.error);
+      setListening(false);
+      if(ev.error==='not-allowed') alert('Microphone access denied. Please allow microphone access in your browser settings.');
+    };
+    rec.onend=()=>setListening(false);
+    rec.start();
+    setRecognition(rec);
+    setListening(true);
+  }
+
+  function stopListening(){
+    if(recognition){recognition.stop();setRecognition(null);}
+    setListening(false);
+    setInterimText('');
+  }
+
+  // ── AI PROCESSING ─────────────────────────────────────────────────────────────
+  async function processWithAI(){
+    if(!transcript.trim()){alert('Please add a transcript first — either by recording or typing/pasting.');return;}
+    setProcessing(true);
+    try{
+      const attendeeNames=(event.attendees||[]).map(a=>a.name).join(', ')||'Not specified';
+      const prompt=`You are an expert meeting notes assistant. Analyze this meeting transcript and create structured meeting notes.
+
+Meeting: ${event.title}
+Date: ${event.date}
+Attendees: ${attendeeNames}
+Created by: ${event.created_by}
+
+TRANSCRIPT:
+${transcript}
+
+Create comprehensive meeting notes in this EXACT JSON format (no markdown, just JSON):
+{
+  "summary": "2-3 sentence executive summary of the meeting",
+  "key_points": ["point 1", "point 2", "point 3"],
+  "action_items": [
+    {"item": "description of action", "owner": "person name or team", "due": "date or timeframe if mentioned"},
+    {"item": "description", "owner": "person", "due": "timeframe"}
+  ],
+  "decisions": ["decision 1", "decision 2"],
+  "follow_up": ["follow up item 1", "follow up item 2"],
+  "sentiment": "productive|needs-follow-up|inconclusive"
+}
+
+Be specific and actionable. Extract real names when mentioned. If no action items/decisions mentioned, return empty arrays.`;
+
+      const res=await fetch('https://api.anthropic.com/v1/messages',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          model:'claude-sonnet-4-20250514',
+          max_tokens:1500,
+          messages:[{role:'user',content:prompt}]
+        })
+      });
+      const data=await res.json();
+      const text=data.content?.[0]?.text||'';
+      let parsed;
+      try{
+        const clean=text.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+        parsed=JSON.parse(clean);
+      }catch(e){
+        parsed={summary:text,key_points:[],action_items:[],decisions:[],follow_up:[],sentiment:'productive'};
+      }
+      setNotes(p=>({...p,...parsed}));
+      setTab('notes');
+    }catch(e){
+      console.error('AI error:',e);
+      alert('AI processing failed. Check your connection and try again.');
+    }
+    setProcessing(false);
+  }
+
+  // ── SAVE & SHARE ─────────────────────────────────────────────────────────────
+  async function saveAndShare(){
+    const noteObj={
+      id:existingNote?.id||'mn-'+Date.now(),
+      event_id:event.id,
+      title:'Meeting Notes: '+event.title,
+      transcript,
+      summary:notes?.summary||'',
+      action_items:notes?.action_items||[],
+      decisions:notes?.decisions||[],
+      key_points:notes?.key_points||[],
+      follow_up:notes?.follow_up||[],
+      sentiment:notes?.sentiment||'productive',
+      attendees:event.attendees||[],
+      created_by:cu.name,
+      created_by_id:cu.id,
+      created_at:existingNote?.created_at||new Date().toISOString(),
+      updated_at:new Date().toISOString(),
+    };
+    try{
+      if(existingNote){await db.update('pf_meeting_notes',existingNote.id,noteObj);}
+      else{await db.insert('pf_meeting_notes',noteObj);}
+      setMeetingNotes(p=>existingNote?p.map(n=>n.id===existingNote.id?noteObj:n):[noteObj,...p]);
+    }catch(e){console.error(e);}
+
+    // Email notes to attendees only
+    const recipients=(event.attendees||[]).filter(a=>a.email&&a.id!==cu.id);
+    if(recipients.length>0&&notes){
+      const actionItemsHtml=(notes.action_items||[]).map(a=>`<li style="margin-bottom:6px"><strong>${a.owner||'Team'}:</strong> ${a.item}${a.due?' <em>(${a.due})</em>':''}</li>`).join('');
+      const decisionsHtml=(notes.decisions||[]).map(d=>`<li style="margin-bottom:6px">${d}</li>`).join('');
+      const keyPointsHtml=(notes.key_points||[]).map(k=>`<li style="margin-bottom:6px">${k}</li>`).join('');
+      const followUpHtml=(notes.follow_up||[]).map(f=>`<li style="margin-bottom:6px">${f}</li>`).join('');
+
+      recipients.forEach(a=>{
+        sendEmail({
+          to:a.email,
+          subject:`📋 Meeting Notes: ${event.title} — ${event.date}`,
+          html:`<div style="font-family:sans-serif;background:#0a0f1e;color:#e8edf8;padding:32px;border-radius:12px;max-width:620px;border:1px solid #1a2d4f">
+            <div style="color:#f5a623;font-size:22px;font-weight:800;margin-bottom:4px">📋 Hendrix TMS</div>
+            <div style="font-size:13px;color:#7b8db8;margin-bottom:24px">AI-Generated Meeting Notes</div>
+            <div style="font-size:20px;font-weight:700;margin-bottom:6px">${event.title}</div>
+            <div style="font-size:13px;color:#7b8db8;margin-bottom:24px">📅 ${event.date}${event.start_time?' at '+event.start_time:''} · Notes by ${cu.name}</div>
+            <div style="background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.2);border-radius:10px;padding:16px;margin-bottom:20px">
+              <div style="font-size:11px;font-weight:700;color:#f5a623;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Summary</div>
+              <div style="font-size:14px;line-height:1.6">${notes?.summary||''}</div>
+            </div>
+            ${keyPointsHtml?`<div style="margin-bottom:20px"><div style="font-size:11px;font-weight:700;color:#f5a623;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Key Points</div><ul style="padding-left:20px;color:#e8edf8">${keyPointsHtml}</ul></div>`:''}
+            ${actionItemsHtml?`<div style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:16px;margin-bottom:20px"><div style="font-size:11px;font-weight:700;color:#ef4444;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Action Items</div><ul style="padding-left:20px;color:#e8edf8">${actionItemsHtml}</ul></div>`:''}
+            ${decisionsHtml?`<div style="margin-bottom:20px"><div style="font-size:11px;font-weight:700;color:#10b981;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Decisions Made</div><ul style="padding-left:20px;color:#e8edf8">${decisionsHtml}</ul></div>`:''}
+            ${followUpHtml?`<div style="margin-bottom:20px"><div style="font-size:11px;font-weight:700;color:#3b82f6;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Follow Up</div><ul style="padding-left:20px;color:#e8edf8">${followUpHtml}</ul></div>`:''}
+            <div style="margin-top:24px;padding-top:16px;border-top:1px solid #1a2d4f;font-size:11px;color:#3a4f7a">These notes were AI-generated from the meeting transcript and shared only with meeting attendees.</div>
+          </div>`
+        });
+      });
+    }
+    setSaved(true);
+    setTimeout(()=>onClose(),1200);
+  }
+
+  const sentimentColors={productive:'var(--green)',inconclusive:'var(--yellow)','needs-follow-up':'var(--red)'};
+  const sentimentLabels={productive:'✅ Productive','needs-follow-up':'⚠️ Needs Follow-up',inconclusive:'❓ Inconclusive'};
+
+  return el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&onClose()},
+    el('div',{className:'md',style:{width:720,maxHeight:'92vh'}},
+      el('div',{className:'mh'},
+        el('div',{style:{flex:1}},
+          el('div',{style:{display:'flex',gap:8,alignItems:'center',marginBottom:6}},
+            el('span',{style:{fontSize:20}},'🤖'),
+            el('div',{className:'mt2'},'AI Meeting Notes'),
+          ),
+          el('div',{style:{fontSize:12,color:'var(--text2)'}},'Meeting: '+event.title+' · '+event.date),
+        ),
+        el('button',{className:'mc',onClick:onClose},'×'),
+      ),
+      // Tabs
+      el('div',{style:{display:'flex',gap:3,background:'var(--surface2)',padding:4,margin:'0 24px 0',borderRadius:'var(--rs)',border:'1px solid var(--border)'}},
+        [{id:'record',label:'🎙 Record / Transcript'},{id:'notes',label:'📋 AI Notes',disabled:!notes&&!existingNote}].map(t=>
+          el('button',{key:t.id,onClick:()=>!t.disabled&&setTab(t.id),style:{flex:1,padding:'7px',borderRadius:8,border:'none',background:tab===t.id?'var(--surface)':'transparent',color:tab===t.id?'var(--text)':t.disabled?'var(--text3)':'var(--text2)',cursor:t.disabled?'not-allowed':'pointer',fontFamily:'inherit',fontSize:12,fontWeight:600,transition:'all .15s'}},t.label)
+        )
+      ),
+      el('div',{className:'mbd'},
+
+        // ── RECORD TAB ──────────────────────────────────────────────────────────
+        tab==='record'&&el('div',null,
+          // Recording controls
+          el('div',{style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:12,padding:20,marginBottom:16,textAlign:'center'}},
+            el('div',{style:{fontSize:13,color:'var(--text2)',marginBottom:14}},'Use live transcription during your meeting or paste/type the transcript below'),
+            el('div',{style:{display:'flex',gap:10,justifyContent:'center',flexWrap:'wrap'}},
+              !listening?
+                el('button',{onClick:startListening,style:{background:'var(--red)',color:'#fff',border:'none',borderRadius:10,padding:'12px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:8}},
+                  el('div',{style:{width:10,height:10,borderRadius:'50%',background:'#fff'}}),
+                  'Start Recording'
+                ):
+                el('button',{onClick:stopListening,style:{background:'rgba(239,68,68,.15)',color:'var(--red)',border:'2px solid var(--red)',borderRadius:10,padding:'12px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:8}},
+                  el('div',{style:{width:10,height:10,borderRadius:'50%',background:'var(--red)',animation:'pulse-red 1s infinite'}}),
+                  'Stop Recording'
+                ),
+              el('button',{onClick:()=>setTranscript(''),style:{background:'transparent',color:'var(--text3)',border:'1px solid var(--border)',borderRadius:10,padding:'12px 20px',fontFamily:'inherit',fontSize:13,cursor:'pointer'}},'Clear'),
+            ),
+            listening&&el('div',{style:{marginTop:12,fontSize:12,color:'var(--red)',fontWeight:600,display:'flex',alignItems:'center',gap:6,justifyContent:'center'}},
+              el('div',{style:{width:8,height:8,borderRadius:'50%',background:'var(--red)',animation:'pulse-red 1s infinite'}}),
+              'Listening...'+(interimText?' — "'+interimText+'"':''),
+            ),
+          ),
+          // Transcript area
+          el('div',{className:'fg'},
+            el('label',null,'Transcript ('+(transcript.split(' ').filter(Boolean).length)+' words)'),
+            el('textarea',{
+              value:transcript+(interimText?' ['+interimText+']':''),
+              onChange:ev=>setTranscript(ev.target.value),
+              placeholder:'Transcript will appear here as you speak...\n\nOr paste/type the meeting transcript manually.\n\nTip: You can also take rough notes and the AI will clean them up.',
+              style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:200,resize:'vertical',lineHeight:1.6}
+            }),
+          ),
+          // Process button
+          el('div',{style:{display:'flex',gap:10,justifyContent:'flex-end',marginTop:8}},
+            el('button',{onClick:processWithAI,disabled:processing||!transcript.trim(),style:{background:transcript.trim()&&!processing?'var(--accent)':'rgba(245,166,35,.2)',color:transcript.trim()&&!processing?'#0a0f1e':'var(--text3)',border:'none',borderRadius:10,padding:'12px 28px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:transcript.trim()&&!processing?'pointer':'not-allowed',display:'flex',alignItems:'center',gap:8,transition:'all .2s'}},
+              processing?el('div',{style:{width:16,height:16,border:'2px solid rgba(0,0,0,.3)',borderTopColor:'#000',borderRadius:'50%',animation:'spin .6s linear infinite'}}):'🤖',
+              processing?'AI is analyzing...':'Generate AI Notes',
+            ),
+          ),
+        ),
+
+        // ── NOTES TAB ──────────────────────────────────────────────────────────
+        tab==='notes'&&notes&&el('div',null,
+          // Sentiment badge
+          notes.sentiment&&el('div',{style:{display:'flex',justifyContent:'flex-end',marginBottom:12}},
+            el('span',{style:{background:sentimentColors[notes.sentiment]+'22',color:sentimentColors[notes.sentiment],border:'1px solid '+sentimentColors[notes.sentiment]+'44',borderRadius:20,padding:'4px 14px',fontSize:12,fontWeight:700}},sentimentLabels[notes.sentiment]||notes.sentiment),
+          ),
+          // Summary
+          notes.summary&&el('div',{style:{background:'rgba(245,166,35,.06)',border:'1px solid rgba(245,166,35,.2)',borderRadius:12,padding:16,marginBottom:16}},
+            el('div',{style:{fontSize:11,fontWeight:700,color:'var(--accent)',textTransform:'uppercase',letterSpacing:'1px',marginBottom:8}},'Summary'),
+            el('div',{style:{fontSize:14,lineHeight:1.7,color:'var(--text)'}},notes.summary),
+          ),
+          // Key Points
+          (notes.key_points||[]).length>0&&el('div',{style:{marginBottom:16}},
+            el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'1px',marginBottom:10}},'Key Points'),
+            (notes.key_points||[]).map((p,i)=>el('div',{key:i,style:{display:'flex',gap:10,marginBottom:8,alignItems:'flex-start'}},
+              el('div',{style:{width:6,height:6,borderRadius:'50%',background:'var(--accent)',flexShrink:0,marginTop:6}}),
+              el('div',{style:{fontSize:13,lineHeight:1.5}},p),
+            )),
+          ),
+          // Action Items
+          (notes.action_items||[]).length>0&&el('div',{style:{background:'rgba(239,68,68,.04)',border:'1px solid rgba(239,68,68,.15)',borderRadius:12,padding:16,marginBottom:16}},
+            el('div',{style:{fontSize:11,fontWeight:700,color:'var(--red)',textTransform:'uppercase',letterSpacing:'1px',marginBottom:12}},'🔴 Action Items'),
+            (notes.action_items||[]).map((a,i)=>el('div',{key:i,style:{display:'flex',gap:12,marginBottom:10,alignItems:'flex-start',paddingBottom:10,borderBottom:i<notes.action_items.length-1?'1px solid rgba(239,68,68,.1)':'none'}},
+              el('div',{style:{background:'var(--red)',color:'#fff',borderRadius:20,padding:'2px 10px',fontSize:11,fontWeight:700,flexShrink:0,marginTop:2}},i+1),
+              el('div',{style:{flex:1}},
+                el('div',{style:{fontSize:13,fontWeight:600,marginBottom:3}},a.item),
+                el('div',{style:{display:'flex',gap:10,flexWrap:'wrap'}},
+                  a.owner&&el('span',{style:{fontSize:11,color:'var(--text2)'}},'👤 '+a.owner),
+                  a.due&&el('span',{style:{fontSize:11,color:'var(--yellow)'}},'📅 '+a.due),
+                ),
+              ),
+            )),
+          ),
+          // Decisions
+          (notes.decisions||[]).length>0&&el('div',{style:{marginBottom:16}},
+            el('div',{style:{fontSize:11,fontWeight:700,color:'var(--green)',textTransform:'uppercase',letterSpacing:'1px',marginBottom:10}},'✅ Decisions Made'),
+            (notes.decisions||[]).map((d,i)=>el('div',{key:i,style:{display:'flex',gap:10,marginBottom:8}},
+              el('div',{style:{color:'var(--green)',fontSize:16,flexShrink:0}},'✓'),
+              el('div',{style:{fontSize:13,lineHeight:1.5}},d),
+            )),
+          ),
+          // Follow Up
+          (notes.follow_up||[]).length>0&&el('div',{style:{marginBottom:16}},
+            el('div',{style:{fontSize:11,fontWeight:700,color:'var(--blue)',textTransform:'uppercase',letterSpacing:'1px',marginBottom:10}},'🔵 Follow Up'),
+            (notes.follow_up||[]).map((f,i)=>el('div',{key:i,style:{display:'flex',gap:10,marginBottom:8}},
+              el('div',{style:{color:'var(--blue)',fontSize:16,flexShrink:0}},'→'),
+              el('div',{style:{fontSize:13,lineHeight:1.5}},f),
+            )),
+          ),
+          // Attendees
+          el('div',{style:{display:'flex',gap:6,flexWrap:'wrap',marginBottom:16}},
+            el('div',{style:{fontSize:11,color:'var(--text3)',marginRight:4,alignSelf:'center'}},'Shared with:'),
+            (event.attendees||[]).map(a=>el('div',{key:a.id,style:{display:'flex',alignItems:'center',gap:5,background:'var(--surface2)',borderRadius:20,padding:'3px 10px',fontSize:11}},
+              el('div',{className:'avatar',style:{background:`hsl(${(a.name.charCodeAt(0)*47)%360},50%,35%)`,width:16,height:16,fontSize:8}},a.name.charAt(0).toUpperCase()),
+              a.name,
+            )),
+          ),
+          saved&&el('div',{style:{background:'rgba(16,185,129,.1)',border:'1px solid rgba(16,185,129,.3)',borderRadius:8,padding:'10px 14px',fontSize:13,color:'var(--green)',textAlign:'center',marginBottom:10}},'✓ Notes saved and emailed to all attendees!'),
+        ),
+        tab==='notes'&&!notes&&el('div',{className:'empty'},el('div',{className:'eico'},'🤖'),el('div',{className:'etxt'},'No notes yet — go to the Record tab to generate AI notes')),
+      ),
+      el('div',{className:'mf',style:{justifyContent:'space-between'}},
+        el('div',{style:{fontSize:12,color:'var(--text3)'}},(event.attendees||[]).length>0?'Will email notes to '+(event.attendees||[]).length+' attendee(s)':'No attendees to email'),
+        el('div',{style:{display:'flex',gap:8}},
+          el('button',{className:'btn b-ghost',onClick:onClose},'Close'),
+          tab==='notes'&&notes&&el('button',{onClick:saveAndShare,style:{background:'var(--accent)',color:'#0a0f1e',border:'none',borderRadius:'var(--rs)',padding:'9px 20px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer'}},saved?'✓ Saved!':'💾 Save & Email Attendees'),
+        ),
+      ),
+    ),
+  );
+}
+
+
 // ── CALENDAR ──────────────────────────────────────────────────────────────────
 const EVENT_COLORS=['#f5a623','#3b82f6','#10b981','#ef4444','#8b5cf6','#f97316','#06b6d4','#ec4899'];
 const EVENT_TYPES={event:{label:'Event',ico:'📌'},meeting:{label:'Meeting',ico:'🤝'},task:{label:'Task Due',ico:'✅'},personal:{label:'Personal',ico:'👤'},schedule:{label:'Work Schedule',ico:'🏭'}};
@@ -988,8 +1727,9 @@ function getMeetLink(){
   return'https://meet.jit.si/hendrix-'+id;
 }
 
-function Calendar({events,setEvents,tasks,cu,users,locFilter,onJoinCall}){
-  const[view,setView]=useState('month'); // month | week | day | list
+function Calendar({events,setEvents,tasks,cu,users,locFilter,meetingNotes,setMeetingNotes,onJoinCall}){
+  const[view,setView]=useState('month');
+  const[notesEvent,setNotesEvent]=useState(null);
   const[cur,setCur]=useState(new Date());
   const[showNew,setNew]=useState(false);
   const[sel,setSel]=useState(null);
@@ -1202,9 +1942,10 @@ function Calendar({events,setEvents,tasks,cu,users,locFilter,onJoinCall}){
             el('div',{style:{fontSize:12,color:'var(--text2)',marginTop:4}},formatDate(ev.date)+(ev.start_time?' · '+ev.start_time+(ev.end_time?' - '+ev.end_time:''):'')),
             ev.location&&el('div',{style:{fontSize:12,color:'var(--text2)',marginTop:2}},'📍 '+ev.location),
           ),
-          ev.meet_link&&!ev._task&&el('div',{style:{display:'flex',gap:6,flexShrink:0},onClick:e=>e.stopPropagation()},
-            el('button',{onClick:e=>{e.stopPropagation();onJoinCall(ev.meet_link.split('/').pop(),ev.title,ev.meet_link);},style:{background:'#10b981',color:'#fff',padding:'7px 14px',borderRadius:8,border:'none',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}},'🎥 Join'),
-            el('button',{onClick:e=>{e.stopPropagation();navigator.clipboard.writeText(ev.meet_link);alert('Link copied!');},style:{background:'rgba(16,185,129,.1)',color:'#10b981',border:'1px solid rgba(16,185,129,.3)',padding:'7px 12px',borderRadius:8,fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}},'🔗'),
+          el('div',{style:{display:'flex',gap:6,flexShrink:0},onClick:e=>e.stopPropagation()},
+            ev.meet_link&&!ev._task&&el('button',{onClick:e=>{e.stopPropagation();onJoinCall(ev.meet_link.split('/').pop(),ev.title,ev.meet_link);},style:{background:'#10b981',color:'#fff',padding:'7px 14px',borderRadius:8,border:'none',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}},'🎥 Join'),
+            ev.meet_link&&!ev._task&&el('button',{onClick:e=>{e.stopPropagation();navigator.clipboard.writeText(ev.meet_link);alert('Link copied!');},style:{background:'rgba(16,185,129,.1)',color:'#10b981',border:'1px solid rgba(16,185,129,.3)',padding:'7px 12px',borderRadius:8,fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}},'🔗'),
+            !ev._task&&el('button',{onClick:e=>{e.stopPropagation();setNotesEvent(ev);},style:{background:'rgba(245,166,35,.1)',color:'var(--accent)',border:'1px solid rgba(245,166,35,.2)',padding:'7px 12px',borderRadius:8,fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}},'🤖'),
           ),
         ),
         (ev.attendees||[]).length>0&&el('div',{style:{display:'flex',gap:4,marginTop:8}},
@@ -1328,8 +2069,9 @@ function Calendar({events,setEvents,tasks,cu,users,locFilter,onJoinCall}){
           el('div',null,
             !sel._task&&(sel.created_by_id===cu.id||cu.role==='admin')&&el('button',{className:'btn b-red',onClick:()=>deleteEvent(sel.id)},'Delete'),
           ),
-          el('div',{style:{display:'flex',gap:8}},
+          el('div',{style:{display:'flex',gap:8,flexWrap:'wrap'}},
             sel.meet_link&&!sel._task&&el('button',{onClick:()=>{setSel(null);onJoinCall(sel.meet_link.split('/').pop(),sel.title,sel.meet_link);},style:{background:'#10b981',color:'#fff',padding:'9px 16px',borderRadius:8,border:'none',fontWeight:700,fontSize:13,display:'inline-flex',alignItems:'center',gap:6,cursor:'pointer',fontFamily:'inherit'}},'🎥 Join'),
+            !sel._task&&(sel.type==='meeting'||(sel.attendees||[]).length>0)&&el('button',{onClick:()=>{setSel(null);setNotesEvent(sel);},style:{background:'rgba(245,166,35,.1)',color:'var(--accent)',border:'1px solid rgba(245,166,35,.3)',padding:'9px 16px',borderRadius:8,fontWeight:700,fontSize:13,cursor:'pointer',fontFamily:'inherit',display:'inline-flex',alignItems:'center',gap:6}},'🤖 AI Notes'+(meetingNotes?.find(n=>n.event_id===sel.id)?' ✓':'')),
             el('button',{className:'btn b-ghost',onClick:()=>setSel(null)},'Close'),
           ),
         ),
@@ -1384,7 +2126,9 @@ function usePullToRefresh(onRefresh){
 function App(){
   const[cu,setCu]=useState(()=>{try{const s=localStorage.getItem('pf_session');return s?JSON.parse(s):null;}catch{return null;}});
   const[tasks,setTasks]=useState([]);
+  const[salesTasks,setSalesTasks]=useState([]);
   const[events,setEvents]=useState([]);
+  const[meetingNotes,setMeetingNotes]=useState([]);
   const[users,setUsers]=useState([]);
   const[loading,setLoading]=useState(false);
   const[dbReady,setDbReady]=useState(null);
@@ -1397,9 +2141,11 @@ function App(){
     if(!cu||!dbReady)return;
     Promise.all([
       db.get('pf_tasks','order=created_at.desc').catch(()=>[]),
+      db.get('pf_sales_tasks','order=created_at.desc').catch(()=>[]),
       db.get('pf_users').catch(()=>[]),
       db.get('pf_events','order=date.asc').catch(()=>[]),
-    ]).then(([t,u,ev])=>{setTasks(t||[]);setUsers(u||[]);});
+      db.get('pf_meeting_notes','order=created_at.desc').catch(()=>[]),
+    ]).then(([t,u,ev,mn,st])=>{setTasks(t||[]);setUsers(u||[]);});
   },[cu,dbReady]);
 
   usePullToRefresh(doRefresh);
@@ -1434,12 +2180,16 @@ function App(){
     setLoading(true);
     Promise.all([
       db.get('pf_tasks','order=created_at.desc').catch(()=>[]),
+      db.get('pf_sales_tasks','order=created_at.desc').catch(()=>[]),
       db.get('pf_users').catch(()=>[]),
       db.get('pf_events','order=date.asc').catch(()=>[]),
-    ]).then(([t,u,ev])=>{
+      db.get('pf_meeting_notes','order=created_at.desc').catch(()=>[]),
+    ]).then(([t,u,ev,mn,st])=>{
       setTasks(t||[]);
       setUsers(u||[]);
       setEvents(ev||[]);
+      setMeetingNotes(mn||[]);
+      setSalesTasks(st||[]);
     }).catch(console.error).finally(()=>setLoading(false));
     // Check for tasks placed on hold for this user
     db.get('pf_tasks','status=eq.on_hold&order=updated_at.desc').then(held=>{
@@ -1462,6 +2212,7 @@ function App(){
   const nav=[
     {id:'board',ico:'⬛',label:'Task Board'},
     {id:'calendar',ico:'📅',label:'Calendar'},
+    (cu.role==='admin'||cu.dept==='Sales'||cu.dept==='Marketing')&&{id:'sales',ico:'🏪',label:'Sales & Marketing'},
     isAdmin&&{id:'team',ico:'👥',label:'Team & Access',badge:pending||null},
   ].filter(Boolean);
 
@@ -1543,6 +2294,9 @@ function App(){
       el('button',{className:`mnav-btn${page==='board'?' on':''}`,onClick:()=>setPage('board')},
         el('span',{className:'mnav-ico'},'⬛'),'Board'
       ),
+      el('button',{className:`mnav-btn${page==='sales'?' on':''}`,onClick:()=>setPage('sales')},
+        el('span',{className:'mnav-ico'},'🏪'),'Sales'
+      ),
       el('button',{className:`mnav-btn${page==='calendar'?' on':''}`,onClick:()=>setPage('calendar')},
         el('span',{className:'mnav-ico'},'📅'),'Calendar'
       ),
@@ -1570,7 +2324,8 @@ function App(){
     ),
     el('div',{className:'main'},
       page==='board'&&el(Board,{tasks,setTasks,cu,users,locFilter,setLocFilter}),
-      page==='calendar'&&el(Calendar,{events,setEvents,tasks,cu,users,locFilter,onJoinCall:(room,title,meetLink)=>setActiveCall({room,title,meetLink})}),
+      page==='calendar'&&el(Calendar,{events,setEvents,tasks,cu,users,locFilter,meetingNotes,setMeetingNotes,onJoinCall:(room,title,meetLink)=>setActiveCall({room,title,meetLink})}),
+      page==='sales'&&el(SalesMarketing,{salesTasks,setSalesTasks,cu,users,locFilter}),
       page==='team'&&isAdmin&&el(Team,{users,setUsers,cu}),
     )
   );
