@@ -207,7 +207,77 @@ async function sendEmail({to,subject,html}){
 
 // ── CONSTANTS ─────────────────────────────────────────────────────────────────
 const LOCS=['Nationwide','Michigan','Missouri'];
-const DEPTS=['Gummy','Cartridge','Pre-Roll','QC','Distribution','Warehouse','Facility','HR','Management','Extraction','Testing','Waste','Purchasing','Biomass','Shipping','Receiving','Sales','Marketing'];
+// ── DEPARTMENT HIERARCHY (Grandmother → Mother → Child) ─────────────────────
+const DEPT_TREE={
+  'Production':{
+    'Cart Department':['Cart Priming','Cart Filling','Cart Cleaning','Cart Packaging'],
+    'Pre-Roll Department':['Pre-Roll Priming','Pre-Roll Filling','Pre-Roll Kiefing'],
+    'Gummy Department':['Gummy Production','Gummy Packaging'],
+    'Biomass':[],
+    'Extraction':[],
+    'QC':[],
+  },
+  'Distribution':{
+    'Inventory':[],
+    'Orders':[],
+  },
+  'Facility':{
+    'HR':[],
+    'A/R & A/P':[],
+    'Sanitation':[],
+    'Maintenance':[],
+  },
+  'Compliance':{
+    'METRC Compliance':[],
+    'Label':[],
+    'Waste':[],
+    'Testing':[],
+  },
+  'Warehouse':{},
+  'Sales & Marketing':{
+    'Sales':[],
+    'Marketing':[],
+  },
+};
+// Expand access: selecting a grandmother auto-includes all its mothers+children
+// Selecting a mother auto-includes all its children
+function expandDepts(selected){
+  const result=new Set(selected);
+  selected.forEach(d=>{
+    // Is it a grandmother?
+    if(DEPT_TREE[d]){
+      Object.entries(DEPT_TREE[d]).forEach(([mother,children])=>{
+        result.add(mother);
+        children.forEach(c=>result.add(c));
+      });
+    }
+    // Is it a mother?
+    Object.values(DEPT_TREE).forEach(mothers=>{
+      if(mothers[d]){
+        (mothers[d]||[]).forEach(c=>result.add(c));
+      }
+    });
+  });
+  return [...result];
+}
+function getParents(dept){
+  const parents=[];
+  Object.entries(DEPT_TREE).forEach(([gm,mothers])=>{
+    if(dept===gm) return;
+    Object.entries(mothers).forEach(([m,children])=>{
+      if(dept===m){parents.push(gm);}
+      if(children.includes(dept)){parents.push(gm);parents.push(m);}
+    });
+  });
+  return [...new Set(parents)];
+}
+const DEPTS=['Production','Distribution','Facility','Compliance','Warehouse','Sales & Marketing',
+  'Cart Department','Pre-Roll Department','Gummy Department','Biomass','Extraction','QC',
+  'Inventory','Orders','HR','A/R & A/P','Sanitation','Maintenance',
+  'METRC Compliance','Label','Waste','Testing','Sales','Marketing',
+  'Cart Priming','Cart Filling','Cart Cleaning','Cart Packaging',
+  'Pre-Roll Priming','Pre-Roll Filling','Pre-Roll Kiefing',
+  'Gummy Production','Gummy Packaging'];
 const ROLES=[
   'employee',
   'brand_ambassador',
@@ -1005,23 +1075,36 @@ function Team({users,setUsers,cu}){
   const[editU,setEditU]=useState(null);
   const[showAdd,setAdd]=useState(false);
   const[search,setSearch]=useState('');
-  const[af,setAf]=useState({firstName:'',lastName:'',email:'',pw:'',role:'employee',dept:'General',loc:'Nationwide'});
+  const[saveMsg,setSaveMsg]=useState('');
+  const[af,setAf]=useState({firstName:'',lastName:'',email:'',pw:'',role:'employee',dept:'Production',loc:'Nationwide'});
   const pending=users.filter(u=>!u.approved);
   const approved=users.filter(u=>u.approved).filter(u=>
-    !search||u.name.toLowerCase().includes(search.toLowerCase())||u.email?.toLowerCase().includes(search.toLowerCase())||RLABEL[u.role]?.toLowerCase().includes(search.toLowerCase())
+    !search||u.name.toLowerCase().includes(search.toLowerCase())||
+    u.email?.toLowerCase().includes(search.toLowerCase())||
+    (RLABEL[u.role]||'').toLowerCase().includes(search.toLowerCase())
   );
 
   async function approve(id){
-    await db.update('pf_users',id,{approved:true});
-    setUsers(p=>p.map(u=>u.id===id?{...u,approved:true}:u));
-    const user=users.find(u=>u.id===id);
-    if(user?.email) sendEmail({to:user.email,subject:'Your Hendrix TMS account is approved',html:`<div style="font-family:sans-serif;background:#0f1117;color:#e8eaf0;padding:24px;border-radius:12px;max-width:500px"><div style="color:#f5a623;font-size:20px;font-weight:700;margin-bottom:12px">Hendrix TMS</div><p>Hi ${user.name}, your account has been approved.</p><a href="${APP_URL}" style="display:inline-block;background:#f5a623;color:#0a0f1e;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:600;margin-top:12px">Sign In →</a></div>`});
+    try{
+      await db.update('pf_users',id,{approved:true});
+      setUsers(p=>p.map(u=>u.id===id?{...u,approved:true}:u));
+      const user=users.find(u=>u.id===id);
+      if(user?.email) sendEmail({to:user.email,subject:'Your Hendrix TMS account is approved',html:`<div style="font-family:sans-serif;background:#0f1117;color:#e8eaf0;padding:24px;border-radius:12px;max-width:500px"><div style="color:#f5a623;font-size:20px;font-weight:700;margin-bottom:12px">Hendrix TMS</div><p>Hi ${user.name}, your account has been approved.</p><a href="${APP_URL}" style="display:inline-block;background:#f5a623;color:#0a0f1e;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:600;margin-top:12px">Sign In →</a></div>`});
+    }catch(e){console.error('approve error:',e);}
   }
 
-  async function reject(id){if(!window.confirm('Reject this request?'))return;await db.remove('pf_users',id);setUsers(p=>p.filter(u=>u.id!==id));}
-  async function removeUser(id){if(id===cu.id||!window.confirm('Remove this user?'))return;await db.remove('pf_users',id);setUsers(p=>p.filter(u=>u.id!==id));}
+  async function reject(id){
+    if(!window.confirm('Reject this request?'))return;
+    try{await db.remove('pf_users',id);setUsers(p=>p.filter(u=>u.id!==id));}catch(e){console.error(e);}
+  }
+
+  async function removeUser(id){
+    if(id===cu.id||!window.confirm('Remove this user?'))return;
+    try{await db.remove('pf_users',id);setUsers(p=>p.filter(u=>u.id!==id));}catch(e){console.error(e);}
+  }
 
   async function saveEdit(){
+    setSaveMsg('Saving...');
     const update={
       role:editU.role,
       dept:editU.dept,
@@ -1029,129 +1112,183 @@ function Team({users,setUsers,cu}){
       managers:editU.managers||[],
       oversees_depts:editU.oversees_depts||[],
     };
-    await db.update('pf_users',editU.id,update);
-    setUsers(p=>p.map(u=>u.id===editU.id?{...u,...update}:u));
-    setEditU(null);
+    try{
+      await db.update('pf_users',editU.id,update);
+      setUsers(p=>p.map(u=>u.id===editU.id?{...u,...update}:u));
+      setSaveMsg('✓ Saved!');
+      setTimeout(()=>{setSaveMsg('');setEditU(null);},800);
+    }catch(e){
+      console.error('saveEdit error:',e);
+      setSaveMsg('❌ Save failed — check console');
+    }
   }
 
   async function addUser(){
     if(!af.firstName||!af.email||!af.pw)return;
     const fullName=af.firstName.trim()+' '+(af.lastName||'').trim();
-    const nu={id:'u'+Date.now(),name:fullName,first_name:af.firstName,last_name:af.lastName||'',email:af.email,pw:af.pw,role:af.role,dept:af.dept,loc:af.loc,approved:true,perms:[],managers:[],oversees_depts:[]};
-    await db.insert('pf_users',nu);
-    setUsers(p=>[...p,nu]);
-    setAdd(false);setAf({firstName:'',lastName:'',email:'',pw:'',role:'employee',dept:'General',loc:'Nationwide'});
+    const nu={
+      id:'u'+Date.now(),name:fullName,
+      first_name:af.firstName,last_name:af.lastName||'',
+      email:af.email,pw:af.pw,role:af.role,
+      dept:af.dept,loc:af.loc,
+      approved:true,perms:[],managers:[],oversees_depts:[],
+    };
+    try{
+      await db.insert('pf_users',nu);
+      setUsers(p=>[...p,nu]);
+      setAdd(false);
+      setAf({firstName:'',lastName:'',email:'',pw:'',role:'employee',dept:'Production',loc:'Nationwide'});
+    }catch(e){console.error('addUser error:',e);alert('Failed to add user: '+e.message);}
   }
 
-  function toggleOverseesDept(dept){
+  function toggleDept(dept){
     setEditU(p=>{
-      const cur=p.oversees_depts||[];
-      return {...p,oversees_depts:cur.includes(dept)?cur.filter(d=>d!==dept):[...cur,dept]};
+      const cur=new Set(p.oversees_depts||[]);
+      if(cur.has(dept)){
+        // Remove this dept AND any children that were auto-added by it
+        cur.delete(dept);
+        // Remove children if no other parent selects them
+        const remaining=[...cur];
+        const expanded=new Set(expandDepts(remaining));
+        return {...p,oversees_depts:remaining.filter(d=>expanded.has(d)||remaining.includes(d))};
+      } else {
+        cur.add(dept);
+        return {...p,oversees_depts:[...cur]};
+      }
     });
   }
+
+  // Get effective access (expanded) for display
+  function getEffectiveAccess(selected){
+    return expandDepts(selected||[]);
+  }
+
+  // Determine dept level for styling
+  function deptLevel(dept){
+    if(DEPT_TREE[dept]!==undefined) return 'grandmother';
+    for(const [gm,mothers] of Object.entries(DEPT_TREE)){
+      if(mothers[dept]!==undefined) return 'mother';
+      for(const children of Object.values(mothers)){
+        if(children.includes(dept)) return 'child';
+      }
+    }
+    return 'child';
+  }
+
+  const deptLevelStyle={
+    grandmother:{bg:'rgba(245,166,35,.12)',border:'rgba(245,166,35,.4)',color:'var(--accent)',fw:700},
+    mother:{bg:'rgba(59,130,246,.08)',border:'rgba(59,130,246,.3)',color:'#93c5fd',fw:600},
+    child:{bg:'var(--surface2)',border:'var(--border)',color:'var(--text2)',fw:500},
+  };
 
   return el('div',null,
     el('div',{className:'ph'},
       el('div',null,el('div',{className:'pt'},'Team & Access'),el('div',{className:'ps'},'Manage roles, managers and department oversight')),
       el('div',{style:{display:'flex',gap:8}},
-        el('input',{placeholder:'Search team...',value:search,onChange:ev=>setSearch(ev.target.value),style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px 14px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',width:200}}),
+        el('input',{placeholder:'Search...',value:search,onChange:ev=>setSearch(ev.target.value),style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px 14px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',width:200}}),
         el('button',{className:'btn b-blue',onClick:()=>setAdd(true)},'+ Add Member'),
       ),
     ),
 
+    // Pending approvals
     pending.length>0&&el('div',{className:'card',style:{marginBottom:18,borderColor:'rgba(245,158,11,.3)'}},
       el('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:12}},
         el('span',{className:'badge bb-yellow'},'⏳ Pending'),
-        el('span',{style:{fontSize:12,color:'var(--text2)'}}),`${pending.length} waiting for approval`
+        el('span',{style:{fontSize:13,color:'var(--text2)'}},pending.length+' waiting for approval'),
       ),
       pending.map(u=>el('div',{key:u.id,style:{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 0',borderBottom:'1px solid var(--border)',gap:12,flexWrap:'wrap'}},
         el('div',null,
           el('div',{style:{fontWeight:600,fontSize:13}},u.name),
-          el('div',{style:{fontSize:12,color:'var(--text2)'}},`${u.email} · ${u.dept} · ${u.loc}`)
+          el('div',{style:{fontSize:12,color:'var(--text2)'}},`${u.email} · ${u.dept} · ${u.loc}`),
         ),
-        el('div',{style:{display:'flex',gap:8,alignItems:'center'}},
+        el('div',{style:{display:'flex',gap:8}},
           el('button',{className:'btn b-green btn-sm',onClick:()=>approve(u.id)},'✓ Approve'),
           el('button',{className:'btn b-red btn-sm',onClick:()=>reject(u.id)},'✗ Reject'),
         ),
       ))
     ),
 
+    // Team table
     el('div',{className:'card',style:{padding:0}},
       el('div',{className:'tw'},
         el('table',null,
-          el('thead',null,el('tr',null,['Member','Role','Location','Managers','Oversees',''].map(h=>el('th',{key:h},h)))),
-          el('tbody',null,approved.map(u=>el('tr',{key:u.id},
-            el('td',null,
-              el('div',{style:{display:'flex',alignItems:'center',gap:8}},
-                el('div',{className:'avatar',style:{background:avatarColor(u.name),width:32,height:32,fontSize:12}},u.name.charAt(0).toUpperCase()),
-                el('div',null,
-                  el('div',{style:{fontWeight:600,fontSize:13}},u.name),
-                  el('div',{style:{fontSize:11,color:'var(--text3)'}},u.email),
+          el('thead',null,el('tr',null,['Member','Role','Location','Reports To','Oversees',''].map(h=>el('th',{key:h},h)))),
+          el('tbody',null,approved.map(u=>{
+            const effective=getEffectiveAccess(u.oversees_depts||[]);
+            return el('tr',{key:u.id},
+              el('td',null,
+                el('div',{style:{display:'flex',alignItems:'center',gap:8}},
+                  el('div',{className:'avatar',style:{background:avatarColor(u.name),width:32,height:32,fontSize:12}},u.name.charAt(0).toUpperCase()),
+                  el('div',null,
+                    el('div',{style:{fontWeight:600,fontSize:13}},u.name),
+                    el('div',{style:{fontSize:11,color:'var(--text3)'}},u.email),
+                  )
                 )
-              )
-            ),
-            el('td',null,el('span',{className:`badge ${RCOLOR[u.role]||'bb-gray'}`,style:{fontSize:11,whiteSpace:'nowrap'}},RLABEL[u.role]||u.role)),
-            el('td',null,el('span',{style:{fontSize:12,color:'var(--text2)'}},u.loc)),
-            el('td',null,
-              (u.managers||[]).length===0
-                ?el('span',{style:{fontSize:12,color:'var(--text3)'}},'—')
-                :el('div',null,(u.managers||[]).map(m=>el('div',{key:m.id,style:{fontSize:12,marginBottom:2}},m.name)))
-            ),
-            el('td',null,
-              (u.oversees_depts||[]).length===0
-                ?el('span',{style:{fontSize:12,color:'var(--text3)'}},'—')
-                :el('div',{style:{display:'flex',flexWrap:'wrap',gap:3}},
-                  (u.oversees_depts||[]).map(d=>el('span',{key:d,style:{background:'var(--accent-dim)',color:'var(--accent)',border:'1px solid rgba(245,166,35,.2)',borderRadius:4,padding:'1px 6px',fontSize:10,fontWeight:600}},d))
-                )
-            ),
-            el('td',null,
-              el('button',{className:'btn b-ghost btn-sm',onClick:()=>setEditU({...u,oversees_depts:u.oversees_depts||[],managers:u.managers||[]})},  'Edit'),
-              u.id!==cu.id&&el('button',{className:'btn b-red btn-sm',style:{marginLeft:6},onClick:()=>removeUser(u.id)},'Remove'),
-            ),
-          )))
+              ),
+              el('td',null,el('span',{className:`badge ${RCOLOR[u.role]||'bb-gray'}`,style:{fontSize:11,whiteSpace:'nowrap'}},RLABEL[u.role]||u.role)),
+              el('td',null,el('span',{style:{fontSize:12,color:'var(--text2)'}},u.loc)),
+              el('td',null,
+                (u.managers||[]).length===0
+                  ?el('span',{style:{fontSize:12,color:'var(--text3)'}},'—')
+                  :el('div',null,(u.managers||[]).map(m=>el('div',{key:m.id,style:{fontSize:12,marginBottom:2}},m.name)))
+              ),
+              el('td',null,
+                (u.oversees_depts||[]).length===0
+                  ?el('span',{style:{fontSize:12,color:'var(--text3)'}},'—')
+                  :el('div',null,
+                    el('div',{style:{display:'flex',flexWrap:'wrap',gap:3,marginBottom:3}},
+                      (u.oversees_depts||[]).map(d=>{
+                        const lvl=deptLevel(d);
+                        const s=deptLevelStyle[lvl];
+                        return el('span',{key:d,style:{background:s.bg,color:s.color,border:'1px solid '+s.border,borderRadius:4,padding:'1px 6px',fontSize:10,fontWeight:s.fw}},d);
+                      })
+                    ),
+                    effective.length>(u.oversees_depts||[]).length&&el('div',{style:{fontSize:10,color:'var(--text3)'}},`+${effective.length-(u.oversees_depts||[]).length} auto-included`),
+                  )
+              ),
+              el('td',null,
+                el('button',{className:'btn b-ghost btn-sm',onClick:()=>setEditU({...u,oversees_depts:u.oversees_depts||[],managers:u.managers||[]})},'Edit'),
+                u.id!==cu.id&&el('button',{className:'btn b-red btn-sm',style:{marginLeft:6},onClick:()=>removeUser(u.id)},'Remove'),
+              ),
+            );
+          }))
         )
       )
     ),
 
-    // ── EDIT MODAL ──────────────────────────────────────────────────────────
+    // ── EDIT MODAL ─────────────────────────────────────────────────────────
     editU&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setEditU(null)},
-      el('div',{className:'md',style:{width:680,maxHeight:'92vh'}},
+      el('div',{className:'md',style:{width:700,maxHeight:'92vh'}},
         el('div',{className:'mh'},
-          el('div',{style:{flex:1}},
-            el('div',{style:{display:'flex',alignItems:'center',gap:10}},
-              el('div',{className:'avatar',style:{background:avatarColor(editU.name),width:36,height:36,fontSize:14}},editU.name.charAt(0).toUpperCase()),
-              el('div',null,el('div',{className:'mt2'},editU.name),el('div',{style:{fontSize:12,color:'var(--text2)'}},editU.email))
-            )
+          el('div',{style:{flex:1,display:'flex',alignItems:'center',gap:10}},
+            el('div',{className:'avatar',style:{background:avatarColor(editU.name),width:36,height:36,fontSize:14}},editU.name.charAt(0).toUpperCase()),
+            el('div',null,el('div',{className:'mt2'},editU.name),el('div',{style:{fontSize:12,color:'var(--text2)'}},editU.email)),
           ),
-          el('button',{className:'mc',onClick:()=>setEditU(null)},'×')
+          el('button',{className:'mc',onClick:()=>setEditU(null)},'×'),
         ),
         el('div',{className:'mbd'},
 
-          // ── ROLE ──────────────────────────────────────────────────────────
+          // Role dropdown (grouped)
           el('div',{className:'fg'},
             el('label',null,'Role'),
-            el('div',{style:{display:'flex',flexDirection:'column',gap:8}},
-              ROLE_GROUPS.map(group=>el('div',{key:group.label},
-                el('div',{style:{fontSize:10,fontWeight:700,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'1px',marginBottom:5}},group.label),
-                el('div',{style:{display:'flex',flexWrap:'wrap',gap:5}},
-                  group.roles.map(r=>el('button',{key:r,
-                    onClick:()=>setEditU(p=>({...p,role:r})),
-                    style:{
-                      padding:'5px 12px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:600,cursor:'pointer',
-                      background:editU.role===r?'var(--accent)':'transparent',
-                      color:editU.role===r?'#0a0f1e':'var(--text2)',
-                      borderColor:editU.role===r?'var(--accent)':'var(--border)',
-                      transition:'all .15s',fontFamily:'inherit',
-                    }
-                  },RLABEL[r]))
-                )
-              ))
-            )
+            el('select',{
+              value:editU.role,
+              onChange:ev=>setEditU(p=>({...p,role:ev.target.value})),
+              style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'10px 14px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none'},
+            },
+              ROLE_GROUPS.map(g=>[
+                el('option',{key:'h-'+g.label,disabled:true,style:{color:'#6b7280',fontWeight:700}},'── '+g.label+' ──'),
+                ...g.roles.map(r=>el('option',{key:r,value:r,style:{paddingLeft:16}},RLABEL[r]||r))
+              ])
+            ),
+            el('div',{style:{marginTop:6,display:'flex',alignItems:'center',gap:6}},
+              el('span',{className:`badge ${RCOLOR[editU.role]||'bb-gray'}`,style:{fontSize:11}},RLABEL[editU.role]||editU.role),
+            ),
           ),
 
           el('div',{className:'divider'}),
 
-          // ── LOCATION + DEPT ───────────────────────────────────────────────
+          // Location + Home Dept
           el('div',{className:'g2'},
             el('div',{className:'fg',style:{marginBottom:0}},
               el('label',null,'Location'),
@@ -1169,47 +1306,91 @@ function Team({users,setUsers,cu}){
 
           el('div',{className:'divider'}),
 
-          // ── OVERSEES DEPTS ────────────────────────────────────────────────
+          // Dept access / oversight with hierarchy
           el('div',{className:'fg'},
-            el('label',null,'Oversees Departments'),
-            el('div',{style:{fontSize:11,color:'var(--text3)',marginBottom:8}},'Check all departments this person is responsible for'),
-            el('div',{style:{display:'flex',flexWrap:'wrap',gap:6}},
-              DEPTS.map(dept=>{
-                const checked=(editU.oversees_depts||[]).includes(dept);
-                return el('div',{key:dept,
-                  onClick:()=>toggleOverseesDept(dept),
-                  style:{
-                    display:'flex',alignItems:'center',gap:6,padding:'6px 12px',
-                    borderRadius:20,border:'1px solid',cursor:'pointer',
-                    background:checked?'rgba(245,166,35,.1)':'var(--surface2)',
-                    borderColor:checked?'var(--accent)':'var(--border)',
-                    color:checked?'var(--accent)':'var(--text2)',
-                    fontSize:12,fontWeight:checked?700:500,
-                    transition:'all .15s',userSelect:'none',
-                  }
-                },
-                  el('div',{style:{width:14,height:14,borderRadius:3,border:'1.5px solid',borderColor:checked?'var(--accent)':'var(--text3)',background:checked?'var(--accent)':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}},
-                    checked&&el('span',{style:{color:'#0a0f1e',fontSize:9,fontWeight:900}},'✓')
+            el('label',null,'Department Access / Oversight'),
+            el('div',{style:{fontSize:11,color:'var(--text3)',marginBottom:10,lineHeight:1.5}},
+              '🟡 Selecting a ',el('strong',null,'top-level department'),' automatically grants access to all sub-departments. ',
+              '🔵 Selecting a ',el('strong',null,'mid-level'),' grants access to its sub-departments.'
+            ),
+            // Render by grandmother → mother → children
+            el('div',{style:{display:'flex',flexDirection:'column',gap:10}},
+              Object.entries(DEPT_TREE).map(([gm,mothers])=>{
+                const gmSelected=(editU.oversees_depts||[]).includes(gm);
+                const effective=new Set(expandDepts(editU.oversees_depts||[]));
+                const gmActive=effective.has(gm)||gmSelected;
+                return el('div',{key:gm,style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:10,padding:12}},
+                  // Grandmother row
+                  el('div',{
+                    onClick:()=>toggleDept(gm),
+                    style:{display:'flex',alignItems:'center',gap:8,cursor:'pointer',marginBottom:Object.keys(mothers).length>0?10:0},
+                  },
+                    el('div',{style:{width:18,height:18,borderRadius:4,border:'2px solid',borderColor:gmSelected?'var(--accent)':'var(--text3)',background:gmSelected?'var(--accent)':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,transition:'all .15s'}},
+                      gmSelected&&el('span',{style:{color:'#0a0f1e',fontSize:10,fontWeight:900}},'✓')
+                    ),
+                    el('span',{style:{fontSize:13,fontWeight:700,color:gmSelected?'var(--accent)':'var(--text)'}},gm),
+                    el('span',{style:{fontSize:10,color:'var(--text3)',marginLeft:4}},'(all sub-depts)'),
+                    !gmSelected&&gmActive&&el('span',{style:{fontSize:10,color:'var(--accent)',marginLeft:6}},'● partial'),
                   ),
-                  dept
+                  // Mother rows
+                  Object.keys(mothers).length>0&&el('div',{style:{paddingLeft:16,display:'flex',flexDirection:'column',gap:6}},
+                    Object.entries(mothers).map(([mother,children])=>{
+                      const mSelected=(editU.oversees_depts||[]).includes(mother)||gmSelected;
+                      const mActive=effective.has(mother);
+                      return el('div',{key:mother},
+                        el('div',{
+                          onClick:()=>!gmSelected&&toggleDept(mother),
+                          style:{display:'flex',alignItems:'center',gap:7,cursor:gmSelected?'not-allowed':'pointer',marginBottom:children.length>0?6:0,opacity:gmSelected?.6:1},
+                        },
+                          el('div',{style:{width:15,height:15,borderRadius:3,border:'1.5px solid',borderColor:mActive?'#93c5fd':'var(--text3)',background:mActive?'rgba(59,130,246,.3)':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}},
+                            mActive&&el('span',{style:{color:'#93c5fd',fontSize:9,fontWeight:900}},'✓')
+                          ),
+                          el('span',{style:{fontSize:12,fontWeight:600,color:mActive?'#93c5fd':'var(--text2)'}},mother),
+                          children.length>0&&el('span',{style:{fontSize:10,color:'var(--text3)',marginLeft:3}},'('+children.length+' sub)'),
+                        ),
+                        // Children
+                        children.length>0&&el('div',{style:{paddingLeft:16,display:'flex',flexWrap:'wrap',gap:5,marginBottom:4}},
+                          children.map(child=>{
+                            const cActive=effective.has(child)||mActive;
+                            return el('div',{key:child,
+                              onClick:()=>!gmSelected&&!mSelected&&toggleDept(child),
+                              style:{display:'flex',alignItems:'center',gap:5,padding:'3px 9px',borderRadius:12,border:'1px solid',borderColor:cActive?'var(--border)':'var(--border)',background:cActive?'var(--surface3)':'transparent',color:cActive?'var(--text2)':'var(--text3)',fontSize:11,cursor:(gmSelected||mSelected)?'not-allowed':'pointer',opacity:(gmSelected||mSelected)?.6:1},
+                            },
+                              el('div',{style:{width:8,height:8,borderRadius:'50%',background:cActive?'var(--green)':'var(--text3)',flexShrink:0}}),
+                              child
+                            );
+                          })
+                        ),
+                      );
+                    })
+                  ),
                 );
               })
             ),
-            (editU.oversees_depts||[]).length>0&&el('div',{style:{marginTop:8,fontSize:12,color:'var(--accent)',fontWeight:600}},
-              `✓ ${(editU.oversees_depts||[]).length} department${(editU.oversees_depts||[]).length>1?'s':''} selected`
-            ),
+            // Summary of what's granted
+            (()=>{
+              const selected=editU.oversees_depts||[];
+              const effective=expandDepts(selected);
+              if(effective.length===0) return null;
+              return el('div',{style:{marginTop:12,background:'rgba(245,166,35,.06)',border:'1px solid rgba(245,166,35,.2)',borderRadius:8,padding:'10px 14px'}},
+                el('div',{style:{fontSize:11,fontWeight:700,color:'var(--accent)',marginBottom:6,textTransform:'uppercase',letterSpacing:'.5px'}},'Effective Access ('+effective.length+' depts)'),
+                el('div',{style:{display:'flex',flexWrap:'wrap',gap:4}},
+                  effective.map(d=>el('span',{key:d,style:{background:'rgba(245,166,35,.1)',color:'var(--accent)',border:'1px solid rgba(245,166,35,.2)',borderRadius:3,padding:'1px 6px',fontSize:10,fontWeight:600}},d))
+                ),
+              );
+            })(),
           ),
 
           el('div',{className:'divider'}),
 
-          // ── MANAGERS ──────────────────────────────────────────────────────
+          // Reports To (managers)
           el('div',{className:'fg'},
-            el('label',null,'Reports To (up to 3 managers)'),
+            el('label',null,'Reports To (up to 3)'),
             el('select',{value:'',onChange:ev=>{
               const u=users.find(x=>x.id===ev.target.value);
               if(!u)return;
               const mgrs=editU.managers||[];
-              if(mgrs.length>=3){alert('Max 3 managers per person.');return;}
+              if(mgrs.length>=3){alert('Max 3 managers.');return;}
               if(mgrs.find(m=>m.id===u.id))return;
               setEditU(p=>({...p,managers:[...mgrs,{id:u.id,name:u.name,email:u.email,role:u.role}]}));
               ev.target.value='';
@@ -1217,7 +1398,7 @@ function Team({users,setUsers,cu}){
               el('option',{value:''},'+ Add manager...'),
               ...users.filter(u=>u.approved&&u.id!==editU.id&&!(editU.managers||[]).find(m=>m.id===u.id)).map(u=>el('option',{key:u.id,value:u.id},`${u.name} — ${RLABEL[u.role]||u.role}`))
             ),
-            (editU.managers||[]).length>0&&el('div',{style:{marginTop:10,display:'flex',flexDirection:'column',gap:6}},
+            (editU.managers||[]).length>0&&el('div',{style:{marginTop:8,display:'flex',flexDirection:'column',gap:6}},
               (editU.managers||[]).map((m,i)=>el('div',{key:m.id,style:{display:'flex',alignItems:'center',justifyContent:'space-between',background:'var(--surface2)',borderRadius:8,padding:'8px 12px'}},
                 el('div',{style:{display:'flex',alignItems:'center',gap:8}},
                   el('div',{style:{background:'var(--accent)',color:'#0a0f1e',borderRadius:5,padding:'2px 7px',fontSize:10,fontWeight:800}},'M'+(i+1)),
@@ -1226,20 +1407,23 @@ function Team({users,setUsers,cu}){
                     el('div',{style:{fontSize:11,color:'var(--text2)'}},RLABEL[m.role]||m.role)
                   )
                 ),
-                el('button',{style:{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:18},onClick:()=>setEditU(p=>({...p,managers:p.managers.filter(x=>x.id!==m.id)}))},'×')
+                el('button',{style:{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:18,lineHeight:1},onClick:()=>setEditU(p=>({...p,managers:p.managers.filter(x=>x.id!==m.id)}))},'×')
               ))
             ),
             (editU.managers||[]).length===0&&el('div',{style:{fontSize:12,color:'var(--text3)',marginTop:6}},'No managers assigned'),
           ),
         ),
-        el('div',{className:'mf'},
-          el('button',{className:'btn b-ghost',onClick:()=>setEditU(null)},'Cancel'),
-          el('button',{className:'btn b-blue',onClick:saveEdit},'Save Changes'),
+        el('div',{className:'mf',style:{justifyContent:'space-between',alignItems:'center'}},
+          el('div',{style:{fontSize:13,fontWeight:600,color:saveMsg.includes('❌')?'var(--red)':saveMsg.includes('✓')?'var(--green)':'var(--text2)'}},saveMsg),
+          el('div',{style:{display:'flex',gap:8}},
+            el('button',{className:'btn b-ghost',onClick:()=>setEditU(null)},'Cancel'),
+            el('button',{className:'btn b-blue',onClick:saveEdit},'Save Changes'),
+          ),
         ),
       )
     ),
 
-    // ── ADD USER MODAL ───────────────────────────────────────────────────────
+    // ── ADD USER MODAL ────────────────────────────────────────────────────
     showAdd&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setAdd(false)},
       el('div',{className:'md'},
         el('div',{className:'mh'},el('div',{className:'mt2'},'Add Team Member'),el('button',{className:'mc',onClick:()=>setAdd(false)},'×')),
@@ -1254,14 +1438,14 @@ function Team({users,setUsers,cu}){
             el('label',null,'Role'),
             el('select',{value:af.role,onChange:ev=>setAf(p=>({...p,role:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
               ROLE_GROUPS.map(g=>[
-                el('option',{key:'h-'+g.label,disabled:true,style:{fontWeight:700,color:'var(--text3)'}},'── '+g.label+' ──'),
-                ...g.roles.map(r=>el('option',{key:r,value:r},RLABEL[r]))
+                el('option',{key:'h-'+g.label,disabled:true,style:{color:'#6b7280',fontWeight:700}},'── '+g.label+' ──'),
+                ...g.roles.map(r=>el('option',{key:r,value:r},RLABEL[r]||r))
               ])
             )
           ),
           el('div',{className:'g2'},
             el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Location'),el('select',{value:af.loc,onChange:ev=>setAf(p=>({...p,loc:ev.target.value}))},LOCS.map(l=>el('option',{key:l,value:l},l)))),
-            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Department'),el('select',{value:af.dept,onChange:ev=>setAf(p=>({...p,dept:ev.target.value}))},DEPTS.map(d=>el('option',{key:d,value:d},d)))),
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Home Department'),el('select',{value:af.dept,onChange:ev=>setAf(p=>({...p,dept:ev.target.value}))},DEPTS.map(d=>el('option',{key:d,value:d},d)))),
           ),
         ),
         el('div',{className:'mf'},
