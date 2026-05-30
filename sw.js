@@ -1,32 +1,54 @@
-const CACHE = "hendrix-tms-v2";
+const CACHE_NAME = "hendrix-tms-v3";
 const ASSETS = [
   "/ProFlow/",
   "/ProFlow/index.html",
-  "https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js",
-  "https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"
 ];
 
-// ── INSTALL & CACHE ───────────────────────────────────────────────────────────
+// ── INSTALL ───────────────────────────────────────────────────────────────────
 self.addEventListener("install", ev => {
-  ev.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS).catch(()=>{})));
-  self.skipWaiting();
+  console.log("SW installing v3");
+  ev.waitUntil(
+    caches.open(CACHE_NAME).then(c => c.addAll(ASSETS).catch(()=>{}))
+  );
+  self.skipWaiting(); // Activate immediately without waiting
 });
 
+// ── ACTIVATE — Clean old caches ───────────────────────────────────────────────
 self.addEventListener("activate", ev => {
-  ev.waitUntil(caches.keys().then(keys =>
-    Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-  ));
-  self.clients.claim();
+  console.log("SW activating v3 — clearing old caches");
+  ev.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => {
+        console.log("Deleting old cache:", k);
+        return caches.delete(k);
+      }))
+    ).then(() => self.clients.claim()) // Take control immediately
+  );
+  // Notify all open tabs to reload
+  self.clients.matchAll({type:"window"}).then(clients => {
+    clients.forEach(client => {
+      client.postMessage({type:"SW_UPDATED", version:"v3"});
+    });
+  });
 });
 
+// ── FETCH — Network first, cache fallback ─────────────────────────────────────
 self.addEventListener("fetch", ev => {
-  if(ev.request.url.includes("supabase.co") || ev.request.url.includes("resend.com")) return;
+  // Never cache API calls
+  if(ev.request.url.includes("supabase.co") || 
+     ev.request.url.includes("resend.com") ||
+     ev.request.url.includes("googleapis.com")) return;
+
   ev.respondWith(
-    fetch(ev.request).then(res => {
-      const clone = res.clone();
-      caches.open(CACHE).then(c => c.put(ev.request, clone));
-      return res;
-    }).catch(() => caches.match(ev.request))
+    fetch(ev.request, {cache: "no-cache"})
+      .then(res => {
+        if(res.ok) {
+          const clone = res.clone();
+          caches.open(CACHE_NAME).then(c => c.put(ev.request, clone));
+        }
+        return res;
+      })
+      .catch(() => caches.match(ev.request))
   );
 });
 
@@ -34,7 +56,7 @@ self.addEventListener("fetch", ev => {
 self.addEventListener("push", ev => {
   if(!ev.data) return;
   let data;
-  try { data = ev.data.json(); } catch(e) { data = { title: "Hendrix TMS", body: ev.data.text() }; }
+  try { data = ev.data.json(); } catch(e) { data = {title:"Hendrix TMS", body:ev.data.text()}; }
 
   ev.waitUntil(
     self.registration.showNotification(data.title || "Hendrix TMS", {
@@ -43,9 +65,8 @@ self.addEventListener("push", ev => {
       badge: "/ProFlow/icon-192.png",
       tag: data.tag || "hendrix-tms",
       data: data.url || "/ProFlow/",
-      vibrate: [200, 100, 200],
+      vibrate: data.urgent ? [300,100,300,100,300] : [200,100,200],
       requireInteraction: data.urgent || false,
-      actions: data.actions || []
     })
   );
 });
@@ -53,15 +74,12 @@ self.addEventListener("push", ev => {
 // ── NOTIFICATION CLICK ────────────────────────────────────────────────────────
 self.addEventListener("notificationclick", ev => {
   ev.notification.close();
-  const url = ev.notification.data || "/ProFlow/";
   ev.waitUntil(
-    clients.matchAll({type: "window"}).then(clientList => {
+    clients.matchAll({type:"window",includeUncontrolled:true}).then(clientList => {
       for(const client of clientList) {
-        if(client.url.includes("/ProFlow/") && "focus" in client) {
-          return client.focus();
-        }
+        if(client.url.includes("/ProFlow/") && "focus" in client) return client.focus();
       }
-      if(clients.openWindow) return clients.openWindow(url);
+      return clients.openWindow("/ProFlow/");
     })
   );
 });
