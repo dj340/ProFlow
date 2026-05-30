@@ -2058,6 +2058,387 @@ Create comprehensive meeting notes in this EXACT JSON format (no markdown, just 
   );
 }
 
+// ── SOPs ──────────────────────────────────────────────────────────────────────
+function SOPs({sops,setSops,cu,users}){
+  const[view,setView]=useState('list'); // list | detail
+  const[sel,setSel]=useState(null);
+  const[showNew,setNew]=useState(false);
+  const[search,setSearch]=useState('');
+  const[deptFilter,setDeptFilter]=useState('All');
+  const[saving,setSaving]=useState(false);
+  const[ackMsg,setAckMsg]=useState('');
+  const[f,setF]=useState({
+    title:'',dept:'Production',description:'',
+    steps:[{id:'s1',text:''}],
+    version:'1.0',status:'draft',
+    attachments:[],
+    visible_to_roles:[],
+    visible_to_depts:[],
+  });
+
+  const isAdmin=cu.role==='admin'||['coo','director_production','director_operations','director_sales_marketing','general_manager'].includes(cu.role);
+  const canCreate=isAdmin||['facility_manager','production_manager','compliance_manager','warehouse_manager','distribution_manager','extraction_manager','maintenance_manager','sales_marketing_manager'].includes(cu.role);
+
+  // Filter SOPs visible to this user
+  const visibleSops=sops.filter(s=>{
+    if(isAdmin) return true;
+    if(s.status==='draft'&&s.created_by_id!==cu.id) return false;
+    if((s.visible_to_depts||[]).length>0){
+      const effective=expandDepts(s.visible_to_depts);
+      if(!effective.includes(cu.dept)&&!s.visible_to_depts.includes(cu.dept)) return false;
+    }
+    return true;
+  });
+
+  const filtered=visibleSops.filter(s=>{
+    if(deptFilter!=='All'&&s.dept!==deptFilter) return false;
+    if(search&&!s.title.toLowerCase().includes(search.toLowerCase())&&!s.dept.toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
+
+  const depts=['All',...Object.keys(DEPT_TREE)];
+
+  // Stats
+  const myAcks=sops.filter(s=>(s.acknowledgements||[]).some(a=>a.id===cu.id));
+  const needsAck=visibleSops.filter(s=>s.status==='published'&&!(s.acknowledgements||[]).some(a=>a.id===cu.id));
+
+  async function createSOP(){
+    if(!f.title) return;
+    setSaving(true);
+    const sop={
+      id:'sop-'+Date.now(),
+      ...f,
+      steps:f.steps.filter(s=>s.text.trim()),
+      acknowledgements:[],
+      created_by:cu.name,created_by_id:cu.id,
+      created_at:new Date().toISOString(),
+      updated_at:new Date().toISOString(),
+      updated_by:cu.name,
+    };
+    try{
+      await db.insert('pf_sops',sop);
+      setSops(p=>[sop,...p]);
+      setNew(false);
+      setF({title:'',dept:'Production',description:'',steps:[{id:'s1',text:''}],version:'1.0',status:'draft',attachments:[],visible_to_roles:[],visible_to_depts:[]});
+    }catch(e){
+      console.error(e);
+      alert('Failed to create SOP. Run SQL migration:\n\nCREATE TABLE IF NOT EXISTS pf_sops (\n  id text primary key, title text, dept text,\n  description text default \'\', steps jsonb default \'[]\',\n  version text default \'1.0\', status text default \'draft\',\n  attachments jsonb default \'[]\',\n  visible_to_roles jsonb default \'[]\',\n  visible_to_depts jsonb default \'[]\',\n  acknowledgements jsonb default \'[]\',\n  created_by text, created_by_id text,\n  created_at text, updated_at text, updated_by text\n);\nALTER TABLE pf_sops DISABLE ROW LEVEL SECURITY;');
+      navigator.clipboard.writeText("CREATE TABLE IF NOT EXISTS pf_sops (\n  id text primary key, title text, dept text,\n  description text default '', steps jsonb default '[]',\n  version text default '1.0', status text default 'draft',\n  attachments jsonb default '[]',\n  visible_to_roles jsonb default '[]',\n  visible_to_depts jsonb default '[]',\n  acknowledgements jsonb default '[]',\n  created_by text, created_by_id text,\n  created_at text, updated_at text, updated_by text\n);\nALTER TABLE pf_sops DISABLE ROW LEVEL SECURITY;").catch(()=>{});
+    }
+    setSaving(false);
+  }
+
+  async function publishSOP(sop){
+    const update={status:'published',updated_at:new Date().toISOString(),updated_by:cu.name};
+    try{
+      await db.update('pf_sops',sop.id,update);
+      setSops(p=>p.map(s=>s.id===sop.id?{...s,...update}:s));
+      setSel(s=>s?{...s,...update}:null);
+      // Notify all users
+      users.filter(u=>u.approved&&u.email).forEach(u=>{
+        sendEmail({to:u.email,subject:`📋 New SOP Published: "${sop.title}"`,
+          html:`<div style="font-family:sans-serif;background:#0a0f1e;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
+            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:4px">📋 Hendrix TMS</div>
+            <div style="font-size:18px;font-weight:700;margin-bottom:12px">${sop.title}</div>
+            <div style="background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.2);border-radius:10px;padding:14px;margin-bottom:20px">
+              <div style="margin-bottom:6px">📂 Department: <strong>${sop.dept}</strong></div>
+              <div style="margin-bottom:6px">📝 Version: <strong>${sop.version}</strong></div>
+              <div>👤 Published by: <strong>${cu.name}</strong></div>
+            </div>
+            <p style="color:#7b8db8;margin-bottom:20px">Please review and acknowledge this SOP in the Hendrix TMS app.</p>
+            <a href="${APP_URL}" style="background:#f5a623;color:#0a0f1e;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">Review SOP →</a>
+          </div>`
+        });
+      });
+    }catch(e){console.error(e);}
+  }
+
+  async function archiveSOP(sop){
+    if(!window.confirm('Archive this SOP?')) return;
+    const update={status:'archived',updated_at:new Date().toISOString(),updated_by:cu.name};
+    try{
+      await db.update('pf_sops',sop.id,update);
+      setSops(p=>p.map(s=>s.id===sop.id?{...s,...update}:s));
+      setSel(null);
+    }catch(e){console.error(e);}
+  }
+
+  async function acknowledgeSOP(sop){
+    const already=(sop.acknowledgements||[]).some(a=>a.id===cu.id);
+    if(already) return;
+    const ack={id:cu.id,name:cu.name,role:cu.role,at:new Date().toISOString()};
+    const acknowledgements=[...(sop.acknowledgements||[]),ack];
+    try{
+      await db.update('pf_sops',sop.id,{acknowledgements,updated_at:new Date().toISOString(),updated_by:cu.name});
+      setSops(p=>p.map(s=>s.id===sop.id?{...s,acknowledgements}:s));
+      setSel(s=>s?{...s,acknowledgements}:null);
+      setAckMsg('✓ Acknowledged!');
+      setTimeout(()=>setAckMsg(''),2000);
+    }catch(e){console.error(e);}
+  }
+
+  async function deleteSOP(id){
+    if(!window.confirm('Delete this SOP permanently?')) return;
+    try{
+      await db.remove('pf_sops',id);
+      setSops(p=>p.filter(s=>s.id!==id));
+      setSel(null);
+    }catch(e){console.error(e);}
+  }
+
+  function addStep(){
+    setF(p=>({...p,steps:[...p.steps,{id:'s'+Date.now(),text:''}]}));
+  }
+  function updateStep(id,text){
+    setF(p=>({...p,steps:p.steps.map(s=>s.id===id?{...s,text}:s)}));
+  }
+  function removeStep(id){
+    setF(p=>({...p,steps:p.steps.filter(s=>s.id!==id)}));
+  }
+
+  const statusColor={draft:'var(--text3)',published:'var(--green)',archived:'var(--text3)'};
+  const statusBg={draft:'bb-gray',published:'bb-green',archived:'bb-gray'};
+
+  return el('div',null,
+    el('div',{className:'ph'},
+      el('div',null,
+        el('div',{className:'pt'},'SOPs'),
+        el('div',{className:'ps'},'Standard Operating Procedures'),
+      ),
+      el('div',{style:{display:'flex',gap:8,alignItems:'center'}},
+        el('input',{placeholder:'Search SOPs...',value:search,onChange:ev=>setSearch(ev.target.value),style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px 14px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',width:200}}),
+        canCreate&&el('button',{className:'btn b-blue',onClick:()=>setNew(true)},'+ New SOP'),
+      ),
+    ),
+
+    // Stats row
+    el('div',{className:'g4',style:{marginBottom:20}},
+      [{l:'Total SOPs',v:visibleSops.length,c:'var(--text)',ico:'📋'},
+       {l:'Published',v:visibleSops.filter(s=>s.status==='published').length,c:'var(--green)',ico:'✅'},
+       {l:'Needs My Ack',v:needsAck.length,c:needsAck.length>0?'var(--red)':'var(--text3)',ico:'⚠️'},
+       {l:'I\'ve Acknowledged',v:myAcks.length,c:'var(--accent)',ico:'👍'},
+      ].map(({l,v,c,ico})=>el('div',{key:l,className:'stat',style:{display:'flex',alignItems:'center',gap:14}},
+        el('div',{style:{fontSize:28}},ico),
+        el('div',null,el('div',{className:'sl'},l),el('div',{className:'sv',style:{color:c,fontSize:24}},v)),
+      ))
+    ),
+
+    // Dept filter tabs
+    el('div',{style:{display:'flex',gap:6,flexWrap:'wrap',marginBottom:16}},
+      depts.map(d=>el('button',{key:d,onClick:()=>setDeptFilter(d),style:{padding:'5px 14px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:500,cursor:'pointer',background:deptFilter===d?'var(--accent)':'transparent',color:deptFilter===d?'#0a0f1e':'var(--text2)',borderColor:deptFilter===d?'var(--accent)':'var(--border)',transition:'all .15s'}},d))
+    ),
+
+    // Needs acknowledgement alert
+    needsAck.length>0&&el('div',{className:'alert al-yellow',style:{marginBottom:16}},
+      el('span',{style:{fontSize:18}},'⚠️'),
+      el('div',null,
+        el('div',{style:{fontWeight:700,marginBottom:4}},'Action Required'),
+        el('div',{style:{fontSize:13}},`You have ${needsAck.length} SOP${needsAck.length>1?'s':''} waiting for your acknowledgement.`),
+      ),
+    ),
+
+    // SOP list
+    filtered.length===0?el('div',{className:'empty'},el('div',{className:'eico'},'📋'),el('div',{className:'etxt'},'No SOPs found')):
+    el('div',{style:{display:'flex',flexDirection:'column',gap:8}},
+      filtered.map(sop=>{
+        const acked=(sop.acknowledgements||[]).some(a=>a.id===cu.id);
+        const ackPct=users.filter(u=>u.approved).length>0?Math.round(((sop.acknowledgements||[]).length/users.filter(u=>u.approved).length)*100):0;
+        return el('div',{key:sop.id,
+          onClick:()=>setSel(sop),
+          style:{background:'var(--surface)',border:'1px solid var(--border)',borderLeft:`3px solid ${sop.status==='published'?'var(--green)':sop.status==='archived'?'var(--text3)':'var(--accent)'}`,borderRadius:10,padding:'14px 18px',cursor:'pointer',transition:'all .15s'},
+          onMouseEnter:ev=>ev.currentTarget.style.borderColor='rgba(245,166,35,.3)',
+          onMouseLeave:ev=>ev.currentTarget.style.borderColor='var(--border)',
+        },
+          el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12}},
+            el('div',{style:{flex:1}},
+              el('div',{style:{display:'flex',gap:6,marginBottom:6,flexWrap:'wrap',alignItems:'center'}},
+                el('span',{className:`badge ${statusBg[sop.status]}`},sop.status==='published'?'✅ Published':sop.status==='draft'?'📝 Draft':'🗄 Archived'),
+                el('span',{style:{background:'rgba(59,130,246,.1)',color:'#93c5fd',border:'1px solid rgba(59,130,246,.2)',borderRadius:4,padding:'2px 8px',fontSize:11,fontWeight:600}},sop.dept),
+                el('span',{style:{background:'var(--surface2)',color:'var(--text2)',border:'1px solid var(--border)',borderRadius:4,padding:'2px 8px',fontSize:11}},`v${sop.version}`),
+                !acked&&sop.status==='published'&&el('span',{style:{background:'rgba(239,68,68,.1)',color:'var(--red)',border:'1px solid rgba(239,68,68,.2)',borderRadius:4,padding:'2px 8px',fontSize:11,fontWeight:700}},'⚠ Needs Ack'),
+                acked&&el('span',{style:{background:'rgba(16,185,129,.1)',color:'var(--green)',border:'1px solid rgba(16,185,129,.2)',borderRadius:4,padding:'2px 8px',fontSize:11,fontWeight:700}},'✓ Acknowledged'),
+              ),
+              el('div',{style:{fontSize:15,fontWeight:700,marginBottom:4}},sop.title),
+              sop.description&&el('div',{style:{fontSize:12,color:'var(--text2)',lineHeight:1.5}},sop.description.slice(0,120)+(sop.description.length>120?'...':'')),
+            ),
+            el('div',{style:{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:6,flexShrink:0}},
+              el('div',{style:{fontSize:11,color:'var(--text3)'}},`${(sop.steps||[]).length} steps`),
+              sop.status==='published'&&el('div',{style:{textAlign:'right'}},
+                el('div',{style:{fontSize:11,color:'var(--text3)',marginBottom:3}},`${(sop.acknowledgements||[]).length}/${users.filter(u=>u.approved).length} acked`),
+                el('div',{style:{width:80,height:4,background:'var(--surface2)',borderRadius:4}},
+                  el('div',{style:{width:ackPct+'%',height:'100%',background:'var(--green)',borderRadius:4,transition:'width .3s'}}),
+                ),
+              ),
+              el('div',{style:{fontSize:11,color:'var(--text3)'}},sop.created_by),
+            ),
+          ),
+        );
+      })
+    ),
+
+    // ── NEW SOP MODAL ───────────────────────────────────────────────────────
+    showNew&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setNew(false)},
+      el('div',{className:'md',style:{width:680,maxHeight:'92vh'}},
+        el('div',{className:'mh'},el('div',{className:'mt2'},'New SOP'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
+        el('div',{className:'mbd'},
+          el('div',{className:'fg'},el('label',null,'Title *'),el('input',{placeholder:'e.g. Cart Filling Standard Procedure',value:f.title,onChange:ev=>setF(p=>({...p,title:ev.target.value})),autoFocus:true})),
+          el('div',{className:'g2'},
+            el('div',{className:'fg',style:{marginBottom:0}},
+              el('label',null,'Department'),
+              el('select',{value:f.dept,onChange:ev=>setF(p=>({...p,dept:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+                DEPTS.map(d=>el('option',{key:d,value:d},d))
+              )
+            ),
+            el('div',{className:'g2',style:{marginBottom:0}},
+              el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Version'),el('input',{value:f.version,onChange:ev=>setF(p=>({...p,version:ev.target.value})),placeholder:'1.0'})),
+              el('div',{className:'fg',style:{marginBottom:0}},
+                el('label',null,'Status'),
+                el('select',{value:f.status,onChange:ev=>setF(p=>({...p,status:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+                  el('option',{value:'draft'},'Draft'),
+                  el('option',{value:'published'},'Published'),
+                )
+              ),
+            ),
+          ),
+          el('div',{className:'fg',style:{marginTop:13}},el('label',null,'Description / Purpose'),el('textarea',{placeholder:'What is this SOP for?',value:f.description,onChange:ev=>setF(p=>({...p,description:ev.target.value}))})),
+
+          el('div',{className:'divider'}),
+          el('div',{style:{fontWeight:700,fontSize:14,marginBottom:10}},'Steps'),
+          f.steps.map((step,i)=>el('div',{key:step.id,style:{display:'flex',gap:8,marginBottom:8,alignItems:'flex-start'}},
+            el('div',{style:{width:24,height:24,borderRadius:'50%',background:'var(--accent)',color:'#0a0f1e',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:800,flexShrink:0,marginTop:8}},i+1),
+            el('textarea',{value:step.text,onChange:ev=>updateStep(step.id,ev.target.value),placeholder:`Step ${i+1}...`,style:{flex:1,background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px 12px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',resize:'vertical',minHeight:60}}),
+            f.steps.length>1&&el('button',{onClick:()=>removeStep(step.id),style:{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:18,marginTop:6,padding:'2px 4px'}},'×'),
+          )),
+          el('button',{className:'btn b-ghost btn-sm',onClick:addStep,style:{marginBottom:14}},'+ Add Step'),
+
+          el('div',{className:'divider'}),
+          el('div',{className:'fg'},
+            el('label',null,'Attach File (PDF, image, doc)'),
+            el('input',{type:'file',accept:'.pdf,.doc,.docx,.png,.jpg,.xlsx',onChange:async ev=>{
+              const file=ev.target.files[0];if(!file)return;
+              const reader=new FileReader();
+              reader.onload=re=>{
+                setF(p=>({...p,attachments:[...p.attachments,{id:'att-'+Date.now(),name:file.name,data:re.target.result}]}));
+              };
+              reader.readAsDataURL(file);
+            },style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px',color:'var(--text)',fontFamily:'inherit',fontSize:13}}),
+          ),
+          f.attachments.length>0&&el('div',{style:{marginBottom:10}},
+            f.attachments.map(att=>el('div',{key:att.id,style:{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'6px 10px',background:'var(--surface2)',borderRadius:6,marginBottom:4,fontSize:12}},
+              `📎 ${att.name}`,
+              el('span',{style:{cursor:'pointer',color:'var(--red)'},onClick:()=>setF(p=>({...p,attachments:p.attachments.filter(a=>a.id!==att.id)}))},'×'),
+            ))
+          ),
+        ),
+        el('div',{className:'mf'},
+          el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),
+          el('button',{className:'btn b-blue',onClick:createSOP,disabled:saving||!f.title},saving?'Saving...':'Create SOP'),
+        ),
+      )
+    ),
+
+    // ── SOP DETAIL MODAL ────────────────────────────────────────────────────
+    sel&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setSel(null)},
+      el('div',{className:'md',style:{width:700,maxHeight:'92vh'}},
+        el('div',{className:'mh'},
+          el('div',{style:{flex:1}},
+            el('div',{style:{display:'flex',gap:6,marginBottom:8,flexWrap:'wrap'}},
+              el('span',{className:`badge ${statusBg[sel.status]}`},sel.status==='published'?'✅ Published':sel.status==='draft'?'📝 Draft':'🗄 Archived'),
+              el('span',{style:{background:'rgba(59,130,246,.1)',color:'#93c5fd',border:'1px solid rgba(59,130,246,.2)',borderRadius:4,padding:'2px 8px',fontSize:11,fontWeight:600}},sel.dept),
+              el('span',{style:{background:'var(--surface2)',color:'var(--text2)',border:'1px solid var(--border)',borderRadius:4,padding:'2px 8px',fontSize:11}},`v${sel.version}`),
+            ),
+            el('div',{style:{fontSize:17,fontWeight:700}},sel.title),
+          ),
+          el('button',{className:'mc',onClick:()=>setSel(null)},'×'),
+        ),
+        el('div',{className:'mbd'},
+          sel.description&&el('div',{style:{background:'rgba(245,166,35,.06)',border:'1px solid rgba(245,166,35,.15)',borderRadius:10,padding:'12px 16px',marginBottom:16,fontSize:13,lineHeight:1.6,color:'var(--text2)'}},sel.description),
+
+          // Steps
+          (sel.steps||[]).length>0&&el('div',{style:{marginBottom:20}},
+            el('div',{style:{fontWeight:700,fontSize:14,marginBottom:12}},'Procedure'),
+            (sel.steps||[]).map((step,i)=>el('div',{key:step.id||i,style:{display:'flex',gap:12,marginBottom:12,alignItems:'flex-start'}},
+              el('div',{style:{width:28,height:28,borderRadius:'50%',background:'var(--accent)',color:'#0a0f1e',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:800,flexShrink:0}},i+1),
+              el('div',{style:{flex:1,background:'var(--surface2)',borderRadius:10,padding:'10px 14px',fontSize:13,lineHeight:1.6}},step.text||step),
+            ))
+          ),
+
+          // Attachments
+          (sel.attachments||[]).length>0&&el('div',{style:{marginBottom:16}},
+            el('div',{style:{fontWeight:600,marginBottom:8,fontSize:13}},'Attachments'),
+            (sel.attachments||[]).map(att=>el('div',{key:att.id,style:{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 12px',background:'var(--surface2)',borderRadius:8,marginBottom:5}},
+              el('span',{style:{fontSize:12}},`📎 ${att.name}`),
+              el('button',{className:'btn b-ghost btn-sm',onClick:()=>{const a=document.createElement('a');a.href=att.data;a.download=att.name;a.click();}},'Download'),
+            ))
+          ),
+
+          el('div',{className:'divider'}),
+
+          // Acknowledgement section
+          el('div',{style:{marginBottom:16}},
+            el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}},
+              el('div',{style:{fontWeight:700,fontSize:14}},'Acknowledgements'),
+              el('div',{style:{fontSize:12,color:'var(--text2)'}},`${(sel.acknowledgements||[]).length} of ${users.filter(u=>u.approved).length} team members`),
+            ),
+            // Ack progress bar
+            el('div',{style:{height:6,background:'var(--surface2)',borderRadius:4,marginBottom:12}},
+              el('div',{style:{
+                width:users.filter(u=>u.approved).length>0?Math.round(((sel.acknowledgements||[]).length/users.filter(u=>u.approved).length)*100)+'%':'0%',
+                height:'100%',background:'var(--green)',borderRadius:4,transition:'width .3s'
+              }}),
+            ),
+            // Who has/hasn't acked (admin view)
+            isAdmin&&el('div',{style:{display:'flex',gap:16,marginBottom:12}},
+              el('div',{style:{flex:1}},
+                el('div',{style:{fontSize:11,fontWeight:700,color:'var(--green)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:6}},'✓ Acknowledged'),
+                (sel.acknowledgements||[]).length===0?el('div',{style:{fontSize:12,color:'var(--text3)'}},'None yet'):
+                (sel.acknowledgements||[]).map(a=>el('div',{key:a.id,style:{display:'flex',alignItems:'center',gap:6,marginBottom:4}},
+                  el('div',{className:'avatar',style:{background:avatarColor(a.name),width:20,height:20,fontSize:9}},a.name.charAt(0).toUpperCase()),
+                  el('div',null,el('div',{style:{fontSize:12,fontWeight:600}},a.name),el('div',{style:{fontSize:10,color:'var(--text3)'}},a.at?.slice(0,10))),
+                )),
+              ),
+              el('div',{style:{flex:1}},
+                el('div',{style:{fontSize:11,fontWeight:700,color:'var(--red)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:6}},'✗ Pending'),
+                users.filter(u=>u.approved&&!(sel.acknowledgements||[]).some(a=>a.id===u.id)).length===0
+                  ?el('div',{style:{fontSize:12,color:'var(--green)',fontWeight:600}},'Everyone acknowledged ✓')
+                  :users.filter(u=>u.approved&&!(sel.acknowledgements||[]).some(a=>a.id===u.id)).map(u=>el('div',{key:u.id,style:{display:'flex',alignItems:'center',gap:6,marginBottom:4}},
+                    el('div',{className:'avatar',style:{background:avatarColor(u.name),width:20,height:20,fontSize:9,opacity:.5}},u.name.charAt(0).toUpperCase()),
+                    el('div',{style:{fontSize:12,color:'var(--text3)'}},u.name),
+                  )),
+              ),
+            ),
+            // My ack button
+            sel.status==='published'&&el('div',null,
+              !(sel.acknowledgements||[]).some(a=>a.id===cu.id)?
+                el('button',{
+                  onClick:()=>acknowledgeSOP(sel),
+                  style:{width:'100%',background:'var(--green)',color:'#fff',border:'none',borderRadius:10,padding:'13px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8,transition:'all .15s'}
+                },'👍 I Have Read and Understood This SOP'):
+                el('div',{style:{background:'rgba(16,185,129,.08)',border:'1px solid rgba(16,185,129,.25)',borderRadius:10,padding:'12px 16px',textAlign:'center',fontSize:13,fontWeight:700,color:'var(--green)'}},
+                  '✓ You acknowledged this on '+((sel.acknowledgements||[]).find(a=>a.id===cu.id)?.at||'').slice(0,10)
+                ),
+              ackMsg&&el('div',{style:{marginTop:8,textAlign:'center',fontSize:13,fontWeight:700,color:'var(--green)'}},ackMsg),
+            ),
+          ),
+
+          el('div',{style:{fontSize:11,color:'var(--text3)'}},
+            `Created by ${sel.created_by} · ${sel.created_at?.slice(0,10)}`,
+            sel.updated_by&&` · Updated by ${sel.updated_by} ${sel.updated_at?.slice(0,10)}`,
+          ),
+        ),
+        el('div',{className:'mf',style:{justifyContent:'space-between'}},
+          el('div',{style:{display:'flex',gap:8}},
+            canCreate&&sel.status==='draft'&&el('button',{className:'btn b-green',onClick:()=>publishSOP(sel)},'📢 Publish & Notify'),
+            canCreate&&sel.status==='published'&&el('button',{className:'btn b-ghost',onClick:()=>archiveSOP(sel)},'🗄 Archive'),
+            isAdmin&&el('button',{className:'btn b-red',onClick:()=>deleteSOP(sel.id)},'Delete'),
+          ),
+          el('button',{className:'btn b-ghost',onClick:()=>setSel(null)},'Close'),
+        ),
+      )
+    ),
+  );
+}
+
 // ── CALENDAR ──────────────────────────────────────────────────────────────────
 const EVENT_COLORS=['#f5a623','#3b82f6','#10b981','#ef4444','#8b5cf6','#f97316','#06b6d4','#ec4899'];
 function getMeetLink(){return'https://meet.jit.si/hendrix-'+Math.random().toString(36).slice(2,12);}
@@ -2410,12 +2791,14 @@ function App(){
       db.get('pf_users').catch(()=>[]),
       db.get('pf_events','order=date.asc').catch(()=>[]),
       db.get('pf_meeting_notes','order=created_at.desc').catch(()=>[]),
-    ]).then(([_tasks,_sales,_users,_events,_notes])=>{
+      db.get('pf_sops','order=created_at.desc').catch(()=>[]),
+    ]).then(([_tasks,_sales,_users,_events,_notes,_sops])=>{
       setTasks(_tasks||[]);
       setSalesTasks(_sales||[]);
       setUsers(_users||[]);
       setEvents(_events||[]);
       setMeetingNotes(_notes||[]);
+      setSops(_sops||[]);
     });
   },[cu,dbReady]);
 
@@ -2477,6 +2860,7 @@ function App(){
     {id:'board',ico:'⬛',label:'Task Board'},
     {id:'calendar',ico:'📅',label:'Calendar'},
     (cu.role==='admin'||cu.dept==='Sales'||cu.dept==='Marketing')&&{id:'sales',ico:'🏪',label:'Sales & Marketing'},
+    {id:'sops',ico:'📋',label:'SOPs'},
     isAdmin&&{id:'team',ico:'👥',label:'Team & Access',badge:pending||null},
   ].filter(Boolean);
 
@@ -2556,12 +2940,14 @@ function App(){
         }},
         el('span',{className:'mnav-ico'},typeof Notification!=='undefined'&&Notification.permission==='granted'?'🔔':'🔕'),'Alerts'
       ),
+      el('button',{className:`mnav-btn${page==='sops'?' on':''}`,onClick:()=>setPage('sops')},el('span',{className:'mnav-ico'},'📋'),'SOPs'),
       el('button',{className:'mnav-btn',onClick:()=>{if(window.confirm('Sign out?')){localStorage.removeItem('pf_session');window.location.reload();}}},el('span',{className:'mnav-ico'},'⏻'),'Sign Out'),
     ),
     el('div',{className:'main'},
       page==='board'&&el(Board,{tasks,setTasks,cu,users,locFilter,setLocFilter}),
       page==='calendar'&&el(Calendar,{events,setEvents,tasks,cu,users,locFilter,meetingNotes,setMeetingNotes,onJoinCall:(room,title,meetLink)=>setActiveCall({room,title,meetLink})}),
       page==='sales'&&el(SalesMarketing,{salesTasks,setSalesTasks,cu,users,locFilter}),
+      page==='sops'&&el(SOPs,{sops,setSops,cu,users}),
       page==='team'&&isAdmin&&el(Team,{users,setUsers,cu}),
     )
   );
