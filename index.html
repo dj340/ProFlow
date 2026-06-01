@@ -776,6 +776,7 @@ function TaskCard({task,onClick}){
 // ── TASK DETAIL MODAL ─────────────────────────────────────────────────────────
 function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
   const[newNote,setNewNote]=useState('');
+  const[noteFiles,setNoteFiles]=useState([]);
   const[saving,setSaving]=useState(false);
   const today=new Date().toISOString().slice(0,10);
   const isAdmin=cu.role==='admin';
@@ -858,22 +859,30 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
   }
 
   async function postNote(){
-    if(!newNote.trim())return;
+    if(!newNote.trim()&&noteFiles.length===0)return;
     setSaving(true);
-    const note={id:'n'+Date.now(),text:newNote,by:cu.name,by_id:cu.id,at:new Date().toISOString()};
+    const note={
+      id:'n'+Date.now(),
+      text:newNote,
+      by:cu.name,by_id:cu.id,
+      at:new Date().toISOString(),
+      files:noteFiles,
+    };
     const notes=[...(task.notes||[]),note];
     try{await db.update('pf_tasks',task.id,{notes,updated_at:new Date().toISOString(),updated_by:cu.name});}catch(e){console.error(e);}
     onUpdate({...task,notes,updated_at:new Date().toISOString(),updated_by:cu.name});
     // Notify all task members about the new comment
-    const taskWithEmail={...task,_creatorEmail:users.find(u=>u.id===task.created_by_id)?.email};
-    notifyTask({
-      task:taskWithEmail,
-      actor:cu.name,
-      subject:`💬 New comment on "${task.title}"`,
-      body:`<strong>${cu.name}</strong> commented:<br><br>"${newNote.slice(0,200)}${newNote.length>200?'...':''}"`,
-      skipId:cu.id,
-    });
-    setNewNote('');setSaving(false);
+    if(newNote.trim()){
+      const taskWithEmail={...task,_creatorEmail:users.find(u=>u.id===task.created_by_id)?.email};
+      notifyTask({
+        task:taskWithEmail,
+        actor:cu.name,
+        subject:`💬 New comment on "${task.title}"`,
+        body:`<strong>${cu.name}</strong> commented:<br><br>"${newNote.slice(0,200)}${newNote.length>200?'...':''}"${noteFiles.length>0?`<br><br>📎 ${noteFiles.length} file(s) attached`:''}`,
+        skipId:cu.id,
+      });
+    }
+    setNewNote('');setNoteFiles([]);setSaving(false);
   }
 
   const overdue=task.due_date&&task.due_date<today;
@@ -966,15 +975,81 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
         (task.notes||[]).map(note=>el('div',{key:note.id,style:{display:'flex',gap:10,marginBottom:12}},
           el('div',{className:'avatar',style:{background:avatarColor(note.by),flexShrink:0}},note.by.charAt(0).toUpperCase()),
           el('div',{style:{flex:1,background:'var(--surface2)',borderRadius:'0 10px 10px 10px',padding:'9px 13px'}},
-            el('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:5}},el('span',{style:{fontSize:12,fontWeight:600}},note.by),el('span',{style:{fontSize:11,color:'var(--text2)'}},note.at.slice(0,16).replace('T',' '))),
-            el('div',{style:{fontSize:13,lineHeight:1.5}},note.text),
+            el('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:5}},
+              el('span',{style:{fontSize:12,fontWeight:600}},note.by),
+              el('span',{style:{fontSize:11,color:'var(--text2)'}},note.at.slice(0,16).replace('T',' ')),
+            ),
+            note.text&&el('div',{style:{fontSize:13,lineHeight:1.5,marginBottom:(note.files||[]).length>0?8:0}},note.text),
+            (note.files||[]).length>0&&el('div',{style:{display:'flex',flexWrap:'wrap',gap:5,marginTop:4}},
+              (note.files||[]).map(f=>el('div',{key:f.id,style:{display:'flex',alignItems:'center',gap:6,background:'var(--surface)',border:'1px solid var(--border)',borderRadius:6,padding:'4px 10px',fontSize:11}},
+                el('span',null,f.name.match(/\.(png|jpg|jpeg|gif|webp)$/i)?'🖼️':f.name.match(/\.pdf$/i)?'📄':f.name.match(/\.(doc|docx)$/i)?'📝':f.name.match(/\.(xls|xlsx|csv)$/i)?'📊':'📎'),
+                el('span',{style:{color:'var(--text2)',maxWidth:120,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},f.name),
+                el('button',{
+                  onClick:()=>{const a=document.createElement('a');a.href=f.data;a.download=f.name;a.click();},
+                  style:{background:'none',border:'none',color:'var(--accent)',cursor:'pointer',fontSize:11,fontWeight:600,padding:0,fontFamily:'inherit'}
+                },'↓'),
+                // Show image inline if it's an image
+              )),
+            ),
+            // Inline image preview
+            (note.files||[]).filter(f=>f.name.match(/\.(png|jpg|jpeg|gif|webp)$/i)).map(f=>
+              el('img',{key:f.id+'img',src:f.data,alt:f.name,style:{maxWidth:'100%',maxHeight:200,borderRadius:6,marginTop:6,display:'block',objectFit:'contain'}})
+            ),
           ),
         )),
         el('div',{style:{display:'flex',gap:10,alignItems:'flex-start'}},
           el('div',{className:'avatar',style:{background:avatarColor(cu.name),flexShrink:0,marginTop:4}},cu.name.charAt(0).toUpperCase()),
           el('div',{style:{flex:1}},
-            el('textarea',{placeholder:'Write a comment... (Enter to post)',value:newNote,onChange:ev=>setNewNote(ev.target.value),onKeyDown:ev=>ev.key==='Enter'&&!ev.shiftKey&&(ev.preventDefault(),postNote()),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:60,resize:'none'}}),
-            el('button',{className:'btn b-blue btn-sm',style:{marginTop:6},onClick:postNote,disabled:!newNote.trim()||saving},'Post'),
+            el('textarea',{
+              placeholder:'Write a comment... (Enter to post, Shift+Enter for new line)',
+              value:newNote,
+              onChange:ev=>setNewNote(ev.target.value),
+              onKeyDown:ev=>ev.key==='Enter'&&!ev.shiftKey&&(ev.preventDefault(),postNote()),
+              style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:60,resize:'none'},
+            }),
+            // File previews
+            noteFiles.length>0&&el('div',{style:{display:'flex',flexWrap:'wrap',gap:6,marginTop:6}},
+              noteFiles.map(f=>el('div',{key:f.id,style:{position:'relative',display:'flex',alignItems:'center',gap:6,background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:6,padding:'4px 10px',fontSize:11}},
+                f.name.match(/\.(png|jpg|jpeg|gif|webp)$/i)
+                  ?el('img',{src:f.data,style:{width:32,height:32,objectFit:'cover',borderRadius:4}})
+                  :el('span',null,f.name.match(/\.pdf$/i)?'📄':f.name.match(/\.(doc|docx)$/i)?'📝':f.name.match(/\.(xls|xlsx|csv)$/i)?'📊':'📎'),
+                el('span',{style:{maxWidth:100,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:'var(--text2)'}},f.name),
+                el('span',{
+                  onClick:()=>setNoteFiles(p=>p.filter(x=>x.id!==f.id)),
+                  style:{cursor:'pointer',color:'var(--red)',fontWeight:700,marginLeft:2,fontSize:13}
+                },'×'),
+              ))
+            ),
+            el('div',{style:{display:'flex',gap:6,marginTop:6,alignItems:'center'}},
+              // File upload button
+              el('label',{style:{display:'flex',alignItems:'center',gap:4,padding:'5px 10px',background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:'var(--rs)',cursor:'pointer',fontSize:12,color:'var(--text2)',fontWeight:600,transition:'all .15s'},
+                onMouseEnter:ev=>{ev.currentTarget.style.borderColor='var(--accent)';ev.currentTarget.style.color='var(--accent)';},
+                onMouseLeave:ev=>{ev.currentTarget.style.borderColor='var(--border)';ev.currentTarget.style.color='var(--text2)';}
+              },
+                el('input',{
+                  type:'file',
+                  multiple:true,
+                  accept:'image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.zip',
+                  style:{display:'none'},
+                  onChange:async ev=>{
+                    const files=Array.from(ev.target.files);
+                    const loaded=await Promise.all(files.map(file=>new Promise(resolve=>{
+                      const reader=new FileReader();
+                      reader.onload=re=>resolve({id:'f'+Date.now()+Math.random(),name:file.name,data:re.target.result,size:file.size,type:file.type});
+                      reader.readAsDataURL(file);
+                    })));
+                    setNoteFiles(p=>[...p,...loaded]);
+                    ev.target.value='';
+                  },
+                }),
+                '📎 Attach',
+              ),
+              el('button',{
+                className:'btn b-blue btn-sm',
+                onClick:postNote,
+                disabled:(!newNote.trim()&&noteFiles.length===0)||saving,
+              },saving?'Posting...':'Post'),
+            ),
           ),
         ),
       ),
