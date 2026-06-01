@@ -3357,6 +3357,13 @@ function App(){
 
   usePullToRefresh(doRefresh);
 
+  // Auto-refresh every 30 seconds
+  useEffect(()=>{
+    if(!cu||!dbReady) return;
+    const interval=setInterval(()=>doRefresh(),30*1000);
+    return()=>clearInterval(interval);
+  },[cu,dbReady,doRefresh]);
+
   useEffect(()=>{
     db.get('pf_users','limit=1').then(()=>setDbReady(true)).catch(()=>setDbReady(false));
   },[]);
@@ -3366,7 +3373,7 @@ function App(){
     let timer;
     const reset=()=>{
       clearTimeout(timer);
-      timer=setTimeout(()=>{localStorage.removeItem('pf_session');setCu(null);alert('You have been signed out due to inactivity.');},5*60*1000);
+      timer=setTimeout(()=>{localStorage.removeItem('pf_session');setCu(null);alert('You have been signed out due to inactivity.');},30*60*1000);
     };
     const evts=['mousemove','keydown','click','touchstart','scroll'];
     evts.forEach(e=>window.addEventListener(e,reset,{passive:true}));
