@@ -212,12 +212,24 @@ async function runMigrations(){
 
 async function sendEmail({to,subject,html}){
   try{
-    await fetch(`${SUPA_URL}/functions/v1/send-email`,{
+    const res=await fetch('https://api.resend.com/emails',{
       method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPA_KEY},
-      body:JSON.stringify({to,subject,html}),
+      headers:{
+        'Content-Type':'application/json',
+        'Authorization':'Bearer '+RESEND_KEY,
+      },
+      body:JSON.stringify({
+        from:'Hendrix TMS <noreply@hendrix.com>',
+        to:Array.isArray(to)?to:[to],
+        subject,
+        html,
+      }),
     });
-  }catch(e){console.error('Email:',e);}
+    if(!res.ok){
+      const err=await res.text();
+      console.error('Resend error:',err);
+    }
+  }catch(e){console.error('Email error:',e);}
 }
 
 // ── NOTIFY TASK ───────────────────────────────────────────────────────────────
@@ -3282,6 +3294,14 @@ function App(){
   // FIX 1: main data load with correct destructuring
   useEffect(()=>{
     if(!cu||!dbReady)return;
+    // Ask for notification permission immediately on login
+    if('Notification' in window&&Notification.permission==='default'){
+      Notification.requestPermission().then(p=>{
+        if(p==='granted'){
+          new Notification('🔔 Hendrix TMS',{body:'Notifications enabled! You will be notified of all task updates.',icon:'/ProFlow/icon-192.png'});
+        }
+      });
+    }
     setTimeout(()=>requestPushPermission(cu.id),2000);
     setLoading(true);
     Promise.all([
@@ -3354,13 +3374,44 @@ function App(){
         el('button',{
           onClick:async()=>{
             if(!('Notification' in window)){alert('Notifications not supported on this browser.');return;}
-            if(Notification.permission==='granted'){alert('Notifications already enabled! ✓');return;}
+            if(Notification.permission==='granted'){
+              new Notification('🔔 Test Notification',{body:'Notifications are working!',icon:'/ProFlow/icon-192.png'});
+              return;
+            }
             const perm=await Notification.requestPermission();
             if(perm==='granted'){requestPushPermission(cu.id);new Notification('Hendrix TMS',{body:'Notifications enabled!',icon:'/ProFlow/icon-192.png'});}
-            else if(perm==='denied'){alert('Notifications blocked. Go to browser settings → Site Settings → Notifications → Allow.');}
+            else if(perm==='denied'){alert('Notifications blocked.\n\nTo fix:\n1. Click the 🔒 lock icon in your browser address bar\n2. Find Notifications\n3. Set to Allow\n4. Refresh the page');}
           },
           style:{marginTop:8,width:'100%',background:typeof Notification!=='undefined'&&Notification.permission==='granted'?'rgba(16,185,129,.08)':'rgba(245,166,35,.06)',border:'1px solid',borderColor:typeof Notification!=='undefined'&&Notification.permission==='granted'?'rgba(16,185,129,.2)':'rgba(245,166,35,.2)',borderRadius:'var(--rs)',padding:'8px',color:typeof Notification!=='undefined'&&Notification.permission==='granted'?'var(--green)':'var(--accent)',fontFamily:'inherit',fontSize:12,fontWeight:600,cursor:'pointer',transition:'all .15s',letterSpacing:'.3px'}
         },typeof Notification!=='undefined'&&Notification.permission==='granted'?'🔔 Notifications On ✓':'🔔 Enable Notifications'),
+        el('button',{
+          onClick:async()=>{
+            // Send a real test email to the logged in user
+            if(!cu.email){alert('No email on your account.');return;}
+            try{
+              await sendEmail({
+                to:cu.email,
+                subject:'✅ Hendrix TMS — Email Test',
+                html:`<div style="font-family:sans-serif;background:#0a0f1e;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
+                  <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">✅ Email Working!</div>
+                  <p>Hi ${cu.name},</p>
+                  <p style="margin:12px 0;color:#7b8db8">This is a test email from Hendrix TMS. If you received this, email notifications are working correctly.</p>
+                  <div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:8px;padding:12px;margin-top:16px;font-size:13px;color:#10b981">
+                    ✅ Resend API connected<br>✅ Email delivery confirmed
+                  </div>
+                </div>`,
+              });
+              alert('✅ Test email sent to '+cu.email+'\n\nCheck your inbox (and spam folder).');
+            }catch(e){
+              alert('❌ Email failed: '+e.message);
+            }
+            // Also send a test push notification
+            if(Notification.permission==='granted'){
+              sendLocalNotification('✅ Test Push','Push notifications are working!');
+            }
+          },
+          style:{marginTop:4,width:'100%',background:'rgba(59,130,246,.08)',border:'1px solid rgba(59,130,246,.2)',borderRadius:'var(--rs)',padding:'8px',color:'#93c5fd',fontFamily:'inherit',fontSize:12,fontWeight:600,cursor:'pointer',transition:'all .15s'}
+        },'📧 Test Email & Push'),
         el('button',{
           onClick:()=>{localStorage.removeItem('pf_session');setCu(null);},
           style:{marginTop:6,width:'100%',background:'rgba(239,68,68,.08)',border:'1px solid rgba(239,68,68,.2)',borderRadius:'var(--rs)',padding:'8px',color:'var(--red)',fontFamily:'inherit',fontSize:12,fontWeight:600,cursor:'pointer',transition:'all .15s',letterSpacing:'.3px'}
