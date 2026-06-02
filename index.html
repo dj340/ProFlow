@@ -696,6 +696,7 @@ CREATE TABLE IF NOT EXISTS pf_tasks (
   archived_at text, hold_reason text, hold_by text, hold_at text, cc jsonb default '[]'
 );
 ALTER TABLE pf_tasks DISABLE ROW LEVEL SECURITY;
+ALTER TABLE pf_tasks ADD COLUMN IF NOT EXISTS micro_tasks jsonb default '[]';
 CREATE TABLE IF NOT EXISTS pf_events (
   id text primary key, title text, description text,
   type text default 'event', date text, start_time text, end_time text,
@@ -778,6 +779,11 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
   const[newNote,setNewNote]=useState('');
   const[noteFiles,setNoteFiles]=useState([]);
   const[saving,setSaving]=useState(false);
+  const[showNewMicro,setShowNewMicro]=useState(false);
+  const[newMicro,setNewMicro]=useState({title:'',assignee_id:'',assignee_name:'',status:'not_started',priority:'medium'});
+  const[microNote,setMicroNote]=useState({});
+  const[microNoteFiles,setMicroNoteFiles]=useState({});
+  const[expandedMicro,setExpandedMicro]=useState({});
   const today=new Date().toISOString().slice(0,10);
   const isAdmin=cu.role==='admin';
   const isAssigned=(task.assignees||[]).some(a=>a.id===cu.id);
@@ -856,6 +862,52 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
     const update={[field]:value,updated_at:new Date().toISOString(),updated_by:cu.name};
     try{await db.update('pf_tasks',task.id,update);}catch(e){console.error(e);}
     onUpdate({...task,...update});
+  }
+
+  // ── MICRO TASK HELPERS ──────────────────────────────────────────────────────
+  async function addMicroTask(){
+    if(!newMicro.title.trim()) return;
+    const mt={
+      id:'mt-'+Date.now(),
+      title:newMicro.title.trim(),
+      assignee_id:newMicro.assignee_id,
+      assignee_name:newMicro.assignee_name,
+      status:'not_started',
+      priority:newMicro.priority,
+      notes:[],
+      created_by:cu.name,
+      created_at:new Date().toISOString(),
+    };
+    const micro_tasks=[...(task.micro_tasks||[]),mt];
+    try{await db.update('pf_tasks',task.id,{micro_tasks,updated_at:new Date().toISOString(),updated_by:cu.name});}catch(e){console.error(e);}
+    onUpdate({...task,micro_tasks});
+    setNewMicro({title:'',assignee_id:'',assignee_name:'',status:'not_started',priority:'medium'});
+    setShowNewMicro(false);
+  }
+
+  async function updateMicroStatus(mtId,status){
+    const micro_tasks=(task.micro_tasks||[]).map(mt=>mt.id===mtId?{...mt,status,updated_at:new Date().toISOString()}:mt);
+    try{await db.update('pf_tasks',task.id,{micro_tasks,updated_at:new Date().toISOString(),updated_by:cu.name});}catch(e){console.error(e);}
+    onUpdate({...task,micro_tasks});
+  }
+
+  async function deleteMicroTask(mtId){
+    if(!window.confirm('Delete this sub-task?')) return;
+    const micro_tasks=(task.micro_tasks||[]).filter(mt=>mt.id!==mtId);
+    try{await db.update('pf_tasks',task.id,{micro_tasks,updated_at:new Date().toISOString(),updated_by:cu.name});}catch(e){console.error(e);}
+    onUpdate({...task,micro_tasks});
+  }
+
+  async function postMicroNote(mtId){
+    const text=microNote[mtId]||'';
+    const files=microNoteFiles[mtId]||[];
+    if(!text.trim()&&files.length===0) return;
+    const note={id:'n'+Date.now(),text,files,by:cu.name,by_id:cu.id,at:new Date().toISOString()};
+    const micro_tasks=(task.micro_tasks||[]).map(mt=>mt.id===mtId?{...mt,notes:[...(mt.notes||[]),note]}:mt);
+    try{await db.update('pf_tasks',task.id,{micro_tasks,updated_at:new Date().toISOString(),updated_by:cu.name});}catch(e){console.error(e);}
+    onUpdate({...task,micro_tasks});
+    setMicroNote(p=>({...p,[mtId]:''}));
+    setMicroNoteFiles(p=>({...p,[mtId]:[]}));
   }
 
   async function postNote(){
@@ -970,6 +1022,190 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
             el('button',{className:'btn b-ghost btn-sm',onClick:()=>{const a=document.createElement('a');a.href=att.data;a.download=att.name;a.click();}},'Download'),
           ))
         ),
+        el('div',{className:'divider'}),
+
+        // ── MICRO TASKS ─────────────────────────────────────────────────────
+        el('div',{style:{marginBottom:8}},
+          el('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}},
+            el('div',{style:{display:'flex',alignItems:'center',gap:8}},
+              el('span',{style:{fontWeight:700,fontSize:14}},'Sub-Tasks'),
+              el('span',{style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:10,padding:'1px 8px',fontSize:11,color:'var(--text2)',fontWeight:700}},(task.micro_tasks||[]).length),
+              (task.micro_tasks||[]).length>0&&el('span',{style:{fontSize:11,color:'var(--green)',fontWeight:600}},
+                `${(task.micro_tasks||[]).filter(m=>m.status==='done').length}/${(task.micro_tasks||[]).length} done`
+              ),
+            ),
+            el('button',{
+              onClick:()=>setShowNewMicro(p=>!p),
+              style:{background:showNewMicro?'var(--surface2)':'var(--accent)',color:showNewMicro?'var(--text2)':'#0a0f1e',border:'1px solid',borderColor:showNewMicro?'var(--border)':'var(--accent)',borderRadius:'var(--rs)',padding:'5px 12px',fontFamily:'inherit',fontSize:12,fontWeight:700,cursor:'pointer',transition:'all .15s'}
+            },showNewMicro?'✕ Cancel':'＋ Add Sub-Task'),
+          ),
+
+          // Progress bar
+          (task.micro_tasks||[]).length>0&&el('div',{style:{height:4,background:'var(--surface2)',borderRadius:4,marginBottom:12}},
+            el('div',{style:{
+              width:Math.round(((task.micro_tasks||[]).filter(m=>m.status==='done').length/(task.micro_tasks||[]).length)*100)+'%',
+              height:'100%',background:'var(--green)',borderRadius:4,transition:'width .3s'
+            }}),
+          ),
+
+          // New micro task form
+          showNewMicro&&el('div',{style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:10,padding:14,marginBottom:12}},
+            el('div',{className:'fg',style:{marginBottom:10}},
+              el('input',{
+                placeholder:'Sub-task title...',autoFocus:true,
+                value:newMicro.title,
+                onChange:ev=>setNewMicro(p=>({...p,title:ev.target.value})),
+                onKeyDown:ev=>ev.key==='Enter'&&newMicro.title.trim()&&addMicroTask(),
+                style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none'},
+              }),
+            ),
+            el('div',{style:{display:'flex',gap:8,flexWrap:'wrap'}},
+              el('select',{
+                value:newMicro.assignee_id,
+                onChange:ev=>{const u=users.find(x=>x.id===ev.target.value);setNewMicro(p=>({...p,assignee_id:ev.target.value,assignee_name:u?.name||''}));},
+                style:{flex:1,background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'7px 10px',color:'var(--text)',fontFamily:'inherit',fontSize:12},
+              },
+                el('option',{value:''},'Assign to...'),
+                ...[...new Set([...(task.assignees||[]).map(a=>a.id)])].map(id=>{
+                  const u=users.find(x=>x.id===id)||(task.assignees||[]).find(a=>a.id===id);
+                  return u?el('option',{key:u.id,value:u.id},u.name):null;
+                }).filter(Boolean),
+                ...users.filter(u=>u.approved&&!(task.assignees||[]).find(a=>a.id===u.id)).map(u=>el('option',{key:u.id,value:u.id},u.name+' (not on task)')),
+              ),
+              el('select',{
+                value:newMicro.priority,
+                onChange:ev=>setNewMicro(p=>({...p,priority:ev.target.value})),
+                style:{background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'7px 10px',color:'var(--text)',fontFamily:'inherit',fontSize:12},
+              },
+                Object.entries(PRI).map(([k,{label}])=>el('option',{key:k,value:k},label))
+              ),
+              el('button',{
+                onClick:addMicroTask,
+                disabled:!newMicro.title.trim(),
+                style:{background:'var(--accent)',color:'#0a0f1e',border:'none',borderRadius:'var(--rs)',padding:'7px 14px',fontFamily:'inherit',fontSize:12,fontWeight:700,cursor:'pointer'},
+              },'Add'),
+            ),
+          ),
+
+          // Micro task list
+          (task.micro_tasks||[]).map((mt,i)=>{
+            const isExpanded=expandedMicro[mt.id];
+            const pri=PRI[mt.priority]||PRI.medium;
+            return el('div',{key:mt.id,style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:10,marginBottom:6,overflow:'hidden'}},
+              // Header row
+              el('div',{style:{display:'flex',alignItems:'center',gap:8,padding:'10px 12px'}},
+                // Status dropdown
+                el('select',{
+                  value:mt.status,
+                  onChange:ev=>updateMicroStatus(mt.id,ev.target.value),
+                  onClick:ev=>ev.stopPropagation(),
+                  style:{
+                    background:mt.status==='done'?'rgba(16,185,129,.15)':mt.status==='in_progress'?'rgba(245,166,35,.12)':mt.status==='on_hold'?'rgba(239,68,68,.1)':'var(--bg)',
+                    color:mt.status==='done'?'var(--green)':mt.status==='in_progress'?'var(--accent)':mt.status==='on_hold'?'var(--red)':'var(--text2)',
+                    border:'1px solid',
+                    borderColor:mt.status==='done'?'rgba(16,185,129,.3)':mt.status==='in_progress'?'rgba(245,166,35,.3)':mt.status==='on_hold'?'rgba(239,68,68,.3)':'var(--border)',
+                    borderRadius:6,padding:'3px 6px',fontFamily:'inherit',fontSize:11,fontWeight:700,cursor:'pointer',flexShrink:0,
+                  },
+                },
+                  el('option',{value:'not_started'},'⬜ Not Started'),
+                  el('option',{value:'in_progress'},'🔄 In Progress'),
+                  el('option',{value:'review'},'👁 In Review'),
+                  el('option',{value:'on_hold'},'🚨 On Hold'),
+                  el('option',{value:'done'},'✅ Done'),
+                ),
+                // Priority dot
+                el('div',{style:{width:6,height:6,borderRadius:'50%',background:pri.color,flexShrink:0}}),
+                // Title
+                el('div',{style:{flex:1,fontSize:13,fontWeight:mt.status==='done'?400:600,color:mt.status==='done'?'var(--text3)':'var(--text)',textDecoration:mt.status==='done'?'line-through':'none',lineHeight:1.4}},mt.title),
+                // Assignee avatar
+                mt.assignee_name&&el('div',{className:'avatar',title:mt.assignee_name,style:{background:avatarColor(mt.assignee_name),width:22,height:22,fontSize:9,flexShrink:0}},mt.assignee_name.charAt(0).toUpperCase()),
+                // Comment count
+                (mt.notes||[]).length>0&&el('span',{style:{fontSize:11,color:'var(--text3)',flexShrink:0}},`💬${(mt.notes||[]).length}`),
+                // Expand/collapse
+                el('button',{
+                  onClick:()=>setExpandedMicro(p=>({...p,[mt.id]:!p[mt.id]})),
+                  style:{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:14,padding:'0 2px',flexShrink:0,lineHeight:1}
+                },isExpanded?'▲':'▼'),
+                // Delete
+                (canEdit)&&el('button',{
+                  onClick:ev=>{ev.stopPropagation();deleteMicroTask(mt.id);},
+                  style:{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:14,padding:'0 2px',flexShrink:0}
+                },'×'),
+              ),
+
+              // Expanded: comments + file upload
+              isExpanded&&el('div',{style:{borderTop:'1px solid var(--border)',padding:'10px 12px'}},
+                // Existing comments
+                (mt.notes||[]).length>0&&el('div',{style:{marginBottom:10}},
+                  (mt.notes||[]).map(note=>el('div',{key:note.id,style:{display:'flex',gap:8,marginBottom:8}},
+                    el('div',{className:'avatar',style:{background:avatarColor(note.by),width:22,height:22,fontSize:9,flexShrink:0}},note.by.charAt(0).toUpperCase()),
+                    el('div',{style:{flex:1,background:'var(--bg)',borderRadius:'0 8px 8px 8px',padding:'7px 10px'}},
+                      el('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:3}},
+                        el('span',{style:{fontSize:11,fontWeight:600}},note.by),
+                        el('span',{style:{fontSize:10,color:'var(--text3)'}},note.at.slice(0,16).replace('T',' ')),
+                      ),
+                      note.text&&el('div',{style:{fontSize:12,lineHeight:1.5}},note.text),
+                      (note.files||[]).length>0&&el('div',{style:{display:'flex',flexWrap:'wrap',gap:4,marginTop:4}},
+                        (note.files||[]).map(f=>el('div',{key:f.id,style:{display:'flex',alignItems:'center',gap:4,background:'var(--surface2)',borderRadius:4,padding:'2px 7px',fontSize:10}},
+                          el('span',null,f.name.match(/\.(png|jpg|jpeg|gif|webp)$/i)?'🖼️':'📎'),
+                          el('span',{style:{color:'var(--text2)',maxWidth:80,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},f.name),
+                          el('button',{onClick:()=>{const a=document.createElement('a');a.href=f.data;a.download=f.name;a.click();},style:{background:'none',border:'none',color:'var(--accent)',cursor:'pointer',fontSize:10,fontWeight:600,padding:0,fontFamily:'inherit'}},'↓'),
+                        )),
+                      ),
+                      (note.files||[]).filter(f=>f.name.match(/\.(png|jpg|jpeg|gif|webp)$/i)).map(f=>
+                        el('img',{key:f.id,src:f.data,style:{maxWidth:'100%',maxHeight:120,borderRadius:4,marginTop:4,display:'block'}})
+                      ),
+                    ),
+                  ))
+                ),
+                // New comment input
+                el('div',{style:{display:'flex',gap:6,alignItems:'flex-start'}},
+                  el('div',{className:'avatar',style:{background:avatarColor(cu.name),width:22,height:22,fontSize:9,flexShrink:0,marginTop:2}},cu.name.charAt(0).toUpperCase()),
+                  el('div',{style:{flex:1}},
+                    el('input',{
+                      placeholder:'Add comment... (Enter to post)',
+                      value:microNote[mt.id]||'',
+                      onChange:ev=>setMicroNote(p=>({...p,[mt.id]:ev.target.value})),
+                      onKeyDown:ev=>ev.key==='Enter'&&postMicroNote(mt.id),
+                      style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'6px 10px',color:'var(--text)',fontFamily:'inherit',fontSize:12,outline:'none'},
+                    }),
+                    // File previews
+                    (microNoteFiles[mt.id]||[]).length>0&&el('div',{style:{display:'flex',flexWrap:'wrap',gap:4,marginTop:4}},
+                      (microNoteFiles[mt.id]||[]).map(f=>el('div',{key:f.id,style:{display:'flex',alignItems:'center',gap:4,background:'var(--surface)',border:'1px solid var(--border)',borderRadius:4,padding:'2px 7px',fontSize:10}},
+                        f.name.match(/\.(png|jpg|jpeg|gif|webp)$/i)?el('img',{src:f.data,style:{width:20,height:20,objectFit:'cover',borderRadius:2}}):el('span',null,'📎'),
+                        el('span',{style:{maxWidth:60,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},f.name),
+                        el('span',{onClick:()=>setMicroNoteFiles(p=>({...p,[mt.id]:(p[mt.id]||[]).filter(x=>x.id!==f.id)})),style:{cursor:'pointer',color:'var(--red)',fontWeight:700}},'×'),
+                      ))
+                    ),
+                    el('div',{style:{display:'flex',gap:4,marginTop:4}},
+                      el('label',{style:{display:'flex',alignItems:'center',gap:3,padding:'3px 8px',background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:6,cursor:'pointer',fontSize:11,color:'var(--text2)',fontWeight:600}},
+                        el('input',{type:'file',multiple:true,accept:'image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv',style:{display:'none'},
+                          onChange:async ev=>{
+                            const files=Array.from(ev.target.files);
+                            const loaded=await Promise.all(files.map(file=>new Promise(resolve=>{
+                              const reader=new FileReader();
+                              reader.onload=re=>resolve({id:'f'+Date.now()+Math.random(),name:file.name,data:re.target.result});
+                              reader.readAsDataURL(file);
+                            })));
+                            setMicroNoteFiles(p=>({...p,[mt.id]:[...(p[mt.id]||[]),...loaded]}));
+                            ev.target.value='';
+                          },
+                        }),
+                        '📎',
+                      ),
+                      el('button',{
+                        onClick:()=>postMicroNote(mt.id),
+                        disabled:!(microNote[mt.id]||'').trim()&&!(microNoteFiles[mt.id]||[]).length,
+                        style:{background:'var(--accent)',color:'#0a0f1e',border:'none',borderRadius:6,padding:'3px 10px',fontFamily:'inherit',fontSize:11,fontWeight:700,cursor:'pointer'},
+                      },'Post'),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }),
+        ),
+
         el('div',{className:'divider'}),
         el('div',{style:{fontWeight:600,marginBottom:14}},`Comments (${(task.notes||[]).length})`),
         (task.notes||[]).map(note=>el('div',{key:note.id,style:{display:'flex',gap:10,marginBottom:12}},
