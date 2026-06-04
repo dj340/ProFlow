@@ -382,7 +382,75 @@ const ROLE_GROUPS=[
   {label:'Leads',roles:['marketing_lead','cart_priming_lead','cart_filling_lead','cart_cleaning_lead','cart_packaging_lead','pre_roll_lead','edible_lead','qc_lead','biomass_lead','concentrate_lead']},
   {label:'Staff',roles:['brand_ambassador','employee']},
 ];
-const SECTIONS=['R&D','Special Projects','Production Investigation','HR','General','Michigan Production','Missouri Production','Extraction','Testing','Waste','Inventory Check','Purchasing','Biomass','Shipping','Receiving'];
+// ── SECTIONS (mirrors DEPT_TREE hierarchy) ───────────────────────────────────
+const SECTION_TREE={
+  'Michigan Production':{
+    'Cart Department':['Cart Priming','Cart Filling','Cart Cleaning','Cart Packaging'],
+    'Pre-Roll Department':['Pre-Roll Priming','Pre-Roll Filling','Pre-Roll Kiefing'],
+    'Gummy Department':['Gummy Production','Gummy Packaging'],
+    'Biomass':[],
+    'Extraction':[],
+    'QC':[],
+  },
+  'Missouri Production':{
+    'Cart Department':['Cart Priming','Cart Filling','Cart Cleaning','Cart Packaging'],
+    'Pre-Roll Department':['Pre-Roll Priming','Pre-Roll Filling','Pre-Roll Kiefing'],
+    'Gummy Department':['Gummy Production','Gummy Packaging'],
+    'Biomass':[],
+    'Extraction':[],
+    'QC':[],
+  },
+  'Distribution':{
+    'Inventory':[],
+    'Orders':[],
+  },
+  'Facility':{
+    'HR':[],
+    'A/R & A/P':[],
+    'Sanitation':[],
+    'Maintenance':[],
+  },
+  'Compliance':{
+    'METRC Compliance':[],
+    'Label':[],
+    'Waste':[],
+    'Testing':[],
+  },
+  'Warehouse':{},
+  'Sales & Marketing':{
+    'Sales':[],
+    'Marketing':[],
+  },
+  'General':{
+    'R&D':[],
+    'Special Projects':[],
+    'Production Investigation':[],
+    'HR':[],
+  },
+};
+// Flat list for backwards compat
+const SECTIONS=[
+  // Grandmothers
+  'Michigan Production','Missouri Production','Distribution','Facility','Compliance','Warehouse','Sales & Marketing','General',
+  // Michigan Production children
+  'Cart Department','Pre-Roll Department','Gummy Department','Biomass','Extraction','QC',
+  // Cart children
+  'Cart Priming','Cart Filling','Cart Cleaning','Cart Packaging',
+  // Pre-Roll children
+  'Pre-Roll Priming','Pre-Roll Filling','Pre-Roll Kiefing',
+  // Gummy children
+  'Gummy Production','Gummy Packaging',
+  // Distribution
+  'Inventory','Orders',
+  // Facility
+  'HR','A/R & A/P','Sanitation','Maintenance',
+  // Compliance
+  'METRC Compliance','Label','Waste','Testing',
+  // Sales
+  'Sales','Marketing',
+  // General
+  'R&D','Special Projects','Production Investigation',
+];
 
 // ── RETAIL BRANDS & LOCATIONS ─────────────────────────────────────────────────
 const RETAIL_BRANDS={
@@ -594,7 +662,9 @@ const CART_WORKFLOW=[
 
 // Is this task on the cart production workflow?
 function isCartWorkflow(task){
-  return task.loc==='Michigan'&&task.section==='Cart Department';
+  // Triggers for Michigan location + Cart Department or any cart child section
+  const cartSections=['Cart Department','Cart Priming','Cart Filling','Cart Cleaning','Cart Packaging'];
+  return task.loc==='Michigan'&&cartSections.includes(task.section);
 }
 
 // Get current workflow step index
@@ -1674,10 +1744,14 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter}){
   async function createTask(){
     if(!f.title||f.assignees.length===0)return;
     setSaving(true);
-    const isCartWFTask=f.loc==='Michigan'&&f.section==='Cart Department';
+    const cartSecs=['Cart Department','Cart Priming','Cart Filling','Cart Cleaning','Cart Packaging'];
+    const isCartWFTask=f.loc==='Michigan'&&cartSecs.includes(f.section);
+    // Determine starting step based on section selected
+    const sectionToStep={'Cart Department':'cart_priming','Cart Priming':'cart_priming','Cart Filling':'cart_filling','Cart Cleaning':'cart_cleaning','Cart Packaging':'cart_packaging'};
+    const startStep=sectionToStep[f.section]||'cart_priming';
     const task={id:'task-'+Date.now(),...f,
       status:'not_started',
-      workflow_step:isCartWFTask?'cart_priming':null,
+      workflow_step:isCartWFTask?startStep:null,
       workflow_history:isCartWFTask?[]:null,
       created_by:cu.name,created_by_id:cu.id,
       created_at:new Date().toISOString(),
@@ -1844,7 +1918,23 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter}){
         el('div',{className:'mbd'},
           el('div',{className:'fg'},el('label',null,'Title *'),el('input',{placeholder:'What needs to be done?',value:f.title,onChange:ev=>setF(p=>({...p,title:ev.target.value})),autoFocus:true})),
           el('div',{className:'g2'},
-            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Section'),el('select',{value:f.section,onChange:ev=>setF(p=>({...p,section:ev.target.value}))},SECTIONS.map(s=>el('option',{key:s,value:s},s)))),
+            el('div',{className:'fg',style:{marginBottom:0}},
+            el('label',null,'Section'),
+            el('select',{
+              value:f.section,
+              onChange:ev=>setF(p=>({...p,section:ev.target.value})),
+              style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13},
+            },
+              Object.entries(SECTION_TREE).map(([gm,mothers])=>[
+                el('option',{key:'h-'+gm,disabled:true,style:{fontWeight:800,color:'#f5a623',background:'var(--surface)'}},'── '+gm+' ──'),
+                el('option',{key:gm,value:gm,style:{fontWeight:700}},gm),
+                ...Object.entries(mothers).map(([mother,children])=>[
+                  el('option',{key:mother,value:mother},'  ↳ '+mother),
+                  ...children.map(child=>el('option',{key:child,value:child},'      ↳ '+child)),
+                ]).flat(),
+              ]).flat()
+            ),
+          ),
             el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Priority'),el('select',{value:f.priority,onChange:ev=>setF(p=>({...p,priority:ev.target.value}))},Object.entries(PRI).map(([k,{label}])=>el('option',{key:k,value:k},label)))),
           ),
           el('div',{className:'g2',style:{marginTop:13}},
