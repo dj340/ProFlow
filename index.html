@@ -582,6 +582,33 @@ const PRI={
   high:{label:'High',color:'#f59e0b'},
   urgent:{label:'Urgent',color:'#ef4444'},
 };
+// ── CART DEPARTMENT PRODUCTION WORKFLOW (Michigan only) ──────────────────────
+const CART_WORKFLOW=[
+  {id:'cart_priming',   label:'Cart Priming',   dept:'Cart Priming'},
+  {id:'cart_filling',   label:'Cart Filling',   dept:'Cart Filling'},
+  {id:'cart_cleaning',  label:'Cart Cleaning',  dept:'Cart Cleaning'},
+  {id:'testing',        label:'Testing',        dept:'QC', isTesting:true},
+  {id:'cart_packaging', label:'Cart Packaging', dept:'Cart Packaging'},
+  {id:'qc',             label:'QC',             dept:'QC'},
+];
+
+// Is this task on the cart production workflow?
+function isCartWorkflow(task){
+  return task.loc==='Michigan'&&task.section==='Cart Department';
+}
+
+// Get current workflow step index
+function getWorkflowStep(task){
+  if(!task.workflow_step) return 0;
+  return CART_WORKFLOW.findIndex(s=>s.id===task.workflow_step);
+}
+
+// Get step object for task
+function getWorkflowStepObj(task){
+  const idx=getWorkflowStep(task);
+  return idx>=0?CART_WORKFLOW[idx]:CART_WORKFLOW[0];
+}
+
 function avatarColor(name){return`hsl(${(name.charCodeAt(0)*47)%360},50%,35%)`;}
 
 // Push notifications
@@ -699,6 +726,9 @@ CREATE TABLE IF NOT EXISTS pf_tasks (
 );
 ALTER TABLE pf_tasks DISABLE ROW LEVEL SECURITY;
 ALTER TABLE pf_tasks ADD COLUMN IF NOT EXISTS micro_tasks jsonb default '[]';
+ALTER TABLE pf_tasks ADD COLUMN IF NOT EXISTS workflow_step text;
+ALTER TABLE pf_tasks ADD COLUMN IF NOT EXISTS workflow_history jsonb default '[]';
+ALTER TABLE pf_tasks ADD COLUMN IF NOT EXISTS testing_result text;
 CREATE TABLE IF NOT EXISTS pf_events (
   id text primary key, title text, description text,
   type text default 'event', date text, start_time text, end_time text,
@@ -754,6 +784,9 @@ function TaskCard({task,onClick}){
       el('div',{style:{flex:1,minWidth:0}},
         el('div',{style:{display:'flex',gap:5,marginBottom:6,flexWrap:'wrap'}},
           el('span',{className:'section-tag'},task.section),
+          isCartWorkflow(task)&&task.workflow_step&&task.workflow_step!=='done'&&el('span',{style:{background:'rgba(59,130,246,.1)',color:'#93c5fd',border:'1px solid rgba(59,130,246,.2)',borderRadius:5,padding:'2px 7px',fontSize:10,fontWeight:700}},
+            '🏭 '+(CART_WORKFLOW.find(s=>s.id===task.workflow_step)?.label||task.workflow_step)
+          ),
           (task.tags||[]).map(tag=>el('span',{key:tag,className:'tag'},tag)),
         ),
         el('div',{style:{fontSize:13,fontWeight:600,marginBottom:task.status==='on_hold'?4:8,lineHeight:1.4,color:task.status==='done'?'var(--text2)':'var(--text)'}},task.title),
@@ -782,6 +815,13 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
   const[noteFiles,setNoteFiles]=useState([]);
   const[saving,setSaving]=useState(false);
   const[showNewMicro,setShowNewMicro]=useState(false);
+  const isCartWF=isCartWorkflow(task);
+  const cwfStep=isCartWF?getWorkflowStepObj(task):null;
+  const cwfIdx=isCartWF?getWorkflowStep(task):0;
+  const isTesting=isCartWF&&cwfStep?.isTesting;
+  // For testing: only CC'd managers can change status
+  const isCCManager=(task.cc||[]).some(c=>c.id===cu.id&&['manager','admin','supervisor','director_production','director_operations','coo','general_manager','production_manager','qc_supervisor','qc_lead'].includes(c.role||users.find(u=>u.id===c.id)?.role));
+  const canTestingChange=isTesting&&(isCCManager||isAdmin);
   const[newMicro,setNewMicro]=useState({title:'',assignee_id:'',assignee_name:'',status:'not_started',priority:'medium'});
   const[microNote,setMicroNote]=useState({});
   const[microNoteFiles,setMicroNoteFiles]=useState({});
@@ -895,6 +935,139 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
     const update={[field]:value,updated_at:new Date().toISOString(),updated_by:cu.name};
     try{await db.update('pf_tasks',task.id,update);}catch(e){console.error(e);}
     onUpdate({...task,...update});
+  }
+
+  // ── CART WORKFLOW ADVANCE ────────────────────────────────────────────────────
+  async function advanceWorkflow(){
+    const nextIdx=cwfIdx+1;
+    const currentStep=CART_WORKFLOW[cwfIdx];
+
+    // Archive current step: save history snapshot
+    const historyEntry={
+      step_id:currentStep.id,
+      step_label:currentStep.label,
+      completed_by:cu.name,
+      completed_at:new Date().toISOString(),
+      notes:task.notes||[],
+      assignees:task.assignees||[],
+      status:'completed',
+    };
+    const workflow_history=[...(task.workflow_history||[]),historyEntry];
+
+    if(nextIdx>=CART_WORKFLOW.length){
+      // All steps done → mark task Done
+      const update={
+        status:'done',
+        completed_at:new Date().toISOString(),
+        updated_at:new Date().toISOString(),
+        updated_by:cu.name,
+        workflow_history,
+        workflow_step:'done',
+      };
+      try{await db.update('pf_tasks',task.id,update);}catch(e){console.error(e);}
+      onUpdate({...task,...update});
+      sendLocalNotification('🎉 Cart Task Complete!',task.title+' — all steps finished').catch(()=>{});
+      // Notify creator
+      const creator=users.find(u=>u.id===task.created_by_id);
+      if(creator?.email) sendEmail({to:creator.email,
+        subject:`🎉 Cart task fully completed: "${task.title}"`,
+        html:`<div style="font-family:sans-serif;background:#0a0f1e;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f"><div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Hendrix TMS</div><div style="text-align:center;padding:20px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:10px;margin-bottom:20px"><div style="font-size:40px">🎉</div><div style="font-size:17px;font-weight:700;margin-top:8px">All Steps Complete!</div><div style="font-size:13px;color:#6ee7b7;margin-top:4px">"${task.title}"</div></div><p style="font-size:13px;color:#7b8db8">All ${CART_WORKFLOW.length} production steps completed successfully. Task is now Done.</p><a href="${APP_URL}" style="display:inline-block;margin-top:16px;background:#10b981;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">View Task →</a></div>`
+      });
+      return;
+    }
+
+    const nextStep=CART_WORKFLOW[nextIdx];
+    // Reset notes for new step (keep history), reset status, update workflow_step
+    const update={
+      status:'not_started',
+      workflow_step:nextStep.id,
+      workflow_history,
+      notes:[], // fresh notes for new step
+      updated_at:new Date().toISOString(),
+      updated_by:cu.name,
+    };
+    try{await db.update('pf_tasks',task.id,update);}catch(e){console.error(e);}
+    onUpdate({...task,...update});
+
+    sendLocalNotification(`📋 → ${nextStep.label}`,task.title+' advanced to '+nextStep.label).catch(()=>{});
+
+    // Notify assignees on task + all CC'd people
+    const allNotify=new Map();
+    (task.assignees||[]).forEach(a=>{const u=users.find(x=>x.id===a.id);if(u?.email)allNotify.set(u.id,u);});
+    (task.cc||[]).forEach(c=>{const u=users.find(x=>x.id===c.id);if(u?.email)allNotify.set(u.id,u);});
+    allNotify.forEach(u=>{
+      sendEmail({to:u.email,
+        subject:`📋 Production step advanced: "${task.title}" → ${nextStep.label}`,
+        html:`<div style="font-family:sans-serif;background:#0a0f1e;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
+          <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Hendrix TMS — Production Workflow</div>
+          <div style="display:flex;align-items:center;gap:12px;background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.2);border-radius:10px;padding:16px;margin-bottom:20px">
+            <div style="font-size:28px">✅</div>
+            <div>
+              <div style="font-size:12px;color:#f5a623;font-weight:700;text-transform:uppercase;letter-spacing:1px">Step ${cwfIdx+1} Complete</div>
+              <div style="font-size:15px;font-weight:700;text-decoration:line-through;color:#7b8db8">${currentStep.label}</div>
+            </div>
+            <div style="font-size:20px;color:#7b8db8">→</div>
+            <div>
+              <div style="font-size:12px;color:#3b82f6;font-weight:700;text-transform:uppercase;letter-spacing:1px">Step ${nextIdx+1} Starting</div>
+              <div style="font-size:15px;font-weight:700;color:#93c5fd">${nextStep.label}</div>
+            </div>
+          </div>
+          <div style="font-size:13px;color:#7b8db8;margin-bottom:8px">Task: <strong style="color:#e8edf8">"${task.title}"</strong></div>
+          <div style="font-size:13px;color:#7b8db8;margin-bottom:20px">Completed by: <strong style="color:#e8edf8">${cu.name}</strong></div>
+          <div style="background:var(--surface2);border-radius:8px;padding:12px;margin-bottom:20px">
+            <div style="font-size:11px;color:#7b8db8;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Progress</div>
+            <div style="display:flex;gap:4px">'+CART_WORKFLOW.map((s,i)=>'<div style="flex:1;height:4px;border-radius:2px;background:'+(i<=cwfIdx?'#10b981':'#1a2d4f')+'"></div>').join('')+'</div>
+            <div style="font-size:11px;color:#7b8db8;margin-top:6px">Step ${nextIdx+1} of ${CART_WORKFLOW.length}: ${nextStep.label}</div>
+          </div>
+          <a href="${APP_URL}" style="display:inline-block;background:#f5a623;color:#0a0f1e;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">View Task →</a>
+        </div>`
+      });
+    });
+  }
+
+  async function handleTestingStatus(result){
+    // result: 'passed_testing' or 'failed_testing'
+    if(result==='failed_testing'){
+      const update={
+        status:'on_hold',
+        hold_reason:'Failed Testing — requires review and correction',
+        hold_by:cu.name,
+        hold_at:new Date().toISOString(),
+        testing_result:'failed',
+        updated_at:new Date().toISOString(),
+        updated_by:cu.name,
+      };
+      try{await db.update('pf_tasks',task.id,update);}catch(e){console.error(e);}
+      onUpdate({...task,...update});
+      sendLocalNotification('🚨 Testing Failed',task.title+' — placed on hold').catch(()=>{});
+      // Notify all assignees + CC
+      const allNotify=new Map();
+      (task.assignees||[]).forEach(a=>{const u=users.find(x=>x.id===a.id);if(u?.email)allNotify.set(u.id,u);});
+      (task.cc||[]).forEach(c=>{const u=users.find(x=>x.id===c.id);if(u?.email)allNotify.set(u.id,u);});
+      allNotify.forEach(u=>{
+        sendEmail({to:u.email,
+          subject:`🚨 Testing FAILED & task on hold: "${task.title}"`,
+          html:`<div style="font-family:sans-serif;background:#0a0f1e;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #7f1d1d">
+            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Hendrix TMS</div>
+            <div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.4);border-radius:10px;padding:20px;margin-bottom:20px;text-align:center">
+              <div style="font-size:40px;margin-bottom:8px">🚨</div>
+              <div style="font-size:18px;font-weight:800;color:#ef4444">TESTING FAILED</div>
+              <div style="font-size:13px;color:#fca5a5;margin-top:6px">"${task.title}"</div>
+              <div style="font-size:12px;color:#fca5a5;margin-top:4px">Task automatically placed On Hold</div>
+            </div>
+            <p style="font-size:13px;color:#7b8db8">Marked by <strong style="color:#e8edf8">${cu.name}</strong>. Please review, make corrections, and resubmit.</p>
+            <a href="${APP_URL}" style="display:inline-block;margin-top:16px;background:#ef4444;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">View Task →</a>
+          </div>`
+        });
+      });
+    } else {
+      // passed_testing → advance to cart_packaging
+      const update={testing_result:'passed',updated_at:new Date().toISOString(),updated_by:cu.name};
+      try{await db.update('pf_tasks',task.id,update);}catch(e){console.error(e);}
+      onUpdate({...task,...update});
+      sendLocalNotification('✅ Testing Passed!',task.title+' → advancing to Cart Packaging').catch(()=>{});
+      await advanceWorkflow();
+    }
   }
 
   // ── MICRO TASK HELPERS ──────────────────────────────────────────────────────
@@ -1084,6 +1257,114 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
           ))
         ),
         el('div',{className:'divider'}),
+
+        // ── CART PRODUCTION WORKFLOW (Michigan only) ─────────────────────────
+        isCartWF&&el('div',{style:{marginBottom:8}},
+          // Progress stepper
+          el('div',{style:{marginBottom:14}},
+            el('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}},
+              el('div',{style:{fontWeight:700,fontSize:14}},'🏭 Production Workflow'),
+              el('span',{style:{fontSize:11,color:'var(--text3)'}},`Step ${Math.min(cwfIdx+1,CART_WORKFLOW.length)} of ${CART_WORKFLOW.length}`),
+            ),
+            // Step pills
+            el('div',{style:{display:'flex',gap:3,flexWrap:'wrap',marginBottom:12}},
+              CART_WORKFLOW.map((step,i)=>{
+                const isDone=i<cwfIdx||(i===cwfIdx&&task.status==='done');
+                const isCurrent=i===cwfIdx&&task.status!=='done';
+                return el('div',{key:step.id,style:{
+                  display:'flex',alignItems:'center',gap:4,
+                  padding:'4px 10px',borderRadius:20,fontSize:11,fontWeight:600,
+                  background:isDone?'rgba(16,185,129,.15)':isCurrent?'rgba(245,166,35,.15)':'var(--surface2)',
+                  color:isDone?'var(--green)':isCurrent?'var(--accent)':'var(--text3)',
+                  border:'1px solid',
+                  borderColor:isDone?'rgba(16,185,129,.3)':isCurrent?'rgba(245,166,35,.3)':'var(--border)',
+                }},
+                  el('span',null,isDone?'✅':isCurrent?'🔄':'⬜'),
+                  step.label,
+                );
+              })
+            ),
+            // Progress bar
+            el('div',{style:{height:4,background:'var(--surface2)',borderRadius:4}},
+              el('div',{style:{width:Math.round((cwfIdx/CART_WORKFLOW.length)*100)+'%',height:'100%',background:'var(--green)',borderRadius:4,transition:'width .5s'}}),
+            ),
+          ),
+
+          // Current step info box
+          task.status!=='done'&&cwfStep&&el('div',{style:{background:'rgba(245,166,35,.06)',border:'1px solid rgba(245,166,35,.2)',borderRadius:10,padding:'14px 16px',marginBottom:12}},
+            el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:8}},
+              el('div',null,
+                el('div',{style:{fontSize:11,fontWeight:700,color:'var(--accent)',textTransform:'uppercase',letterSpacing:'.8px',marginBottom:4}},'Current Step'),
+                el('div',{style:{fontSize:16,fontWeight:700}},cwfStep.label),
+                el('div',{style:{fontSize:12,color:'var(--text2)',marginTop:3}},
+                  task.status==='on_hold'&&task.testing_result==='failed'
+                    ?'🚨 On Hold — Testing Failed'
+                    :`Status: ${task.status?.replace(/_/g,' ')||'Not Started'}`
+                ),
+              ),
+              // Action buttons
+              el('div',{style:{display:'flex',gap:6,flexWrap:'wrap'}},
+                // Testing step buttons (only CC'd managers)
+                isTesting&&canTestingChange&&task.status!=='on_hold'&&el('div',{style:{display:'flex',gap:6}},
+                  el('button',{
+                    onClick:()=>handleTestingStatus('passed_testing'),
+                    style:{background:'rgba(16,185,129,.15)',color:'var(--green)',border:'1px solid rgba(16,185,129,.3)',borderRadius:8,padding:'8px 16px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer'}
+                  },'✅ Passed Testing'),
+                  el('button',{
+                    onClick:()=>handleTestingStatus('failed_testing'),
+                    style:{background:'rgba(239,68,68,.1)',color:'var(--red)',border:'1px solid rgba(239,68,68,.3)',borderRadius:8,padding:'8px 16px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer'}
+                  },'❌ Failed Testing'),
+                ),
+                isTesting&&!canTestingChange&&el('div',{style:{fontSize:12,color:'var(--text3)',fontStyle:'italic',padding:'8px'}},'Only CC managers can update testing status'),
+                // Non-testing: assignee can mark complete to advance
+                !isTesting&&(isAssigned||isAdmin)&&task.status!=='on_hold'&&el('button',{
+                  onClick:async()=>{
+                    if(task.status!=='under_review'){
+                      // Mark as completed first, then advance
+                      await advanceWorkflow();
+                    }
+                  },
+                  style:{background:'var(--accent)',color:'#0a0f1e',border:'none',borderRadius:8,padding:'8px 16px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:6}
+                },`✅ Complete & Send to ${cwfIdx+1<CART_WORKFLOW.length?CART_WORKFLOW[cwfIdx+1].label:'Done'}`),
+                // If on hold (failed testing) - manager can release back
+                task.status==='on_hold'&&task.testing_result==='failed'&&(isAdmin||isCCManager)&&el('button',{
+                  onClick:async()=>{
+                    const update={status:'not_started',hold_reason:'',testing_result:'',updated_at:new Date().toISOString(),updated_by:cu.name};
+                    try{await db.update('pf_tasks',task.id,update);}catch(e){console.error(e);}
+                    onUpdate({...task,...update});
+                  },
+                  style:{background:'rgba(245,166,35,.1)',color:'var(--accent)',border:'1px solid rgba(245,166,35,.3)',borderRadius:8,padding:'8px 14px',fontFamily:'inherit',fontSize:12,fontWeight:700,cursor:'pointer'}
+                },'↩ Release from Hold'),
+              ),
+            ),
+          ),
+
+          // Step history
+          (task.workflow_history||[]).length>0&&el('div',{style:{marginBottom:12}},
+            el('div',{style:{fontWeight:600,fontSize:12,color:'var(--text2)',marginBottom:8,textTransform:'uppercase',letterSpacing:'.5px'}},'Step History'),
+            el('div',{style:{display:'flex',flexDirection:'column',gap:4}},
+              (task.workflow_history||[]).map((h,i)=>el('div',{key:i,style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:8,padding:'10px 14px'}},
+                el('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:h.notes?.length>0?8:0}},
+                  el('div',{style:{display:'flex',alignItems:'center',gap:6}},
+                    el('span',{style:{color:'var(--green)',fontSize:14}},'✅'),
+                    el('span',{style:{fontWeight:600,fontSize:13}},h.step_label),
+                    el('span',{style:{fontSize:11,color:'var(--text3)'}},'completed by '+h.completed_by),
+                  ),
+                  el('span',{style:{fontSize:11,color:'var(--text3)'}},h.completed_at?.slice(0,10)),
+                ),
+                // Show notes from that step
+                h.notes?.length>0&&el('div',{style:{marginTop:6,paddingTop:6,borderTop:'1px solid var(--border)'}},
+                  el('div',{style:{fontSize:11,color:'var(--text3)',marginBottom:4}},`${h.notes.length} comment${h.notes.length>1?'s':''} from this step:`),
+                  h.notes.slice(0,2).map((n,ni)=>el('div',{key:ni,style:{fontSize:12,color:'var(--text2)',marginBottom:2}},
+                    el('strong',null,n.by+': '),n.text?.slice(0,80)+(n.text?.length>80?'...':''),
+                    (n.files||[]).length>0&&el('span',{style:{color:'var(--accent)',marginLeft:4}},`📎${(n.files||[]).length}`),
+                  )),
+                  h.notes.length>2&&el('div',{style:{fontSize:11,color:'var(--text3)'}},`+${h.notes.length-2} more comments`),
+                ),
+              ))
+            ),
+          ),
+        ),
 
         // ── MICRO TASKS ─────────────────────────────────────────────────────
         el('div',{style:{marginBottom:8}},
@@ -1393,7 +1674,17 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter}){
   async function createTask(){
     if(!f.title||f.assignees.length===0)return;
     setSaving(true);
-    const task={id:'task-'+Date.now(),...f,status:'not_started',created_by:cu.name,created_by_id:cu.id,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),updated_by:cu.name,notes:[],attachments:[]};
+    const isCartWFTask=f.loc==='Michigan'&&f.section==='Cart Department';
+    const task={id:'task-'+Date.now(),...f,
+      status:'not_started',
+      workflow_step:isCartWFTask?'cart_priming':null,
+      workflow_history:isCartWFTask?[]:null,
+      created_by:cu.name,created_by_id:cu.id,
+      created_at:new Date().toISOString(),
+      updated_at:new Date().toISOString(),
+      updated_by:cu.name,
+      notes:[],attachments:[],
+    };
     try{await db.insert('pf_tasks',task);}catch(e){console.error(e);setSaving(false);return;}
     setTasks(p=>[task,...p]);
     // Notify all assignees + their managers
