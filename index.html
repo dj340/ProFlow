@@ -885,17 +885,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
   const[noteFiles,setNoteFiles]=useState([]);
   const[saving,setSaving]=useState(false);
   const[showNewMicro,setShowNewMicro]=useState(false);
-  const isCartWF=isCartWorkflow(task);
-  const cwfStep=isCartWF?getWorkflowStepObj(task):null;
-  const cwfIdx=isCartWF?getWorkflowStep(task):0;
-  const isTesting=isCartWF&&cwfStep?.isTesting;
-  // For testing: inline checks (no forward refs)
-  const isCCManager=(task.cc||[]).some(c=>c.id===cu.id);
-  const userRole=cu.role||'';
-  const isManagerRole=['admin','coo','director_production','director_operations','general_manager','production_manager','qc_supervisor','qc_lead','facility_manager','compliance_manager','manager','supervisor'].includes(userRole);
-  const _isAdminCheck=cu.role==='admin';
-  const _isCreatorCheck=task.created_by_id===cu.id;
-  const canTestingChange=isTesting&&(isCCManager||_isAdminCheck||isManagerRole||_isCreatorCheck);
+
   const[newMicro,setNewMicro]=useState({title:'',assignee_id:'',assignee_name:'',status:'not_started',priority:'medium'});
   const[microNote,setMicroNote]=useState({});
   const[microNoteFiles,setMicroNoteFiles]=useState({});
@@ -908,6 +898,15 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
   const canEdit=isAdmin||isCreator;
   const canMove=isAssigned||canEdit;
   const canApprove=isAdmin||isCreator;
+  // ── CART WORKFLOW STATE (after role vars are defined) ──────────────────────
+  const isCartWF=isCartWorkflow(task);
+  const cwfStep=isCartWF?getWorkflowStepObj(task):null;
+  const cwfIdx=isCartWF?getWorkflowStep(task):0;
+  const isTesting=isCartWF&&cwfStep?.isTesting;
+  const isCCManager=(task.cc||[]).some(c=>c.id===cu.id);
+  const userRole=cu.role||'';
+  const isManagerRole=['admin','coo','director_production','director_operations','general_manager','production_manager','qc_supervisor','qc_lead','facility_manager','compliance_manager','manager','supervisor'].includes(userRole);
+  const canTestingChange=isTesting&&(isCCManager||isAdmin||isManagerRole||isCreator);
 
   async function changeStatus(s){
     // ── WORKFLOW ──────────────────────────────────────────────────────────────
