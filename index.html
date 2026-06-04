@@ -570,9 +570,11 @@ const SALES_ROLES=['Director of Sales & Marketing','Sales & Marketing Manager','
 const COLS=[
   {id:'not_started',label:'Not Started',color:'#4a5068'},
   {id:'in_progress',label:'In Progress',color:'#f5a623'},
-  {id:'review',label:'In Review',color:'#3b82f6'},
+  {id:'completed',label:'Completed',color:'#10b981'},
+  {id:'under_review',label:'Under Review',color:'#3b82f6'},
   {id:'on_hold',label:'On Hold',color:'#ef4444'},
   {id:'done',label:'Done',color:'#22c55e'},
+  {id:'rejected',label:'Rejected',color:'#ef4444'},
 ];
 const PRI={
   low:{label:'Low',color:'#6b7280'},
@@ -794,70 +796,101 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
   const canApprove=isAdmin||isCreator;
 
   async function changeStatus(s){
-    // If assignee marks 'done', move to 'review' first and notify creator to approve
-    const actualStatus = (s==='done' && !canApprove) ? 'review' : s;
+    // ── WORKFLOW ──────────────────────────────────────────────────────────────
+    // Assignee clicks "Completed" → auto moves to "Under Review" + notifies creator
+    // Creator/admin clicks "Done" → approved + notifies assignees
+    // Creator/admin clicks "Rejected" → rejected + notifies assignees
+    const actualStatus=(s==='completed'&&!canApprove)?'under_review':s;
+
     const update={status:actualStatus,updated_at:new Date().toISOString(),updated_by:cu.name};
     if(actualStatus==='done') update.completed_at=new Date().toISOString();
-    if(actualStatus==='archived') update.archived_at=new Date().toISOString();
-    if(actualStatus==='approved') update.approved_by=cu.name;
+    if(actualStatus==='rejected') update.rejected_at=new Date().toISOString();
+    if(actualStatus==='under_review') update.submitted_at=new Date().toISOString();
+
     try{await db.update('pf_tasks',task.id,update);}catch(e){console.error(e);}
     onUpdate({...task,...update});
-    // Universal status change notification (for all statuses except review/done handled below)
-    const statusLabels={not_started:'Not Started',in_progress:'In Progress',review:'In Review',on_hold:'🚨 On Hold',done:'✅ Done',archived:'Archived'};
-    const statusLabel=statusLabels[actualStatus]||actualStatus;
-    if(!['review','done'].includes(actualStatus)){
-      // Notify assignees + cc + creator except the person making the change
-      const taskWithEmail={...task,_creatorEmail:users.find(u=>u.id===task.created_by_id)?.email};
+
+    const statusLabels={
+      not_started:'Not Started',in_progress:'In Progress',
+      completed:'Completed',under_review:'Under Review',
+      on_hold:'On Hold',done:'Done',rejected:'Rejected',
+    };
+
+    // Assignee marked completed → auto goes to Under Review → notify creator
+    if(actualStatus==='under_review'){
+      const creator=users.find(u=>u.id===task.created_by_id);
+      sendLocalNotification('👁 Task ready for review',`"${task.title}" submitted by ${cu.name}`).catch(()=>{});
+      if(creator?.email&&creator.id!==cu.id){
+        sendEmail({to:creator.email,
+          subject:`👁 Task completed & awaiting your review: "${task.title}"`,
+          html:`<div style="font-family:sans-serif;background:#0a0f1e;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
+            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Hendrix TMS</div>
+            <div style="background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.25);border-radius:10px;padding:20px;margin-bottom:20px;text-align:center">
+              <div style="font-size:36px;margin-bottom:10px">👁</div>
+              <div style="font-size:17px;font-weight:700;margin-bottom:6px">Task Completed — Awaiting Your Review</div>
+              <div style="font-size:14px;color:#93c5fd">"${task.title}"</div>
+            </div>
+            <p style="font-size:13px;color:#7b8db8;margin-bottom:20px"><strong style="color:#e8edf8">${cu.name}</strong> has completed this task and submitted it for your review. Please mark it as <strong>Done</strong> or <strong>Rejected</strong>.</p>
+            <a href="${APP_URL}" style="display:inline-block;background:#3b82f6;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">Review Now →</a>
+          </div>`
+        });
+      }
+    }
+
+    // Creator marked Done → notify assignees
+    if(actualStatus==='done'){
+      sendLocalNotification('✅ Task Approved!',`"${task.title}" approved by ${cu.name}`).catch(()=>{});
+      (task.assignees||[]).filter(a=>a.id!==cu.id).forEach(a=>{
+        const u=users.find(x=>x.id===a.id);
+        if(u?.email) sendEmail({to:u.email,
+          subject:`✅ Task approved & done: "${task.title}"`,
+          html:`<div style="font-family:sans-serif;background:#0a0f1e;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
+            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Hendrix TMS</div>
+            <div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:10px;padding:20px;margin-bottom:20px;text-align:center">
+              <div style="font-size:40px;margin-bottom:10px">🎉</div>
+              <div style="font-size:17px;font-weight:700;margin-bottom:6px">Task Approved & Done!</div>
+              <div style="font-size:14px;color:#6ee7b7">"${task.title}"</div>
+            </div>
+            <p style="font-size:13px;color:#7b8db8">Approved by <strong style="color:#e8edf8">${cu.name}</strong>. Great work!</p>
+            <a href="${APP_URL}" style="display:inline-block;margin-top:16px;background:#10b981;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">View Task →</a>
+          </div>`
+        });
+      });
+    }
+
+    // Creator rejected → notify assignees
+    if(actualStatus==='rejected'){
+      sendLocalNotification('❌ Task Rejected',`"${task.title}" — check comments for feedback`).catch(()=>{});
+      (task.assignees||[]).filter(a=>a.id!==cu.id).forEach(a=>{
+        const u=users.find(x=>x.id===a.id);
+        if(u?.email) sendEmail({to:u.email,
+          subject:`❌ Task rejected: "${task.title}"`,
+          html:`<div style="font-family:sans-serif;background:#0a0f1e;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #7f1d1d">
+            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Hendrix TMS</div>
+            <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:20px;margin-bottom:20px;text-align:center">
+              <div style="font-size:40px;margin-bottom:10px">❌</div>
+              <div style="font-size:17px;font-weight:700;margin-bottom:6px">Task Rejected</div>
+              <div style="font-size:14px;color:#fca5a5">"${task.title}"</div>
+            </div>
+            <p style="font-size:13px;color:#7b8db8">Reviewed by <strong style="color:#e8edf8">${cu.name}</strong>. Please check the task comments for feedback and resubmit.</p>
+            <a href="${APP_URL}" style="display:inline-block;margin-top:16px;background:#ef4444;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">View Feedback →</a>
+          </div>`
+        });
+      });
+    }
+
+    // All other status changes
+    if(!['under_review','done','rejected'].includes(actualStatus)){
+      const taskWithEmail={...task,...update,_creatorEmail:users.find(u=>u.id===task.created_by_id)?.email};
       notifyTask({
         task:taskWithEmail,
         actor:cu.name,
-        subject:`${actualStatus==='on_hold'?'🚨':'📋'} Task ${statusLabel}: "${task.title}"`,
-        body:`${cu.name} moved this task to <strong>${statusLabel}</strong>.${actualStatus==='on_hold'&&task.hold_reason?`<br><br><strong>Reason:</strong> ${task.hold_reason}`:''}`,
+        subject:`${actualStatus==='on_hold'?'🚨':'📋'} Task ${statusLabels[actualStatus]||actualStatus}: "${task.title}"`,
+        body:`${cu.name} moved this task to <strong>${statusLabels[actualStatus]||actualStatus}</strong>.${actualStatus==='on_hold'&&task.hold_reason?`<br><br><strong>Reason:</strong> ${task.hold_reason}`:''}`,
         skipId:cu.id,
       });
     }
-    // Notify creator when task goes to review (either directly or via done)
-    if(actualStatus==='review'){
-      const creator=users.find(u=>u.id===task.created_by_id);
-      if(creator?.email&&creator.id!==cu.id){
-        const isDoneRequest = s==='done';
-        sendEmail({to:creator.email,
-          subject:`${isDoneRequest?'✅ Task completed':'👁 Task ready for review'}: "${task.title}"`,
-          html:`<div style="font-family:sans-serif;background:#0a0f1e;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
-            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:12px">Hendrix TMS</div>
-            <div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:10px;padding:16px;margin-bottom:20px">
-              <div style="font-size:28px;margin-bottom:8px">${isDoneRequest?'✅':'👁'}</div>
-              <div style="font-size:16px;font-weight:700;margin-bottom:6px">${isDoneRequest?'Task Marked Complete':'Ready for Review'}</div>
-              <div style="font-size:14px;color:#a5b4d4">"${task.title}"</div>
-            </div>
-            <p style="margin-bottom:6px;font-size:13px;color:#7b8db8"><strong style="color:#e8edf8">${cu.name}</strong> ${isDoneRequest?'has completed this task and is requesting your approval.':'has submitted this task for review.'}</p>
-            <a href="${APP_URL}" style="display:inline-block;margin-top:16px;background:#10b981;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">${isDoneRequest?'✅ Review & Approve →':'Review Now →'}</a>
-          </div>`
-        });
-        sendLocalNotification(isDoneRequest?'✅ Task completed':'👁 Ready for review', cu.name+' — '+task.title);
-      }
-    }
-    // Notify assignees when creator approves/completes from review
-    if(actualStatus==='done' && canApprove){
-      (task.assignees||[]).filter(a=>a.email&&a.id!==cu.id).forEach(a=>{
-        sendEmail({to:a.email,
-          subject:`✅ Task approved & completed: "${task.title}"`,
-          html:`<div style="font-family:sans-serif;background:#0a0f1e;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
-            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:12px">Hendrix TMS</div>
-            <div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:10px;padding:16px;margin-bottom:20px;text-align:center">
-              <div style="font-size:36px;margin-bottom:8px">🎉</div>
-              <div style="font-size:16px;font-weight:700">Task Approved & Completed!</div>
-              <div style="font-size:14px;color:#a5b4d4;margin-top:6px">"${task.title}"</div>
-            </div>
-            <p style="font-size:13px;color:#7b8db8">Approved by <strong style="color:#e8edf8">${cu.name}</strong></p>
-            <a href="${APP_URL}" style="display:inline-block;margin-top:16px;background:#f5a623;color:#0a0f1e;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">View Task →</a>
-          </div>`
-        });
-      });
-      sendLocalNotification('🎉 Task approved!', task.title+' approved by '+cu.name);
-    }
   }
-
   async function updateField(field,value){
     const update={[field]:value,updated_at:new Date().toISOString(),updated_by:cu.name};
     try{await db.update('pf_tasks',task.id,update);}catch(e){console.error(e);}
@@ -947,7 +980,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
           el('div',{style:{display:'flex',gap:6,flexWrap:'wrap',marginBottom:8}},
             el('span',{style:{background:pri.color+'22',color:pri.color,borderRadius:4,padding:'2px 8px',fontSize:11,fontWeight:600}},pri.label),
             el('span',{className:'section-tag'},task.section),
-            el('span',{className:`badge ${task.status==='done'?'bb-green':task.status==='review'?'bb-yellow':task.status==='in_progress'?'bb-blue':task.status==='archived'?'bb-gray':'bb-gray'}`},COLS.find(c=>c.id===task.status)?.label||task.status),
+            el('span',{className:`badge ${task.status==='done'?'bb-green':task.status==='completed'?'bb-green':task.status==='under_review'?'bb-blue':task.status==='in_progress'?'bb-yellow':task.status==='rejected'?'bb-red':task.status==='archived'?'bb-gray':'bb-gray'}`},COLS.find(c=>c.id===task.status)?.label||task.status),
             (task.tags||[]).map(tag=>el('span',{key:tag,className:'tag'},tag)),
           ),
           el('div',{style:{fontSize:16,fontWeight:700}},task.title),
@@ -959,18 +992,46 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
           COLS.map(col=>{
             const isActive=task.status===col.id;
             const allowed=(()=>{
-              if(col.id==='on_hold') return canEdit;
-              if(col.id==='done') return isAssigned||canEdit; // assignee marks done → goes to review
-              if(col.id==='archived'||col.id==='approved') return canApprove;
-              if(col.id==='review') return canEdit; // only creator/admin can approve from review
               if(isCC) return false;
-              return canMove;
+              // Assignee can only click: in_progress, completed
+              // Creator/admin can click everything
+              if(col.id==='not_started') return canEdit;
+              if(col.id==='in_progress') return isAssigned||canEdit;
+              if(col.id==='completed') return isAssigned; // ONLY assignee marks complete
+              if(col.id==='under_review') return false; // auto-set when assignee clicks completed
+              if(col.id==='on_hold') return canEdit;
+              if(col.id==='done') return canApprove; // ONLY creator/admin approves
+              if(col.id==='rejected') return canApprove; // ONLY creator/admin rejects
+              if(col.id==='archived') return canApprove;
+              return canEdit;
             })();
+            const btnLabel={
+              not_started:'⬜ '+col.label,
+              in_progress:'🔄 '+col.label,
+              completed:'✅ '+col.label,
+              under_review:'👁 '+col.label,
+              on_hold:'🚨 '+col.label,
+              done:'🎉 '+col.label,
+              rejected:'❌ '+col.label,
+            }[col.id]||col.label;
+            const btnHint={
+              completed:isAssigned&&!canApprove?'Click to submit for review':'',
+              under_review:'Auto-set when assignee completes',
+              done:canApprove?'Approve & close task':'Only creator/manager can approve',
+              rejected:canApprove?'Reject & return to assignee':'Only creator/manager can reject',
+            }[col.id]||'';
             return el('button',{key:col.id,className:`pipe-btn${isActive?' active':''}`,
               disabled:!allowed,
+              title:btnHint,
               onClick:()=>allowed&&changeStatus(col.id),
-              style:{borderColor:isActive?col.color:col.id==='on_hold'?'rgba(239,68,68,.2)':'var(--border)',background:isActive?col.color+'22':col.id==='on_hold'?'rgba(239,68,68,.04)':'transparent',color:isActive?col.color:col.id==='on_hold'?'var(--red)':'var(--text2)',fontWeight:col.id==='on_hold'?700:'inherit'}},
-              col.id==='on_hold'?'🚨 '+col.label:col.label
+              style:{
+                borderColor:isActive?col.color:col.id==='on_hold'||col.id==='rejected'?'rgba(239,68,68,.2)':col.id==='done'?'rgba(16,185,129,.2)':col.id==='completed'?'rgba(16,185,129,.2)':col.id==='under_review'?'rgba(59,130,246,.2)':'var(--border)',
+                background:isActive?col.color+'22':col.id==='on_hold'||col.id==='rejected'?'rgba(239,68,68,.04)':col.id==='done'?'rgba(16,185,129,.04)':col.id==='completed'?'rgba(16,185,129,.04)':col.id==='under_review'?'rgba(59,130,246,.04)':'transparent',
+                color:isActive?col.color:col.id==='on_hold'||col.id==='rejected'?'var(--red)':col.id==='done'?'var(--green)':col.id==='completed'?'var(--green)':col.id==='under_review'?'#93c5fd':'var(--text2)',
+                fontWeight:['on_hold','rejected','done','completed'].includes(col.id)?700:'inherit',
+                fontSize:10,
+              }},
+              btnLabel
             );
           })
         ),
@@ -1307,7 +1368,7 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter}){
   const[selected,setSelected]=useState(null);
   const[tagInput,setTagInput]=useState('');
   const[saving,setSaving]=useState(false);
-  const[colOrder,setColOrder]=useState(()=>{try{const s=localStorage.getItem('pf_col_order');return s?JSON.parse(s):COLS.map(c=>c.id);}catch{return COLS.map(c=>c.id);}});
+  const[colOrder,setColOrder]=useState(()=>{try{const s=localStorage.getItem('pf_col_order');const saved=s?JSON.parse(s):null;const allIds=COLS.map(c=>c.id);if(saved){const merged=[...saved.filter(id=>allIds.includes(id)),...allIds.filter(id=>!saved.includes(id))];return merged;}return allIds;}catch{return COLS.map(c=>c.id);}});
   const[dragCol,setDragCol]=useState(null);
   const[dragOver,setDragOver]=useState(null);
   const[f,setF]=useState({title:'',section:'General',description:'',assignees:[],due_date:'',priority:'medium',loc:locFilter==='Nationwide'?'Nationwide':locFilter,tags:[]});
@@ -2628,8 +2689,8 @@ function Scoreboard({tasks,cu,users}){
   const scores=approvedUsers.map(u=>{
     const assigned=periodTasks.filter(t=>(t.assignees||[]).some(a=>a.id===u.id));
     const total=assigned.length;
-    const done=assigned.filter(t=>t.status==='done');
-    const inProgress=assigned.filter(t=>t.status==='in_progress');
+    const done=assigned.filter(t=>t.status==='done'||t.status==='completed');
+    const inProgress=assigned.filter(t=>t.status==='in_progress'||t.status==='under_review');
     const inReview=assigned.filter(t=>t.status==='review');
     const notStarted=assigned.filter(t=>t.status==='not_started');
     const onHold=assigned.filter(t=>t.status==='on_hold');
