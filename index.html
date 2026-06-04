@@ -889,9 +889,11 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
   const cwfStep=isCartWF?getWorkflowStepObj(task):null;
   const cwfIdx=isCartWF?getWorkflowStep(task):0;
   const isTesting=isCartWF&&cwfStep?.isTesting;
-  // For testing: only CC'd managers can change status
-  const isCCManager=(task.cc||[]).some(c=>c.id===cu.id&&['manager','admin','supervisor','director_production','director_operations','coo','general_manager','production_manager','qc_supervisor','qc_lead'].includes(c.role||users.find(u=>u.id===c.id)?.role));
-  const canTestingChange=isTesting&&(isCCManager||isAdmin);
+  // For testing: CC'd managers OR admins/managers can change status
+  const isCCManager=(task.cc||[]).some(c=>c.id===cu.id);
+  const userRole=cu.role||'';
+  const isManagerRole=['admin','coo','director_production','director_operations','general_manager','production_manager','qc_supervisor','qc_lead','facility_manager','compliance_manager','manager','supervisor'].includes(userRole);
+  const canTestingChange=isTesting&&(isCCManager||isAdmin||isManagerRole||isCreator);
   const[newMicro,setNewMicro]=useState({title:'',assignee_id:'',assignee_name:'',status:'not_started',priority:'medium'});
   const[microNote,setMicroNote]=useState({});
   const[microNoteFiles,setMicroNoteFiles]=useState({});
@@ -1374,20 +1376,42 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
               ),
               // Action buttons
               el('div',{style:{display:'flex',gap:6,flexWrap:'wrap'}},
-                // Testing step buttons (only CC'd managers)
-                isTesting&&canTestingChange&&task.status!=='on_hold'&&el('div',{style:{display:'flex',gap:6}},
-                  el('button',{
-                    onClick:()=>handleTestingStatus('passed_testing'),
-                    style:{background:'rgba(16,185,129,.15)',color:'var(--green)',border:'1px solid rgba(16,185,129,.3)',borderRadius:8,padding:'8px 16px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer'}
-                  },'✅ Passed Testing'),
-                  el('button',{
-                    onClick:()=>handleTestingStatus('failed_testing'),
-                    style:{background:'rgba(239,68,68,.1)',color:'var(--red)',border:'1px solid rgba(239,68,68,.3)',borderRadius:8,padding:'8px 16px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer'}
-                  },'❌ Failed Testing'),
+                // Testing step buttons
+                isTesting&&el('div',{style:{width:'100%'}},
+                  // Show result if already set
+                  task.testing_result&&el('div',{style:{
+                    display:'flex',alignItems:'center',gap:8,marginBottom:10,
+                    background:task.testing_result==='passed'?'rgba(16,185,129,.1)':'rgba(239,68,68,.1)',
+                    border:'1px solid',
+                    borderColor:task.testing_result==='passed'?'rgba(16,185,129,.3)':'rgba(239,68,68,.3)',
+                    borderRadius:8,padding:'8px 14px',fontSize:13,fontWeight:700,
+                    color:task.testing_result==='passed'?'var(--green)':'var(--red)',
+                  }},
+                    task.testing_result==='passed'?'✅ Passed Testing':'❌ Failed Testing',
+                    el('span',{style:{fontSize:11,fontWeight:400,marginLeft:4,color:'var(--text3)'}},
+                      task.testing_result==='passed'?'— advancing to Cart Packaging':'— task placed on hold'
+                    ),
+                  ),
+                  // Action buttons
+                  canTestingChange&&task.status!=='on_hold'&&el('div',{style:{display:'flex',gap:8,flexWrap:'wrap',marginTop:4}},
+                    el('button',{
+                      onClick:()=>handleTestingStatus('passed_testing'),
+                      style:{flex:1,background:'rgba(16,185,129,.15)',color:'var(--green)',border:'2px solid rgba(16,185,129,.4)',borderRadius:8,padding:'10px 16px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer',transition:'all .15s'}
+                    },'✅ Passed Testing'),
+                    el('button',{
+                      onClick:()=>handleTestingStatus('failed_testing'),
+                      style:{flex:1,background:'rgba(239,68,68,.1)',color:'var(--red)',border:'2px solid rgba(239,68,68,.3)',borderRadius:8,padding:'10px 16px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer',transition:'all .15s'}
+                    },'❌ Failed Testing'),
+                  ),
+                  !canTestingChange&&el('div',{style:{
+                    background:'rgba(245,166,35,.06)',border:'1px solid rgba(245,166,35,.15)',
+                    borderRadius:8,padding:'10px 14px',fontSize:12,color:'var(--text2)',lineHeight:1.5
+                  }},
+                    '🔒 Testing status can be changed by managers, admins, or CC members on this task.'
+                  ),
                 ),
-                isTesting&&!canTestingChange&&el('div',{style:{fontSize:12,color:'var(--text3)',fontStyle:'italic',padding:'8px'}},'Only CC managers can update testing status'),
-                // Non-testing: assignee can mark complete to advance
-                !isTesting&&(isAssigned||isAdmin)&&task.status!=='on_hold'&&el('button',{
+                // Non-testing: assignee or admin can mark complete to advance
+                !isTesting&&(isAssigned||isAdmin||isCreator)&&task.status!=='on_hold'&&el('button',{
                   onClick:async()=>{
                     if(task.status!=='under_review'){
                       // Mark as completed first, then advance
