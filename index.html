@@ -636,6 +636,7 @@ const RETAIL_BRANDS={
 const SALES_TASK_TYPES=['Retail Visit','Budtender Training','Product Demo','Pop-up Event','Marketing Drop','Account Check-in','New Account Setup','Promotional Event','Other'];
 const SALES_ROLES=['Director of Sales & Marketing','Sales & Marketing Manager','Sales Rep','Marketing Rep'];
 const COLS=[
+  {id:'not_started',label:'Not Started',color:'#4a5068'},
   {id:'in_progress',label:'In Progress',color:'#f5a623'},
   {id:'completed',label:'Completed',color:'#10b981'},
   {id:'under_review',label:'Under Review',color:'#3b82f6'},
@@ -923,6 +924,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
     onUpdate({...task,...update});
 
     const statusLabels={
+      not_started:'Not Started',
       in_progress:'In Progress',
       completed:'Completed',
       under_review:'Under Review',
@@ -1054,7 +1056,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
     const nextStep=CART_WORKFLOW[nextIdx];
     // Reset notes for new step (keep history), reset status, update workflow_step
     const update={
-      status:'in_progress',
+      status:'not_started',
       workflow_step:nextStep.id,
       workflow_history,
       notes:[], // fresh notes for new step
@@ -1229,7 +1231,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
             el('span',{style:{background:pri.color+'22',color:pri.color,borderRadius:4,padding:'2px 8px',fontSize:11,fontWeight:600}},pri.label),
             el('span',{className:'section-tag'},task.section),
             el('span',{className:`badge ${task.status==='done'?'bb-green':task.status==='completed'?'bb-green':task.status==='under_review'?'bb-blue':task.status==='in_progress'?'bb-yellow':task.status==='on_hold'?'bb-red':task.status==='rejected'?'bb-red':'bb-gray'}`},
-              ({in_progress:'In Progress',completed:'Completed',under_review:'Under Review',done:'Done',on_hold:'On Hold',rejected:'Rejected'})[task.status]||task.status),
+              ({not_started:'Not Started',in_progress:'In Progress',completed:'Completed',under_review:'Under Review',done:'Done',on_hold:'On Hold',rejected:'Rejected'})[task.status]||task.status),
             (task.tags||[]).map(tag=>el('span',{key:tag,className:'tag'},tag)),
           ),
           el('div',{style:{fontSize:16,fontWeight:700}},task.title),
@@ -1242,6 +1244,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
             const isActive=task.status===col.id;
             const allowed=(()=>{
               if(isCC) return false;
+              if(col.id==='not_started') return canEdit;
               if(col.id==='in_progress') return isAssigned||canEdit;
               if(col.id==='completed') return isAssigned; // assignee only
               if(col.id==='under_review') return false; // auto-set
@@ -1249,6 +1252,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
               return false;
             })();
             const btnLabel={
+              not_started:'⬜ '+col.label,
               in_progress:'🔄 '+col.label,
               completed:'✅ '+col.label,
               under_review:'👁 '+col.label,
@@ -1537,6 +1541,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
                     borderRadius:6,padding:'3px 6px',fontFamily:'inherit',fontSize:11,fontWeight:700,cursor:'pointer',flexShrink:0,
                   },
                 },
+                  el('option',{value:'not_started'},'⬜ Not Started'),
                   el('option',{value:'in_progress'},'🔄 In Progress'),
                   el('option',{value:'completed'},'✅ Completed'),
                   el('option',{value:'under_review'},'👁 Under Review'),
