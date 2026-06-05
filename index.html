@@ -636,14 +636,13 @@ const RETAIL_BRANDS={
 const SALES_TASK_TYPES=['Retail Visit','Budtender Training','Product Demo','Pop-up Event','Marketing Drop','Account Check-in','New Account Setup','Promotional Event','Other'];
 const SALES_ROLES=['Director of Sales & Marketing','Sales & Marketing Manager','Sales Rep','Marketing Rep'];
 const COLS=[
-  {id:'not_started',label:'Not Started',color:'#4a5068'},
   {id:'in_progress',label:'In Progress',color:'#f5a623'},
   {id:'completed',label:'Completed',color:'#10b981'},
   {id:'under_review',label:'Under Review',color:'#3b82f6'},
-  {id:'on_hold',label:'On Hold',color:'#ef4444'},
   {id:'done',label:'Done',color:'#22c55e'},
-  {id:'rejected',label:'Rejected',color:'#ef4444'},
 ];
+// Extra statuses used internally (on_hold, rejected) but not shown as board cols
+
 const PRI={
   low:{label:'Low',color:'#6b7280'},
   medium:{label:'Medium',color:'#f5a623'},
@@ -924,9 +923,12 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
     onUpdate({...task,...update});
 
     const statusLabels={
-      not_started:'Not Started',in_progress:'In Progress',
-      completed:'Completed',under_review:'Under Review',
-      on_hold:'On Hold',done:'Done',rejected:'Rejected',
+      in_progress:'In Progress',
+      completed:'Completed',
+      under_review:'Under Review',
+      done:'Done',
+      on_hold:'On Hold',
+      rejected:'Rejected',
     };
 
     // Assignee marked completed → auto goes to Under Review → notify creator
@@ -1052,7 +1054,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
     const nextStep=CART_WORKFLOW[nextIdx];
     // Reset notes for new step (keep history), reset status, update workflow_step
     const update={
-      status:'not_started',
+      status:'in_progress',
       workflow_step:nextStep.id,
       workflow_history,
       notes:[], // fresh notes for new step
@@ -1226,7 +1228,8 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
           el('div',{style:{display:'flex',gap:6,flexWrap:'wrap',marginBottom:8}},
             el('span',{style:{background:pri.color+'22',color:pri.color,borderRadius:4,padding:'2px 8px',fontSize:11,fontWeight:600}},pri.label),
             el('span',{className:'section-tag'},task.section),
-            el('span',{className:`badge ${task.status==='done'?'bb-green':task.status==='completed'?'bb-green':task.status==='under_review'?'bb-blue':task.status==='in_progress'?'bb-yellow':task.status==='rejected'?'bb-red':task.status==='archived'?'bb-gray':'bb-gray'}`},COLS.find(c=>c.id===task.status)?.label||task.status),
+            el('span',{className:`badge ${task.status==='done'?'bb-green':task.status==='completed'?'bb-green':task.status==='under_review'?'bb-blue':task.status==='in_progress'?'bb-yellow':task.status==='on_hold'?'bb-red':task.status==='rejected'?'bb-red':'bb-gray'}`},
+              ({in_progress:'In Progress',completed:'Completed',under_review:'Under Review',done:'Done',on_hold:'On Hold',rejected:'Rejected'})[task.status]||task.status),
             (task.tags||[]).map(tag=>el('span',{key:tag,className:'tag'},tag)),
           ),
           el('div',{style:{fontSize:16,fontWeight:700}},task.title),
@@ -1239,32 +1242,22 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
             const isActive=task.status===col.id;
             const allowed=(()=>{
               if(isCC) return false;
-              // Assignee can only click: in_progress, completed
-              // Creator/admin can click everything
-              if(col.id==='not_started') return canEdit;
               if(col.id==='in_progress') return isAssigned||canEdit;
-              if(col.id==='completed') return isAssigned; // ONLY assignee marks complete
-              if(col.id==='under_review') return false; // auto-set when assignee clicks completed
-              if(col.id==='on_hold') return canEdit;
-              if(col.id==='done') return canApprove; // ONLY creator/admin approves
-              if(col.id==='rejected') return canApprove; // ONLY creator/admin rejects
-              if(col.id==='archived') return canApprove;
-              return canEdit;
+              if(col.id==='completed') return isAssigned; // assignee only
+              if(col.id==='under_review') return false; // auto-set
+              if(col.id==='done') return canApprove; // creator/admin only
+              return false;
             })();
             const btnLabel={
-              not_started:'⬜ '+col.label,
               in_progress:'🔄 '+col.label,
               completed:'✅ '+col.label,
               under_review:'👁 '+col.label,
-              on_hold:'🚨 '+col.label,
               done:'🎉 '+col.label,
-              rejected:'❌ '+col.label,
             }[col.id]||col.label;
             const btnHint={
-              completed:isAssigned&&!canApprove?'Click to submit for review':'',
+              completed:'Assignee marks done — sends to review',
               under_review:'Auto-set when assignee completes',
-              done:canApprove?'Approve & close task':'Only creator/manager can approve',
-              rejected:canApprove?'Reject & return to assignee':'Only creator/manager can reject',
+              done:canApprove?'Approve & complete':'Only creator/manager can approve',
             }[col.id]||'';
             return el('button',{key:col.id,className:`pipe-btn${isActive?' active':''}`,
               disabled:!allowed,
@@ -1468,7 +1461,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
               el('span',{style:{fontWeight:700,fontSize:14}},'Sub-Tasks'),
               el('span',{style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:10,padding:'1px 8px',fontSize:11,color:'var(--text2)',fontWeight:700}},(task.micro_tasks||[]).length),
               (task.micro_tasks||[]).length>0&&el('span',{style:{fontSize:11,color:'var(--green)',fontWeight:600}},
-                `${(task.micro_tasks||[]).filter(m=>m.status==='done').length}/${(task.micro_tasks||[]).length} done`
+                `${(task.micro_tasks||[]).filter(m=>m.status==='done'||m.status==='completed').length}/${(task.micro_tasks||[]).length} done`
               ),
             ),
             el('button',{
@@ -1480,7 +1473,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
           // Progress bar
           (task.micro_tasks||[]).length>0&&el('div',{style:{height:4,background:'var(--surface2)',borderRadius:4,marginBottom:12}},
             el('div',{style:{
-              width:Math.round(((task.micro_tasks||[]).filter(m=>m.status==='done').length/(task.micro_tasks||[]).length)*100)+'%',
+              width:Math.round(((task.micro_tasks||[]).filter(m=>m.status==='done'||m.status==='completed').length/(task.micro_tasks||[]).length)*100)+'%',
               height:'100%',background:'var(--green)',borderRadius:4,transition:'width .3s'
             }}),
           ),
@@ -1537,18 +1530,17 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
                   onChange:ev=>updateMicroStatus(mt.id,ev.target.value),
                   onClick:ev=>ev.stopPropagation(),
                   style:{
-                    background:mt.status==='done'?'rgba(16,185,129,.15)':mt.status==='in_progress'?'rgba(245,166,35,.12)':mt.status==='on_hold'?'rgba(239,68,68,.1)':'var(--bg)',
-                    color:mt.status==='done'?'var(--green)':mt.status==='in_progress'?'var(--accent)':mt.status==='on_hold'?'var(--red)':'var(--text2)',
+                    background:mt.status==='done'?'rgba(16,185,129,.15)':mt.status==='under_review'?'rgba(59,130,246,.1)':mt.status==='completed'?'rgba(16,185,129,.08)':mt.status==='in_progress'?'rgba(245,166,35,.12)':'var(--bg)',
+                    color:mt.status==='done'?'var(--green)':mt.status==='under_review'?'#93c5fd':mt.status==='completed'?'var(--green)':mt.status==='in_progress'?'var(--accent)':'var(--text2)',
                     border:'1px solid',
-                    borderColor:mt.status==='done'?'rgba(16,185,129,.3)':mt.status==='in_progress'?'rgba(245,166,35,.3)':mt.status==='on_hold'?'rgba(239,68,68,.3)':'var(--border)',
+                    borderColor:mt.status==='done'?'rgba(16,185,129,.3)':mt.status==='under_review'?'rgba(59,130,246,.3)':mt.status==='completed'?'rgba(16,185,129,.2)':mt.status==='in_progress'?'rgba(245,166,35,.3)':'var(--border)',
                     borderRadius:6,padding:'3px 6px',fontFamily:'inherit',fontSize:11,fontWeight:700,cursor:'pointer',flexShrink:0,
                   },
                 },
-                  el('option',{value:'not_started'},'⬜ Not Started'),
                   el('option',{value:'in_progress'},'🔄 In Progress'),
-                  el('option',{value:'review'},'👁 In Review'),
-                  el('option',{value:'on_hold'},'🚨 On Hold'),
-                  el('option',{value:'done'},'✅ Done'),
+                  el('option',{value:'completed'},'✅ Completed'),
+                  el('option',{value:'under_review'},'👁 Under Review'),
+                  el('option',{value:'done'},'🎉 Done'),
                 ),
                 // Priority dot
                 el('div',{style:{width:6,height:6,borderRadius:'50%',background:pri.color,flexShrink:0}}),
@@ -1747,7 +1739,7 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter}){
   const[colOrder,setColOrder]=useState(()=>{try{const s=localStorage.getItem('pf_col_order');const saved=s?JSON.parse(s):null;const allIds=COLS.map(c=>c.id);if(saved){const merged=[...saved.filter(id=>allIds.includes(id)),...allIds.filter(id=>!saved.includes(id))];return merged;}return allIds;}catch{return COLS.map(c=>c.id);}});
   const[dragCol,setDragCol]=useState(null);
   const[dragOver,setDragOver]=useState(null);
-  const[f,setF]=useState({title:'',section:'General',description:'',assignees:[],due_date:'',priority:'medium',loc:locFilter==='Nationwide'?'Nationwide':locFilter,tags:[]});
+  const[f,setF]=useState({title:'',section:'Michigan Production',description:'',assignees:[],due_date:'',priority:'medium',loc:locFilter==='Nationwide'?'Nationwide':locFilter,tags:[]});
   const today=new Date().toISOString().slice(0,10);
   const isAdmin=cu.role==='admin';
 
@@ -1848,7 +1840,7 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter}){
         view==='board'&&el('button',{
           className:'btn b-ghost btn-sm',
           title:'Reset column order',
-          onClick:()=>{const def=COLS.map(c=>c.id);setColOrder(def);localStorage.setItem('pf_col_order',JSON.stringify(def));},
+          onClick:()=>{localStorage.removeItem('pf_col_order');const def=COLS.map(c=>c.id);setColOrder(def);},
           style:{fontSize:11,opacity:.7}
         },'↺ Reset Layout'),
         el('button',{className:'btn b-blue',onClick:()=>setNew(true)},'+ New Task'),
@@ -1910,7 +1902,9 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter}){
     ),
     view==='list'&&el('div',null,
       COLS.map(col=>{
-        const colTasks=filtered.filter(t=>t.status===col.id);
+        // In Progress col also shows on_hold and rejected tasks
+        const extraStatuses=col.id==='in_progress'?['on_hold','rejected']:[];
+        const colTasks=filtered.filter(t=>t.status===col.id||extraStatuses.includes(t.status));
         if(!colTasks.length) return null;
         return el('div',{key:col.id,style:{marginBottom:20}},
           el('div',{style:{display:'flex',alignItems:'center',gap:10,padding:'8px 0',borderBottom:'2px solid var(--border)',marginBottom:8}},
@@ -3096,7 +3090,7 @@ function Scoreboard({tasks,cu,users}){
     const assigned=periodTasks.filter(t=>(t.assignees||[]).some(a=>a.id===u.id));
     const total=assigned.length;
     const done=assigned.filter(t=>t.status==='done'||t.status==='completed');
-    const inProgress=assigned.filter(t=>t.status==='in_progress'||t.status==='under_review');
+    const inProgress=assigned.filter(t=>['in_progress','under_review','completed'].includes(t.status));
     const inReview=assigned.filter(t=>t.status==='review');
     const notStarted=assigned.filter(t=>t.status==='not_started');
     const onHold=assigned.filter(t=>t.status==='on_hold');
