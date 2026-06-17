@@ -2941,10 +2941,13 @@ TRANSCRIPT:
 ${transcript}
 Create comprehensive meeting notes in this EXACT JSON format (no markdown, just JSON):
 {"summary":"2-3 sentence executive summary","key_points":["point 1","point 2"],"action_items":[{"item":"description","owner":"person","due":"timeframe"}],"decisions":["decision 1"],"follow_up":["follow up 1"],"sentiment":"productive|needs-follow-up|inconclusive"}`;
-      const res=await fetch('https://api.anthropic.com/v1/messages',{
+      const res=await fetch(`${SUPA_URL}/functions/v1/claude-proxy`,{
         method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1500,messages:[{role:'user',content:prompt}]})
+        headers:{
+          'Content-Type':'application/json',
+          'Authorization':'Bearer '+SUPA_KEY,
+        },
+        body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1500,messages:[{role:'user',content:prompt}]})
       });
       const data=await res.json();
       const text=data.content?.[0]?.text||'';
@@ -4237,9 +4240,12 @@ function SOPGenerator({cu,onClose,onSave}){
         content:SOP_STRUCTURE_PROMPT(title,category,license,state,uploadedText),
       }];
 
-      const res=await fetch('https://api.anthropic.com/v1/messages',{
+      const res=await fetch(`${SUPA_URL}/functions/v1/claude-proxy`,{
         method:'POST',
-        headers:{'Content-Type':'application/json'},
+        headers:{
+          'Content-Type':'application/json',
+          'Authorization':'Bearer '+SUPA_KEY,
+        },
         body:JSON.stringify({
           model:'claude-sonnet-4-6',
           max_tokens:4000,
@@ -4248,7 +4254,7 @@ function SOPGenerator({cu,onClose,onSave}){
       });
 
       const data=await res.json();
-      if(data.error){throw new Error(data.error.message);}
+      if(!res.ok||data.error){throw new Error(data.error?.message||data.message||'API call failed');}
       const raw=data.content?.[0]?.text||'';
       const clean=raw.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
       const parsed=JSON.parse(clean);
