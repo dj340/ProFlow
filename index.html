@@ -745,7 +745,7 @@ async function requestPushPermission(userId){
 // ── AUTH ──────────────────────────────────────────────────────────────────────
 function Auth({onLogin}){
   const[tab,setTab]=useState('login');
-  const[f,setF]=useState({firstName:'',lastName:'',email:'',pw:'',dept:'Management',loc:'Nationwide'});
+  const[f,setF]=useState({firstName:'',lastName:'',email:'',pw:'',dept:'Production',loc:'Nationwide',depts:[],licenses:[]});
   const[msg,setMsg]=useState('');
   const[pend,setPend]=useState(false);
   const[loading,setLoading]=useState(false);
@@ -770,7 +770,7 @@ function Auth({onLogin}){
       const exists=await db.get('pf_users',`email=eq.${encodeURIComponent(f.email)}`);
       if(exists.length){setMsg('Email already registered.');setLoading(false);return;}
       const fullName=f.firstName.trim()+' '+f.lastName.trim();
-      await db.insert('pf_users',{id:'u'+Date.now(),name:fullName,first_name:f.firstName,last_name:f.lastName,email:f.email,pw:f.pw,role:'employee',dept:f.dept,loc:f.loc,approved:false,perms:[]});
+      await db.insert('pf_users',{id:'u'+Date.now(),name:fullName,first_name:f.firstName,last_name:f.lastName,email:f.email,pw:f.pw,role:'employee',dept:(f.depts||[])[0]||'Production',depts:f.depts||[],licenses:f.licenses||[],loc:f.loc,approved:false,perms:[],managers:[],oversees_depts:[]});
       setPend(true);
     }catch(e){setMsg('Error. Please try again.');console.error(e);}
     setLoading(false);
@@ -805,9 +805,37 @@ function Auth({onLogin}){
       ),
       el('div',{className:'fg'},el('label',null,'Email'),el('input',{type:'email',value:f.email,onChange:ev=>setF(p=>({...p,email:ev.target.value}))})),
       el('div',{className:'fg'},el('label',null,'Password'),el('input',{type:'password',value:f.pw,onChange:ev=>setF(p=>({...p,pw:ev.target.value}))})),
-      el('div',{className:'g2'},
-        el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Location'),el('select',{value:f.loc,onChange:ev=>setF(p=>({...p,loc:ev.target.value}))},LOCS.map(l=>el('option',{key:l,value:l},l)))),
-        el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Department'),el('select',{value:f.dept,onChange:ev=>setF(p=>({...p,dept:ev.target.value}))},DEPTS.map(d=>el('option',{key:d,value:d},d)))),
+      el('div',{className:'fg'},
+        el('label',null,'Location'),
+        el('select',{value:f.loc,onChange:ev=>setF(p=>({...p,loc:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+          LOCS.map(l=>el('option',{key:l,value:l},l))
+        ),
+      ),
+      el('div',{className:'fg'},
+        el('label',null,'License(s) — select all that apply'),
+        el('div',{style:{display:'flex',flexDirection:'column',gap:5}},
+          LICENSES.map(lic=>el('label',{key:lic.id,style:{display:'flex',alignItems:'center',gap:8,padding:'7px 10px',background:'var(--surface2)',border:'1px solid',borderColor:(f.licenses||[]).includes(lic.id)?'var(--accent)':'var(--border)',borderRadius:8,cursor:'pointer',transition:'all .15s'}},
+            el('input',{type:'checkbox',checked:(f.licenses||[]).includes(lic.id),onChange:ev=>{const cur=f.licenses||[];setF(p=>({...p,licenses:ev.target.checked?[...cur,lic.id]:cur.filter(x=>x!==lic.id)}));},style:{accentColor:'var(--accent)'}}),
+            el('div',null,
+              el('div',{style:{fontSize:12,fontWeight:600,color:(f.licenses||[]).includes(lic.id)?'var(--accent)':'var(--text)'}},lic.name),
+              el('div',{style:{fontSize:11,color:'var(--text3)'}},lic.state+' · '+lic.license_type),
+            )
+          ))
+        ),
+      ),
+      el('div',{className:'fg'},
+        el('label',null,'Department(s) — select all that apply'),
+        el('div',{style:{display:'flex',flexWrap:'wrap',gap:5}},
+          Object.keys(DEPT_TREE).map(gm=>el('div',{key:gm,
+            onClick:()=>setF(p=>{const cur=new Set(p.depts||[]);cur.has(gm)?cur.delete(gm):cur.add(gm);return{...p,depts:[...cur],dept:cur.size>0?[...cur][0]:'Production'};}),
+            style:{padding:'5px 12px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:600,cursor:'pointer',userSelect:'none',transition:'all .15s',
+              background:(f.depts||[]).includes(gm)?'var(--accent)':'var(--surface2)',
+              color:(f.depts||[]).includes(gm)?'#0a0f1e':'var(--text2)',
+              borderColor:(f.depts||[]).includes(gm)?'var(--accent)':'var(--border)',
+            }
+          },gm))
+        ),
+        (f.depts||[]).length===0&&el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:4}},'Select at least one department'),
       ),
       el('button',{className:'btn-primary',onClick:register,disabled:loading},loading?'Submitting...':'Request Access'),
       el('div',{className:'auth-note'},'Admin will approve your account before you can log in.'),
@@ -821,10 +849,12 @@ CREATE TABLE IF NOT EXISTS pf_users (
   id text primary key, name text, first_name text, last_name text,
   email text unique, pw text, role text default 'employee',
   dept text default 'General', loc text default 'Nationwide',
-  approved boolean default false, perms jsonb default '[]', managers jsonb default '[]', oversees_depts jsonb default '[]'
+  approved boolean default false, perms jsonb default '[]', managers jsonb default '[]', oversees_depts jsonb default '[]', licenses jsonb default '[]', depts jsonb default '[]'
 );
 ALTER TABLE pf_users DISABLE ROW LEVEL SECURITY;
 ALTER TABLE pf_users ADD COLUMN IF NOT EXISTS oversees_depts jsonb default '[]';
+ALTER TABLE pf_users ADD COLUMN IF NOT EXISTS licenses jsonb default '[]';
+ALTER TABLE pf_users ADD COLUMN IF NOT EXISTS depts jsonb default '[]';
 CREATE TABLE IF NOT EXISTS pf_tasks (
   id text primary key, title text, section text,
   description text default '', assignees jsonb default '[]',
@@ -2145,7 +2175,8 @@ function Team({users,setUsers,cu}){
       id:'u'+Date.now(),name:fullName,
       first_name:af.firstName,last_name:af.lastName||'',
       email:af.email,pw:af.pw,role:af.role,
-      dept:af.dept,loc:af.loc,
+      dept:af.dept,depts:af.depts||[af.dept],
+      licenses:af.licenses||[],loc:af.loc,
       approved:true,perms:[],managers:[],oversees_depts:[],
     };
     try{
@@ -2322,6 +2353,32 @@ function Team({users,setUsers,cu}){
           el('div',{className:'divider'}),
 
           // Dept access / oversight with hierarchy
+          el('div',{className:'fg'},
+            el('label',null,'License(s) — Facilities this person works at'),
+            el('div',{style:{display:'flex',flexDirection:'column',gap:6,marginBottom:8}},
+              LICENSES.map(lic=>el('label',{key:lic.id,style:{display:'flex',alignItems:'center',gap:8,padding:'8px 12px',background:'var(--surface2)',border:'1px solid',borderColor:(editU.licenses||[]).includes(lic.id)?'var(--accent)':'var(--border)',borderRadius:8,cursor:'pointer',transition:'all .15s'}},
+                el('input',{type:'checkbox',checked:(editU.licenses||[]).includes(lic.id),onChange:ev=>{const cur=editU.licenses||[];setEditU(p=>({...p,licenses:ev.target.checked?[...cur,lic.id]:cur.filter(x=>x!==lic.id)}));},style:{accentColor:'var(--accent)'}}),
+                el('div',null,
+                  el('div',{style:{fontSize:12,fontWeight:600,color:(editU.licenses||[]).includes(lic.id)?'var(--accent)':'var(--text)'}},lic.name),
+                  el('div',{style:{fontSize:11,color:'var(--text3)'}},lic.state+' · '+lic.license_type),
+                )
+              ))
+            ),
+          ),
+          el('div',{className:'fg'},
+            el('label',null,'Department(s) — All departments this person works in'),
+            el('div',{style:{display:'flex',flexWrap:'wrap',gap:5,marginBottom:4}},
+              Object.keys(DEPT_TREE).map(gm=>el('div',{key:gm,
+                onClick:()=>setEditU(p=>{const cur=new Set(p.depts||[]);cur.has(gm)?cur.delete(gm):cur.add(gm);return{...p,depts:[...cur]};}),
+                style:{padding:'5px 12px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:600,cursor:'pointer',userSelect:'none',transition:'all .15s',
+                  background:(editU.depts||[]).includes(gm)?'rgba(245,166,35,.15)':'var(--surface2)',
+                  color:(editU.depts||[]).includes(gm)?'var(--accent)':'var(--text2)',
+                  borderColor:(editU.depts||[]).includes(gm)?'var(--accent)':'var(--border)',
+                }
+              },gm))
+            ),
+          ),
+          el('div',{className:'divider'}),
           el('div',{className:'fg'},
             el('label',null,'Department Access / Oversight'),
             el('div',{style:{fontSize:11,color:'var(--text3)',marginBottom:10,lineHeight:1.5}},
@@ -3339,11 +3396,14 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
   const[showNew,setNew]=useState(false);
   const[sel,setSel]=useState(null);
   const[editing,setEditing]=useState(null);
+  const[licFilter,setLicFilter]=useState('all');
   const isAdmin=cu.role==='admin'||['coo','director_production','director_operations','general_manager','compliance_manager','director_sales_marketing'].includes(cu.role);
   const today=new Date().toISOString().slice(0,10);
 
   // Dashboard stats
-  const openDeviations=deviations.filter(d=>d.status==='open');
+  // Filter by license
+  const filterByLic=(arr)=>licFilter==='all'?arr:arr.filter(r=>!r.license_id||r.license_id===licFilter);
+  const openDeviations=filterByLic(deviations).filter(d=>d.status==='open');
   const openCAPAs=capas.filter(c=>c.status==='open'||c.status==='in_progress');
   const overdueCAPAs=capas.filter(c=>c.due_date&&c.due_date<today&&c.status!=='closed');
   const openComplaints=complaints.filter(c=>c.status==='open');
@@ -3386,6 +3446,13 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
         el('div',{className:'pt'},'Quality Management System'),
         el('div',{className:'ps'},'DCR Compliance — Missouri QMS Requirements'),
       ),
+    ),
+
+    // License filter
+    el('div',{style:{display:'flex',gap:6,marginBottom:12,flexWrap:'wrap',alignItems:'center'}},
+      el('span',{style:{fontSize:11,fontWeight:700,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'.5px'}},'License:'),
+      el('button',{onClick:()=>setLicFilter('all'),style:{padding:'4px 12px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:500,cursor:'pointer',background:licFilter==='all'?'var(--accent)':'transparent',color:licFilter==='all'?'#0a0f1e':'var(--text2)',borderColor:licFilter==='all'?'var(--accent)':'var(--border)',transition:'all .15s'}},'All Licenses'),
+      ...LICENSES.map(lic=>el('button',{key:lic.id,onClick:()=>setLicFilter(lic.id),style:{padding:'4px 12px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:500,cursor:'pointer',background:licFilter===lic.id?'var(--accent)':'transparent',color:licFilter===lic.id?'#0a0f1e':'var(--text2)',borderColor:licFilter===lic.id?'var(--accent)':'var(--border)',transition:'all .15s'}},lic.name)),
     ),
 
     // Tabs
@@ -3477,7 +3544,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
     // ── DEVIATIONS ────────────────────────────────────────────────────────────
     tab==='deviations'&&el('div',null,
       !showNew&&!sel&&el(RecordList,{
-        items:deviations,
+        items:filterByLic(deviations),
         emptyMsg:'No deviations recorded',
         newLabel:'+ Report Deviation',
         onNew:()=>setNew(true),
@@ -3537,7 +3604,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
     // ── CAPAs ─────────────────────────────────────────────────────────────────
     tab==='capas'&&el('div',null,
       !showNew&&!sel&&el(RecordList,{
-        items:capas,emptyMsg:'No CAPAs yet',newLabel:'+ New CAPA',onNew:()=>setNew(true),
+        items:filterByLic(capas),emptyMsg:'No CAPAs yet',newLabel:'+ New CAPA',onNew:()=>setNew(true),
         renderRow:c=>el('div',{key:c.id,onClick:()=>setSel(c),style:{background:'var(--surface)',border:'1px solid var(--border)',borderLeft:'3px solid '+(c.status==='closed'?'var(--green)':c.due_date&&c.due_date<today?'var(--red)':'var(--accent)'),borderRadius:10,padding:'14px 16px',cursor:'pointer',transition:'all .15s'},onMouseEnter:ev=>ev.currentTarget.style.borderColor='rgba(245,166,35,.3)',onMouseLeave:ev=>ev.currentTarget.style.borderColor='var(--border)'},
           el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},
             el('div',{style:{flex:1}},
@@ -3593,7 +3660,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
     // ── AUDITS ────────────────────────────────────────────────────────────────
     tab==='audits'&&el('div',null,
       !showNew&&!sel&&el(RecordList,{
-        items:audits,emptyMsg:'No audits on record',newLabel:'+ New Audit',onNew:()=>setNew(true),
+        items:filterByLic(audits),emptyMsg:'No audits on record',newLabel:'+ New Audit',onNew:()=>setNew(true),
         renderRow:a=>el('div',{key:a.id,onClick:()=>setSel(a),style:{background:'var(--surface)',border:'1px solid var(--border)',borderLeft:'3px solid '+(a.status==='closed'?'var(--green)':'#3b82f6'),borderRadius:10,padding:'14px 16px',cursor:'pointer',transition:'all .15s'},onMouseEnter:ev=>ev.currentTarget.style.borderColor='rgba(245,166,35,.3)',onMouseLeave:ev=>ev.currentTarget.style.borderColor='var(--border)'},
           el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},
             el('div',{style:{flex:1}},
@@ -3653,7 +3720,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
     // ── CHANGE CONTROL ────────────────────────────────────────────────────────
     tab==='changes'&&el('div',null,
       !showNew&&!sel&&el(RecordList,{
-        items:changes,emptyMsg:'No change records',newLabel:'+ New Change',onNew:()=>setNew(true),
+        items:filterByLic(changes),emptyMsg:'No change records',newLabel:'+ New Change',onNew:()=>setNew(true),
         renderRow:c=>el('div',{key:c.id,onClick:()=>setSel(c),style:{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:10,padding:'14px 16px',cursor:'pointer',transition:'all .15s'},onMouseEnter:ev=>ev.currentTarget.style.borderColor='rgba(245,166,35,.3)',onMouseLeave:ev=>ev.currentTarget.style.borderColor='var(--border)'},
           el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},
             el('div',{style:{flex:1}},
@@ -3719,7 +3786,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
     // ── COMPLAINTS ────────────────────────────────────────────────────────────
     tab==='complaints'&&el('div',null,
       !showNew&&!sel&&el(RecordList,{
-        items:complaints,emptyMsg:'No complaints on record',newLabel:'+ Log Complaint',onNew:()=>setNew(true),
+        items:filterByLic(complaints),emptyMsg:'No complaints on record',newLabel:'+ Log Complaint',onNew:()=>setNew(true),
         renderRow:c=>el('div',{key:c.id,onClick:()=>setSel(c),style:{background:'var(--surface)',border:'1px solid var(--border)',borderLeft:'3px solid '+(c.type==='adverse_event'?'var(--red)':c.status==='open'?'var(--accent)':'var(--green)'),borderRadius:10,padding:'14px 16px',cursor:'pointer',transition:'all .15s'},onMouseEnter:ev=>ev.currentTarget.style.borderColor='rgba(245,166,35,.3)',onMouseLeave:ev=>ev.currentTarget.style.borderColor='var(--border)'},
           el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},
             el('div',{style:{flex:1}},
@@ -3775,7 +3842,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
     // ── SUPPLIERS ─────────────────────────────────────────────────────────────
     tab==='suppliers'&&el('div',null,
       !showNew&&!sel&&el(RecordList,{
-        items:suppliers,emptyMsg:'No suppliers qualified',newLabel:'+ Add Supplier',onNew:()=>setNew(true),
+        items:filterByLic(suppliers),emptyMsg:'No suppliers qualified',newLabel:'+ Add Supplier',onNew:()=>setNew(true),
         renderRow:s=>el('div',{key:s.id,onClick:()=>setSel(s),style:{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:10,padding:'14px 16px',cursor:'pointer',transition:'all .15s'},onMouseEnter:ev=>ev.currentTarget.style.borderColor='rgba(245,166,35,.3)',onMouseLeave:ev=>ev.currentTarget.style.borderColor='var(--border)'},
           el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},
             el('div',{style:{flex:1}},
@@ -4312,6 +4379,7 @@ function SOPGenerator({cu,onClose,onSave}){
       id:'sop-'+Date.now(),
       title:editedSOP.title||title,
       depts:[category.split(' — ')[0]||'Production'],
+      license_id:license.id,
       description:editedSOP.purpose||'',
       steps:(editedSOP.steps||[]).map((s,i)=>({id:'s'+i,text:typeof s==='string'?s:`[${s.step_number||i+1}] ${s.title}: ${s.instruction}`})),
       version:editedSOP.revision||'1.0',
@@ -4594,9 +4662,20 @@ function SOPs({sops,setSops,cu,users}){
   const visibleSops=sops.filter(s=>{
     if(isAdmin) return true;
     if(s.status==='draft'&&s.created_by_id!==cu.id) return false;
+    // License check: if SOP has a license, user must be on that license
+    if(s.license_name){
+      const sopLic=LICENSES.find(l=>l.name===s.license_name);
+      if(sopLic){
+        const userLicenses=cu.licenses||[];
+        if(userLicenses.length>0&&!userLicenses.includes(sopLic.id)) return false;
+      }
+    }
+    // Dept check: if SOP has visible_to_depts, user must be in one
     if((s.visible_to_depts||[]).length>0){
-      const effective=expandDepts(s.visible_to_depts);
-      if(!effective.includes(cu.dept)&&!s.visible_to_depts.includes(cu.dept)) return false;
+      const userDepts=[...(cu.depts||[]),cu.dept].filter(Boolean);
+      const sopDepts=expandDepts(s.visible_to_depts);
+      const hasAccess=userDepts.some(d=>sopDepts.includes(d)||s.visible_to_depts.includes(d));
+      if(!hasAccess) return false;
     }
     return true;
   });
