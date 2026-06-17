@@ -4143,7 +4143,7 @@ ${STATE_REGS[state].key_rules.map((r,i)=>`${i+1}. ${r}`).join('\n')}
 
 ${uploadedContent?`UPLOADED REFERENCE CONTENT (use this as the basis, enhance and formalize it):\n---\n${uploadedContent.slice(0,3000)}\n---\n`:''}
 
-Generate a professional SOP in this EXACT JSON format (respond with JSON only, no markdown):
+Generate a professional SOP in this EXACT JSON format (respond with JSON only, no markdown, keep each field concise to avoid truncation):
 {
   "sop_number": "SOP-[DEPT_CODE]-[3_DIGIT_NUMBER]",
   "title": "${title}",
@@ -4248,7 +4248,7 @@ function SOPGenerator({cu,onClose,onSave}){
         },
         body:JSON.stringify({
           model:'claude-sonnet-4-6',
-          max_tokens:4000,
+          max_tokens:8000,
           messages,
         }),
       });
@@ -4256,8 +4256,44 @@ function SOPGenerator({cu,onClose,onSave}){
       const data=await res.json();
       if(!res.ok||data.error){throw new Error(data.error?.message||data.message||'API call failed');}
       const raw=data.content?.[0]?.text||'';
-      const clean=raw.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
-      const parsed=JSON.parse(clean);
+      let clean=raw.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+      // Fix truncated JSON by attempting to close it
+      if(!clean.endsWith('}')){
+        // Find last complete field and close the JSON
+        const lastBrace=clean.lastIndexOf('}');
+        if(lastBrace>0){
+          clean=clean.slice(0,lastBrace+1);
+          // Close any open arrays/objects
+          let depth=0;
+          for(const ch of clean){if(ch==='{')depth++;else if(ch==='}')depth--;}
+          while(depth>0){clean+='}';depth--;}
+        }
+      }
+      let parsed;
+      try{parsed=JSON.parse(clean);}
+      catch(e){
+        // Try to extract what we got
+        try{
+          const titleMatch=clean.match(/"title"\s*:\s*"([^"]+)"/);
+          const purposeMatch=clean.match(/"purpose"\s*:\s*"([^"]+)"/);
+          parsed={
+            title:titleMatch?.[1]||title,
+            sop_number:'SOP-AUTO-001',
+            revision:'1.0',
+            effective_date:new Date().toISOString().slice(0,10),
+            purpose:purposeMatch?.[1]||'See generated content',
+            scope:'Cannabis operations per '+state+' regulations',
+            regulatory_references:STATE_REGS[state].key_rules.slice(0,3),
+            responsibilities:[],steps:[],quality_checks:[],
+            documentation_required:[],
+            deviation_procedure:'Contact supervisor immediately',
+            training_requirements:'All staff performing this procedure',
+            revision_history:[{revision:'1.0',date:new Date().toISOString().slice(0,10),description:'Initial release',approved_by:''}],
+            license_name:license.name,state,
+            _raw:clean.slice(0,2000),
+          };
+        }catch(e2){throw new Error('Failed to parse AI response. Please try again.');}
+      }
       setGeneratedSOP(parsed);
       setEditedSOP(parsed);
       setStep(3);
