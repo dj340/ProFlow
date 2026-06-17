@@ -216,6 +216,48 @@ const EMAILJS_SERVICE_ID='service_hendrix';
 const EMAILJS_TEMPLATE_ID='template_hendrix';
 const EMAILJS_PUBLIC_KEY='REPLACE_WITH_EMAILJS_PUBLIC_KEY';
 
+// ── SUPABASE STORAGE UPLOAD ──────────────────────────────────────────────────
+async function uploadFile(file, folder='tasks'){
+  try{
+    const ext=file.name.split('.').pop();
+    const path=`${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const res=await fetch(`${SUPA_URL}/storage/v1/object/proflow-files/${path}`,{
+      method:'POST',
+      headers:{
+        'Authorization':'Bearer '+SUPA_KEY,
+        'apikey':SUPA_KEY,
+        'Content-Type':file.type||'application/octet-stream',
+        'x-upsert':'true',
+      },
+      body:file,
+    });
+    if(!res.ok){
+      const err=await res.text();
+      console.error('Storage upload error:',err);
+      // Fallback to base64 if storage fails
+      return await readFileAsBase64(file);
+    }
+    const publicUrl=`${SUPA_URL}/storage/v1/object/public/proflow-files/${path}`;
+    return {id:'att-'+Date.now(),name:file.name,url:publicUrl,path,size:file.size,type:file.type,uploaded:true};
+  }catch(e){
+    console.error('Upload failed, using base64 fallback:',e);
+    return await readFileAsBase64(file);
+  }
+}
+
+function readFileAsBase64(file){
+  return new Promise(resolve=>{
+    const reader=new FileReader();
+    reader.onload=re=>resolve({id:'att-'+Date.now(),name:file.name,data:re.target.result,size:file.size,type:file.type});
+    reader.readAsDataURL(file);
+  });
+}
+
+// Render a file attachment (handles both URL and base64)
+function renderFileUrl(att){
+  return att.url||att.data||'';
+}
+
 async function sendEmail({to,subject,html}){
   try{
     // EmailJS sends via your connected Gmail/Outlook
@@ -1312,18 +1354,15 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
           el('label',null,'Attach File'),
           el('input',{type:'file',accept:'.pdf,.doc,.docx,.png,.jpg,.xlsx,.csv',onChange:async ev=>{
             const file=ev.target.files[0];if(!file)return;
-            const reader=new FileReader();
-            reader.onload=async re=>{
-              const att={id:'att-'+Date.now(),name:file.name,data:re.target.result,by:cu.name,at:new Date().toISOString()};
-              await updateField('attachments',[...(task.attachments||[]),att]);
-            };
-            reader.readAsDataURL(file);
+            const att=await uploadFile(file,'tasks');
+            att.by=cu.name;att.at=new Date().toISOString();
+            await updateField('attachments',[...(task.attachments||[]),att]);
           },style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px',color:'var(--text)',fontFamily:'inherit',fontSize:13}}),
         ),
         (task.attachments||[]).length>0&&el('div',{style:{marginBottom:14}},
           (task.attachments||[]).map(att=>el('div',{key:att.id,style:{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'7px 10px',background:'var(--surface2)',borderRadius:6,marginBottom:5}},
             el('span',{style:{fontSize:12}},`📎 ${att.name} — uploaded by ${att.by}`),
-            el('button',{className:'btn b-ghost btn-sm',onClick:()=>{const a=document.createElement('a');a.href=att.data;a.download=att.name;a.click();}},'Download'),
+            el('button',{className:'btn b-ghost btn-sm',onClick:()=>{const a=document.createElement('a');a.href=renderFileUrl(att);a.download=att.name;a.target='_blank';a.click();}},'Download'),
           ))
         ),
         el('div',{className:'divider'}),
@@ -1583,11 +1622,11 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
                         (note.files||[]).map(f=>el('div',{key:f.id,style:{display:'flex',alignItems:'center',gap:4,background:'var(--surface2)',borderRadius:4,padding:'2px 7px',fontSize:10}},
                           el('span',null,f.name.match(/\.(png|jpg|jpeg|gif|webp)$/i)?'🖼️':'📎'),
                           el('span',{style:{color:'var(--text2)',maxWidth:80,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},f.name),
-                          el('button',{onClick:()=>{const a=document.createElement('a');a.href=f.data;a.download=f.name;a.click();},style:{background:'none',border:'none',color:'var(--accent)',cursor:'pointer',fontSize:10,fontWeight:600,padding:0,fontFamily:'inherit'}},'↓'),
+                          el('button',{onClick:()=>{const a=document.createElement('a');a.href=renderFileUrl(f);a.download=f.name;a.target='_blank';a.click();},style:{background:'none',border:'none',color:'var(--accent)',cursor:'pointer',fontSize:10,fontWeight:600,padding:0,fontFamily:'inherit'}},'↓'),
                         )),
                       ),
                       (note.files||[]).filter(f=>f.name.match(/\.(png|jpg|jpeg|gif|webp)$/i)).map(f=>
-                        el('img',{key:f.id,src:f.data,style:{maxWidth:'100%',maxHeight:120,borderRadius:4,marginTop:4,display:'block'}})
+                        el('img',{key:f.id,src:renderFileUrl(f),style:{maxWidth:'100%',maxHeight:120,borderRadius:4,marginTop:4,display:'block'}})
                       ),
                     ),
                   ))
@@ -1616,11 +1655,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
                         el('input',{type:'file',multiple:true,accept:'image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv',style:{display:'none'},
                           onChange:async ev=>{
                             const files=Array.from(ev.target.files);
-                            const loaded=await Promise.all(files.map(file=>new Promise(resolve=>{
-                              const reader=new FileReader();
-                              reader.onload=re=>resolve({id:'f'+Date.now()+Math.random(),name:file.name,data:re.target.result});
-                              reader.readAsDataURL(file);
-                            })));
+                            const loaded=await Promise.all(files.map(f=>uploadFile(f,'micro')));
                             setMicroNoteFiles(p=>({...p,[mt.id]:[...(p[mt.id]||[]),...loaded]}));
                             ev.target.value='';
                           },
@@ -1655,7 +1690,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
                 el('span',null,f.name.match(/\.(png|jpg|jpeg|gif|webp)$/i)?'🖼️':f.name.match(/\.pdf$/i)?'📄':f.name.match(/\.(doc|docx)$/i)?'📝':f.name.match(/\.(xls|xlsx|csv)$/i)?'📊':'📎'),
                 el('span',{style:{color:'var(--text2)',maxWidth:120,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},f.name),
                 el('button',{
-                  onClick:()=>{const a=document.createElement('a');a.href=f.data;a.download=f.name;a.click();},
+                  onClick:()=>{const a=document.createElement('a');a.href=renderFileUrl(f);a.download=f.name;a.target='_blank';a.click();},
                   style:{background:'none',border:'none',color:'var(--accent)',cursor:'pointer',fontSize:11,fontWeight:600,padding:0,fontFamily:'inherit'}
                 },'↓'),
                 // Show image inline if it's an image
@@ -1681,7 +1716,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
             noteFiles.length>0&&el('div',{style:{display:'flex',flexWrap:'wrap',gap:6,marginTop:6}},
               noteFiles.map(f=>el('div',{key:f.id,style:{position:'relative',display:'flex',alignItems:'center',gap:6,background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:6,padding:'4px 10px',fontSize:11}},
                 f.name.match(/\.(png|jpg|jpeg|gif|webp)$/i)
-                  ?el('img',{src:f.data,style:{width:32,height:32,objectFit:'cover',borderRadius:4}})
+                  ?el('img',{src:renderFileUrl(f),style:{width:32,height:32,objectFit:'cover',borderRadius:4}})
                   :el('span',null,f.name.match(/\.pdf$/i)?'📄':f.name.match(/\.(doc|docx)$/i)?'📝':f.name.match(/\.(xls|xlsx|csv)$/i)?'📊':'📎'),
                 el('span',{style:{maxWidth:100,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:'var(--text2)'}},f.name),
                 el('span',{
@@ -1703,11 +1738,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
                   style:{display:'none'},
                   onChange:async ev=>{
                     const files=Array.from(ev.target.files);
-                    const loaded=await Promise.all(files.map(file=>new Promise(resolve=>{
-                      const reader=new FileReader();
-                      reader.onload=re=>resolve({id:'f'+Date.now()+Math.random(),name:file.name,data:re.target.result,size:file.size,type:file.type});
-                      reader.readAsDataURL(file);
-                    })));
+                    const loaded=await Promise.all(files.map(f=>uploadFile(f,'comments')));
                     setNoteFiles(p=>[...p,...loaded]);
                     ev.target.value='';
                   },
@@ -2820,22 +2851,19 @@ function SalesMarketing({salesTasks,setSalesTasks,cu,users,locFilter}){
             el('input',{type:'file',accept:'.pdf,.doc,.docx,.png,.jpg,.xlsx,.csv',multiple:true,onChange:async ev=>{
               const files=Array.from(ev.target.files);
               for(const file of files){
-                const reader=new FileReader();
-                reader.onload=async re=>{
-                  const att={id:'att-'+Date.now(),name:file.name,data:re.target.result,by:cu.name,at:new Date().toISOString()};
-                  const atts=[...(sel.attachments||[]),att];
-                  await db.update('pf_sales_tasks',sel.id,{attachments:atts,updated_at:new Date().toISOString()}).catch(console.error);
-                  setSalesTasks(p=>p.map(t=>t.id===sel.id?{...t,attachments:atts}:t));
-                  setSel(s=>({...s,attachments:atts}));
-                };
-                reader.readAsDataURL(file);
+                const att=await uploadFile(file,'sales');
+                att.by=cu.name;att.at=new Date().toISOString();
+                const atts=[...(sel.attachments||[]),att];
+                await db.update('pf_sales_tasks',sel.id,{attachments:atts,updated_at:new Date().toISOString()}).catch(console.error);
+                setSalesTasks(p=>p.map(t=>t.id===sel.id?{...t,attachments:atts}:t));
+                setSel(s=>({...s,attachments:atts}));
               }
             },style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px',color:'var(--text)',fontFamily:'inherit',fontSize:13}}),
           ),
           (sel.attachments||[]).length>0&&el('div',{style:{marginBottom:14}},
             (sel.attachments||[]).map(att=>el('div',{key:att.id,style:{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'7px 10px',background:'var(--surface2)',borderRadius:6,marginBottom:5}},
               el('span',{style:{fontSize:12}},`📎 ${att.name}`),
-              el('button',{className:'btn b-ghost btn-sm',onClick:()=>{const a=document.createElement('a');a.href=att.data;a.download=att.name;a.click();}},'Download'),
+              el('button',{className:'btn b-ghost btn-sm',onClick:()=>{const a=document.createElement('a');a.href=renderFileUrl(att);a.download=att.name;a.target='_blank';a.click();}},'Download'),
             ))
           ),
           el('div',{className:'divider'}),
@@ -3066,6 +3094,782 @@ Create comprehensive meeting notes in this EXACT JSON format (no markdown, just 
     ),
   );
 }
+
+// ── QMS (Quality Management System) ──────────────────────────────────────────
+const QMS_TABS=[
+  {id:'dashboard',label:'Dashboard',ico:'📊'},
+  {id:'deviations',label:'Deviations',ico:'⚠️'},
+  {id:'capas',label:'CAPAs',ico:'🔧'},
+  {id:'audits',label:'Audits',ico:'🔍'},
+  {id:'changes',label:'Change Control',ico:'📝'},
+  {id:'complaints',label:'Complaints',ico:'📣'},
+  {id:'suppliers',label:'Suppliers',ico:'🏭'},
+  {id:'training',label:'Training Matrix',ico:'🎓'},
+];
+
+const QMS_DEPTS=['Cart Department','Pre-Roll Department','Gummy Department','Extraction','QC','Packaging','Compliance','Facility','Distribution','Warehouse'];
+const QMS_PRIORITIES={critical:{label:'Critical',color:'#ef4444'},major:{label:'Major',color:'#f59e0b'},minor:{label:'Minor',color:'#3b82f6'}};
+const QMS_STATUSES={open:{label:'Open',color:'#ef4444'},in_progress:{label:'In Progress',color:'#f5a623'},closed:{label:'Closed',color:'#10b981'},cancelled:{label:'Cancelled',color:'#6b7280'}};
+
+function QMSBadge({status,type}){
+  const s=QMS_STATUSES[status];
+  if(!s) return el('span',{style:{fontSize:11,color:'var(--text3)'}},status||'—');
+  return el('span',{style:{background:s.color+'22',color:s.color,border:'1px solid '+s.color+'44',borderRadius:4,padding:'2px 8px',fontSize:11,fontWeight:700}},s.label);
+}
+function PriBadge({priority}){
+  const p=QMS_PRIORITIES[priority];
+  if(!p) return null;
+  return el('span',{style:{background:p.color+'22',color:p.color,border:'1px solid '+p.color+'44',borderRadius:4,padding:'2px 8px',fontSize:11,fontWeight:700}},p.label);
+}
+
+// ── DEVIATION FORM ────────────────────────────────────────────────────────────
+function DeviationForm({cu,users,onSave,onCancel,existing}){
+  const[f,setF]=useState(existing||{
+    title:'',dept:'Cart Department',description:'',
+    product_affected:'',lot_number:'',
+    immediate_action:'',root_cause:'',
+    priority:'major',status:'open',
+    reported_by:cu.name,reported_by_id:cu.id,
+    attachments:[],notes:[],
+  });
+  const[saving,setSaving]=useState(false);
+  async function save(){
+    if(!f.title.trim()) return;
+    setSaving(true);
+    const rec={...f,
+      id:existing?.id||'dev-'+Date.now(),
+      created_by:cu.name,created_by_id:cu.id,
+      created_at:existing?.created_at||new Date().toISOString(),
+      updated_at:new Date().toISOString(),updated_by:cu.name,
+    };
+    try{
+      if(existing){await db.update('pf_qms_deviations',existing.id,rec);}
+      else{await db.insert('pf_qms_deviations',rec);}
+      onSave(rec);
+    }catch(e){
+      console.error(e);
+      alert('Save failed. Run SQL migration:\nCREATE TABLE IF NOT EXISTS pf_qms_deviations (id text primary key, title text, dept text, description text, product_affected text, lot_number text, immediate_action text, root_cause text, priority text, status text default \'open\', reported_by text, reported_by_id text, attachments jsonb default \'[]\', notes jsonb default \'[]\', created_by text, created_by_id text, created_at text, updated_at text, updated_by text, closed_at text);\nALTER TABLE pf_qms_deviations DISABLE ROW LEVEL SECURITY;');
+      navigator.clipboard.writeText("CREATE TABLE IF NOT EXISTS pf_qms_deviations (id text primary key, title text, dept text, description text, product_affected text, lot_number text, immediate_action text, root_cause text, priority text, status text default 'open', reported_by text, reported_by_id text, attachments jsonb default '[]', notes jsonb default '[]', created_by text, created_by_id text, created_at text, updated_at text, updated_by text, closed_at text);\nALTER TABLE pf_qms_deviations DISABLE ROW LEVEL SECURITY;").catch(()=>{});
+    }
+    setSaving(false);
+  }
+  return el('div',{className:'mbd'},
+    el('div',{className:'fg'},el('label',null,'Deviation Title *'),el('input',{value:f.title,onChange:ev=>setF(p=>({...p,title:ev.target.value})),placeholder:'e.g. Wrong label applied to Pre-Roll batch',autoFocus:true})),
+    el('div',{className:'g2'},
+      el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Department'),el('select',{value:f.dept,onChange:ev=>setF(p=>({...p,dept:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},QMS_DEPTS.map(d=>el('option',{key:d,value:d},d)))),
+      el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Priority'),el('select',{value:f.priority,onChange:ev=>setF(p=>({...p,priority:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},Object.entries(QMS_PRIORITIES).map(([k,{label}])=>el('option',{key:k,value:k},label)))),
+    ),
+    el('div',{className:'g2',style:{marginTop:13}},
+      el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Product Affected'),el('input',{value:f.product_affected,onChange:ev=>setF(p=>({...p,product_affected:ev.target.value})),placeholder:'e.g. Live Resin Carts 1g'})),
+      el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Lot / Batch Number'),el('input',{value:f.lot_number,onChange:ev=>setF(p=>({...p,lot_number:ev.target.value})),placeholder:'e.g. LOT-2026-0601'})),
+    ),
+    el('div',{className:'fg'},el('label',null,'What Happened? *'),el('textarea',{value:f.description,onChange:ev=>setF(p=>({...p,description:ev.target.value})),placeholder:'Describe the deviation in detail...'})),
+    el('div',{className:'fg'},el('label',null,'Immediate Action Taken'),el('textarea',{value:f.immediate_action,onChange:ev=>setF(p=>({...p,immediate_action:ev.target.value})),placeholder:'What was done right away to contain the issue?'})),
+    el('div',{className:'fg'},el('label',null,'Root Cause (if known)'),el('textarea',{value:f.root_cause,onChange:ev=>setF(p=>({...p,root_cause:ev.target.value})),placeholder:'Why did this happen?'})),
+    existing&&el('div',{className:'fg'},el('label',null,'Status'),el('select',{value:f.status,onChange:ev=>setF(p=>({...p,status:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},Object.entries(QMS_STATUSES).map(([k,{label}])=>el('option',{key:k,value:k},label)))),
+    el('div',{className:'mf'},
+      el('button',{className:'btn b-ghost',onClick:onCancel},'Cancel'),
+      el('button',{className:'btn b-blue',onClick:save,disabled:saving||!f.title.trim()},saving?'Saving...':existing?'Update':'Submit Deviation'),
+    ),
+  );
+}
+
+// ── CAPA FORM ─────────────────────────────────────────────────────────────────
+function CAPAForm({cu,users,deviations,onSave,onCancel,existing}){
+  const[f,setF]=useState(existing||{
+    title:'',linked_deviation:'',dept:'Cart Department',
+    issue_description:'',correction:'',preventive_action:'',
+    responsible_person_id:'',responsible_person_name:'',
+    due_date:'',verification_method:'',
+    priority:'major',status:'open',effectiveness_rating:'',
+    attachments:[],notes:[],
+  });
+  const[saving,setSaving]=useState(false);
+  async function save(){
+    if(!f.title.trim()) return;
+    setSaving(true);
+    const rec={...f,
+      id:existing?.id||'capa-'+Date.now(),
+      created_by:cu.name,created_by_id:cu.id,
+      created_at:existing?.created_at||new Date().toISOString(),
+      updated_at:new Date().toISOString(),updated_by:cu.name,
+    };
+    try{
+      if(existing){await db.update('pf_qms_capas',existing.id,rec);}
+      else{await db.insert('pf_qms_capas',rec);}
+      onSave(rec);
+    }catch(e){console.error(e);alert('Save failed. Create table pf_qms_capas in Supabase SQL Editor.');}
+    setSaving(false);
+  }
+  return el('div',{className:'mbd'},
+    el('div',{className:'fg'},el('label',null,'CAPA Title *'),el('input',{value:f.title,onChange:ev=>setF(p=>({...p,title:ev.target.value})),placeholder:'e.g. Pre-roll weight deviation CAPA',autoFocus:true})),
+    el('div',{className:'g2'},
+      el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Department'),el('select',{value:f.dept,onChange:ev=>setF(p=>({...p,dept:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},QMS_DEPTS.map(d=>el('option',{key:d,value:d},d)))),
+      el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Priority'),el('select',{value:f.priority,onChange:ev=>setF(p=>({...p,priority:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},Object.entries(QMS_PRIORITIES).map(([k,{label}])=>el('option',{key:k,value:k},label)))),
+    ),
+    deviations.length>0&&el('div',{className:'fg'},
+      el('label',null,'Linked Deviation (optional)'),
+      el('select',{value:f.linked_deviation,onChange:ev=>setF(p=>({...p,linked_deviation:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+        el('option',{value:''},'— None —'),
+        ...deviations.map(d=>el('option',{key:d.id,value:d.id},d.title)),
+      ),
+    ),
+    el('div',{className:'fg'},el('label',null,'Issue Description *'),el('textarea',{value:f.issue_description,onChange:ev=>setF(p=>({...p,issue_description:ev.target.value})),placeholder:'Describe the problem being addressed...'})),
+    el('div',{className:'fg'},el('label',null,'Correction (Immediate Fix)'),el('textarea',{value:f.correction,onChange:ev=>setF(p=>({...p,correction:ev.target.value})),placeholder:'What was done to fix the immediate problem?'})),
+    el('div',{className:'fg'},el('label',null,'Preventive Action (Long-term Fix)'),el('textarea',{value:f.preventive_action,onChange:ev=>setF(p=>({...p,preventive_action:ev.target.value})),placeholder:'What process changes prevent recurrence? e.g. Add hourly weight verification, supervisor signoff every batch'})),
+    el('div',{className:'g2'},
+      el('div',{className:'fg',style:{marginBottom:0}},
+        el('label',null,'Responsible Person'),
+        el('select',{value:f.responsible_person_id,onChange:ev=>{const u=users.find(x=>x.id===ev.target.value);setF(p=>({...p,responsible_person_id:ev.target.value,responsible_person_name:u?.name||''}));},style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+          el('option',{value:''},'— Select —'),
+          ...users.filter(u=>u.approved).map(u=>el('option',{key:u.id,value:u.id},u.name+' — '+u.dept)),
+        ),
+      ),
+      el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Due Date'),el('input',{type:'date',value:f.due_date,onChange:ev=>setF(p=>({...p,due_date:ev.target.value}))})),
+    ),
+    el('div',{className:'fg'},el('label',null,'Verification Method'),el('input',{value:f.verification_method,onChange:ev=>setF(p=>({...p,verification_method:ev.target.value})),placeholder:'How will you verify the fix worked?'})),
+    existing&&el('div',{className:'g2'},
+      el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Status'),el('select',{value:f.status,onChange:ev=>setF(p=>({...p,status:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},Object.entries(QMS_STATUSES).map(([k,{label}])=>el('option',{key:k,value:k},label)))),
+      el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Effectiveness (if closed)'),el('select',{value:f.effectiveness_rating,onChange:ev=>setF(p=>({...p,effectiveness_rating:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+        el('option',{value:''},'— Rate effectiveness —'),
+        el('option',{value:'effective'},'✅ Effective'),
+        el('option',{value:'partially'},'⚠️ Partially Effective'),
+        el('option',{value:'ineffective'},'❌ Ineffective — Reopen'),
+      )),
+    ),
+    el('div',{className:'mf'},
+      el('button',{className:'btn b-ghost',onClick:onCancel},'Cancel'),
+      el('button',{className:'btn b-blue',onClick:save,disabled:saving||!f.title.trim()},saving?'Saving...':existing?'Update CAPA':'Create CAPA'),
+    ),
+  );
+}
+
+// ── AUDIT FORM ────────────────────────────────────────────────────────────────
+const AUDIT_TYPES=['METRC Audit','Packaging Audit','Security Audit','Training Audit','Testing Audit','SOP Compliance Audit','Equipment Calibration Audit','Sanitation Audit','Full Facility Audit','Custom'];
+function AuditForm({cu,users,onSave,onCancel,existing}){
+  const[f,setF]=useState(existing||{
+    title:'',audit_type:'METRC Audit',dept:'Compliance',
+    audit_date:new Date().toISOString().slice(0,10),
+    auditor_id:cu.id,auditor_name:cu.name,
+    scope:'',findings:[],
+    total_findings:0,critical_findings:0,
+    recommendations:'',conclusion:'',
+    status:'open',next_audit_date:'',
+    attachments:[],
+  });
+  const[newFinding,setNewFinding]=useState({description:'',severity:'minor',corrective_action:'',status:'open'});
+  const[saving,setSaving]=useState(false);
+
+  function addFinding(){
+    if(!newFinding.description.trim()) return;
+    const finding={...newFinding,id:'f'+Date.now()};
+    setF(p=>({...p,findings:[...p.findings,finding],total_findings:(p.findings||[]).length+1,critical_findings:(p.findings||[]).filter(x=>x.severity==='critical').length+(finding.severity==='critical'?1:0)}));
+    setNewFinding({description:'',severity:'minor',corrective_action:'',status:'open'});
+  }
+
+  async function save(){
+    if(!f.title.trim()) return;
+    setSaving(true);
+    const rec={...f,id:existing?.id||'aud-'+Date.now(),created_by:cu.name,created_by_id:cu.id,created_at:existing?.created_at||new Date().toISOString(),updated_at:new Date().toISOString(),updated_by:cu.name};
+    try{
+      if(existing){await db.update('pf_qms_audits',existing.id,rec);}
+      else{await db.insert('pf_qms_audits',rec);}
+      onSave(rec);
+    }catch(e){console.error(e);alert('Save failed. Create table pf_qms_audits in Supabase.');}
+    setSaving(false);
+  }
+  return el('div',{className:'mbd'},
+    el('div',{className:'fg'},el('label',null,'Audit Title *'),el('input',{value:f.title,onChange:ev=>setF(p=>({...p,title:ev.target.value})),placeholder:'e.g. Monthly METRC Audit — June 2026',autoFocus:true})),
+    el('div',{className:'g2'},
+      el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Audit Type'),el('select',{value:f.audit_type,onChange:ev=>setF(p=>({...p,audit_type:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},AUDIT_TYPES.map(t=>el('option',{key:t,value:t},t)))),
+      el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Audit Date'),el('input',{type:'date',value:f.audit_date,onChange:ev=>setF(p=>({...p,audit_date:ev.target.value}))})),
+    ),
+    el('div',{className:'g2',style:{marginTop:13}},
+      el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Department'),el('select',{value:f.dept,onChange:ev=>setF(p=>({...p,dept:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},QMS_DEPTS.map(d=>el('option',{key:d,value:d},d)))),
+      el('div',{className:'fg',style:{marginBottom:0}},
+        el('label',null,'Lead Auditor'),
+        el('select',{value:f.auditor_id,onChange:ev=>{const u=users.find(x=>x.id===ev.target.value);setF(p=>({...p,auditor_id:ev.target.value,auditor_name:u?.name||''}));},style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+          ...users.filter(u=>u.approved).map(u=>el('option',{key:u.id,value:u.id},u.name)),
+        ),
+      ),
+    ),
+    el('div',{className:'fg'},el('label',null,'Audit Scope'),el('textarea',{value:f.scope,onChange:ev=>setF(p=>({...p,scope:ev.target.value})),placeholder:'What areas/processes were reviewed?'})),
+    el('div',{className:'divider'}),
+    el('div',{style:{fontWeight:700,fontSize:14,marginBottom:10}},'Findings'),
+    (f.findings||[]).map((finding,i)=>el('div',{key:finding.id,style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:8,padding:12,marginBottom:6,display:'flex',gap:10,alignItems:'flex-start'}},
+      el('div',{style:{flex:1}},
+        el('div',{style:{display:'flex',gap:6,marginBottom:4}},
+          el('span',{style:{background:finding.severity==='critical'?'rgba(239,68,68,.15)':finding.severity==='major'?'rgba(245,158,11,.15)':'rgba(59,130,246,.1)',color:finding.severity==='critical'?'var(--red)':finding.severity==='major'?'var(--accent)':'#93c5fd',borderRadius:4,padding:'1px 7px',fontSize:10,fontWeight:700}},finding.severity.toUpperCase()),
+        ),
+        el('div',{style:{fontSize:13,fontWeight:600}},finding.description),
+        finding.corrective_action&&el('div',{style:{fontSize:12,color:'var(--text2)',marginTop:3}},'Action: '+finding.corrective_action),
+      ),
+      el('button',{onClick:()=>setF(p=>({...p,findings:p.findings.filter((_,j)=>j!==i)})),style:{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:16}},'×'),
+    )),
+    el('div',{style:{background:'var(--surface2)',border:'1px dashed var(--border)',borderRadius:8,padding:12,marginBottom:14}},
+      el('div',{style:{fontSize:12,fontWeight:700,color:'var(--text2)',marginBottom:8}},'Add Finding'),
+      el('textarea',{value:newFinding.description,onChange:ev=>setNewFinding(p=>({...p,description:ev.target.value})),placeholder:'Describe the finding...',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px',color:'var(--text)',fontFamily:'inherit',fontSize:12,outline:'none',minHeight:50,resize:'vertical',marginBottom:8}}),
+      el('div',{style:{display:'flex',gap:8}},
+        el('select',{value:newFinding.severity,onChange:ev=>setNewFinding(p=>({...p,severity:ev.target.value})),style:{background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'6px',color:'var(--text)',fontFamily:'inherit',fontSize:12}},
+          el('option',{value:'minor'},'Minor'),el('option',{value:'major'},'Major'),el('option',{value:'critical'},'Critical'),
+        ),
+        el('input',{value:newFinding.corrective_action,onChange:ev=>setNewFinding(p=>({...p,corrective_action:ev.target.value})),placeholder:'Required corrective action...',style:{flex:1,background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'6px 10px',color:'var(--text)',fontFamily:'inherit',fontSize:12,outline:'none'}}),
+        el('button',{onClick:addFinding,disabled:!newFinding.description.trim(),className:'btn b-blue btn-sm'},'+ Add'),
+      ),
+    ),
+    el('div',{className:'fg'},el('label',null,'Recommendations'),el('textarea',{value:f.recommendations,onChange:ev=>setF(p=>({...p,recommendations:ev.target.value})),placeholder:'Overall recommendations from this audit...'})),
+    el('div',{className:'fg'},el('label',null,'Conclusion / Summary'),el('textarea',{value:f.conclusion,onChange:ev=>setF(p=>({...p,conclusion:ev.target.value})),placeholder:'Overall audit conclusion...'})),
+    el('div',{className:'g2'},
+      el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Status'),el('select',{value:f.status,onChange:ev=>setF(p=>({...p,status:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},Object.entries(QMS_STATUSES).map(([k,{label}])=>el('option',{key:k,value:k},label)))),
+      el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Next Audit Date'),el('input',{type:'date',value:f.next_audit_date,onChange:ev=>setF(p=>({...p,next_audit_date:ev.target.value}))})),
+    ),
+    el('div',{className:'mf'},
+      el('button',{className:'btn b-ghost',onClick:onCancel},'Cancel'),
+      el('button',{className:'btn b-blue',onClick:save,disabled:saving||!f.title.trim()},saving?'Saving...':existing?'Update Audit':'Submit Audit'),
+    ),
+  );
+}
+
+// ── MAIN QMS COMPONENT ────────────────────────────────────────────────────────
+function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits,setAudits,changes,setChanges,complaints,setComplaints,suppliers,setSuppliers}){
+  const[tab,setTab]=useState('dashboard');
+  const[showNew,setNew]=useState(false);
+  const[sel,setSel]=useState(null);
+  const[editing,setEditing]=useState(null);
+  const isAdmin=cu.role==='admin'||['coo','director_production','director_operations','general_manager','compliance_manager','director_sales_marketing'].includes(cu.role);
+  const today=new Date().toISOString().slice(0,10);
+
+  // Dashboard stats
+  const openDeviations=deviations.filter(d=>d.status==='open');
+  const openCAPAs=capas.filter(c=>c.status==='open'||c.status==='in_progress');
+  const overdueCAPAs=capas.filter(c=>c.due_date&&c.due_date<today&&c.status!=='closed');
+  const openComplaints=complaints.filter(c=>c.status==='open');
+  const pendingAudits=audits.filter(a=>a.next_audit_date&&a.next_audit_date<=new Date(Date.now()+7*86400000).toISOString().slice(0,10));
+  // SOP ack rate
+  const approvedUsers=users.filter(u=>u.approved);
+  const publishedSOPs=sops.filter(s=>s.status==='published');
+  const avgAckRate=publishedSOPs.length>0?Math.round(publishedSOPs.reduce((sum,s)=>{const acked=(s.acknowledgements||[]).length;return sum+(approvedUsers.length>0?acked/approvedUsers.length:0);},0)/publishedSOPs.length*100):0;
+  // Training: users who have NOT acked all published SOPs
+  const untrainedUsers=approvedUsers.filter(u=>publishedSOPs.some(s=>!(s.acknowledgements||[]).some(a=>a.id===u.id)));
+
+  function handleSave(type,rec,setter,list){
+    setter(p=>{const exists=p.find(x=>x.id===rec.id);return exists?p.map(x=>x.id===rec.id?rec:x):[rec,...p];});
+    setNew(false);setEditing(null);setSel(rec);
+  }
+
+  async function deleteRec(type,id,setter){
+    if(!window.confirm('Delete this record?')) return;
+    const tableMap={deviation:'pf_qms_deviations',capa:'pf_qms_capas',audit:'pf_qms_audits',change:'pf_qms_changes',complaint:'pf_qms_complaints',supplier:'pf_qms_suppliers'};
+    try{await db.remove(tableMap[type],id);}catch(e){console.error(e);}
+    setter(p=>p.filter(x=>x.id!==id));
+    setSel(null);
+  }
+
+  // Generic list renderer
+  function RecordList({items,emptyMsg,renderRow,onNew,newLabel}){
+    return el('div',null,
+      el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}},
+        el('div',{style:{fontSize:13,color:'var(--text2)'}},(items.length)+' record'+(items.length!==1?'s':'')),
+        (isAdmin||tab==='deviations')&&el('button',{className:'btn b-blue',onClick:onNew},newLabel||'+ New'),
+      ),
+      items.length===0?el('div',{className:'empty'},el('div',{className:'eico'},'📋'),el('div',{className:'etxt'},emptyMsg)):
+      el('div',{style:{display:'flex',flexDirection:'column',gap:6}},items.map(renderRow)),
+    );
+  }
+
+  return el('div',null,
+    el('div',{className:'ph'},
+      el('div',null,
+        el('div',{className:'pt'},'Quality Management System'),
+        el('div',{className:'ps'},'DCR Compliance — Missouri QMS Requirements'),
+      ),
+    ),
+
+    // Tabs
+    el('div',{style:{display:'flex',gap:4,flexWrap:'wrap',marginBottom:20,background:'var(--surface)',border:'1px solid var(--border)',borderRadius:'var(--r)',padding:4}},
+      QMS_TABS.map(t=>el('button',{key:t.id,onClick:()=>{setTab(t.id);setNew(false);setSel(null);},style:{display:'flex',alignItems:'center',gap:6,padding:'8px 14px',borderRadius:8,border:'none',background:tab===t.id?'var(--accent)':'transparent',color:tab===t.id?'#0a0f1e':'var(--text2)',fontFamily:'inherit',fontSize:12,fontWeight:tab===t.id?700:500,cursor:'pointer',transition:'all .15s'}},
+        el('span',null,t.ico),t.label,
+        // Badges
+        t.id==='deviations'&&openDeviations.length>0&&el('span',{style:{background:'rgba(239,68,68,.8)',color:'#fff',borderRadius:10,padding:'0 5px',fontSize:10,fontWeight:700}},openDeviations.length),
+        t.id==='capas'&&overdueCAPAs.length>0&&el('span',{style:{background:'rgba(239,68,68,.8)',color:'#fff',borderRadius:10,padding:'0 5px',fontSize:10,fontWeight:700}},overdueCAPAs.length),
+        t.id==='complaints'&&openComplaints.length>0&&el('span',{style:{background:'rgba(245,158,11,.8)',color:'#fff',borderRadius:10,padding:'0 5px',fontSize:10,fontWeight:700}},openComplaints.length),
+      ))
+    ),
+
+    // ── DASHBOARD ─────────────────────────────────────────────────────────────
+    tab==='dashboard'&&el('div',null,
+      el('div',{className:'g4',style:{marginBottom:20}},
+        [{l:'Open Deviations',v:openDeviations.length,c:openDeviations.length>0?'var(--red)':'var(--green)',ico:'⚠️'},
+         {l:'Open CAPAs',v:openCAPAs.length,c:openCAPAs.length>0?'var(--accent)':'var(--green)',ico:'🔧'},
+         {l:'Overdue CAPAs',v:overdueCAPAs.length,c:overdueCAPAs.length>0?'var(--red)':'var(--green)',ico:'🚨'},
+         {l:'Open Complaints',v:openComplaints.length,c:openComplaints.length>0?'var(--accent)':'var(--green)',ico:'📣'},
+        ].map(({l,v,c,ico})=>el('div',{key:l,className:'stat',style:{display:'flex',alignItems:'center',gap:14}},el('div',{style:{fontSize:28}},ico),el('div',null,el('div',{className:'sl'},l),el('div',{className:'sv',style:{color:c,fontSize:24}},v))))
+      ),
+      el('div',{className:'g2',style:{marginBottom:20}},
+        // SOP Training compliance
+        el('div',{className:'card'},
+          el('div',{style:{fontWeight:700,fontSize:14,marginBottom:12}},'📚 SOP Training Compliance'),
+          el('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:6}},
+            el('span',{style:{fontSize:13,color:'var(--text2)'}},'Average Acknowledgement Rate'),
+            el('span',{style:{fontSize:16,fontWeight:800,color:avgAckRate>=80?'var(--green)':avgAckRate>=50?'var(--accent)':'var(--red)'}},avgAckRate+'%'),
+          ),
+          el('div',{style:{height:6,background:'var(--surface2)',borderRadius:4,marginBottom:12}},
+            el('div',{style:{width:avgAckRate+'%',height:'100%',background:avgAckRate>=80?'var(--green)':avgAckRate>=50?'var(--accent)':'var(--red)',borderRadius:4,transition:'width .5s'}}),
+          ),
+          untrainedUsers.length>0&&el('div',null,
+            el('div',{style:{fontSize:11,fontWeight:700,color:'var(--red)',marginBottom:6,textTransform:'uppercase',letterSpacing:'.5px'}},'Pending Acknowledgements'),
+            untrainedUsers.slice(0,5).map(u=>el('div',{key:u.id,style:{display:'flex',alignItems:'center',gap:8,marginBottom:5}},
+              el('div',{className:'avatar',style:{background:avatarColor(u.name),width:22,height:22,fontSize:9}},u.name.charAt(0).toUpperCase()),
+              el('span',{style:{fontSize:12}},u.name),
+              el('span',{style:{fontSize:11,color:'var(--text3)'}},publishedSOPs.filter(s=>!(s.acknowledgements||[]).some(a=>a.id===u.id)).length+' SOPs pending'),
+            )),
+            untrainedUsers.length>5&&el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:4}},'+'+( untrainedUsers.length-5)+' more'),
+          ),
+          untrainedUsers.length===0&&el('div',{style:{color:'var(--green)',fontWeight:600,fontSize:13}},'✅ All staff current on SOPs'),
+        ),
+        // DCR Readiness
+        el('div',{className:'card'},
+          el('div',{style:{fontWeight:700,fontSize:14,marginBottom:12}},'🛡️ DCR Inspection Readiness'),
+          [
+            {l:'SOP Library',v:sops.filter(s=>s.status==='published').length+' published',ok:sops.filter(s=>s.status==='published').length>0},
+            {l:'Training Records',v:avgAckRate+'% compliance',ok:avgAckRate>=80},
+            {l:'Open Deviations',v:openDeviations.length+' open',ok:openDeviations.length===0},
+            {l:'CAPAs',v:openCAPAs.length+' active',ok:overdueCAPAs.length===0},
+            {l:'Internal Audits',v:audits.length+' on record',ok:audits.length>0},
+            {l:'Supplier Records',v:suppliers.length+' qualified',ok:suppliers.length>0},
+          ].map(({l,v,ok})=>el('div',{key:l,style:{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'7px 0',borderBottom:'1px solid var(--border)'}},
+            el('div',{style:{display:'flex',alignItems:'center',gap:8}},
+              el('span',{style:{fontSize:14}},ok?'✅':'⚠️'),
+              el('span',{style:{fontSize:13}},l),
+            ),
+            el('span',{style:{fontSize:12,color:ok?'var(--green)':'var(--accent)',fontWeight:600}},v),
+          )),
+        ),
+      ),
+      // Recent activity
+      el('div',{className:'card'},
+        el('div',{style:{fontWeight:700,fontSize:14,marginBottom:12}},'Recent QMS Activity'),
+        el('div',{className:'tw'},
+          el('table',null,
+            el('thead',null,el('tr',null,['Type','Record','Status','Date','By'].map(h=>el('th',{key:h},h)))),
+            el('tbody',null,
+              [...deviations.slice(0,3).map(r=>({type:'⚠️ Deviation',r,status:r.status})),
+               ...capas.slice(0,3).map(r=>({type:'🔧 CAPA',r,status:r.status})),
+               ...audits.slice(0,2).map(r=>({type:'🔍 Audit',r,status:r.status})),
+              ].sort((a,b)=>b.r.created_at?.localeCompare(a.r.created_at||'')||0).slice(0,8).map(({type,r,status})=>
+                el('tr',{key:r.id},
+                  el('td',null,el('span',{style:{fontSize:12}},type)),
+                  el('td',null,el('span',{style:{fontSize:13,fontWeight:600}},r.title)),
+                  el('td',null,el(QMSBadge,{status})),
+                  el('td',null,el('span',{style:{fontSize:12,color:'var(--text2)'}},r.created_at?.slice(0,10))),
+                  el('td',null,el('span',{style:{fontSize:12,color:'var(--text2)'}},r.created_by)),
+                )
+              )
+            )
+          )
+        )
+      ),
+    ),
+
+    // ── DEVIATIONS ────────────────────────────────────────────────────────────
+    tab==='deviations'&&el('div',null,
+      !showNew&&!sel&&el(RecordList,{
+        items:deviations,
+        emptyMsg:'No deviations recorded',
+        newLabel:'+ Report Deviation',
+        onNew:()=>setNew(true),
+        renderRow:d=>el('div',{key:d.id,onClick:()=>setSel(d),style:{background:'var(--surface)',border:'1px solid var(--border)',borderLeft:'3px solid '+(d.priority==='critical'?'var(--red)':d.priority==='major'?'var(--accent)':'#3b82f6'),borderRadius:10,padding:'14px 16px',cursor:'pointer',transition:'all .15s'},onMouseEnter:ev=>ev.currentTarget.style.borderColor='rgba(245,166,35,.3)',onMouseLeave:ev=>ev.currentTarget.style.borderColor='var(--border)'},
+          el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},
+            el('div',{style:{flex:1}},
+              el('div',{style:{display:'flex',gap:6,marginBottom:5}},el(QMSBadge,{status:d.status}),el(PriBadge,{priority:d.priority}),el('span',{style:{background:'var(--surface2)',color:'var(--text2)',border:'1px solid var(--border)',borderRadius:4,padding:'2px 7px',fontSize:11}},d.dept)),
+              el('div',{style:{fontSize:14,fontWeight:700,marginBottom:3}},d.title),
+              d.product_affected&&el('div',{style:{fontSize:12,color:'var(--text2)'}},'Product: '+d.product_affected+(d.lot_number?' · Lot: '+d.lot_number:'')),
+            ),
+            el('div',{style:{fontSize:11,color:'var(--text3)',flexShrink:0,marginLeft:12}},d.created_at?.slice(0,10)),
+          ),
+        ),
+      }),
+      showNew&&el('div',{className:'card',style:{padding:0}},
+        el('div',{className:'mh'},el('div',{className:'mt2'},'Report Deviation'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
+        el(DeviationForm,{cu,users,onSave:r=>handleSave('deviation',r,setDeviations,deviations),onCancel:()=>setNew(false)}),
+      ),
+      sel&&!editing&&el('div',{className:'card'},
+        el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:16}},
+          el('div',null,
+            el('div',{style:{display:'flex',gap:6,marginBottom:8}},el(QMSBadge,{status:sel.status}),el(PriBadge,{priority:sel.priority}),el('span',{style:{background:'var(--surface2)',color:'var(--text2)',border:'1px solid var(--border)',borderRadius:4,padding:'2px 7px',fontSize:11}},sel.dept)),
+            el('div',{style:{fontSize:18,fontWeight:700}},sel.title),
+            el('div',{style:{fontSize:12,color:'var(--text3)',marginTop:4}},'Reported by '+sel.reported_by+' · '+sel.created_at?.slice(0,10)),
+          ),
+          el('div',{style:{display:'flex',gap:6}},
+            el('button',{className:'btn b-ghost btn-sm',onClick:()=>setEditing(sel)},'Edit'),
+            isAdmin&&el('button',{className:'btn b-red btn-sm',onClick:()=>deleteRec('deviation',sel.id,setDeviations)},'Delete'),
+            el('button',{className:'btn b-ghost btn-sm',onClick:()=>setSel(null)},'← Back'),
+          ),
+        ),
+        sel.product_affected&&el('div',{style:{background:'rgba(245,166,35,.06)',border:'1px solid rgba(245,166,35,.15)',borderRadius:8,padding:'10px 14px',marginBottom:14,display:'flex',gap:20}},
+          el('div',null,el('div',{style:{fontSize:10,color:'var(--accent)',fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px'}},'Product'),el('div',{style:{fontSize:13,fontWeight:600}},sel.product_affected)),
+          sel.lot_number&&el('div',null,el('div',{style:{fontSize:10,color:'var(--accent)',fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px'}},'Lot #'),el('div',{style:{fontSize:13,fontWeight:600}},sel.lot_number)),
+        ),
+        [['What Happened',sel.description],['Immediate Action',sel.immediate_action],['Root Cause',sel.root_cause]].filter(([,v])=>v).map(([label,val])=>
+          el('div',{key:label,style:{marginBottom:14}},
+            el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:5}},label),
+            el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:'10px 14px',fontSize:13,lineHeight:1.6}},val),
+          )
+        ),
+        // Link to CAPA
+        el('div',{style:{marginTop:14,paddingTop:14,borderTop:'1px solid var(--border)',display:'flex',gap:8,alignItems:'center'}},
+          el('span',{style:{fontSize:13,color:'var(--text2)'}},'Linked CAPAs:'),
+          capas.filter(c=>c.linked_deviation===sel.id).length===0
+            ?el('span',{style:{fontSize:12,color:'var(--text3)'}},'None — ')
+            :capas.filter(c=>c.linked_deviation===sel.id).map(c=>el('span',{key:c.id,style:{background:'rgba(245,166,35,.1)',color:'var(--accent)',borderRadius:4,padding:'2px 8px',fontSize:12,fontWeight:600}},c.title)),
+          el('button',{onClick:()=>{setTab('capas');setNew(true);},className:'btn b-ghost btn-sm'},'+ Create CAPA'),
+        ),
+      ),
+      editing&&el('div',{className:'card',style:{padding:0}},
+        el('div',{className:'mh'},el('div',{className:'mt2'},'Edit Deviation'),el('button',{className:'mc',onClick:()=>setEditing(null)},'×')),
+        el(DeviationForm,{cu,users,existing:editing,onSave:r=>{handleSave('deviation',r,setDeviations,deviations);setEditing(null);},onCancel:()=>setEditing(null)}),
+      ),
+    ),
+
+    // ── CAPAs ─────────────────────────────────────────────────────────────────
+    tab==='capas'&&el('div',null,
+      !showNew&&!sel&&el(RecordList,{
+        items:capas,emptyMsg:'No CAPAs yet',newLabel:'+ New CAPA',onNew:()=>setNew(true),
+        renderRow:c=>el('div',{key:c.id,onClick:()=>setSel(c),style:{background:'var(--surface)',border:'1px solid var(--border)',borderLeft:'3px solid '+(c.status==='closed'?'var(--green)':c.due_date&&c.due_date<today?'var(--red)':'var(--accent)'),borderRadius:10,padding:'14px 16px',cursor:'pointer',transition:'all .15s'},onMouseEnter:ev=>ev.currentTarget.style.borderColor='rgba(245,166,35,.3)',onMouseLeave:ev=>ev.currentTarget.style.borderColor='var(--border)'},
+          el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},
+            el('div',{style:{flex:1}},
+              el('div',{style:{display:'flex',gap:6,marginBottom:5}},el(QMSBadge,{status:c.status}),el(PriBadge,{priority:c.priority}),el('span',{style:{background:'var(--surface2)',color:'var(--text2)',border:'1px solid var(--border)',borderRadius:4,padding:'2px 7px',fontSize:11}},c.dept)),
+              el('div',{style:{fontSize:14,fontWeight:700,marginBottom:3}},c.title),
+              c.responsible_person_name&&el('div',{style:{fontSize:12,color:'var(--text2)'}},'Responsible: '+c.responsible_person_name),
+            ),
+            el('div',{style:{textAlign:'right',flexShrink:0,marginLeft:12}},
+              c.due_date&&el('div',{style:{fontSize:11,fontWeight:700,color:c.due_date<today&&c.status!=='closed'?'var(--red)':'var(--text3)'}},'Due: '+c.due_date),
+              el('div',{style:{fontSize:11,color:'var(--text3)'}},c.created_at?.slice(0,10)),
+            ),
+          ),
+        ),
+      }),
+      showNew&&el('div',{className:'card',style:{padding:0}},
+        el('div',{className:'mh'},el('div',{className:'mt2'},'New CAPA'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
+        el(CAPAForm,{cu,users,deviations,onSave:r=>handleSave('capa',r,setCapas,capas),onCancel:()=>setNew(false)}),
+      ),
+      sel&&!editing&&el('div',{className:'card'},
+        el('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:16}},
+          el('div',null,
+            el('div',{style:{display:'flex',gap:6,marginBottom:8}},el(QMSBadge,{status:sel.status}),el(PriBadge,{priority:sel.priority})),
+            el('div',{style:{fontSize:18,fontWeight:700}},sel.title),
+            el('div',{style:{fontSize:12,color:'var(--text3)',marginTop:4}},'Created '+sel.created_at?.slice(0,10)+' · Due '+( sel.due_date||'—')),
+          ),
+          el('div',{style:{display:'flex',gap:6}},
+            el('button',{className:'btn b-ghost btn-sm',onClick:()=>setEditing(sel)},'Edit'),
+            isAdmin&&el('button',{className:'btn b-red btn-sm',onClick:()=>deleteRec('capa',sel.id,setCapas)},'Delete'),
+            el('button',{className:'btn b-ghost btn-sm',onClick:()=>setSel(null)},'← Back'),
+          ),
+        ),
+        [['Issue',sel.issue_description],['Correction',sel.correction],['Preventive Action',sel.preventive_action],['Verification Method',sel.verification_method]].filter(([,v])=>v).map(([label,val])=>
+          el('div',{key:label,style:{marginBottom:14}},
+            el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:5}},label),
+            el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:'10px 14px',fontSize:13,lineHeight:1.6}},val),
+          )
+        ),
+        sel.responsible_person_name&&el('div',{style:{display:'flex',alignItems:'center',gap:8,marginTop:8}},
+          el('div',{className:'avatar',style:{background:avatarColor(sel.responsible_person_name),width:28,height:28,fontSize:11}},sel.responsible_person_name.charAt(0).toUpperCase()),
+          el('div',null,el('div',{style:{fontSize:12,fontWeight:600}},sel.responsible_person_name),el('div',{style:{fontSize:11,color:'var(--text3)'}},'Responsible Person')),
+        ),
+        sel.effectiveness_rating&&el('div',{style:{marginTop:14,background:'rgba(16,185,129,.06)',border:'1px solid rgba(16,185,129,.2)',borderRadius:8,padding:'10px 14px'}},
+          el('div',{style:{fontSize:11,fontWeight:700,color:'var(--green)',textTransform:'uppercase',marginBottom:4}},'Effectiveness'),
+          el('div',{style:{fontSize:13}},({effective:'✅ Effective',partially:'⚠️ Partially Effective',ineffective:'❌ Ineffective'})[sel.effectiveness_rating]||sel.effectiveness_rating),
+        ),
+      ),
+      editing&&el('div',{className:'card',style:{padding:0}},
+        el('div',{className:'mh'},el('div',{className:'mt2'},'Edit CAPA'),el('button',{className:'mc',onClick:()=>setEditing(null)},'×')),
+        el(CAPAForm,{cu,users,deviations,existing:editing,onSave:r=>{handleSave('capa',r,setCapas,capas);setEditing(null);},onCancel:()=>setEditing(null)}),
+      ),
+    ),
+
+    // ── AUDITS ────────────────────────────────────────────────────────────────
+    tab==='audits'&&el('div',null,
+      !showNew&&!sel&&el(RecordList,{
+        items:audits,emptyMsg:'No audits on record',newLabel:'+ New Audit',onNew:()=>setNew(true),
+        renderRow:a=>el('div',{key:a.id,onClick:()=>setSel(a),style:{background:'var(--surface)',border:'1px solid var(--border)',borderLeft:'3px solid '+(a.status==='closed'?'var(--green)':'#3b82f6'),borderRadius:10,padding:'14px 16px',cursor:'pointer',transition:'all .15s'},onMouseEnter:ev=>ev.currentTarget.style.borderColor='rgba(245,166,35,.3)',onMouseLeave:ev=>ev.currentTarget.style.borderColor='var(--border)'},
+          el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},
+            el('div',{style:{flex:1}},
+              el('div',{style:{display:'flex',gap:6,marginBottom:5}},el(QMSBadge,{status:a.status}),el('span',{style:{background:'rgba(59,130,246,.1)',color:'#93c5fd',border:'1px solid rgba(59,130,246,.2)',borderRadius:4,padding:'2px 7px',fontSize:11,fontWeight:600}},a.audit_type)),
+              el('div',{style:{fontSize:14,fontWeight:700,marginBottom:3}},a.title),
+              el('div',{style:{fontSize:12,color:'var(--text2)'}},a.auditor_name+' · '+(a.findings||[]).length+' findings'),
+            ),
+            el('div',{style:{textAlign:'right',flexShrink:0,marginLeft:12}},
+              el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text3)'}},a.audit_date),
+              a.next_audit_date&&el('div',{style:{fontSize:10,color:a.next_audit_date<=new Date(Date.now()+7*86400000).toISOString().slice(0,10)?'var(--red)':'var(--text3)'}},'Next: '+a.next_audit_date),
+            ),
+          ),
+        ),
+      }),
+      showNew&&el('div',{className:'card',style:{padding:0,maxHeight:'85vh',overflowY:'auto'}},
+        el('div',{className:'mh'},el('div',{className:'mt2'},'New Audit Report'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
+        el(AuditForm,{cu,users,onSave:r=>handleSave('audit',r,setAudits,audits),onCancel:()=>setNew(false)}),
+      ),
+      sel&&!editing&&el('div',{className:'card'},
+        el('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:16}},
+          el('div',null,
+            el('div',{style:{display:'flex',gap:6,marginBottom:8}},el(QMSBadge,{status:sel.status}),el('span',{style:{background:'rgba(59,130,246,.1)',color:'#93c5fd',border:'1px solid rgba(59,130,246,.2)',borderRadius:4,padding:'2px 7px',fontSize:11,fontWeight:600}},sel.audit_type)),
+            el('div',{style:{fontSize:18,fontWeight:700}},sel.title),
+            el('div',{style:{fontSize:12,color:'var(--text3)',marginTop:4}},sel.auditor_name+' · '+sel.audit_date),
+          ),
+          el('div',{style:{display:'flex',gap:6}},
+            el('button',{className:'btn b-ghost btn-sm',onClick:()=>setEditing(sel)},'Edit'),
+            isAdmin&&el('button',{className:'btn b-red btn-sm',onClick:()=>deleteRec('audit',sel.id,setAudits)},'Delete'),
+            el('button',{className:'btn b-ghost btn-sm',onClick:()=>setSel(null)},'← Back'),
+          ),
+        ),
+        sel.scope&&el('div',{style:{marginBottom:14}},el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:5}},'Scope'),el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:'10px 14px',fontSize:13,lineHeight:1.6}},sel.scope)),
+        (sel.findings||[]).length>0&&el('div',{style:{marginBottom:14}},
+          el('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:8}},
+            el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px'}},'Findings ('+( sel.findings||[]).length+')'),
+            el('div',{style:{display:'flex',gap:6}},
+              (sel.findings||[]).filter(f=>f.severity==='critical').length>0&&el('span',{style:{background:'rgba(239,68,68,.1)',color:'var(--red)',borderRadius:4,padding:'2px 7px',fontSize:11,fontWeight:700}},(sel.findings||[]).filter(f=>f.severity==='critical').length+' Critical'),
+              (sel.findings||[]).filter(f=>f.severity==='major').length>0&&el('span',{style:{background:'rgba(245,158,11,.1)',color:'var(--accent)',borderRadius:4,padding:'2px 7px',fontSize:11,fontWeight:700}},(sel.findings||[]).filter(f=>f.severity==='major').length+' Major'),
+            ),
+          ),
+          (sel.findings||[]).map(f=>el('div',{key:f.id,style:{background:'var(--surface2)',border:'1px solid var(--border)',borderLeft:'3px solid '+(f.severity==='critical'?'var(--red)':f.severity==='major'?'var(--accent)':'#3b82f6'),borderRadius:8,padding:'10px 14px',marginBottom:6}},
+            el('div',{style:{display:'flex',gap:6,marginBottom:4}},el('span',{style:{background:f.severity==='critical'?'rgba(239,68,68,.15)':f.severity==='major'?'rgba(245,158,11,.15)':'rgba(59,130,246,.1)',color:f.severity==='critical'?'var(--red)':f.severity==='major'?'var(--accent)':'#93c5fd',borderRadius:4,padding:'1px 7px',fontSize:10,fontWeight:700}},f.severity?.toUpperCase())),
+            el('div',{style:{fontSize:13,fontWeight:600}},f.description),
+            f.corrective_action&&el('div',{style:{fontSize:12,color:'var(--text2)',marginTop:3}},'Required: '+f.corrective_action),
+          )),
+        ),
+        [['Recommendations',sel.recommendations],['Conclusion',sel.conclusion]].filter(([,v])=>v).map(([label,val])=>
+          el('div',{key:label,style:{marginBottom:14}},el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:5}},label),el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:'10px 14px',fontSize:13,lineHeight:1.6}},val))
+        ),
+      ),
+      editing&&el('div',{className:'card',style:{padding:0,maxHeight:'85vh',overflowY:'auto'}},
+        el('div',{className:'mh'},el('div',{className:'mt2'},'Edit Audit'),el('button',{className:'mc',onClick:()=>setEditing(null)},'×')),
+        el(AuditForm,{cu,users,existing:editing,onSave:r=>{handleSave('audit',r,setAudits,audits);setEditing(null);},onCancel:()=>setEditing(null)}),
+      ),
+    ),
+
+    // ── CHANGE CONTROL ────────────────────────────────────────────────────────
+    tab==='changes'&&el('div',null,
+      !showNew&&!sel&&el(RecordList,{
+        items:changes,emptyMsg:'No change records',newLabel:'+ New Change',onNew:()=>setNew(true),
+        renderRow:c=>el('div',{key:c.id,onClick:()=>setSel(c),style:{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:10,padding:'14px 16px',cursor:'pointer',transition:'all .15s'},onMouseEnter:ev=>ev.currentTarget.style.borderColor='rgba(245,166,35,.3)',onMouseLeave:ev=>ev.currentTarget.style.borderColor='var(--border)'},
+          el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},
+            el('div',{style:{flex:1}},
+              el('div',{style:{display:'flex',gap:6,marginBottom:5}},el(QMSBadge,{status:c.status}),el('span',{style:{background:'var(--surface2)',color:'var(--text2)',border:'1px solid var(--border)',borderRadius:4,padding:'2px 7px',fontSize:11}},c.change_type||'Change')),
+              el('div',{style:{fontSize:14,fontWeight:700,marginBottom:3}},c.title),
+              c.description&&el('div',{style:{fontSize:12,color:'var(--text2)'}},c.description.slice(0,100)+(c.description.length>100?'...':'')),
+            ),
+            el('div',{style:{fontSize:11,color:'var(--text3)',flexShrink:0,marginLeft:12}},c.created_at?.slice(0,10)),
+          ),
+        ),
+      }),
+      showNew&&el('div',{className:'card'},
+        el('div',{className:'mh'},el('div',{className:'mt2'},'New Change Control Record'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
+        el('div',{className:'mbd'},
+          el('div',{className:'fg'},el('label',null,'Title *'),el('input',{id:'chg-title',placeholder:'e.g. Switch pre-roll cone supplier — Futurola to Raw',autoFocus:true})),
+          el('div',{className:'g2'},
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Change Type'),el('select',{id:'chg-type',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+              ['Equipment','Process','Packaging','Label','Supplier','Formulation','Facility','Personnel','Software','Other'].map(t=>el('option',{key:t,value:t},t))
+            )),
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Priority'),el('select',{id:'chg-pri',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},Object.entries(QMS_PRIORITIES).map(([k,{label}])=>el('option',{key:k,value:k},label)))),
+          ),
+          el('div',{className:'fg'},el('label',null,'What is changing and why?'),el('textarea',{id:'chg-desc',placeholder:'Describe what is changing and the reason...'})),
+          el('div',{className:'fg'},el('label',null,'Impact Assessment'),el('textarea',{id:'chg-impact',placeholder:'What is the potential impact on product, process, compliance?'})),
+          el('div',{className:'fg'},el('label',null,'Implementation Plan'),el('textarea',{id:'chg-plan',placeholder:'How and when will this change be implemented?'})),
+          el('div',{className:'fg'},el('label',null,'Approved By'),el('select',{id:'chg-approver',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+            el('option',{value:''},'— Select Approver —'),
+            ...users.filter(u=>u.approved&&['admin','manager','coo','director_production','director_operations','general_manager'].includes(u.role)).map(u=>el('option',{key:u.id,value:u.name},u.name+' — '+( RLABEL[u.role]||u.role))),
+          )),
+          el('div',{className:'mf'},
+            el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),
+            el('button',{className:'btn b-blue',onClick:async()=>{
+              const title=document.getElementById('chg-title').value.trim();
+              if(!title) return;
+              const rec={
+                id:'chg-'+Date.now(),title,
+                change_type:document.getElementById('chg-type').value,
+                priority:document.getElementById('chg-pri').value,
+                description:document.getElementById('chg-desc').value,
+                impact_assessment:document.getElementById('chg-impact').value,
+                implementation_plan:document.getElementById('chg-plan').value,
+                approved_by:document.getElementById('chg-approver').value,
+                status:'open',created_by:cu.name,created_by_id:cu.id,
+                created_at:new Date().toISOString(),updated_at:new Date().toISOString(),updated_by:cu.name,
+              };
+              try{await db.insert('pf_qms_changes',rec);}catch(e){alert('Create table pf_qms_changes first.');}
+              handleSave('change',rec,setChanges,changes);
+            }},'Submit Change Record'),
+          ),
+        ),
+      ),
+      sel&&!editing&&el('div',{className:'card'},
+        el('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:16}},
+          el('div',null,el('div',{style:{display:'flex',gap:6,marginBottom:8}},el(QMSBadge,{status:sel.status}),el('span',{style:{background:'var(--surface2)',color:'var(--text2)',border:'1px solid var(--border)',borderRadius:4,padding:'2px 7px',fontSize:11}},sel.change_type)),el('div',{style:{fontSize:18,fontWeight:700}},sel.title)),
+          el('div',{style:{display:'flex',gap:6}},isAdmin&&el('button',{className:'btn b-red btn-sm',onClick:()=>deleteRec('change',sel.id,setChanges)},'Delete'),el('button',{className:'btn b-ghost btn-sm',onClick:()=>setSel(null)},'← Back')),
+        ),
+        [['Description',sel.description],['Impact Assessment',sel.impact_assessment],['Implementation Plan',sel.implementation_plan]].filter(([,v])=>v).map(([label,val])=>
+          el('div',{key:label,style:{marginBottom:14}},el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:5}},label),el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:'10px 14px',fontSize:13,lineHeight:1.6}},val))
+        ),
+        sel.approved_by&&el('div',{style:{background:'rgba(16,185,129,.06)',border:'1px solid rgba(16,185,129,.2)',borderRadius:8,padding:'10px 14px',marginTop:8,fontSize:13}},'✅ Approved by: '+sel.approved_by),
+      ),
+    ),
+
+    // ── COMPLAINTS ────────────────────────────────────────────────────────────
+    tab==='complaints'&&el('div',null,
+      !showNew&&!sel&&el(RecordList,{
+        items:complaints,emptyMsg:'No complaints on record',newLabel:'+ Log Complaint',onNew:()=>setNew(true),
+        renderRow:c=>el('div',{key:c.id,onClick:()=>setSel(c),style:{background:'var(--surface)',border:'1px solid var(--border)',borderLeft:'3px solid '+(c.type==='adverse_event'?'var(--red)':c.status==='open'?'var(--accent)':'var(--green)'),borderRadius:10,padding:'14px 16px',cursor:'pointer',transition:'all .15s'},onMouseEnter:ev=>ev.currentTarget.style.borderColor='rgba(245,166,35,.3)',onMouseLeave:ev=>ev.currentTarget.style.borderColor='var(--border)'},
+          el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},
+            el('div',{style:{flex:1}},
+              el('div',{style:{display:'flex',gap:6,marginBottom:5}},el(QMSBadge,{status:c.status}),el('span',{style:{background:c.type==='adverse_event'?'rgba(239,68,68,.1)':'var(--surface2)',color:c.type==='adverse_event'?'var(--red)':'var(--text2)',border:'1px solid',borderColor:c.type==='adverse_event'?'rgba(239,68,68,.3)':'var(--border)',borderRadius:4,padding:'2px 7px',fontSize:11,fontWeight:600}},({consumer:'Consumer',dispensary:'Dispensary',return:'Product Return',adverse_event:'⚠️ Adverse Event'})[c.type]||c.type)),
+              el('div',{style:{fontSize:14,fontWeight:700,marginBottom:3}},c.title),
+              c.product&&el('div',{style:{fontSize:12,color:'var(--text2)'}},'Product: '+c.product),
+            ),
+            el('div',{style:{fontSize:11,color:'var(--text3)',flexShrink:0,marginLeft:12}},c.created_at?.slice(0,10)),
+          ),
+        ),
+      }),
+      showNew&&el('div',{className:'card'},
+        el('div',{className:'mh'},el('div',{className:'mt2'},'Log Complaint'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
+        el('div',{className:'mbd'},
+          el('div',{className:'fg'},el('label',null,'Title *'),el('input',{id:'comp-title',placeholder:'e.g. Customer reported harsh taste on Live Resin Cart',autoFocus:true})),
+          el('div',{className:'g2'},
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Complaint Type'),el('select',{id:'comp-type',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+              [['consumer','Consumer Complaint'],['dispensary','Dispensary Complaint'],['return','Product Return'],['adverse_event','Adverse Event']].map(([k,l])=>el('option',{key:k,value:k},l))
+            )),
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Priority'),el('select',{id:'comp-pri',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},Object.entries(QMS_PRIORITIES).map(([k,{label}])=>el('option',{key:k,value:k},label)))),
+          ),
+          el('div',{className:'g2',style:{marginTop:13}},
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Product'),el('input',{id:'comp-prod',placeholder:'Product name/SKU'})),
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Lot Number'),el('input',{id:'comp-lot',placeholder:'LOT-XXXX'})),
+          ),
+          el('div',{className:'fg'},el('label',null,'Description'),el('textarea',{id:'comp-desc',placeholder:'Describe the complaint in detail...'})),
+          el('div',{className:'fg'},el('label',null,'Investigation / Resolution'),el('textarea',{id:'comp-res',placeholder:'How was this investigated and resolved?'})),
+          el('div',{className:'mf'},
+            el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),
+            el('button',{className:'btn b-blue',onClick:async()=>{
+              const title=document.getElementById('comp-title').value.trim();
+              if(!title) return;
+              const rec={id:'comp-'+Date.now(),title,type:document.getElementById('comp-type').value,priority:document.getElementById('comp-pri').value,product:document.getElementById('comp-prod').value,lot_number:document.getElementById('comp-lot').value,description:document.getElementById('comp-desc').value,resolution:document.getElementById('comp-res').value,status:'open',created_by:cu.name,created_by_id:cu.id,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),updated_by:cu.name};
+              try{await db.insert('pf_qms_complaints',rec);}catch(e){alert('Create table pf_qms_complaints first.');}
+              handleSave('complaint',rec,setComplaints,complaints);
+            }},'Log Complaint'),
+          ),
+        ),
+      ),
+      sel&&el('div',{className:'card'},
+        el('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:16}},
+          el('div',null,el('div',{style:{display:'flex',gap:6,marginBottom:8}},el(QMSBadge,{status:sel.status})),el('div',{style:{fontSize:18,fontWeight:700}},sel.title),el('div',{style:{fontSize:12,color:'var(--text3)',marginTop:4}},sel.created_at?.slice(0,10))),
+          el('div',{style:{display:'flex',gap:6}},isAdmin&&el('button',{className:'btn b-red btn-sm',onClick:()=>deleteRec('complaint',sel.id,setComplaints)},'Delete'),el('button',{className:'btn b-ghost btn-sm',onClick:()=>setSel(null)},'← Back')),
+        ),
+        sel.product&&el('div',{style:{display:'flex',gap:20,background:'rgba(245,166,35,.06)',border:'1px solid rgba(245,166,35,.15)',borderRadius:8,padding:'10px 14px',marginBottom:14}},
+          el('div',null,el('div',{style:{fontSize:10,color:'var(--accent)',fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px'}},'Product'),el('div',{style:{fontSize:13,fontWeight:600}},sel.product)),
+          sel.lot_number&&el('div',null,el('div',{style:{fontSize:10,color:'var(--accent)',fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px'}},'Lot #'),el('div',{style:{fontSize:13,fontWeight:600}},sel.lot_number)),
+        ),
+        [['Description',sel.description],['Resolution',sel.resolution]].filter(([,v])=>v).map(([label,val])=>el('div',{key:label,style:{marginBottom:14}},el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:5}},label),el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:'10px 14px',fontSize:13,lineHeight:1.6}},val))),
+      ),
+    ),
+
+    // ── SUPPLIERS ─────────────────────────────────────────────────────────────
+    tab==='suppliers'&&el('div',null,
+      !showNew&&!sel&&el(RecordList,{
+        items:suppliers,emptyMsg:'No suppliers qualified',newLabel:'+ Add Supplier',onNew:()=>setNew(true),
+        renderRow:s=>el('div',{key:s.id,onClick:()=>setSel(s),style:{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:10,padding:'14px 16px',cursor:'pointer',transition:'all .15s'},onMouseEnter:ev=>ev.currentTarget.style.borderColor='rgba(245,166,35,.3)',onMouseLeave:ev=>ev.currentTarget.style.borderColor='var(--border)'},
+          el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},
+            el('div',{style:{flex:1}},
+              el('div',{style:{display:'flex',gap:6,marginBottom:5}},el('span',{style:{background:s.status==='approved'?'rgba(16,185,129,.1)':'rgba(245,158,11,.1)',color:s.status==='approved'?'var(--green)':'var(--accent)',border:'1px solid',borderColor:s.status==='approved'?'rgba(16,185,129,.3)':'rgba(245,158,11,.3)',borderRadius:4,padding:'2px 7px',fontSize:11,fontWeight:700}},s.status==='approved'?'✅ Approved':'⏳ Pending'),el('span',{style:{background:'var(--surface2)',color:'var(--text2)',border:'1px solid var(--border)',borderRadius:4,padding:'2px 7px',fontSize:11}},s.category)),
+              el('div',{style:{fontSize:14,fontWeight:700,marginBottom:3}},s.name),
+              el('div',{style:{fontSize:12,color:'var(--text2)'}},s.products_supplied),
+            ),
+            el('div',{style:{fontSize:11,color:'var(--text3)',flexShrink:0,marginLeft:12}},s.coa_expiry?'COA: '+s.coa_expiry:''),
+          ),
+        ),
+      }),
+      showNew&&el('div',{className:'card'},
+        el('div',{className:'mh'},el('div',{className:'mt2'},'Add Supplier'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
+        el('div',{className:'mbd'},
+          el('div',{className:'fg'},el('label',null,'Supplier Name *'),el('input',{id:'sup-name',placeholder:'e.g. Futurola USA',autoFocus:true})),
+          el('div',{className:'g2'},
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Category'),el('select',{id:'sup-cat',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+              ['Cones/Pre-roll Supplies','Packaging','Distillate/Extract','Terpenes','Ingredients','Testing Lab','Equipment','Labels','Other'].map(c=>el('option',{key:c,value:c},c))
+            )),
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Status'),el('select',{id:'sup-status',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},el('option',{value:'pending'},'Pending Approval'),el('option',{value:'approved'},'Approved'))),
+          ),
+          el('div',{className:'fg'},el('label',null,'Products Supplied'),el('input',{id:'sup-prods',placeholder:'e.g. 98mm cones, 109mm cones'})),
+          el('div',{className:'g2'},
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Contact Name'),el('input',{id:'sup-contact',placeholder:'Sales rep name'})),
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Contact Email/Phone'),el('input',{id:'sup-email',placeholder:'contact@supplier.com'})),
+          ),
+          el('div',{className:'g2',style:{marginTop:13}},
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'COA Expiry Date'),el('input',{type:'date',id:'sup-coa'})),
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Last Audit Date'),el('input',{type:'date',id:'sup-audit'})),
+          ),
+          el('div',{className:'fg'},el('label',null,'Notes / Certifications'),el('textarea',{id:'sup-notes',placeholder:'Any certifications, qualifications, or notes...'})),
+          el('div',{className:'mf'},
+            el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),
+            el('button',{className:'btn b-blue',onClick:async()=>{
+              const name=document.getElementById('sup-name').value.trim();
+              if(!name) return;
+              const rec={id:'sup-'+Date.now(),name,category:document.getElementById('sup-cat').value,status:document.getElementById('sup-status').value,products_supplied:document.getElementById('sup-prods').value,contact_name:document.getElementById('sup-contact').value,contact_email:document.getElementById('sup-email').value,coa_expiry:document.getElementById('sup-coa').value,last_audit:document.getElementById('sup-audit').value,notes:document.getElementById('sup-notes').value,created_by:cu.name,created_by_id:cu.id,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),updated_by:cu.name};
+              try{await db.insert('pf_qms_suppliers',rec);}catch(e){alert('Create table pf_qms_suppliers first.');}
+              handleSave('supplier',rec,setSuppliers,suppliers);
+            }},'Add Supplier'),
+          ),
+        ),
+      ),
+      sel&&el('div',{className:'card'},
+        el('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:16}},
+          el('div',null,el('div',{style:{display:'flex',gap:6,marginBottom:8}},el('span',{style:{background:sel.status==='approved'?'rgba(16,185,129,.1)':'rgba(245,158,11,.1)',color:sel.status==='approved'?'var(--green)':'var(--accent)',borderRadius:4,padding:'2px 8px',fontSize:11,fontWeight:700}},sel.status==='approved'?'✅ Approved':'⏳ Pending')),el('div',{style:{fontSize:18,fontWeight:700}},sel.name),el('div',{style:{fontSize:12,color:'var(--text3)',marginTop:4}},sel.category)),
+          el('div',{style:{display:'flex',gap:6}},isAdmin&&el('button',{className:'btn b-red btn-sm',onClick:()=>deleteRec('supplier',sel.id,setSuppliers)},'Delete'),el('button',{className:'btn b-ghost btn-sm',onClick:()=>setSel(null)},'← Back')),
+        ),
+        el('div',{style:{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:12,marginBottom:14}},
+          [['Products Supplied',sel.products_supplied],['Contact',sel.contact_name+(sel.contact_email?' · '+sel.contact_email:'')],['COA Expiry',sel.coa_expiry||'—'],['Last Audit',sel.last_audit||'—']].map(([k,v])=>v&&v!=='—'?el('div',{key:k,style:{background:'var(--surface2)',borderRadius:8,padding:'10px 12px'}},el('div',{style:{fontSize:10,color:'var(--text3)',fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px',marginBottom:3}},k),el('div',{style:{fontSize:13,fontWeight:600}},v)):null)
+        ),
+        sel.notes&&el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:'10px 14px',fontSize:13,lineHeight:1.6}},sel.notes),
+      ),
+    ),
+
+    // ── TRAINING MATRIX ───────────────────────────────────────────────────────
+    tab==='training'&&el('div',null,
+      el('div',{style:{fontWeight:700,fontSize:14,marginBottom:14,color:'var(--text2)'}},'SOP Acknowledgement Tracking — '+publishedSOPs.length+' Published SOPs · '+approvedUsers.length+' Team Members'),
+      publishedSOPs.length===0?el('div',{className:'empty'},el('div',{className:'eico'},'📚'),el('div',{className:'etxt'},'No published SOPs yet — publish SOPs to track training')):
+      el('div',{className:'card',style:{padding:0,overflowX:'auto'}},
+        el('table',{style:{width:'100%',borderCollapse:'collapse',minWidth:600}},
+          el('thead',null,
+            el('tr',null,
+              el('th',{style:{textAlign:'left',fontSize:11,fontWeight:700,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'1px',padding:'10px 14px',borderBottom:'1px solid var(--border)',whiteSpace:'nowrap',minWidth:150}},'Team Member'),
+              ...publishedSOPs.map(s=>el('th',{key:s.id,style:{fontSize:10,fontWeight:700,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'.5px',padding:'10px 8px',borderBottom:'1px solid var(--border)',textAlign:'center',maxWidth:100,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}},s.title.slice(0,20)+(s.title.length>20?'...':''))),
+              el('th',{style:{fontSize:11,fontWeight:700,color:'var(--text3)',textTransform:'uppercase',padding:'10px 14px',borderBottom:'1px solid var(--border)',textAlign:'center'}},'Rate'),
+            )
+          ),
+          el('tbody',null,
+            approvedUsers.map(u=>{
+              const acked=publishedSOPs.filter(s=>(s.acknowledgements||[]).some(a=>a.id===u.id));
+              const rate=publishedSOPs.length>0?Math.round(acked.length/publishedSOPs.length*100):0;
+              return el('tr',{key:u.id},
+                el('td',{style:{padding:'10px 14px',borderBottom:'1px solid var(--border)',whiteSpace:'nowrap'}},
+                  el('div',{style:{display:'flex',alignItems:'center',gap:8}},
+                    el('div',{className:'avatar',style:{background:avatarColor(u.name),width:24,height:24,fontSize:10}},u.name.charAt(0).toUpperCase()),
+                    el('div',null,el('div',{style:{fontSize:12,fontWeight:600}},u.name),el('div',{style:{fontSize:10,color:'var(--text3)'}},RLABEL[u.role]||u.role)),
+                  )
+                ),
+                ...publishedSOPs.map(s=>{
+                  const a=(s.acknowledgements||[]).find(a=>a.id===u.id);
+                  return el('td',{key:s.id,style:{padding:'8px',borderBottom:'1px solid var(--border)',textAlign:'center'}},
+                    a?el('div',{title:'Acknowledged '+a.at?.slice(0,10),style:{color:'var(--green)',fontSize:16}},'✅'):el('div',{style:{color:'var(--text3)',fontSize:16}},'⬜'),
+                  );
+                }),
+                el('td',{style:{padding:'10px 14px',borderBottom:'1px solid var(--border)',textAlign:'center'}},
+                  el('div',{style:{fontSize:12,fontWeight:700,color:rate===100?'var(--green)':rate>=80?'var(--accent)':'var(--red)'}},rate+'%'),
+                ),
+              );
+            })
+          )
+        )
+      ),
+    ),
+  );
+}
+
 
 // ── SCOREBOARD ───────────────────────────────────────────────────────────────
 function Scoreboard({tasks,cu,users}){
@@ -3570,11 +4374,8 @@ function SOPs({sops,setSops,cu,users}){
             el('label',null,'Attach File (PDF, image, doc)'),
             el('input',{type:'file',accept:'.pdf,.doc,.docx,.png,.jpg,.xlsx',onChange:async ev=>{
               const file=ev.target.files[0];if(!file)return;
-              const reader=new FileReader();
-              reader.onload=re=>{
-                setF(p=>({...p,attachments:[...p.attachments,{id:'att-'+Date.now(),name:file.name,data:re.target.result}]}));
-              };
-              reader.readAsDataURL(file);
+              const att=await uploadFile(file,'sops');
+              setF(p=>({...p,attachments:[...p.attachments,att]}));
             },style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px',color:'var(--text)',fontFamily:'inherit',fontSize:13}}),
           ),
           f.attachments.length>0&&el('div',{style:{marginBottom:10}},
@@ -3622,7 +4423,7 @@ function SOPs({sops,setSops,cu,users}){
             el('div',{style:{fontWeight:600,marginBottom:8,fontSize:13}},'Attachments'),
             (sel.attachments||[]).map(att=>el('div',{key:att.id,style:{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 12px',background:'var(--surface2)',borderRadius:8,marginBottom:5}},
               el('span',{style:{fontSize:12}},`📎 ${att.name}`),
-              el('button',{className:'btn b-ghost btn-sm',onClick:()=>{const a=document.createElement('a');a.href=att.data;a.download=att.name;a.click();}},'Download'),
+              el('button',{className:'btn b-ghost btn-sm',onClick:()=>{const a=document.createElement('a');a.href=renderFileUrl(att);a.download=att.name;a.target='_blank';a.click();}},'Download'),
             ))
           ),
 
@@ -4030,6 +4831,12 @@ function App(){
   const[meetingNotes,setMeetingNotes]=useState([]);
   const[users,setUsers]=useState([]);
   const[sops,setSops]=useState([]);
+  const[qmsDeviations,setQmsDeviations]=useState([]);
+  const[qmsCAPAs,setQmsCAPAs]=useState([]);
+  const[qmsAudits,setQmsAudits]=useState([]);
+  const[qmsChanges,setQmsChanges]=useState([]);
+  const[qmsComplaints,setQmsComplaints]=useState([]);
+  const[qmsSuppliers,setQmsSuppliers]=useState([]);
   const[loading,setLoading]=useState(false);
   const[dbReady,setDbReady]=useState(null);
   const[page,setPage]=useState('board');
@@ -4047,13 +4854,25 @@ function App(){
       db.get('pf_events','order=date.asc').catch(()=>[]),
       db.get('pf_meeting_notes','order=created_at.desc').catch(()=>[]),
       db.get('pf_sops','order=created_at.desc').catch(()=>[]),
-    ]).then(([_tasks,_sales,_users,_events,_notes,_sops])=>{
+      db.get('pf_qms_deviations','order=created_at.desc').catch(()=>[]),
+      db.get('pf_qms_capas','order=created_at.desc').catch(()=>[]),
+      db.get('pf_qms_audits','order=created_at.desc').catch(()=>[]),
+      db.get('pf_qms_changes','order=created_at.desc').catch(()=>[]),
+      db.get('pf_qms_complaints','order=created_at.desc').catch(()=>[]),
+      db.get('pf_qms_suppliers','order=created_at.desc').catch(()=>[]),
+    ]).then(([_tasks,_sales,_users,_events,_notes,_sops,_dev,_cap,_aud,_chg,_comp,_sup])=>{
       setTasks(_tasks||[]);
       setSalesTasks(_sales||[]);
       setUsers(_users||[]);
       setEvents(_events||[]);
       setMeetingNotes(_notes||[]);
       setSops(_sops||[]);
+      setQmsDeviations(_dev||[]);
+      setQmsCAPAs(_cap||[]);
+      setQmsAudits(_aud||[]);
+      setQmsChanges(_chg||[]);
+      setQmsComplaints(_comp||[]);
+      setQmsSuppliers(_sup||[]);
     });
   },[cu,dbReady]);
 
@@ -4131,6 +4950,7 @@ function App(){
     {id:'calendar',ico:'📅',label:'Calendar'},
     (cu.role==='admin'||cu.dept==='Sales'||cu.dept==='Marketing')&&{id:'sales',ico:'🏪',label:'Sales & Marketing'},
     {id:'sops',ico:'📋',label:'SOPs'},
+    {id:'qms',ico:'🛡️',label:'QMS'},
     {id:'scores',ico:'🏆',label:'Scoreboard'},
     isAdmin&&{id:'team',ico:'👥',label:'Team & Access',badge:pending||null},
   ].filter(Boolean);
@@ -4243,6 +5063,7 @@ function App(){
         el('span',{className:'mnav-ico'},typeof Notification!=='undefined'&&Notification.permission==='granted'?'🔔':'🔕'),'Alerts'
       ),
       el('button',{className:`mnav-btn${page==='sops'?' on':''}`,onClick:()=>setPage('sops')},el('span',{className:'mnav-ico'},'📋'),'SOPs'),
+      el('button',{className:`mnav-btn${page==='qms'?' on':''}`,onClick:()=>setPage('qms')},el('span',{className:'mnav-ico'},'🛡️'),'QMS'),
       el('button',{className:`mnav-btn${page==='scores'?' on':''}`,onClick:()=>setPage('scores')},el('span',{className:'mnav-ico'},'🏆'),'Scores'),
       el('button',{className:'mnav-btn',onClick:()=>{if(window.confirm('Sign out?')){localStorage.removeItem('pf_session');window.location.reload();}}},el('span',{className:'mnav-ico'},'⏻'),'Sign Out'),
     ),
@@ -4251,6 +5072,14 @@ function App(){
       page==='calendar'&&el(Calendar,{events,setEvents,tasks,cu,users,locFilter,meetingNotes,setMeetingNotes,onJoinCall:(room,title,meetLink)=>setActiveCall({room,title,meetLink})}),
       page==='sales'&&el(SalesMarketing,{salesTasks,setSalesTasks,cu,users,locFilter}),
       page==='sops'&&el(SOPs,{sops,setSops,cu,users}),
+      page==='qms'&&el(QMS,{cu,users,tasks,sops,
+        deviations:qmsDeviations,setDeviations:setQmsDeviations,
+        capas:qmsCAPAs,setCapas:setQmsCAPAs,
+        audits:qmsAudits,setAudits:setQmsAudits,
+        changes:qmsChanges,setChanges:setQmsChanges,
+        complaints:qmsComplaints,setComplaints:setQmsComplaints,
+        suppliers:qmsSuppliers,setSuppliers:setQmsSuppliers,
+      }),
       page==='scores'&&el(Scoreboard,{tasks,cu,users}),
       page==='team'&&isAdmin&&el(Team,{users,setUsers,cu}),
     )
