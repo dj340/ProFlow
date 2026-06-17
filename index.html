@@ -2802,6 +2802,11 @@ function SalesMarketing({salesTasks,setSalesTasks,cu,users,locFilter}){
         el('button',{onClick:()=>setCancelAlert(null),style:{background:'rgba(255,255,255,.2)',border:'2px solid rgba(255,255,255,.5)',borderRadius:10,padding:'10px 28px',color:'#fff',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer'}},'Dismiss'),
       )
     ),
+    showGenerator&&el(SOPGenerator,{
+      cu,
+      onClose:()=>setShowGenerator(false),
+      onSave:(sop)=>{setSops(p=>[sop,...p]);setShowGenerator(false);setSel(sop);},
+    }),
     sel&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setSel(null)},
       el('div',{className:'md',style:{width:660}},
         el('div',{className:'mh'},
@@ -4053,10 +4058,485 @@ function Scoreboard({tasks,cu,users}){
 }
 
 // ── SOPs ──────────────────────────────────────────────────────────────────────
+// ── LICENSE & REGULATORY CONSTANTS ───────────────────────────────────────────
+const LICENSES=[
+  {id:'mi10',name:'Michigan Investments 10',state:'Michigan',license_type:'Adult Use Grower / Processor'},
+  {id:'wvc',name:'Wellness & Vitality Consulting',state:'Missouri',license_type:'Comprehensive Facility License'},
+  {id:'bfm',name:'Black Fox Manufacturing',state:'Missouri',license_type:'Comprehensive Facility License'},
+];
+
+const STATE_REGS={
+  Michigan:{
+    agency:'Michigan Cannabis Regulatory Agency (CRA)',
+    code:'MRTMA / MMFLA',
+    key_rules:[
+      'R 420.301-420.807 — Marihuana Growers/Processors',
+      'MCL 333.27101-333.27801 — MRTMA Act',
+      'Tracking via METRC required for all plant/product movement',
+      'All cannabis must be tested by a licensed provisioning center before transfer',
+      'Labels must include: license number, product name, net weight, THC/CBD content, batch number, harvest date, test results, warning statements',
+      'Employees must have valid LARA background check clearance',
+      'Inventory reconciliation must be performed monthly',
+      'All waste must be rendered unrecognizable and unusable before disposal',
+      'Security cameras required — 30-day retention minimum',
+      'Packaging must be child-resistant and opaque',
+    ],
+    sop_header_fields:['SOP Number','Revision Number','Effective Date','Approved By','Department','License Number','METRC Relevant','Review Frequency'],
+  },
+  Missouri:{
+    agency:'Missouri Division of Cannabis Regulation (DCR)',
+    code:'19 CSR 100-1 et seq.',
+    key_rules:[
+      '19 CSR 100-1.030 — Comprehensive Facility License requirements',
+      'METRC tracking required for all cannabis and cannabis-infused products',
+      'Testing required: potency, pesticides, heavy metals, microbials, residual solvents',
+      'Labels must include: license number, net weight, THC content (total), warning: "Keep out of reach of children", batch/lot number, test date and lab name',
+      'QMS required within 1 year of receiving approval — must follow recognized standard (ISO/ASTM/CSQ/FOCUS)',
+      'Employee background check required — no disqualifying felony offenses',
+      'Seed-to-sale tracking — no untracked transfers permitted',
+      'Waste disposal: 50% rendered unusable by mixing with non-consumable material',
+      'Facility must maintain cleaning and sanitation logs',
+      'All SOPs must be signed/acknowledged by employees performing the tasks',
+    ],
+    sop_header_fields:['SOP Number','Revision Number','Effective Date','Approved By','Department','License Number','DCR Regulation Reference','Review Frequency','Training Required'],
+  },
+};
+
+const SOP_CATEGORIES=[
+  'Production — Cart Department',
+  'Production — Pre-Roll Department',
+  'Production — Gummy Department',
+  'Production — Extraction',
+  'Production — Biomass',
+  'Quality Control — Testing',
+  'Quality Control — Packaging',
+  'Quality Control — Labeling',
+  'Compliance — METRC',
+  'Compliance — Waste Disposal',
+  'Compliance — Inventory',
+  'Facility — Sanitation & Cleaning',
+  'Facility — Equipment Calibration',
+  'Facility — Security',
+  'HR — Employee Onboarding',
+  'HR — Training',
+  'Distribution — Transfers',
+  'Distribution — Receiving',
+  'Sales & Marketing',
+  'Other',
+];
+
+const SOP_STRUCTURE_PROMPT=(title,category,license,state,uploadedContent)=>`You are an expert cannabis compliance officer and technical writer specializing in ${state} cannabis regulations.
+
+Create a complete, detailed Standard Operating Procedure (SOP) for a licensed cannabis operation.
+
+LICENSE INFORMATION:
+- License Holder: ${license.name}
+- License Type: ${license.license_type}
+- State: ${state}
+- Regulatory Agency: ${STATE_REGS[state].agency}
+- Applicable Code: ${STATE_REGS[state].code}
+
+SOP DETAILS:
+- Title: ${title}
+- Category: ${category}
+
+KEY ${state.toUpperCase()} REGULATORY REQUIREMENTS TO INCORPORATE:
+${STATE_REGS[state].key_rules.map((r,i)=>`${i+1}. ${r}`).join('\n')}
+
+${uploadedContent?`UPLOADED REFERENCE CONTENT (use this as the basis, enhance and formalize it):\n---\n${uploadedContent.slice(0,3000)}\n---\n`:''}
+
+Generate a professional SOP in this EXACT JSON format (respond with JSON only, no markdown):
+{
+  "sop_number": "SOP-[DEPT_CODE]-[3_DIGIT_NUMBER]",
+  "title": "${title}",
+  "revision": "1.0",
+  "effective_date": "${new Date().toISOString().slice(0,10)}",
+  "review_frequency": "Annual or after regulatory change",
+  "department": "[relevant department]",
+  "license_name": "${license.name}",
+  "state": "${state}",
+  "regulatory_references": ["list of specific ${state} regulations that apply"],
+  "purpose": "2-3 sentence explanation of why this SOP exists and what it ensures",
+  "scope": "Who this applies to and what operations it covers",
+  "responsibilities": [
+    {"role": "Job title", "responsibility": "What they are responsible for under this SOP"}
+  ],
+  "definitions": [
+    {"term": "Term", "definition": "Definition"}
+  ],
+  "required_materials": ["list of materials, equipment, PPE needed"],
+  "steps": [
+    {"step_number": 1, "title": "Step title", "instruction": "Detailed instruction", "regulatory_note": "Relevant regulation or requirement if applicable", "critical": true}
+  ],
+  "quality_checks": ["specific quality checkpoints"],
+  "documentation_required": ["forms, logs, METRC entries, records that must be completed"],
+  "deviation_procedure": "What to do if this SOP cannot be followed as written",
+  "training_requirements": "Who must be trained, how, and how often",
+  "revision_history": [
+    {"revision": "1.0", "date": "${new Date().toISOString().slice(0,10)}", "description": "Initial release", "approved_by": ""}
+  ]
+}`;
+
+// ── SOP GENERATOR MODAL ───────────────────────────────────────────────────────
+function SOPGenerator({cu,onClose,onSave}){
+  const[step,setStep]=useState(1); // 1=setup, 2=generating, 3=review
+  const[license,setLicense]=useState(LICENSES[0]);
+  const[state,setState]=useState(LICENSES[0].state);
+  const[title,setTitle]=useState('');
+  const[category,setCategory]=useState('Production — Cart Department');
+  const[uploadedText,setUploadedText]=useState('');
+  const[uploadedFileName,setUploadedFileName]=useState('');
+  const[generating,setGenerating]=useState(false);
+  const[generatedSOP,setGeneratedSOP]=useState(null);
+  const[error,setError]=useState('');
+  const[saving,setSaving]=useState(false);
+  const[editMode,setEditMode]=useState(false);
+  const[editedSOP,setEditedSOP]=useState(null);
+
+  function handleLicenseChange(id){
+    const l=LICENSES.find(x=>x.id===id);
+    setLicense(l);
+    setState(l.state);
+  }
+
+  async function handleFileUpload(ev){
+    const file=ev.target.files[0];
+    if(!file) return;
+    setUploadedFileName(file.name);
+    if(file.name.endsWith('.txt')||file.name.endsWith('.md')){
+      const text=await file.text();
+      setUploadedText(text);
+    } else if(file.name.endsWith('.pdf')){
+      // Read as base64 and send to Claude API with document type
+      const reader=new FileReader();
+      reader.onload=re=>{
+        // Store base64 for API call
+        setUploadedText('__PDF__:'+re.target.result.split(',')[1]);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      // Try reading as text
+      try{
+        const text=await file.text();
+        setUploadedText(text.slice(0,5000));
+      }catch(e){
+        setUploadedText('');
+      }
+    }
+  }
+
+  async function generateSOP(){
+    if(!title.trim()){setError('Please enter an SOP title.');return;}
+    setGenerating(true);setError('');setStep(2);
+
+    try{
+      const isPDF=uploadedText.startsWith('__PDF__:');
+      const messages=isPDF?[{
+        role:'user',
+        content:[
+          {type:'document',source:{type:'base64',media_type:'application/pdf',data:uploadedText.replace('__PDF__:','')}},
+          {type:'text',text:SOP_STRUCTURE_PROMPT(title,category,license,state,'[See uploaded PDF document above — extract and use the content as reference]')},
+        ]
+      }]:[{
+        role:'user',
+        content:SOP_STRUCTURE_PROMPT(title,category,license,state,uploadedText),
+      }];
+
+      const res=await fetch('https://api.anthropic.com/v1/messages',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          model:'claude-sonnet-4-6',
+          max_tokens:4000,
+          messages,
+        }),
+      });
+
+      const data=await res.json();
+      if(data.error){throw new Error(data.error.message);}
+      const raw=data.content?.[0]?.text||'';
+      const clean=raw.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+      const parsed=JSON.parse(clean);
+      setGeneratedSOP(parsed);
+      setEditedSOP(parsed);
+      setStep(3);
+    }catch(e){
+      console.error(e);
+      setError('Generation failed: '+e.message);
+      setStep(1);
+    }
+    setGenerating(false);
+  }
+
+  async function saveSOP(){
+    if(!generatedSOP) return;
+    setSaving(true);
+    const sop={
+      id:'sop-'+Date.now(),
+      title:editedSOP.title||title,
+      depts:[category.split(' — ')[0]||'Production'],
+      description:editedSOP.purpose||'',
+      steps:(editedSOP.steps||[]).map((s,i)=>({id:'s'+i,text:typeof s==='string'?s:`[${s.step_number||i+1}] ${s.title}: ${s.instruction}`})),
+      version:editedSOP.revision||'1.0',
+      status:'draft',
+      attachments:[],
+      visible_to_roles:[],
+      visible_to_depts:[],
+      acknowledgements:[],
+      // Store full generated content
+      generated_content:JSON.stringify(editedSOP),
+      sop_number:editedSOP.sop_number||'',
+      license_name:editedSOP.license_name||license.name,
+      state:editedSOP.state||state,
+      regulatory_references:editedSOP.regulatory_references||[],
+      created_by:cu.name,created_by_id:cu.id,
+      created_at:new Date().toISOString(),
+      updated_at:new Date().toISOString(),updated_by:cu.name,
+    };
+    try{
+      await db.insert('pf_sops',sop);
+      onSave(sop);
+    }catch(e){
+      console.error(e);
+      alert('Save failed: '+e.message);
+    }
+    setSaving(false);
+  }
+
+  const regs=STATE_REGS[state];
+
+  return el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&onClose()},
+    el('div',{className:'md',style:{width:750,maxHeight:'94vh'}},
+
+      // Header
+      el('div',{className:'mh'},
+        el('div',{style:{flex:1}},
+          el('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:4}},
+            el('span',{style:{fontSize:20}},'🤖'),
+            el('div',{className:'mt2'},'AI SOP Generator'),
+          ),
+          el('div',{style:{display:'flex',gap:8}},
+            [{n:1,l:'Setup'},{n:2,l:'Generating'},{n:3,l:'Review & Save'}].map(({n,l})=>
+              el('div',{key:n,style:{display:'flex',alignItems:'center',gap:4,fontSize:11,color:step>=n?'var(--accent)':'var(--text3)',fontWeight:step===n?700:400}},
+                el('div',{style:{width:18,height:18,borderRadius:'50%',background:step>=n?'var(--accent)':'var(--surface2)',border:'1px solid',borderColor:step>=n?'var(--accent)':'var(--border)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,fontWeight:700,color:step>=n?'#0a0f1e':'var(--text3)'}},n),
+                l,
+                n<3&&el('span',{style:{color:'var(--border)'}},'→'),
+              )
+            )
+          ),
+        ),
+        el('button',{className:'mc',onClick:onClose},'×'),
+      ),
+
+      el('div',{className:'mbd'},
+
+        // ── STEP 1: SETUP ─────────────────────────────────────────────────────
+        step===1&&el('div',null,
+
+          // License & State
+          el('div',{style:{background:'rgba(245,166,35,.06)',border:'1px solid rgba(245,166,35,.2)',borderRadius:10,padding:'14px 16px',marginBottom:16}},
+            el('div',{style:{fontSize:11,fontWeight:700,color:'var(--accent)',textTransform:'uppercase',letterSpacing:'.8px',marginBottom:10}},'License & Jurisdiction'),
+            el('div',{className:'g2'},
+              el('div',{className:'fg',style:{marginBottom:0}},
+                el('label',null,'License Holder'),
+                el('select',{value:license.id,onChange:ev=>handleLicenseChange(ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+                  LICENSES.map(l=>el('option',{key:l.id,value:l.id},l.name+' ('+l.state+')'))
+                ),
+                el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:4}},license.license_type),
+              ),
+              el('div',{className:'fg',style:{marginBottom:0}},
+                el('label',null,'State'),
+                el('div',{style:{display:'flex',gap:8,marginTop:4}},
+                  ['Michigan','Missouri'].map(s=>el('button',{key:s,
+                    onClick:()=>setState(s),
+                    style:{flex:1,padding:'9px',borderRadius:'var(--rs)',border:'2px solid',borderColor:state===s?'var(--accent)':'var(--border)',background:state===s?'rgba(245,166,35,.1)':'transparent',color:state===s?'var(--accent)':'var(--text2)',fontFamily:'inherit',fontWeight:600,fontSize:13,cursor:'pointer',transition:'all .15s'}
+                  },'🗺 '+s))
+                ),
+                el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:4}},regs.agency),
+              ),
+            ),
+          ),
+
+          // Regulatory preview
+          el('div',{style:{background:'rgba(59,130,246,.04)',border:'1px solid rgba(59,130,246,.15)',borderRadius:8,padding:'10px 14px',marginBottom:16}},
+            el('div',{style:{fontSize:11,fontWeight:700,color:'#93c5fd',marginBottom:6,textTransform:'uppercase',letterSpacing:'.5px'}},'AI will incorporate '+state+' regulations:'),
+            el('div',{style:{display:'flex',flexWrap:'wrap',gap:4}},
+              regs.key_rules.slice(0,4).map((r,i)=>el('div',{key:i,style:{background:'rgba(59,130,246,.08)',borderRadius:4,padding:'2px 8px',fontSize:10,color:'#93c5fd'}},r.slice(0,60)+(r.length>60?'...':''))),
+              el('div',{style:{background:'rgba(59,130,246,.08)',borderRadius:4,padding:'2px 8px',fontSize:10,color:'#93c5fd'}},`+${regs.key_rules.length-4} more regulations`),
+            ),
+          ),
+
+          // SOP Details
+          el('div',{className:'fg'},
+            el('label',null,'SOP Title *'),
+            el('input',{value:title,onChange:ev=>setTitle(ev.target.value),placeholder:'e.g. Cart Filling Standard Operating Procedure',autoFocus:true,style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'10px 14px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none'}}),
+          ),
+          el('div',{className:'fg'},
+            el('label',null,'Category / Department'),
+            el('select',{value:category,onChange:ev=>setCategory(ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+              SOP_CATEGORIES.map(c=>el('option',{key:c,value:c},c))
+            ),
+          ),
+
+          // Upload reference
+          el('div',{className:'fg'},
+            el('label',null,'Upload Reference Document (optional)'),
+            el('div',{style:{fontSize:11,color:'var(--text3)',marginBottom:6}},'Upload an existing SOP, procedure notes, or any document. AI will use it as a reference to generate the formal SOP.'),
+            el('label',{style:{display:'flex',alignItems:'center',gap:8,padding:'10px 14px',background:'var(--surface2)',border:'1px dashed var(--border)',borderRadius:'var(--rs)',cursor:'pointer',transition:'all .15s'},
+              onMouseEnter:ev=>{ev.currentTarget.style.borderColor='var(--accent)';},
+              onMouseLeave:ev=>{ev.currentTarget.style.borderColor='var(--border)';}},
+              el('input',{type:'file',accept:'.pdf,.txt,.doc,.docx,.md',onChange:handleFileUpload,style:{display:'none'}}),
+              el('span',{style:{fontSize:18}},'📄'),
+              el('div',null,
+                el('div',{style:{fontSize:13,fontWeight:600,color:'var(--text)'}},'Click to upload (PDF, TXT, DOC)'),
+                el('div',{style:{fontSize:11,color:'var(--text3)'}},uploadedFileName||'No file selected — AI will create SOP from title and category'),
+              ),
+              uploadedFileName&&el('span',{style:{marginLeft:'auto',color:'var(--green)',fontWeight:700,fontSize:12}},'✓ Ready'),
+            ),
+          ),
+
+          error&&el('div',{style:{background:'rgba(239,68,68,.1)',border:'1px solid rgba(239,68,68,.3)',borderRadius:8,padding:'10px 14px',fontSize:13,color:'var(--red)',marginBottom:8}},error),
+
+          el('div',{className:'mf'},
+            el('button',{className:'btn b-ghost',onClick:onClose},'Cancel'),
+            el('button',{
+              onClick:generateSOP,
+              disabled:!title.trim(),
+              style:{background:title.trim()?'var(--accent)':'rgba(245,166,35,.2)',color:title.trim()?'#0a0f1e':'var(--text3)',border:'none',borderRadius:'var(--rs)',padding:'10px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:title.trim()?'pointer':'not-allowed',display:'flex',alignItems:'center',gap:8,transition:'all .2s'}
+            },
+              el('span',{style:{fontSize:16}},'🤖'),
+              'Generate SOP with AI',
+            ),
+          ),
+        ),
+
+        // ── STEP 2: GENERATING ────────────────────────────────────────────────
+        step===2&&el('div',{style:{textAlign:'center',padding:'60px 20px'}},
+          el('div',{style:{width:60,height:60,border:'4px solid var(--border)',borderTopColor:'var(--accent)',borderRadius:'50%',animation:'spin .8s linear infinite',margin:'0 auto 20px'}}),
+          el('div',{style:{fontSize:18,fontWeight:700,color:'var(--text)',marginBottom:8}},'AI is generating your SOP...'),
+          el('div',{style:{fontSize:13,color:'var(--text2)',lineHeight:1.6}},
+            'Analyzing '+state+' cannabis regulations,',el('br',null),
+            'applying '+regs.agency+' requirements,',el('br',null),
+            uploadedFileName?'processing your uploaded document, ':null,
+            'and writing your SOP...',
+          ),
+          el('div',{style:{marginTop:20,fontSize:11,color:'var(--text3)'}},'This usually takes 10-20 seconds'),
+        ),
+
+        // ── STEP 3: REVIEW ────────────────────────────────────────────────────
+        step===3&&generatedSOP&&el('div',null,
+
+          // SOP Header card
+          el('div',{style:{background:'rgba(245,166,35,.06)',border:'1px solid rgba(245,166,35,.2)',borderRadius:10,padding:'14px 16px',marginBottom:16}},
+            el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:8}},
+              el('div',null,
+                el('div',{style:{fontSize:11,fontWeight:700,color:'var(--accent)',textTransform:'uppercase',letterSpacing:'.8px',marginBottom:4}},editedSOP.sop_number||'SOP-XXX-001'),
+                el('div',{style:{fontSize:17,fontWeight:800,color:'var(--text)',marginBottom:4}},editedSOP.title),
+                el('div',{style:{display:'flex',gap:10,flexWrap:'wrap',marginTop:4}},
+                  el('span',{style:{fontSize:11,color:'var(--text3)'}},'Rev '+editedSOP.revision),
+                  el('span',{style:{fontSize:11,color:'var(--text3)'}},'Effective: '+editedSOP.effective_date),
+                  el('span',{style:{fontSize:11,color:'#93c5fd'}},'📍 '+editedSOP.state),
+                  el('span',{style:{fontSize:11,color:'var(--text2)'}},'🏭 '+editedSOP.license_name),
+                ),
+              ),
+              el('div',{style:{display:'flex',gap:6}},
+                el('button',{onClick:()=>setEditMode(!editMode),className:'btn b-ghost btn-sm'},editMode?'👁 Preview':'✏️ Edit JSON'),
+                el('button',{onClick:generateSOP,className:'btn b-ghost btn-sm'},'🔄 Regenerate'),
+              ),
+            ),
+          ),
+
+          !editMode&&el('div',null,
+            // Regulatory references
+            (editedSOP.regulatory_references||[]).length>0&&el('div',{style:{marginBottom:14}},
+              el('div',{style:{fontSize:11,fontWeight:700,color:'#93c5fd',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:6}},'📚 Regulatory References'),
+              el('div',{style:{display:'flex',flexWrap:'wrap',gap:4}},
+                (editedSOP.regulatory_references||[]).map((r,i)=>el('div',{key:i,style:{background:'rgba(59,130,246,.08)',border:'1px solid rgba(59,130,246,.2)',borderRadius:4,padding:'2px 8px',fontSize:10,color:'#93c5fd'}},r))
+              ),
+            ),
+
+            // Purpose & Scope
+            [['Purpose',editedSOP.purpose],['Scope',editedSOP.scope],['Training Requirements',editedSOP.training_requirements],['Deviation Procedure',editedSOP.deviation_procedure]].filter(([,v])=>v).map(([label,val])=>
+              el('div',{key:label,style:{marginBottom:12}},
+                el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:5}},label),
+                el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:'10px 14px',fontSize:12,lineHeight:1.6,color:'var(--text2)'}},val),
+              )
+            ),
+
+            // Responsibilities
+            (editedSOP.responsibilities||[]).length>0&&el('div',{style:{marginBottom:12}},
+              el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:6}},'Responsibilities'),
+              (editedSOP.responsibilities||[]).map((r,i)=>el('div',{key:i,style:{display:'flex',gap:8,background:'var(--surface2)',borderRadius:6,padding:'8px 12px',marginBottom:4}},
+                el('div',{style:{fontWeight:600,fontSize:12,color:'var(--accent)',minWidth:150}},r.role),
+                el('div',{style:{fontSize:12,color:'var(--text2)',lineHeight:1.5}},r.responsibility),
+              )),
+            ),
+
+            // Required Materials
+            (editedSOP.required_materials||[]).length>0&&el('div',{style:{marginBottom:12}},
+              el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:6}},'Required Materials / PPE'),
+              el('div',{style:{display:'flex',flexWrap:'wrap',gap:4}},
+                (editedSOP.required_materials||[]).map((m,i)=>el('div',{key:i,style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:4,padding:'3px 10px',fontSize:11,color:'var(--text2)'}},m))
+              ),
+            ),
+
+            // Steps
+            (editedSOP.steps||[]).length>0&&el('div',{style:{marginBottom:12}},
+              el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:8}},'Procedure Steps ('+( editedSOP.steps||[]).length+')'),
+              (editedSOP.steps||[]).map((step,i)=>el('div',{key:i,style:{display:'flex',gap:10,marginBottom:8,background:step.critical?'rgba(239,68,68,.04)':'var(--surface2)',border:'1px solid',borderColor:step.critical?'rgba(239,68,68,.2)':'var(--border)',borderLeft:'3px solid',borderLeftColor:step.critical?'var(--red)':'var(--accent)',borderRadius:8,padding:'10px 14px'}},
+                el('div',{style:{width:24,height:24,borderRadius:'50%',background:step.critical?'var(--red)':'var(--accent)',color:'#0a0f1e',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:800,flexShrink:0}},step.step_number||i+1),
+                el('div',{style:{flex:1}},
+                  el('div',{style:{fontWeight:600,fontSize:12,marginBottom:3,color:'var(--text)'}},step.title||('Step '+(i+1))),
+                  el('div',{style:{fontSize:12,color:'var(--text2)',lineHeight:1.5,marginBottom:step.regulatory_note?4:0}},step.instruction||step),
+                  step.regulatory_note&&el('div',{style:{fontSize:10,color:'#93c5fd',fontStyle:'italic',marginTop:3}},'📋 '+step.regulatory_note),
+                  step.critical&&el('div',{style:{fontSize:10,color:'var(--red)',fontWeight:700,marginTop:3}},'⚠️ CRITICAL STEP'),
+                ),
+              )),
+            ),
+
+            // Quality checks & Documentation
+            el('div',{className:'g2',style:{marginBottom:12}},
+              (editedSOP.quality_checks||[]).length>0&&el('div',null,
+                el('div',{style:{fontSize:11,fontWeight:700,color:'var(--green)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:6}},'Quality Checks'),
+                (editedSOP.quality_checks||[]).map((q,i)=>el('div',{key:i,style:{fontSize:11,color:'var(--text2)',marginBottom:3}},'✓ '+q)),
+              ),
+              (editedSOP.documentation_required||[]).length>0&&el('div',null,
+                el('div',{style:{fontSize:11,fontWeight:700,color:'var(--blue)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:6}},'Documentation Required'),
+                (editedSOP.documentation_required||[]).map((d,i)=>el('div',{key:i,style:{fontSize:11,color:'var(--text2)',marginBottom:3}},'📋 '+d)),
+              ),
+            ),
+          ),
+
+          // Edit mode - JSON editor
+          editMode&&el('div',{className:'fg'},
+            el('label',null,'Edit Generated SOP (JSON)'),
+            el('textarea',{value:JSON.stringify(editedSOP,null,2),onChange:ev=>{try{setEditedSOP(JSON.parse(ev.target.value));}catch(e){}},style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'10px',color:'var(--text)',fontFamily:'DM Mono, monospace',fontSize:11,outline:'none',minHeight:300,resize:'vertical'}}),
+          ),
+
+          el('div',{className:'mf',style:{justifyContent:'space-between'}},
+            el('div',{style:{fontSize:12,color:'var(--text3)'}},'Will be saved as Draft — you can edit and publish from SOPs'),
+            el('div',{style:{display:'flex',gap:8}},
+              el('button',{className:'btn b-ghost',onClick:()=>setStep(1)},'← Back'),
+              el('button',{
+                onClick:saveSOP,
+                disabled:saving,
+                style:{background:'var(--accent)',color:'#0a0f1e',border:'none',borderRadius:'var(--rs)',padding:'10px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:8}
+              },
+                saving?'Saving...':'💾 Save to SOP Library',
+              ),
+            ),
+          ),
+        ),
+      ),
+    )
+  );
+}
+
 function SOPs({sops,setSops,cu,users}){
   const[view,setView]=useState('list'); // list | detail
   const[sel,setSel]=useState(null);
   const[showNew,setNew]=useState(false);
+  const[showGenerator,setShowGenerator]=useState(false);
   const[search,setSearch]=useState('');
   const[deptFilter,setDeptFilter]=useState('All');
   const[saving,setSaving]=useState(false);
@@ -4202,7 +4682,11 @@ function SOPs({sops,setSops,cu,users}){
       ),
       el('div',{style:{display:'flex',gap:8,alignItems:'center'}},
         el('input',{placeholder:'Search SOPs...',value:search,onChange:ev=>setSearch(ev.target.value),style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px 14px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',width:200}}),
-        canCreate&&el('button',{className:'btn b-blue',onClick:()=>setNew(true)},'+ New SOP'),
+        el('button',{
+            onClick:()=>setShowGenerator(true),
+            style:{background:'linear-gradient(135deg,#667eea,#764ba2)',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'9px 16px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:6,transition:'all .15s'}
+          },'🤖 AI Generate SOP'),
+        canCreate&&el('button',{className:'btn b-blue',onClick:()=>setNew(true)},'+ Manual SOP'),
       ),
     ),
 
