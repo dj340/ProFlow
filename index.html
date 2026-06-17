@@ -2802,11 +2802,6 @@ function SalesMarketing({salesTasks,setSalesTasks,cu,users,locFilter}){
         el('button',{onClick:()=>setCancelAlert(null),style:{background:'rgba(255,255,255,.2)',border:'2px solid rgba(255,255,255,.5)',borderRadius:10,padding:'10px 28px',color:'#fff',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer'}},'Dismiss'),
       )
     ),
-    showGenerator&&el(SOPGenerator,{
-      cu,
-      onClose:()=>setShowGenerator(false),
-      onSave:(sop)=>{setSops(p=>[sop,...p]);setShowGenerator(false);setSel(sop);},
-    }),
     sel&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setSel(null)},
       el('div',{className:'md',style:{width:660}},
         el('div',{className:'mh'},
@@ -4876,6 +4871,11 @@ function SOPs({sops,setSops,cu,users}){
       )
     ),
 
+    showGenerator&&el(SOPGenerator,{
+      cu,
+      onClose:()=>setShowGenerator(false),
+      onSave:(sop)=>{setSops(p=>[sop,...p]);setShowGenerator(false);setSel(sop);},
+    }),
     // ── SOP DETAIL MODAL ────────────────────────────────────────────────────
     sel&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setSel(null)},
       el('div',{className:'md',style:{width:700,maxHeight:'92vh'}},
