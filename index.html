@@ -3409,12 +3409,38 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
   const overdueCAPAs=capas.filter(c=>c.due_date&&c.due_date<today&&c.status!=='closed');
   const openComplaints=complaints.filter(c=>c.status==='open');
   const pendingAudits=audits.filter(a=>a.next_audit_date&&a.next_audit_date<=new Date(Date.now()+7*86400000).toISOString().slice(0,10));
-  // SOP ack rate
-  const approvedUsers=users.filter(u=>u.approved);
-  const publishedSOPs=sops.filter(s=>s.status==='published');
-  const avgAckRate=publishedSOPs.length>0?Math.round(publishedSOPs.reduce((sum,s)=>{const acked=(s.acknowledgements||[]).length;return sum+(approvedUsers.length>0?acked/approvedUsers.length:0);},0)/publishedSOPs.length*100):0;
-  // Training: users who have NOT acked all published SOPs
-  const untrainedUsers=approvedUsers.filter(u=>publishedSOPs.some(s=>!(s.acknowledgements||[]).some(a=>a.id===u.id)));
+  // Scoped target users per SOP (same license_id + dept logic used in SOPs module)
+  function targetUsersForSop(sop){
+    return users.filter(u=>{
+      if(!u.approved) return false;
+      if(sop.license_id||sop.license_name){
+        const sopLicId=sop.license_id||LICENSES.find(l=>l.name===sop.license_name)?.id;
+        const userLicenses=u.licenses||[];
+        if(!sopLicId||!userLicenses.includes(sopLicId)) return false;
+      }
+      if((sop.visible_to_depts||[]).length>0){
+        const userDepts=[...(u.depts||[]),u.dept].filter(Boolean);
+        const sopDepts=expandDepts(sop.visible_to_depts);
+        const hasAccess=userDepts.some(d=>sopDepts.includes(d)||sop.visible_to_depts.includes(d));
+        if(!hasAccess) return false;
+      }
+      return true;
+    });
+  }
+  // SOP ack rate — scoped per-SOP, filtered to current license filter
+  const approvedUsers=licFilter==='all'?users.filter(u=>u.approved):users.filter(u=>u.approved&&(u.licenses||[]).includes(licFilter));
+  const publishedSOPs=filterByLic(sops.filter(s=>s.status==='published'));
+  const avgAckRate=publishedSOPs.length>0?Math.round(publishedSOPs.reduce((sum,s)=>{
+    const targets=targetUsersForSop(s);
+    const acked=(s.acknowledgements||[]).filter(a=>targets.some(t=>t.id===a.id)).length;
+    return sum+(targets.length>0?acked/targets.length:0);
+  },0)/publishedSOPs.length*100):0;
+  // Training: users who have NOT acked all SOPs that target them specifically
+  const untrainedUsers=approvedUsers.filter(u=>publishedSOPs.some(s=>{
+    const targets=targetUsersForSop(s);
+    const isTargeted=targets.some(t=>t.id===u.id);
+    return isTargeted&&!(s.acknowledgements||[]).some(a=>a.id===u.id);
+  }));
 
   function handleSave(type,rec,setter,list){
     setter(p=>{const exists=p.find(x=>x.id===rec.id);return exists?p.map(x=>x.id===rec.id?rec:x):[rec,...p];});
@@ -3914,8 +3940,10 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
           ),
           el('tbody',null,
             approvedUsers.map(u=>{
-              const acked=publishedSOPs.filter(s=>(s.acknowledgements||[]).some(a=>a.id===u.id));
-              const rate=publishedSOPs.length>0?Math.round(acked.length/publishedSOPs.length*100):0;
+              // Only count SOPs that actually target this user (their license + dept)
+              const applicableSOPs=publishedSOPs.filter(s=>targetUsersForSop(s).some(t=>t.id===u.id));
+              const acked=applicableSOPs.filter(s=>(s.acknowledgements||[]).some(a=>a.id===u.id));
+              const rate=applicableSOPs.length>0?Math.round(acked.length/applicableSOPs.length*100):0;
               return el('tr',{key:u.id},
                 el('td',{style:{padding:'10px 14px',borderBottom:'1px solid var(--border)',whiteSpace:'nowrap'}},
                   el('div',{style:{display:'flex',alignItems:'center',gap:8}},
@@ -3924,6 +3952,10 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
                   )
                 ),
                 ...publishedSOPs.map(s=>{
+                  const inScope=targetUsersForSop(s).some(t=>t.id===u.id);
+                  if(!inScope) return el('td',{key:s.id,style:{padding:'8px',borderBottom:'1px solid var(--border)',textAlign:'center'}},
+                    el('div',{title:'Not applicable — different license/department',style:{color:'var(--text3)',fontSize:13,opacity:.35}},'—')
+                  );
                   const a=(s.acknowledgements||[]).find(a=>a.id===u.id);
                   return el('td',{key:s.id,style:{padding:'8px',borderBottom:'1px solid var(--border)',textAlign:'center'}},
                     a?el('div',{title:'Acknowledged '+a.at?.slice(0,10),style:{color:'var(--green)',fontSize:16}},'✅'):el('div',{style:{color:'var(--text3)',fontSize:16}},'⬜'),
@@ -5084,6 +5116,28 @@ Respond with ONLY this JSON (no markdown, be concise, this must NOT be truncated
         // ── STEP 3: REVIEW ────────────────────────────────────────────────────
         step===3&&generatedSOP&&el('div',null,
 
+          // VISIBILITY OVERRIDE — explicit control before saving
+          el('div',{style:{background:'rgba(139,92,246,.06)',border:'1px solid rgba(139,92,246,.25)',borderRadius:10,padding:'14px 16px',marginBottom:16}},
+            el('div',{style:{fontSize:11,fontWeight:700,color:'#c4b5fd',textTransform:'uppercase',letterSpacing:'.8px',marginBottom:10}},'🔒 Who Can See & Acknowledge This SOP'),
+            el('div',{className:'g2'},
+              el('div',{className:'fg',style:{marginBottom:0}},
+                el('label',null,'License (locked from Setup)'),
+                el('div',{style:{padding:'9px 13px',background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:'var(--rs)',fontSize:13,color:'var(--text)',fontWeight:600}},license.name),
+              ),
+              el('div',{className:'fg',style:{marginBottom:0}},
+                el('label',null,'Department(s) — applied to this SOP'),
+                el('div',{style:{display:'flex',flexWrap:'wrap',gap:5}},
+                  [...new Set([category.split(' — ')[1]||category.split(' — ')[0],state==='Michigan'?'Michigan Production':'Missouri Production'])].map(d=>
+                    el('div',{key:d,style:{padding:'4px 10px',borderRadius:16,background:'rgba(139,92,246,.15)',color:'#c4b5fd',border:'1px solid rgba(139,92,246,.3)',fontSize:11,fontWeight:600}},d)
+                  )
+                ),
+              ),
+            ),
+            el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:8}},
+              '⚠️ Only people with ',el('strong',{style:{color:'#c4b5fd'}},license.name),' assigned AND working in the department(s) above will see and be required to acknowledge this SOP.'
+            ),
+          ),
+
           // SOP Header card
           el('div',{style:{background:'rgba(245,166,35,.06)',border:'1px solid rgba(245,166,35,.2)',borderRadius:10,padding:'14px 16px',marginBottom:16}},
             el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:8}},
@@ -5211,6 +5265,7 @@ function SOPs({sops,setSops,cu,users}){
     attachments:[],
     visible_to_roles:[],
     visible_to_depts:[],
+    license_id:'',
   });
 
   const isAdmin=cu.role==='admin'||['coo','director_production','director_operations','director_sales_marketing','general_manager'].includes(cu.role);
@@ -5237,6 +5292,26 @@ function SOPs({sops,setSops,cu,users}){
     return true;
   });
 
+  // Returns exactly which approved users are in-scope for a given SOP
+  // (same license_id + dept logic as visibleSops, but applied to any arbitrary user record).
+  function targetUsersForSop(sop){
+    return users.filter(u=>{
+      if(!u.approved) return false;
+      if(sop.license_id||sop.license_name){
+        const sopLicId=sop.license_id||LICENSES.find(l=>l.name===sop.license_name)?.id;
+        const userLicenses=u.licenses||[];
+        if(!sopLicId||!userLicenses.includes(sopLicId)) return false;
+      }
+      if((sop.visible_to_depts||[]).length>0){
+        const userDepts=[...(u.depts||[]),u.dept].filter(Boolean);
+        const sopDepts=expandDepts(sop.visible_to_depts);
+        const hasAccess=userDepts.some(d=>sopDepts.includes(d)||sop.visible_to_depts.includes(d));
+        if(!hasAccess) return false;
+      }
+      return true;
+    });
+  }
+
   const filtered=visibleSops.filter(s=>{
     if(deptFilter!=='All'&&!(s.depts||[s.dept]).includes(deptFilter)) return false;
     if(search&&!s.title.toLowerCase().includes(search.toLowerCase())&&!s.dept.toLowerCase().includes(search.toLowerCase())) return false;
@@ -5251,10 +5326,16 @@ function SOPs({sops,setSops,cu,users}){
 
   async function createSOP(){
     if(!f.title) return;
+    if(!f.license_id){alert('Please select a License before saving. This determines who can see and acknowledge this SOP.');return;}
     setSaving(true);
+    const selectedLic=LICENSES.find(l=>l.id===f.license_id);
     const sop={
       id:'sop-'+Date.now(),
       ...f,
+      // visible_to_depts mirrors the selected departments so visibility filtering works correctly
+      visible_to_depts:f.depts||[],
+      license_name:selectedLic?.name||'',
+      state:selectedLic?.state||'',
       steps:f.steps.filter(s=>s.text.trim()),
       acknowledgements:[],
       created_by:cu.name,created_by_id:cu.id,
@@ -5266,7 +5347,7 @@ function SOPs({sops,setSops,cu,users}){
       await db.insert('pf_sops',sop);
       setSops(p=>[sop,...p]);
       setNew(false);
-      setF({title:'',depts:[],description:'',steps:[{id:'s1',text:''}],version:'1.0',status:'draft',attachments:[],visible_to_roles:[],visible_to_depts:[]});
+      setF({title:'',depts:[],description:'',steps:[{id:'s1',text:''}],version:'1.0',status:'draft',attachments:[],visible_to_roles:[],visible_to_depts:[],license_id:''});
     }catch(e){
       console.error(e);
       alert('Failed to create SOP. Run SQL migration:\n\nCREATE TABLE IF NOT EXISTS pf_sops (\n  id text primary key, title text, dept text,\n  description text default \'\', steps jsonb default \'[]\',\n  version text default \'1.0\', status text default \'draft\',\n  attachments jsonb default \'[]\',\n  visible_to_roles jsonb default \'[]\',\n  visible_to_depts jsonb default \'[]\',\n  acknowledgements jsonb default \'[]\',\n  created_by text, created_by_id text,\n  created_at text, updated_at text, updated_by text\n);\nALTER TABLE pf_sops DISABLE ROW LEVEL SECURITY;');
@@ -5434,6 +5515,18 @@ function SOPs({sops,setSops,cu,users}){
         el('div',{className:'mh'},el('div',{className:'mt2'},'New SOP'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
         el('div',{className:'mbd'},
           el('div',{className:'fg'},el('label',null,'Title *'),el('input',{placeholder:'e.g. Cart Filling Standard Procedure',value:f.title,onChange:ev=>setF(p=>({...p,title:ev.target.value})),autoFocus:true})),
+          el('div',{className:'fg'},
+            el('label',null,'License — who this SOP applies to *'),
+            el('select',{
+              value:f.license_id,
+              onChange:ev=>setF(p=>({...p,license_id:ev.target.value})),
+              style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13},
+            },
+              el('option',{value:''},'— Select License (required) —'),
+              LICENSES.map(lic=>el('option',{key:lic.id,value:lic.id},lic.name+' ('+lic.state+')'))
+            ),
+            !f.license_id&&el('div',{style:{fontSize:11,color:'var(--red)',marginTop:4}},'Required — without this, the SOP cannot be scoped to a facility'),
+          ),
           el('div',{className:'g2'},
             el('div',{className:'fg',style:{marginBottom:0}},
               el('label',null,'Departments'),
@@ -5631,12 +5724,12 @@ function SOPs({sops,setSops,cu,users}){
           el('div',{style:{marginBottom:16}},
             el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}},
               el('div',{style:{fontWeight:700,fontSize:14}},'Acknowledgements'),
-              el('div',{style:{fontSize:12,color:'var(--text2)'}},`${(sel.acknowledgements||[]).length} of ${users.filter(u=>u.approved).length} team members`),
+              el('div',{style:{fontSize:12,color:'var(--text2)'}},`${(sel.acknowledgements||[]).length} of ${targetUsersForSop(sel).length} team members`),
             ),
             // Ack progress bar
             el('div',{style:{height:6,background:'var(--surface2)',borderRadius:4,marginBottom:12}},
               el('div',{style:{
-                width:users.filter(u=>u.approved).length>0?Math.round(((sel.acknowledgements||[]).length/users.filter(u=>u.approved).length)*100)+'%':'0%',
+                width:targetUsersForSop(sel).length>0?Math.round(((sel.acknowledgements||[]).length/targetUsersForSop(sel).length)*100)+'%':'0%',
                 height:'100%',background:'var(--green)',borderRadius:4,transition:'width .3s'
               }}),
             ),
@@ -5652,9 +5745,9 @@ function SOPs({sops,setSops,cu,users}){
               ),
               el('div',{style:{flex:1}},
                 el('div',{style:{fontSize:11,fontWeight:700,color:'var(--red)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:6}},'✗ Pending'),
-                users.filter(u=>u.approved&&!(sel.acknowledgements||[]).some(a=>a.id===u.id)).length===0
+                targetUsersForSop(sel).filter(u=>!(sel.acknowledgements||[]).some(a=>a.id===u.id)).length===0
                   ?el('div',{style:{fontSize:12,color:'var(--green)',fontWeight:600}},'Everyone acknowledged ✓')
-                  :users.filter(u=>u.approved&&!(sel.acknowledgements||[]).some(a=>a.id===u.id)).map(u=>el('div',{key:u.id,style:{display:'flex',alignItems:'center',gap:6,marginBottom:4}},
+                  :targetUsersForSop(sel).filter(u=>!(sel.acknowledgements||[]).some(a=>a.id===u.id)).map(u=>el('div',{key:u.id,style:{display:'flex',alignItems:'center',gap:6,marginBottom:4}},
                     el('div',{className:'avatar',style:{background:avatarColor(u.name),width:20,height:20,fontSize:9,opacity:.5}},u.name.charAt(0).toUpperCase()),
                     el('div',{style:{fontSize:12,color:'var(--text3)'}},u.name),
                   )),
