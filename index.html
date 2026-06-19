@@ -4803,71 +4803,95 @@ function SOPGenerator({cu,onClose,onSave}){
 
     try{
       const isPDF=uploadedText.startsWith('__PDF__:');
-      const messages=isPDF?[{
-        role:'user',
-        content:[
-          {type:'document',source:{type:'base64',media_type:'application/pdf',data:uploadedText.replace('__PDF__:','')}},
-          {type:'text',text:SOP_STRUCTURE_PROMPT(title,category,license,state,'[See uploaded PDF document above — extract and use the content as reference]')},
-        ]
-      }]:[{
-        role:'user',
-        content:SOP_STRUCTURE_PROMPT(title,category,license,state,uploadedText),
-      }];
+      const pdfBlock=isPDF?[{type:'document',source:{type:'base64',media_type:'application/pdf',data:uploadedText.replace('__PDF__:','')}}]:[];
+      const refNote=isPDF?'[See uploaded PDF document above — extract and use the content as reference]':uploadedText;
 
-      const res=await fetch(`${SUPA_URL}/functions/v1/claude-proxy`,{
-        method:'POST',
-        headers:{
-          'Content-Type':'application/json',
-          'Authorization':'Bearer '+SUPA_KEY,
-        },
-        body:JSON.stringify({
-          model:'claude-sonnet-4-6',
-          max_tokens:8000,
-          messages,
-        }),
+      // ── CALL 1: Metadata, purpose, scope, responsibilities, materials (fast, small) ──
+      const metaPrompt=`You are a cannabis compliance officer writing an SOP for ${state} (license: ${license.name}, ${license.license_type}).
+Regulatory agency: ${STATE_REGS[state].agency} — ${STATE_REGS[state].code}
+Key regulations: ${STATE_REGS[state].key_rules.slice(0,6).join('; ')}
+
+SOP Title: ${title}
+Category: ${category}
+${refNote?'Reference material: '+refNote.slice(0,2000):''}
+
+Respond with ONLY this JSON (no markdown, be concise):
+{
+  "sop_number": "SOP-[DEPT]-[3digit]",
+  "title": "${title}",
+  "revision": "1.0",
+  "effective_date": "${new Date().toISOString().slice(0,10)}",
+  "review_frequency": "Annual",
+  "department": "...",
+  "purpose": "2-3 sentences",
+  "scope": "1-2 sentences",
+  "regulatory_references": ["3-5 specific citations"],
+  "responsibilities": [{"role":"...","responsibility":"..."}],
+  "required_materials": ["..."],
+  "deviation_procedure": "1-2 sentences",
+  "training_requirements": "1-2 sentences"
+}`;
+
+      const metaMsgs=isPDF?[{role:'user',content:[...pdfBlock,{type:'text',text:metaPrompt}]}]:[{role:'user',content:metaPrompt}];
+
+      const metaRes=await fetch(`${SUPA_URL}/functions/v1/claude-proxy`,{
+        method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPA_KEY},
+        body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1200,messages:metaMsgs}),
       });
+      const metaData=await metaRes.json();
+      if(!metaRes.ok||metaData.error){throw new Error(metaData.error?.message||'Metadata generation failed');}
+      let metaClean=(metaData.content?.[0]?.text||'').replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+      const metaParsed=JSON.parse(metaClean);
 
-      const data=await res.json();
-      if(!res.ok||data.error){throw new Error(data.error?.message||data.message||'API call failed');}
-      const raw=data.content?.[0]?.text||'';
-      let clean=raw.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
-      // Fix truncated JSON by attempting to close it
-      if(!clean.endsWith('}')){
-        // Find last complete field and close the JSON
-        const lastBrace=clean.lastIndexOf('}');
-        if(lastBrace>0){
-          clean=clean.slice(0,lastBrace+1);
-          // Close any open arrays/objects
-          let depth=0;
-          for(const ch of clean){if(ch==='{')depth++;else if(ch==='}')depth--;}
-          while(depth>0){clean+='}';depth--;}
-        }
-      }
-      let parsed;
-      try{parsed=JSON.parse(clean);}
+      // ── CALL 2: Procedure steps + quality checks + docs (the long part, separate call so it can't blow the time budget alone) ──
+      const stepsPrompt=`You are writing the procedure steps for this cannabis SOP:
+Title: ${title}
+Purpose: ${metaParsed.purpose}
+Department: ${metaParsed.department}
+${refNote?'Reference material: '+refNote.slice(0,2000):''}
+
+Write 6-10 clear procedure steps. Keep each instruction to 1-2 sentences. Flag CRITICAL steps where a regulatory violation or product risk exists.
+
+Respond with ONLY this JSON (no markdown, be concise, this must NOT be truncated so keep instructions short):
+{
+  "steps": [{"step_number":1,"title":"short title","instruction":"1-2 sentences","regulatory_note":"optional, brief","critical":false}],
+  "quality_checks": ["5-8 short checkpoints"],
+  "documentation_required": ["3-6 short items"]
+}`;
+
+      const stepsRes=await fetch(`${SUPA_URL}/functions/v1/claude-proxy`,{
+        method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPA_KEY},
+        body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:3000,messages:[{role:'user',content:stepsPrompt}]}),
+      });
+      const stepsData=await stepsRes.json();
+      if(!stepsRes.ok||stepsData.error){throw new Error(stepsData.error?.message||'Steps generation failed');}
+      let stepsClean=(stepsData.content?.[0]?.text||'').replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+      let stepsParsed;
+      try{stepsParsed=JSON.parse(stepsClean);}
       catch(e){
-        // Try to extract what we got
-        try{
-          const titleMatch=clean.match(/"title"\s*:\s*"([^"]+)"/);
-          const purposeMatch=clean.match(/"purpose"\s*:\s*"([^"]+)"/);
-          parsed={
-            title:titleMatch?.[1]||title,
-            sop_number:'SOP-AUTO-001',
-            revision:'1.0',
-            effective_date:new Date().toISOString().slice(0,10),
-            purpose:purposeMatch?.[1]||'See generated content',
-            scope:'Cannabis operations per '+state+' regulations',
-            regulatory_references:STATE_REGS[state].key_rules.slice(0,3),
-            responsibilities:[],steps:[],quality_checks:[],
-            documentation_required:[],
-            deviation_procedure:'Contact supervisor immediately',
-            training_requirements:'All staff performing this procedure',
-            revision_history:[{revision:'1.0',date:new Date().toISOString().slice(0,10),description:'Initial release',approved_by:''}],
-            license_name:license.name,state,
-            _raw:clean.slice(0,2000),
-          };
-        }catch(e2){throw new Error('Failed to parse AI response. Please try again.');}
+        // Attempt repair on truncation
+        const lastBrace=stepsClean.lastIndexOf('}');
+        if(lastBrace>0){
+          let repaired=stepsClean.slice(0,lastBrace+1);
+          let depth=0;
+          for(const ch of repaired){if(ch==='{')depth++;else if(ch==='}')depth--;}
+          while(depth>0){repaired+='}';depth--;}
+          try{stepsParsed=JSON.parse(repaired);}catch(e2){stepsParsed={steps:[],quality_checks:[],documentation_required:[]};}
+        }else{stepsParsed={steps:[],quality_checks:[],documentation_required:[]};}
       }
+
+      // ── MERGE ──────────────────────────────────────────────────────────────
+      const parsed={
+        ...metaParsed,
+        license_name:license.name,
+        state,
+        steps:stepsParsed.steps||[],
+        quality_checks:stepsParsed.quality_checks||[],
+        documentation_required:stepsParsed.documentation_required||[],
+        definitions:metaParsed.definitions||[],
+        revision_history:[{revision:'1.0',date:new Date().toISOString().slice(0,10),description:'Initial release',approved_by:''}],
+      };
+
       setGeneratedSOP(parsed);
       setEditedSOP(parsed);
       setStep(3);
@@ -4878,6 +4902,7 @@ function SOPGenerator({cu,onClose,onSave}){
     }
     setGenerating(false);
   }
+
 
   async function saveSOP(){
     if(!generatedSOP) return;
