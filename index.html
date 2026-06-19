@@ -4803,17 +4803,34 @@ function SOPGenerator({cu,onClose,onSave}){
 
     try{
       const isPDF=uploadedText.startsWith('__PDF__:');
-      const pdfBlock=isPDF?[{type:'document',source:{type:'base64',media_type:'application/pdf',data:uploadedText.replace('__PDF__:','')}}]:[];
-      const refNote=isPDF?'[See uploaded PDF document above — extract and use the content as reference]':uploadedText;
+      let refText=uploadedText;
 
-      // ── CALL 1: Metadata, purpose, scope, responsibilities, materials (fast, small) ──
+      // ── STEP 0 (only if PDF): extract a short plain-text summary ONCE so the
+      // two main calls below never need to re-send the binary PDF (which is what was slow). ──
+      if(isPDF){
+        const extractRes=await fetch(`${SUPA_URL}/functions/v1/claude-proxy`,{
+          method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPA_KEY},
+          body:JSON.stringify({
+            model:'claude-sonnet-4-6',max_tokens:1000,
+            messages:[{role:'user',content:[
+              {type:'document',source:{type:'base64',media_type:'application/pdf',data:uploadedText.replace('__PDF__:','')}},
+              {type:'text',text:'Summarize the key procedural and regulatory content of this document relevant to "'+title+'" in under 600 words, plain text, no markdown. Focus on facts useful for writing an SOP.'},
+            ]}],
+          }),
+        });
+        const extractData=await extractRes.json();
+        if(!extractRes.ok||extractData.error){throw new Error(extractData.error?.message||'PDF extraction failed');}
+        refText=(extractData.content?.[0]?.text||'').slice(0,3000);
+      }
+
+      // ── CALL 1: Metadata, purpose, scope, responsibilities, materials (fast, small, text-only) ──
       const metaPrompt=`You are a cannabis compliance officer writing an SOP for ${state} (license: ${license.name}, ${license.license_type}).
 Regulatory agency: ${STATE_REGS[state].agency} — ${STATE_REGS[state].code}
 Key regulations: ${STATE_REGS[state].key_rules.slice(0,6).join('; ')}
 
 SOP Title: ${title}
 Category: ${category}
-${refNote?'Reference material: '+refNote.slice(0,2000):''}
+${refText?'Reference material: '+refText:''}
 
 Respond with ONLY this JSON (no markdown, be concise):
 {
@@ -4832,23 +4849,21 @@ Respond with ONLY this JSON (no markdown, be concise):
   "training_requirements": "1-2 sentences"
 }`;
 
-      const metaMsgs=isPDF?[{role:'user',content:[...pdfBlock,{type:'text',text:metaPrompt}]}]:[{role:'user',content:metaPrompt}];
-
       const metaRes=await fetch(`${SUPA_URL}/functions/v1/claude-proxy`,{
         method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPA_KEY},
-        body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1200,messages:metaMsgs}),
+        body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1200,messages:[{role:'user',content:metaPrompt}]}),
       });
       const metaData=await metaRes.json();
       if(!metaRes.ok||metaData.error){throw new Error(metaData.error?.message||'Metadata generation failed');}
       let metaClean=(metaData.content?.[0]?.text||'').replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
       const metaParsed=JSON.parse(metaClean);
 
-      // ── CALL 2: Procedure steps + quality checks + docs (the long part, separate call so it can't blow the time budget alone) ──
+      // ── CALL 2: Procedure steps + quality checks + docs (text-only, no PDF re-attach) ──
       const stepsPrompt=`You are writing the procedure steps for this cannabis SOP:
 Title: ${title}
 Purpose: ${metaParsed.purpose}
 Department: ${metaParsed.department}
-${refNote?'Reference material: '+refNote.slice(0,2000):''}
+${refText?'Reference material: '+refText:''}
 
 Write 6-10 clear procedure steps. Keep each instruction to 1-2 sentences. Flag CRITICAL steps where a regulatory violation or product risk exists.
 
@@ -4869,7 +4884,6 @@ Respond with ONLY this JSON (no markdown, be concise, this must NOT be truncated
       let stepsParsed;
       try{stepsParsed=JSON.parse(stepsClean);}
       catch(e){
-        // Attempt repair on truncation
         const lastBrace=stepsClean.lastIndexOf('}');
         if(lastBrace>0){
           let repaired=stepsClean.slice(0,lastBrace+1);
