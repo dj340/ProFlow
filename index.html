@@ -3192,12 +3192,16 @@ function DeviationForm({cu,users,onSave,onCancel,existing}){
     product_affected:'',lot_number:'',
     immediate_action:'',root_cause:'',
     priority:'major',status:'open',
+    license_id:(cu.licenses||[])[0]||'',
     reported_by:cu.name,reported_by_id:cu.id,
     attachments:[],notes:[],
   });
   const[saving,setSaving]=useState(false);
+  const[error,setError]=useState('');
   async function save(){
     if(!f.title.trim()) return;
+    if(!f.license_id){setError('Please select which license this deviation belongs to.');return;}
+    setError('');
     setSaving(true);
     const rec={...f,
       id:existing?.id||'dev-'+Date.now(),
@@ -3217,7 +3221,12 @@ function DeviationForm({cu,users,onSave,onCancel,existing}){
     setSaving(false);
   }
   return el('div',{className:'mbd'},
+    el('div',{className:'fg'},el('label',null,'License *'),el('select',{value:f.license_id,onChange:ev=>setF(p=>({...p,license_id:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+      el('option',{value:''},'— Select License —'),
+      LICENSES.map(lic=>el('option',{key:lic.id,value:lic.id},lic.name+' ('+lic.state+')'))
+    )),
     el('div',{className:'fg'},el('label',null,'Deviation Title *'),el('input',{value:f.title,onChange:ev=>setF(p=>({...p,title:ev.target.value})),placeholder:'e.g. Wrong label applied to Pre-Roll batch',autoFocus:true})),
+    error&&el('div',{style:{background:'rgba(239,68,68,.1)',border:'1px solid rgba(239,68,68,.3)',borderRadius:8,padding:'8px 12px',fontSize:12,color:'var(--red)',marginBottom:10}},error),
     el('div',{className:'g2'},
       el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Department'),el('select',{value:f.dept,onChange:ev=>setF(p=>({...p,dept:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},QMS_DEPTS.map(d=>el('option',{key:d,value:d},d)))),
       el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Priority'),el('select',{value:f.priority,onChange:ev=>setF(p=>({...p,priority:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},Object.entries(QMS_PRIORITIES).map(([k,{label}])=>el('option',{key:k,value:k},label)))),
@@ -3245,11 +3254,15 @@ function CAPAForm({cu,users,deviations,onSave,onCancel,existing}){
     responsible_person_id:'',responsible_person_name:'',
     due_date:'',verification_method:'',
     priority:'major',status:'open',effectiveness_rating:'',
+    license_id:(cu.licenses||[])[0]||'',
     attachments:[],notes:[],
   });
   const[saving,setSaving]=useState(false);
+  const[error,setError]=useState('');
   async function save(){
     if(!f.title.trim()) return;
+    if(!f.license_id){setError('Please select which license this CAPA belongs to.');return;}
+    setError('');
     setSaving(true);
     const rec={...f,
       id:existing?.id||'capa-'+Date.now(),
@@ -3265,7 +3278,12 @@ function CAPAForm({cu,users,deviations,onSave,onCancel,existing}){
     setSaving(false);
   }
   return el('div',{className:'mbd'},
+    el('div',{className:'fg'},el('label',null,'License *'),el('select',{value:f.license_id,onChange:ev=>setF(p=>({...p,license_id:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+      el('option',{value:''},'— Select License —'),
+      LICENSES.map(lic=>el('option',{key:lic.id,value:lic.id},lic.name+' ('+lic.state+')'))
+    )),
     el('div',{className:'fg'},el('label',null,'CAPA Title *'),el('input',{value:f.title,onChange:ev=>setF(p=>({...p,title:ev.target.value})),placeholder:'e.g. Pre-roll weight deviation CAPA',autoFocus:true})),
+    error&&el('div',{style:{background:'rgba(239,68,68,.1)',border:'1px solid rgba(239,68,68,.3)',borderRadius:8,padding:'8px 12px',fontSize:12,color:'var(--red)',marginBottom:10}},error),
     el('div',{className:'g2'},
       el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Department'),el('select',{value:f.dept,onChange:ev=>setF(p=>({...p,dept:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},QMS_DEPTS.map(d=>el('option',{key:d,value:d},d)))),
       el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Priority'),el('select',{value:f.priority,onChange:ev=>setF(p=>({...p,priority:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},Object.entries(QMS_PRIORITIES).map(([k,{label}])=>el('option',{key:k,value:k},label)))),
@@ -3318,10 +3336,12 @@ function AuditForm({cu,users,onSave,onCancel,existing}){
     total_findings:0,critical_findings:0,
     recommendations:'',conclusion:'',
     status:'open',next_audit_date:'',
+    license_id:(cu.licenses||[])[0]||'',
     attachments:[],
   });
   const[newFinding,setNewFinding]=useState({description:'',severity:'minor',corrective_action:'',status:'open'});
   const[saving,setSaving]=useState(false);
+  const[error,setError]=useState('');
 
   function addFinding(){
     if(!newFinding.description.trim()) return;
@@ -3332,6 +3352,8 @@ function AuditForm({cu,users,onSave,onCancel,existing}){
 
   async function save(){
     if(!f.title.trim()) return;
+    if(!f.license_id){setError('Please select which license this audit belongs to.');return;}
+    setError('');
     setSaving(true);
     const rec={...f,id:existing?.id||'aud-'+Date.now(),created_by:cu.name,created_by_id:cu.id,created_at:existing?.created_at||new Date().toISOString(),updated_at:new Date().toISOString(),updated_by:cu.name};
     try{
@@ -3342,6 +3364,10 @@ function AuditForm({cu,users,onSave,onCancel,existing}){
     setSaving(false);
   }
   return el('div',{className:'mbd'},
+    el('div',{className:'fg'},el('label',null,'License *'),el('select',{value:f.license_id,onChange:ev=>setF(p=>({...p,license_id:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+      el('option',{value:''},'— Select License —'),
+      LICENSES.map(lic=>el('option',{key:lic.id,value:lic.id},lic.name+' ('+lic.state+')'))
+    )),
     el('div',{className:'fg'},el('label',null,'Audit Title *'),el('input',{value:f.title,onChange:ev=>setF(p=>({...p,title:ev.target.value})),placeholder:'e.g. Monthly METRC Audit — June 2026',autoFocus:true})),
     el('div',{className:'g2'},
       el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Audit Type'),el('select',{value:f.audit_type,onChange:ev=>setF(p=>({...p,audit_type:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},AUDIT_TYPES.map(t=>el('option',{key:t,value:t},t)))),
@@ -3386,6 +3412,7 @@ function AuditForm({cu,users,onSave,onCancel,existing}){
       el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Status'),el('select',{value:f.status,onChange:ev=>setF(p=>({...p,status:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},Object.entries(QMS_STATUSES).map(([k,{label}])=>el('option',{key:k,value:k},label)))),
       el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Next Audit Date'),el('input',{type:'date',value:f.next_audit_date,onChange:ev=>setF(p=>({...p,next_audit_date:ev.target.value}))})),
     ),
+    error&&el('div',{style:{background:'rgba(239,68,68,.1)',border:'1px solid rgba(239,68,68,.3)',borderRadius:8,padding:'8px 12px',fontSize:12,color:'var(--red)',marginBottom:10}},error),
     el('div',{className:'mf'},
       el('button',{className:'btn b-ghost',onClick:onCancel},'Cancel'),
       el('button',{className:'btn b-blue',onClick:save,disabled:saving||!f.title.trim()},saving?'Saving...':existing?'Update Audit':'Submit Audit'),
@@ -3414,7 +3441,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
 
   // Dashboard stats
   // Filter by license
-  const filterByLic=(arr)=>licFilter==='all'?arr:arr.filter(r=>!r.license_id||r.license_id===licFilter);
+  const filterByLic=(arr)=>licFilter==='all'?arr:arr.filter(r=>r.license_id===licFilter);
   const openDeviations=filterByLic(deviations).filter(d=>d.status==='open');
   const openCAPAs=capas.filter(c=>c.status==='open'||c.status==='in_progress');
   const overdueCAPAs=capas.filter(c=>c.due_date&&c.due_date<today&&c.status!=='closed');
@@ -3787,7 +3814,11 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
       showNew&&el('div',{className:'card'},
         el('div',{className:'mh'},el('div',{className:'mt2'},'New Change Control Record'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
         el('div',{className:'mbd'},
-          el('div',{className:'fg'},el('label',null,'Title *'),el('input',{id:'chg-title',placeholder:'e.g. Switch pre-roll cone supplier — Futurola to Raw',autoFocus:true})),
+          el('div',{className:'fg'},el('label',null,'License *'),el('select',{id:'chg-license',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+      el('option',{value:''},'— Select License —'),
+      LICENSES.map(lic=>el('option',{key:lic.id,value:lic.id},lic.name+' ('+lic.state+')'))
+    )),
+    el('div',{className:'fg'},el('label',null,'Title *'),el('input',{id:'chg-title',placeholder:'e.g. Switch pre-roll cone supplier — Futurola to Raw',autoFocus:true})),
           el('div',{className:'g2'},
             el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Change Type'),el('select',{id:'chg-type',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
               ['Equipment','Process','Packaging','Label','Supplier','Formulation','Facility','Personnel','Software','Other'].map(t=>el('option',{key:t,value:t},t))
@@ -3805,9 +3836,11 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
             el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),
             el('button',{className:'btn b-blue',onClick:async()=>{
               const title=document.getElementById('chg-title').value.trim();
+              const license_id=document.getElementById('chg-license').value;
               if(!title) return;
+              if(!license_id){alert('Please select which license this change applies to.');return;}
               const rec={
-                id:'chg-'+Date.now(),title,
+                id:'chg-'+Date.now(),title,license_id,
                 change_type:document.getElementById('chg-type').value,
                 priority:document.getElementById('chg-pri').value,
                 description:document.getElementById('chg-desc').value,
@@ -3853,6 +3886,10 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
       showNew&&el('div',{className:'card'},
         el('div',{className:'mh'},el('div',{className:'mt2'},'Log Complaint'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
         el('div',{className:'mbd'},
+          el('div',{className:'fg'},el('label',null,'License *'),el('select',{id:'comp-license',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+            el('option',{value:''},'— Select License —'),
+            LICENSES.map(lic=>el('option',{key:lic.id,value:lic.id},lic.name+' ('+lic.state+')'))
+          )),
           el('div',{className:'fg'},el('label',null,'Title *'),el('input',{id:'comp-title',placeholder:'e.g. Customer reported harsh taste on Live Resin Cart',autoFocus:true})),
           el('div',{className:'g2'},
             el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Complaint Type'),el('select',{id:'comp-type',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
@@ -3870,8 +3907,10 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
             el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),
             el('button',{className:'btn b-blue',onClick:async()=>{
               const title=document.getElementById('comp-title').value.trim();
+              const license_id=document.getElementById('comp-license').value;
               if(!title) return;
-              const rec={id:'comp-'+Date.now(),title,type:document.getElementById('comp-type').value,priority:document.getElementById('comp-pri').value,product:document.getElementById('comp-prod').value,lot_number:document.getElementById('comp-lot').value,description:document.getElementById('comp-desc').value,resolution:document.getElementById('comp-res').value,status:'open',created_by:cu.name,created_by_id:cu.id,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),updated_by:cu.name};
+              if(!license_id){alert('Please select which license this complaint applies to.');return;}
+              const rec={id:'comp-'+Date.now(),title,license_id,type:document.getElementById('comp-type').value,priority:document.getElementById('comp-pri').value,product:document.getElementById('comp-prod').value,lot_number:document.getElementById('comp-lot').value,description:document.getElementById('comp-desc').value,resolution:document.getElementById('comp-res').value,status:'open',created_by:cu.name,created_by_id:cu.id,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),updated_by:cu.name};
               try{await db.insert('pf_qms_complaints',rec);}catch(e){alert('Create table pf_qms_complaints first.');}
               handleSave('complaint',rec,setComplaints,complaints);
             }},'Log Complaint'),
@@ -3909,6 +3948,10 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
       showNew&&el('div',{className:'card'},
         el('div',{className:'mh'},el('div',{className:'mt2'},'Add Supplier'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
         el('div',{className:'mbd'},
+          el('div',{className:'fg'},el('label',null,'License *'),el('select',{id:'sup-license',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+            el('option',{value:''},'— Select License —'),
+            LICENSES.map(lic=>el('option',{key:lic.id,value:lic.id},lic.name+' ('+lic.state+')'))
+          )),
           el('div',{className:'fg'},el('label',null,'Supplier Name *'),el('input',{id:'sup-name',placeholder:'e.g. Futurola USA',autoFocus:true})),
           el('div',{className:'g2'},
             el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Category'),el('select',{id:'sup-cat',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
@@ -3930,8 +3973,10 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
             el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),
             el('button',{className:'btn b-blue',onClick:async()=>{
               const name=document.getElementById('sup-name').value.trim();
+              const license_id=document.getElementById('sup-license').value;
               if(!name) return;
-              const rec={id:'sup-'+Date.now(),name,category:document.getElementById('sup-cat').value,status:document.getElementById('sup-status').value,products_supplied:document.getElementById('sup-prods').value,contact_name:document.getElementById('sup-contact').value,contact_email:document.getElementById('sup-email').value,coa_expiry:document.getElementById('sup-coa').value,last_audit:document.getElementById('sup-audit').value,notes:document.getElementById('sup-notes').value,created_by:cu.name,created_by_id:cu.id,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),updated_by:cu.name};
+              if(!license_id){alert('Please select which license this supplier applies to.');return;}
+              const rec={id:'sup-'+Date.now(),name,license_id,category:document.getElementById('sup-cat').value,status:document.getElementById('sup-status').value,products_supplied:document.getElementById('sup-prods').value,contact_name:document.getElementById('sup-contact').value,contact_email:document.getElementById('sup-email').value,coa_expiry:document.getElementById('sup-coa').value,last_audit:document.getElementById('sup-audit').value,notes:document.getElementById('sup-notes').value,created_by:cu.name,created_by_id:cu.id,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),updated_by:cu.name};
               try{await db.insert('pf_qms_suppliers',rec);}catch(e){alert('Create table pf_qms_suppliers first.');}
               handleSave('supplier',rec,setSuppliers,suppliers);
             }},'Add Supplier'),
