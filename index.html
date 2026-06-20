@@ -3421,13 +3421,321 @@ function AuditForm({cu,users,onSave,onCancel,existing}){
   );
 }
 
+// ── EMPLOYEE TYPEAHEAD PICKER ─────────────────────────────────────────────────
+function EmployeeTypeahead({users,value,onChange,placeholder}){
+  const[query,setQuery]=useState(value?.name||'');
+  const[open,setOpen]=useState(false);
+  const approved=users.filter(u=>u.approved);
+  const matches=query.trim().length>=3?approved.filter(u=>u.name.toLowerCase().includes(query.trim().toLowerCase())).slice(0,8):[];
+
+  return el('div',{style:{position:'relative'}},
+    el('input',{
+      value:query,
+      onChange:ev=>{setQuery(ev.target.value);setOpen(true);if(!ev.target.value)onChange(null);},
+      onFocus:()=>setOpen(true),
+      onBlur:()=>setTimeout(()=>setOpen(false),150),
+      placeholder:placeholder||'Type at least 3 letters of employee name...',
+      style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none'},
+    }),
+    open&&matches.length>0&&el('div',{style:{position:'absolute',top:'100%',left:0,right:0,marginTop:4,background:'var(--surface3)',border:'1px solid var(--border)',borderRadius:8,boxShadow:'0 8px 24px rgba(0,0,0,.4)',zIndex:50,maxHeight:240,overflowY:'auto'}},
+      matches.map(u=>el('div',{key:u.id,
+        onMouseDown:()=>{onChange(u);setQuery(u.name);setOpen(false);},
+        style:{padding:'9px 13px',cursor:'pointer',display:'flex',alignItems:'center',gap:8,borderBottom:'1px solid var(--border)',transition:'background .1s'},
+        onMouseEnter:ev=>ev.currentTarget.style.background='var(--surface2)',
+        onMouseLeave:ev=>ev.currentTarget.style.background='transparent',
+      },
+        el('div',{className:'avatar',style:{background:avatarColor(u.name),width:24,height:24,fontSize:10}},u.name.charAt(0).toUpperCase()),
+        el('div',null,
+          el('div',{style:{fontSize:12,fontWeight:600,color:'var(--text)'}},u.name),
+          el('div',{style:{fontSize:10,color:'var(--text3)'}},(RLABEL[u.role]||u.role)+(u.dept?' · '+u.dept:'')),
+        ),
+      ))
+    ),
+    open&&query.trim().length>=3&&matches.length===0&&el('div',{style:{position:'absolute',top:'100%',left:0,right:0,marginTop:4,background:'var(--surface3)',border:'1px solid var(--border)',borderRadius:8,padding:'9px 13px',fontSize:12,color:'var(--text3)',zIndex:50}},'No matching employees'),
+  );
+}
+
+// ── CORRECTIVE ACTION GENERATOR ───────────────────────────────────────────────
+function CorrectiveActionGenerator({cu,users,onClose,onSave}){
+  const[step,setStep]=useState(1); // 1=setup, 2=generating, 3=review/edit, 4=sent
+  const[employee,setEmployee]=useState(null);
+  const[license,setLicense]=useState(LICENSES[0]);
+  const[violationType,setViolationType]=useState('SOP Non-Compliance');
+  const[violationDesc,setViolationDesc]=useState('');
+  const[severity,setSeverity]=useState('written_warning');
+  const[generating,setGenerating]=useState(false);
+  const[error,setError]=useState('');
+  const[generatedCA,setGeneratedCA]=useState(null);
+  const[editedCA,setEditedCA]=useState(null);
+  const[editMode,setEditMode]=useState(false);
+  const[saving,setSaving]=useState(false);
+
+  const VIOLATION_TYPES=['SOP Non-Compliance','Safety Violation','Attendance/Punctuality','METRC/Compliance Error','Quality Control Failure','Conduct/Behavior','Equipment Misuse','Other'];
+  const SEVERITY_LEVELS=[
+    {id:'verbal_warning',label:'Verbal Warning (Documented)',color:'var(--blue)'},
+    {id:'written_warning',label:'Written Warning',color:'var(--accent)'},
+    {id:'final_warning',label:'Final Written Warning',color:'var(--red)'},
+    {id:'suspension',label:'Suspension',color:'var(--red)'},
+  ];
+
+  async function generate(){
+    if(!employee){setError('Please select the employee involved.');return;}
+    if(!violationDesc.trim()){setError('Please describe what happened.');return;}
+    setError('');setGenerating(true);setStep(2);
+
+    const prompt=`You are an HR/compliance officer at a licensed cannabis manufacturing facility writing a formal Corrective Action document for an employee violation.
+
+EMPLOYEE: ${employee.name} (${RLABEL[employee.role]||employee.role}, ${employee.dept||'N/A'} department)
+LICENSE/FACILITY: ${license.name} (${license.state})
+VIOLATION TYPE: ${violationType}
+SEVERITY: ${SEVERITY_LEVELS.find(s=>s.id===severity)?.label}
+WHAT HAPPENED (as reported by management): ${violationDesc}
+
+Write a formal, professional Corrective Action notice. Be factual, specific, and fair — this is a real HR document that the employee will read and sign. Respond with ONLY this JSON (no markdown):
+{
+  "title": "Corrective Action — [Violation Type] — [Employee Name]",
+  "ca_number": "CA-[3 digit number]",
+  "date_issued": "${new Date().toISOString().slice(0,10)}",
+  "incident_summary": "2-3 sentence factual summary of what happened",
+  "policy_reference": "Which company policy or SOP was violated, if identifiable",
+  "expected_standard": "1-2 sentences on what the correct behavior/procedure should have been",
+  "corrective_steps": ["3-5 specific, actionable steps the employee must take going forward"],
+  "consequences_of_recurrence": "1-2 sentences on what happens if this is repeated",
+  "support_offered": "1 sentence on any training, resources, or support being offered",
+  "employee_acknowledgement_text": "Standard statement the employee will sign confirming they read and understand this notice (do not admit guilt, just acknowledge receipt and understanding)"
+}`;
+
+    try{
+      const res=await fetch(`${SUPA_URL}/functions/v1/claude-proxy`,{
+        method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPA_KEY},
+        body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1500,messages:[{role:'user',content:prompt}]}),
+      });
+      const data=await res.json();
+      if(!res.ok||data.error){throw new Error(data.error?.message||'Generation failed');}
+      let clean=(data.content?.[0]?.text||'').replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+      const parsed=JSON.parse(clean);
+      setGeneratedCA(parsed);
+      setEditedCA(parsed);
+      setStep(3);
+    }catch(e){
+      console.error(e);
+      setError('Generation failed: '+e.message);
+      setStep(1);
+    }
+    setGenerating(false);
+  }
+
+  async function sendToEmployee(){
+    if(!editedCA) return;
+    setSaving(true);
+    const rec={
+      id:'ca-'+Date.now(),
+      employee_id:employee.id,
+      employee_name:employee.name,
+      employee_email:employee.email,
+      license_id:license.id,
+      license_name:license.name,
+      violation_type:violationType,
+      severity,
+      generated_content:JSON.stringify(editedCA),
+      title:editedCA.title,
+      ca_number:editedCA.ca_number,
+      status:'pending', // pending -> acknowledged
+      acknowledged_at:null,
+      issued_by:cu.name,
+      issued_by_id:cu.id,
+      created_at:new Date().toISOString(),
+      updated_at:new Date().toISOString(),
+      updated_by:cu.name,
+    };
+    try{
+      await db.insert('pf_qms_corrective',rec);
+      // Notify the employee
+      if(employee.email){
+        await sendEmail({to:employee.email,
+          subject:`⚖️ Corrective Action Notice — ${editedCA.title}`,
+          html:`<div style="font-family:sans-serif;background:#121212;color:#f0eee8;padding:28px;border-radius:12px;max-width:520px;border:1px solid #333">
+            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">⚖️ Hendrix TMS</div>
+            <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:20px;margin-bottom:20px;text-align:center">
+              <div style="font-size:36px;margin-bottom:10px">⚖️</div>
+              <div style="font-size:17px;font-weight:700;margin-bottom:6px">Corrective Action Notice</div>
+              <div style="font-size:14px;color:#fca5a5">${editedCA.ca_number} — ${license.name}</div>
+            </div>
+            <p style="font-size:13px;color:#9d9a92;margin-bottom:20px">A formal corrective action has been issued to you. Please log in to review the full details and acknowledge receipt.</p>
+            <a href="${APP_URL}" style="display:inline-block;background:#f5a623;color:#000;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">Review & Acknowledge →</a>
+          </div>`
+        });
+      }
+      onSave(rec);
+    }catch(e){
+      console.error(e);
+      alert('Save failed: '+e.message+'\\n\\nRun this SQL in Supabase:\\nCREATE TABLE IF NOT EXISTS pf_qms_corrective (id text primary key, employee_id text, employee_name text, employee_email text, license_id text, license_name text, violation_type text, severity text, generated_content text, title text, ca_number text, status text default \\'pending\\', acknowledged_at text, issued_by text, issued_by_id text, created_at text, updated_at text, updated_by text);\\nALTER TABLE pf_qms_corrective DISABLE ROW LEVEL SECURITY;');
+    }
+    setSaving(false);
+  }
+
+  return el('div',{className:'mo',style:{zIndex:1100},onClick:ev=>ev.target===ev.currentTarget&&onClose()},
+    el('div',{className:'md',style:{width:720,maxHeight:'92vh',overflowY:'auto'}},
+      el('div',{className:'mh'},
+        el('div',{style:{flex:1}},
+          el('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:4}},
+            el('span',{style:{fontSize:20}},'⚖️'),
+            el('div',{className:'mt2'},'AI Corrective Action Generator'),
+          ),
+          el('div',{style:{display:'flex',gap:8}},
+            [{n:1,l:'Setup'},{n:2,l:'Generating'},{n:3,l:'Review & Edit'}].map(({n,l})=>
+              el('div',{key:n,style:{display:'flex',alignItems:'center',gap:4,fontSize:11,color:step>=n?'var(--accent)':'var(--text3)',fontWeight:step===n?700:400}},
+                el('div',{style:{width:18,height:18,borderRadius:'50%',background:step>=n?'var(--accent)':'var(--surface2)',border:'1px solid',borderColor:step>=n?'var(--accent)':'var(--border)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,fontWeight:700,color:step>=n?'#000':'var(--text3)'}},n),
+                l,n<3&&el('span',{style:{color:'var(--border)'}},'→'),
+              )
+            )
+          ),
+        ),
+        el('button',{className:'mc',onClick:onClose},'×'),
+      ),
+
+      el('div',{className:'mbd'},
+
+        // STEP 1: SETUP
+        step===1&&el('div',null,
+          el('div',{className:'fg'},
+            el('label',null,'Employee *'),
+            el(EmployeeTypeahead,{users,value:employee,onChange:setEmployee,placeholder:'Type first 3+ letters of employee name...'}),
+            employee&&el('div',{style:{marginTop:6,display:'flex',alignItems:'center',gap:8,background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:8,padding:'6px 10px'}},
+              el('div',{className:'avatar',style:{background:avatarColor(employee.name),width:22,height:22,fontSize:10}},employee.name.charAt(0).toUpperCase()),
+              el('span',{style:{fontSize:12,color:'var(--text)',fontWeight:600}},employee.name),
+              el('span',{style:{fontSize:11,color:'var(--text3)'}},employee.email),
+            ),
+          ),
+
+          el('div',{className:'g2'},
+            el('div',{className:'fg',style:{marginBottom:0}},
+              el('label',null,'License / Facility *'),
+              el('select',{value:license.id,onChange:ev=>setLicense(LICENSES.find(l=>l.id===ev.target.value)),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+                LICENSES.map(l=>el('option',{key:l.id,value:l.id},l.name+' ('+l.state+')'))
+              ),
+            ),
+            el('div',{className:'fg',style:{marginBottom:0}},
+              el('label',null,'Violation Type *'),
+              el('select',{value:violationType,onChange:ev=>setViolationType(ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+                VIOLATION_TYPES.map(v=>el('option',{key:v,value:v},v))
+              ),
+            ),
+          ),
+
+          el('div',{className:'fg'},
+            el('label',null,'Severity *'),
+            el('div',{style:{display:'flex',gap:6,flexWrap:'wrap'}},
+              SEVERITY_LEVELS.map(s=>el('button',{key:s.id,
+                onClick:()=>setSeverity(s.id),
+                style:{padding:'7px 14px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:600,cursor:'pointer',
+                  background:severity===s.id?s.color:'transparent',
+                  color:severity===s.id?'#000':'var(--text2)',
+                  borderColor:severity===s.id?s.color:'var(--border)',
+                }
+              },s.label))
+            ),
+          ),
+
+          el('div',{className:'fg'},
+            el('label',null,'What happened? (be factual and specific) *'),
+            el('textarea',{
+              value:violationDesc,onChange:ev=>setViolationDesc(ev.target.value),
+              placeholder:'e.g. "On 6/20/26, employee failed to follow Cart Cleaning SOP-CART-001 step 7, leaving METRC tags unaccounted for at end of shift. This is the second occurrence in 30 days."',
+              autoFocus:true,
+              style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'10px 14px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:110,resize:'vertical'},
+            }),
+          ),
+
+          error&&el('div',{style:{background:'rgba(239,68,68,.1)',border:'1px solid rgba(239,68,68,.3)',borderRadius:8,padding:'10px 14px',fontSize:13,color:'var(--red)',marginBottom:8}},error),
+
+          el('div',{className:'mf'},
+            el('button',{className:'btn b-ghost',onClick:onClose},'Cancel'),
+            el('button',{
+              onClick:generate,
+              disabled:!employee||!violationDesc.trim(),
+              style:{background:(employee&&violationDesc.trim())?'var(--accent)':'rgba(245,166,35,.2)',color:(employee&&violationDesc.trim())?'#000':'var(--text3)',border:'none',borderRadius:'var(--rs)',padding:'10px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:(employee&&violationDesc.trim())?'pointer':'not-allowed',display:'flex',alignItems:'center',gap:8}
+            },el('span',null,'🤖'),'Generate Corrective Action'),
+          ),
+        ),
+
+        // STEP 2: GENERATING
+        step===2&&el('div',{style:{textAlign:'center',padding:'60px 20px'}},
+          el('div',{style:{width:60,height:60,border:'4px solid var(--border)',borderTopColor:'var(--accent)',borderRadius:'50%',animation:'spin .8s linear infinite',margin:'0 auto 20px'}}),
+          el('div',{style:{fontSize:18,fontWeight:700,marginBottom:8}},'Drafting corrective action notice...'),
+          el('div',{style:{fontSize:13,color:'var(--text2)'}},'Writing a formal, fair, and specific document'),
+        ),
+
+        // STEP 3: REVIEW & EDIT
+        step===3&&editedCA&&el('div',null,
+          el('div',{style:{background:'rgba(239,68,68,.06)',border:'1px solid rgba(239,68,68,.2)',borderRadius:10,padding:'14px 16px',marginBottom:16}},
+            el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:8}},
+              el('div',null,
+                el('div',{style:{fontSize:11,fontWeight:700,color:'var(--red)',textTransform:'uppercase',letterSpacing:'.8px',marginBottom:4}},editedCA.ca_number),
+                el('div',{style:{fontSize:17,fontWeight:800}},editedCA.title),
+                el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:4}},'For: '+employee.name+' · '+license.name),
+              ),
+              el('button',{onClick:()=>setEditMode(!editMode),className:'btn b-ghost btn-sm'},editMode?'👁 Preview':'✏️ Edit JSON'),
+            ),
+          ),
+
+          el('div',{style:{background:'rgba(245,166,35,.06)',border:'1px solid rgba(245,166,35,.2)',borderRadius:8,padding:'10px 14px',marginBottom:16,fontSize:11,color:'var(--text2)'}},
+            '✏️ You can edit any part of this document before sending. Once the employee acknowledges it, it can no longer be edited or revised — it becomes a permanent record.'
+          ),
+
+          !editMode&&el('div',null,
+            [['Incident Summary','incident_summary'],['Policy/SOP Violated','policy_reference'],['Expected Standard','expected_standard'],['Consequences if Repeated','consequences_of_recurrence'],['Support Offered','support_offered']].map(([label,key])=>
+              el('div',{key,style:{marginBottom:12}},
+                el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:5}},label),
+                el('textarea',{
+                  value:editedCA[key]||'',
+                  onChange:ev=>setEditedCA(p=>({...p,[key]:ev.target.value})),
+                  style:{width:'100%',background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:8,padding:'10px 14px',fontSize:12,lineHeight:1.6,color:'var(--text2)',fontFamily:'inherit',outline:'none',minHeight:50,resize:'vertical'},
+                }),
+              )
+            ),
+            el('div',{style:{marginBottom:12}},
+              el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:6}},'Corrective Steps Required'),
+              (editedCA.corrective_steps||[]).map((s,i)=>el('div',{key:i,style:{display:'flex',gap:8,marginBottom:6}},
+                el('div',{style:{width:20,height:20,borderRadius:'50%',background:'var(--accent)',color:'#000',display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:800,flexShrink:0,marginTop:2}},i+1),
+                el('input',{value:s,onChange:ev=>setEditedCA(p=>{const steps=[...p.corrective_steps];steps[i]=ev.target.value;return{...p,corrective_steps:steps};}),
+                  style:{flex:1,background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:6,padding:'6px 10px',fontSize:12,color:'var(--text2)',fontFamily:'inherit',outline:'none'}}),
+                el('button',{onClick:()=>setEditedCA(p=>({...p,corrective_steps:p.corrective_steps.filter((_,idx)=>idx!==i)})),style:{background:'none',border:'none',color:'var(--red)',cursor:'pointer',fontSize:14}},'×'),
+              )),
+              el('button',{onClick:()=>setEditedCA(p=>({...p,corrective_steps:[...(p.corrective_steps||[]),'']})),className:'btn b-ghost btn-sm',style:{marginTop:4}},'+ Add Step'),
+            ),
+          ),
+
+          editMode&&el('div',{className:'fg'},
+            el('textarea',{value:JSON.stringify(editedCA,null,2),onChange:ev=>{try{setEditedCA(JSON.parse(ev.target.value));}catch(e){}},style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:10,color:'var(--text)',fontFamily:'DM Mono, monospace',fontSize:11,outline:'none',minHeight:300,resize:'vertical'}}),
+          ),
+
+          error&&el('div',{style:{background:'rgba(239,68,68,.1)',border:'1px solid rgba(239,68,68,.3)',borderRadius:8,padding:'10px 14px',fontSize:13,color:'var(--red)',marginBottom:8}},error),
+
+          el('div',{className:'mf',style:{justifyContent:'space-between'}},
+            el('div',{style:{fontSize:12,color:'var(--text3)'}},'Will be emailed to '+employee.name+' for review and acknowledgement'),
+            el('div',{style:{display:'flex',gap:8}},
+              el('button',{className:'btn b-ghost',onClick:()=>setStep(1)},'← Back'),
+              el('button',{
+                onClick:sendToEmployee,disabled:saving,
+                style:{background:'var(--red)',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'10px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer'}
+              },saving?'Sending...':'📨 Send to '+employee.name.split(' ')[0]),
+            ),
+          ),
+        ),
+      ),
+    )
+  );
+}
+
 // ── MAIN QMS COMPONENT ────────────────────────────────────────────────────────
-function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits,setAudits,changes,setChanges,complaints,setComplaints,suppliers,setSuppliers}){
+function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits,setAudits,changes,setChanges,complaints,setComplaints,suppliers,setSuppliers,corrective,setCorrective}){
   const[tab,setTab]=useState('dashboard');
   const[showNew,setNew]=useState(false);
   const[sel,setSel]=useState(null);
   const[editing,setEditing]=useState(null);
   const[licFilter,setLicFilter]=useState('all');
+  const[showCAGenerator,setShowCAGenerator]=useState(false);
   const isAdmin=cu.role==='admin'||['coo','director_production','director_operations','general_manager','compliance_manager','director_sales_marketing'].includes(cu.role);
   const qmsRoleGroup=ROLE_GROUPS.find(g=>g.roles.includes(cu.role))?.label;
   const isManager=qmsRoleGroup==='Managers';
@@ -3998,6 +4306,120 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
         ),
         sel.notes&&el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:'10px 14px',fontSize:13,lineHeight:1.6}},sel.notes),
       ),
+    ),
+
+    // ── CORRECTIVE ACTIONS ──────────────────────────────────────────────────────
+    tab==='corrective'&&el('div',null,
+      !sel&&el('div',null,
+        el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}},
+          el('div',{style:{fontSize:13,color:'var(--text2)'}},filterByLic(corrective).length+' corrective action'+(filterByLic(corrective).length!==1?'s':'')),
+          (isAdmin||isManager)&&el('button',{
+            onClick:()=>setShowCAGenerator(true),
+            style:{background:'var(--red)',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'9px 16px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:6}
+          },'⚖️ New Corrective Action'),
+        ),
+        filterByLic(corrective).length===0?el('div',{className:'empty'},el('div',{className:'eico'},'⚖️'),el('div',{className:'etxt'},'No corrective actions on record')):
+        el('div',{style:{display:'flex',flexDirection:'column',gap:6}},
+          filterByLic(corrective).map(c=>el('div',{key:c.id,onClick:()=>setSel(c),style:{background:'var(--surface)',border:'1px solid var(--border)',borderLeft:'3px solid '+(c.status==='acknowledged'?'var(--green)':'var(--red)'),borderRadius:10,padding:'14px 16px',cursor:'pointer',transition:'all .15s'},onMouseEnter:ev=>ev.currentTarget.style.borderColor='rgba(245,166,35,.3)',onMouseLeave:ev=>ev.currentTarget.style.borderColor='var(--border)'},
+            el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},
+              el('div',{style:{flex:1}},
+                el('div',{style:{display:'flex',gap:6,marginBottom:5,flexWrap:'wrap'}},
+                  el('span',{style:{background:c.status==='acknowledged'?'rgba(16,185,129,.1)':'rgba(239,68,68,.1)',color:c.status==='acknowledged'?'var(--green)':'var(--red)',border:'1px solid',borderColor:c.status==='acknowledged'?'rgba(16,185,129,.3)':'rgba(239,68,68,.3)',borderRadius:4,padding:'2px 7px',fontSize:11,fontWeight:700}},c.status==='acknowledged'?'✓ Acknowledged':'⏳ Pending'),
+                  el('span',{style:{background:'var(--surface2)',color:'var(--text2)',border:'1px solid var(--border)',borderRadius:4,padding:'2px 7px',fontSize:11}},c.ca_number),
+                  el('span',{style:{background:'var(--surface2)',color:'var(--text2)',border:'1px solid var(--border)',borderRadius:4,padding:'2px 7px',fontSize:11}},c.violation_type),
+                ),
+                el('div',{style:{fontSize:14,fontWeight:700,marginBottom:3}},c.title),
+                el('div',{style:{fontSize:12,color:'var(--text2)'}},'Employee: '+c.employee_name+' · Issued by '+c.issued_by),
+              ),
+              el('div',{style:{fontSize:11,color:'var(--text3)',flexShrink:0,marginLeft:12}},c.created_at?.slice(0,10)),
+            ),
+          ))
+        ),
+      ),
+
+      // ── DETAIL VIEW ────────────────────────────────────────────────────────
+      sel&&tab==='corrective'&&el('div',null,
+        el('button',{className:'btn b-ghost btn-sm',onClick:()=>setSel(null),style:{marginBottom:14}},'← Back to list'),
+        (()=>{
+          const gen=sel.generated_content?JSON.parse(sel.generated_content):{};
+          const isMe=cu.id===sel.employee_id;
+          const canAck=isMe&&sel.status!=='acknowledged';
+          return el('div',null,
+            el('div',{style:{background:'rgba(239,68,68,.06)',border:'1px solid rgba(239,68,68,.2)',borderRadius:10,padding:'16px 18px',marginBottom:16}},
+              el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:8}},
+                el('div',null,
+                  el('div',{style:{fontSize:11,fontWeight:700,color:'var(--red)',textTransform:'uppercase',letterSpacing:'.8px',marginBottom:4}},sel.ca_number),
+                  el('div',{style:{fontSize:18,fontWeight:800}},sel.title),
+                  el('div',{style:{display:'flex',gap:10,flexWrap:'wrap',marginTop:6}},
+                    el('span',{style:{fontSize:12,color:'var(--text2)'}},'Employee: '+sel.employee_name),
+                    el('span',{style:{fontSize:12,color:'var(--text2)'}},'License: '+sel.license_name),
+                    el('span',{style:{fontSize:12,color:'var(--text2)'}},'Issued: '+sel.created_at?.slice(0,10)+' by '+sel.issued_by),
+                  ),
+                ),
+                el('span',{style:{background:sel.status==='acknowledged'?'rgba(16,185,129,.1)':'rgba(239,68,68,.1)',color:sel.status==='acknowledged'?'var(--green)':'var(--red)',border:'1px solid',borderColor:sel.status==='acknowledged'?'rgba(16,185,129,.3)':'rgba(239,68,68,.3)',borderRadius:6,padding:'5px 12px',fontSize:12,fontWeight:700}},sel.status==='acknowledged'?'✓ Acknowledged '+sel.acknowledged_at?.slice(0,10):'⏳ Pending Acknowledgement'),
+              ),
+            ),
+
+            [['Incident Summary',gen.incident_summary],['Policy/SOP Violated',gen.policy_reference],['Expected Standard',gen.expected_standard]].filter(([,v])=>v).map(([label,val])=>
+              el('div',{key:label,style:{marginBottom:12}},
+                el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:5}},label),
+                el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:'10px 14px',fontSize:13,lineHeight:1.6,color:'var(--text2)'}},val),
+              )
+            ),
+
+            (gen.corrective_steps||[]).length>0&&el('div',{style:{marginBottom:12}},
+              el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:6}},'Corrective Steps Required'),
+              gen.corrective_steps.map((s,i)=>el('div',{key:i,style:{display:'flex',gap:8,marginBottom:6,alignItems:'flex-start'}},
+                el('div',{style:{width:20,height:20,borderRadius:'50%',background:'var(--accent)',color:'#000',display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:800,flexShrink:0,marginTop:1}},i+1),
+                el('div',{style:{fontSize:13,color:'var(--text2)',lineHeight:1.5}},s),
+              )),
+            ),
+
+            [['Consequences if Repeated',gen.consequences_of_recurrence],['Support Offered',gen.support_offered]].filter(([,v])=>v).map(([label,val])=>
+              el('div',{key:label,style:{marginBottom:12}},
+                el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:5}},label),
+                el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:'10px 14px',fontSize:13,lineHeight:1.6,color:'var(--text2)'}},val),
+              )
+            ),
+
+            gen.employee_acknowledgement_text&&el('div',{style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:10,padding:'14px 16px',marginTop:16,marginBottom:16}},
+              el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:6}},'Acknowledgement Statement'),
+              el('div',{style:{fontSize:12,color:'var(--text2)',lineHeight:1.6,fontStyle:'italic'}},gen.employee_acknowledgement_text),
+            ),
+
+            el('div',{style:{display:'flex',gap:8,marginTop:16}},
+              el('button',{className:'btn b-ghost',onClick:()=>exportCorrectiveActionPdf(sel)},'📄 Download PDF'),
+              canAck&&el('button',{
+                onClick:async()=>{
+                  const update={status:'acknowledged',acknowledged_at:new Date().toISOString(),updated_at:new Date().toISOString(),updated_by:cu.name};
+                  try{
+                    await db.update('pf_qms_corrective',sel.id,update);
+                    setCorrective(p=>p.map(c=>c.id===sel.id?{...c,...update}:c));
+                    setSel(p=>({...p,...update}));
+                    // Notify the issuer that it's been acknowledged
+                    const issuer=users.find(u=>u.id===sel.issued_by_id);
+                    if(issuer?.email) sendEmail({to:issuer.email,
+                      subject:`✓ Corrective Action Acknowledged — ${sel.employee_name}`,
+                      html:`<div style="font-family:sans-serif;background:#121212;color:#f0eee8;padding:24px;border-radius:12px;max-width:480px;border:1px solid #333">
+                        <div style="color:#f5a623;font-size:18px;font-weight:800;margin-bottom:12px">⚖️ Hendrix TMS</div>
+                        <p style="font-size:14px">${sel.employee_name} has acknowledged corrective action ${sel.ca_number} ("${sel.title}").</p>
+                      </div>`
+                    });
+                  }catch(e){console.error(e);alert('Failed to save acknowledgement: '+e.message);}
+                },
+                style:{background:'var(--green)',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'10px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer'}
+              },'✓ I Have Read and Understood This Notice'),
+              !canAck&&!isMe&&sel.status==='acknowledged'&&el('div',{style:{fontSize:12,color:'var(--green)',fontWeight:600,display:'flex',alignItems:'center'}},'✓ Acknowledged by employee — record is now locked'),
+            ),
+          );
+        })(),
+      ),
+
+      showCAGenerator&&el(CorrectiveActionGenerator,{
+        cu,users,
+        onClose:()=>setShowCAGenerator(false),
+        onSave:(rec)=>{setCorrective(p=>[rec,...p]);setShowCAGenerator(false);setSel(rec);},
+      }),
     ),
 
     // ── TRAINING MATRIX ───────────────────────────────────────────────────────
@@ -4798,6 +5220,195 @@ function SOPEditModal({sop,cu,onClose,onSave}){
       ),
     )
   );
+}
+
+// ── CORRECTIVE ACTION PDF EXPORT ──────────────────────────────────────────────
+function exportCorrectiveActionPdf(ca){
+  const{jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:'pt',format:'letter'});
+  const W=612,H=792;
+  const margin=50;
+  let y=0;
+
+  const DARK=[18,18,18],RED=[239,68,68],TEXT=[20,20,20],TEXT2=[90,90,90],BORDER=[210,210,215];
+  const gen=ca.generated_content?JSON.parse(ca.generated_content):{};
+
+  function header(){
+    doc.setFillColor(...DARK);
+    doc.rect(0,0,W,70,'F');
+    doc.setFillColor(...RED);
+    doc.rect(0,68,W,2,'F');
+    doc.setTextColor(...RED);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(16);
+    doc.text('HENDRIX',margin,32);
+    doc.setTextColor(230,230,230);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(9);
+    doc.text('Corrective Action Notice',margin,48);
+    doc.setTextColor(...RED);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(10);
+    doc.text(ca.ca_number||'CA-DRAFT',W-margin,32,{align:'right'});
+    doc.setTextColor(230,230,230);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(9);
+    doc.text(ca.status==='acknowledged'?'ACKNOWLEDGED':'PENDING',W-margin,48,{align:'right'});
+    y=95;
+  }
+
+  function footer(pageNum){
+    doc.setDrawColor(...BORDER);
+    doc.line(margin,H-50,W-margin,H-50);
+    doc.setTextColor(...TEXT2);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(7);
+    doc.text('CONFIDENTIAL — '+(ca.license_name||'Hendrix')+' — Employee Personnel Record',margin,H-35);
+    doc.text('Page '+pageNum,W-margin,H-35,{align:'right'});
+  }
+
+  function checkPageBreak(neededHeight){
+    if(y+neededHeight>H-70){
+      doc.addPage();
+      header();
+    }
+  }
+
+  function sectionTitle(txt){
+    checkPageBreak(30);
+    doc.setFillColor(245,246,250);
+    doc.rect(margin,y,W-margin*2,22,'F');
+    doc.setDrawColor(...RED);
+    doc.setLineWidth(2);
+    doc.line(margin,y,margin,y+22);
+    doc.setTextColor(...DARK);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(11);
+    doc.text(txt.toUpperCase(),margin+10,y+15);
+    y+=32;
+  }
+
+  function bodyText(txt,opts={}){
+    if(!txt) return;
+    doc.setTextColor(...(opts.color||TEXT));
+    doc.setFont('helvetica',opts.bold?'bold':'normal');
+    doc.setFontSize(opts.size||9.5);
+    const lines=doc.splitTextToSize(txt,W-margin*2-(opts.indent||0));
+    checkPageBreak(lines.length*13+10);
+    lines.forEach(line=>{
+      doc.text(line,margin+(opts.indent||0),y);
+      y+=13;
+    });
+    y+=opts.spaceAfter!==undefined?opts.spaceAfter:6;
+  }
+
+  function infoRow(label,value){
+    if(!value) return;
+    checkPageBreak(16);
+    doc.setTextColor(...TEXT2);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(8.5);
+    doc.text(label.toUpperCase()+':',margin,y);
+    doc.setTextColor(...TEXT);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(9.5);
+    doc.text(String(value),margin+130,y);
+    y+=15;
+  }
+
+  header();
+
+  doc.setTextColor(...DARK);
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(17);
+  const titleLines=doc.splitTextToSize(ca.title||gen.title||'Corrective Action Notice',W-margin*2);
+  titleLines.forEach(line=>{doc.text(line,margin,y);y+=20;});
+  y+=8;
+
+  doc.setDrawColor(...BORDER);
+  doc.setLineWidth(0.5);
+  doc.line(margin,y,W-margin,y);
+  y+=14;
+  infoRow('CA Number',ca.ca_number);
+  infoRow('Employee',ca.employee_name);
+  infoRow('License / Facility',ca.license_name);
+  infoRow('Violation Type',ca.violation_type);
+  infoRow('Severity',({verbal_warning:'Verbal Warning (Documented)',written_warning:'Written Warning',final_warning:'Final Written Warning',suspension:'Suspension'})[ca.severity]||ca.severity);
+  infoRow('Date Issued',ca.created_at?.slice(0,10));
+  infoRow('Issued By',ca.issued_by);
+  infoRow('Status',ca.status==='acknowledged'?'Acknowledged on '+ca.acknowledged_at?.slice(0,10):'Pending Acknowledgement');
+  y+=4;
+  doc.line(margin,y,W-margin,y);
+  y+=18;
+
+  if(gen.incident_summary){
+    sectionTitle('Incident Summary');
+    bodyText(gen.incident_summary);
+  }
+  if(gen.policy_reference){
+    sectionTitle('Policy / SOP Violated');
+    bodyText(gen.policy_reference);
+  }
+  if(gen.expected_standard){
+    sectionTitle('Expected Standard');
+    bodyText(gen.expected_standard);
+  }
+  if((gen.corrective_steps||[]).length>0){
+    sectionTitle('Corrective Steps Required');
+    gen.corrective_steps.forEach((s,i)=>{
+      checkPageBreak(28);
+      doc.setFillColor(...RED);
+      doc.circle(margin+8,y+2,8,'F');
+      doc.setTextColor(255,255,255);
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(8.5);
+      doc.text(String(i+1),margin+8,y+4.5,{align:'center'});
+      doc.setTextColor(...TEXT);
+      doc.setFont('helvetica','normal');
+      doc.setFontSize(9.5);
+      const lines=doc.splitTextToSize(s,W-margin*2-22);
+      lines.forEach(line=>{doc.text(line,margin+22,y+3);y+=13;});
+      y+=6;
+    });
+    y+=4;
+  }
+  if(gen.consequences_of_recurrence){
+    sectionTitle('Consequences If Repeated');
+    bodyText(gen.consequences_of_recurrence);
+  }
+  if(gen.support_offered){
+    sectionTitle('Support Offered');
+    bodyText(gen.support_offered);
+  }
+
+  checkPageBreak(100);
+  sectionTitle('Employee Acknowledgement');
+  bodyText(gen.employee_acknowledgement_text||'I acknowledge that I have read and understand this Corrective Action Notice.',{size:9});
+  y+=10;
+  doc.setDrawColor(...TEXT2);
+  doc.line(margin,y,margin+200,y);
+  doc.line(margin+260,y,margin+360,y);
+  y+=12;
+  doc.setFontSize(8);
+  doc.setTextColor(...TEXT2);
+  doc.text('Employee Signature',margin,y);
+  doc.text('Date',margin+260,y);
+  if(ca.status==='acknowledged'){
+    y+=20;
+    doc.setFont('helvetica','bold');
+    doc.setTextColor(40,140,80);
+    doc.setFontSize(9);
+    doc.text('✓ Digitally acknowledged via Hendrix TMS on '+(ca.acknowledged_at?.slice(0,10)||''),margin,y);
+  }
+
+  const pageCount=doc.internal.getNumberOfPages();
+  for(let i=1;i<=pageCount;i++){
+    doc.setPage(i);
+    footer(i);
+  }
+
+  const filename=(ca.ca_number||'CA').replace(/[^a-z0-9]/gi,'_')+'_'+(ca.employee_name||'employee').replace(/[^a-z0-9]/gi,'_')+'.pdf';
+  doc.save(filename);
 }
 
 // ── SOP REVISION MODAL ────────────────────────────────────────────────────────
@@ -6668,6 +7279,7 @@ function App(){
         changes:qmsChanges,setChanges:setQmsChanges,
         complaints:qmsComplaints,setComplaints:setQmsComplaints,
         suppliers:qmsSuppliers,setSuppliers:setQmsSuppliers,
+        corrective:qmsCorrective,setCorrective:setQmsCorrective,
       }),
       page==='scores'&&el(Scoreboard,{tasks,cu,users}),
       page==='team'&&isAdmin&&el(Team,{users,setUsers,cu}),
