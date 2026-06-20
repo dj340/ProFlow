@@ -3418,13 +3418,16 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
       // Admins/owners always count as in-scope so they can track and audit every SOP.
       const isUserAdmin=u.role==='admin';
       if(isUserAdmin) return true;
-      if(sop.license_id||sop.license_name){
-        const sopLicId=sop.license_id||LICENSES.find(l=>l.name===sop.license_name)?.id;
+      {
+        const sopLicIds=sop.license_ids&&sop.license_ids.length>0?sop.license_ids:(sop.license_id?[sop.license_id]:(sop.license_name?[LICENSES.find(l=>l.name===sop.license_name)?.id].filter(Boolean):[]));
         const userLicenses=u.licenses||[];
         // If the user record has no licenses assigned yet (not onboarded into the
         // license system), don't silently exclude them — fall back to matching by
         // department only, so existing employees aren't invisible during rollout.
-        if(userLicenses.length>0&&sopLicId&&!userLicenses.includes(sopLicId)) return false;
+        if(sopLicIds.length>0&&userLicenses.length>0){
+          const hasMatch=sopLicIds.some(id=>userLicenses.includes(id));
+          if(!hasMatch) return false;
+        }
       }
       if((sop.visible_to_depts||[]).length>0){
         const userDepts=[...(u.depts||[]),u.dept].filter(Boolean);
@@ -4560,25 +4563,49 @@ function exportSopPdf(sop){
 }
 
 // ── SOP EDIT MODAL (title, license, departments — admin only, any status) ─────
+// ── SOP EDIT MODAL (state, license, departments — any status, admin/canCreate) ─
 function SOPEditModal({sop,cu,onClose,onSave}){
+  const initLic=LICENSES.find(l=>l.id===sop.license_id)||LICENSES.find(l=>l.name===sop.license_name)||null;
   const[ef,setEf]=useState({
     title:sop.title||'',
-    license_id:sop.license_id||(LICENSES.find(l=>l.name===sop.license_name)?.id)||'',
+    state:sop.state||initLic?.state||'Michigan',
+    license_ids:sop.license_id?[sop.license_id]:(initLic?[initLic.id]:[]),
     depts:sop.visible_to_depts||sop.depts||[],
   });
   const[saving,setSaving]=useState(false);
   const[error,setError]=useState('');
 
+  const stateLicenses=LICENSES.filter(l=>l.state===ef.state);
+
+  function toggleLicense(id){
+    setEf(p=>{
+      const cur=new Set(p.license_ids||[]);
+      cur.has(id)?cur.delete(id):cur.add(id);
+      return{...p,license_ids:[...cur]};
+    });
+  }
+  function toggleDept(d){
+    setEf(p=>{
+      const cur=new Set(p.depts||[]);
+      cur.has(d)?cur.delete(d):cur.add(d);
+      return{...p,depts:[...cur]};
+    });
+  }
+
   async function save(){
     if(!ef.title.trim()){setError('Title is required.');return;}
-    if(!ef.license_id){setError('Please select a license.');return;}
+    if((ef.license_ids||[]).length===0){setError('Select at least one license.');return;}
+    if((ef.depts||[]).length===0){setError('Select at least one department.');return;}
     setSaving(true);setError('');
-    const selectedLic=LICENSES.find(l=>l.id===ef.license_id);
+    // Store first license as the primary license_id/license_name (for legacy single-license
+    // logic elsewhere), plus the full list as license_ids for multi-license SOPs.
+    const primaryLic=LICENSES.find(l=>l.id===ef.license_ids[0]);
     const update={
       title:ef.title.trim(),
-      license_id:ef.license_id,
-      license_name:selectedLic?.name||sop.license_name,
-      state:selectedLic?.state||sop.state,
+      state:ef.state,
+      license_id:ef.license_ids[0],
+      license_ids:ef.license_ids,
+      license_name:primaryLic?.name||sop.license_name,
       depts:ef.depts,
       visible_to_depts:ef.depts,
       updated_at:new Date().toISOString(),
@@ -4588,16 +4615,16 @@ function SOPEditModal({sop,cu,onClose,onSave}){
       await db.update('pf_sops',sop.id,update);
       onSave({...sop,...update});
     }catch(e){
-      console.error(e);
+      console.error('SOP edit save failed:',e);
       setError('Save failed: '+e.message);
     }
     setSaving(false);
   }
 
   return el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&onClose()},
-    el('div',{className:'md',style:{width:560}},
+    el('div',{className:'md',style:{width:600,maxHeight:'88vh',overflowY:'auto'}},
       el('div',{className:'mh'},
-        el('div',{className:'mt2'},'Edit SOP — '+sop.title),
+        el('div',{className:'mt2'},'Edit SOP'),
         el('button',{className:'mc',onClick:onClose},'×'),
       ),
       el('div',{className:'mbd'},
@@ -4606,19 +4633,36 @@ function SOPEditModal({sop,cu,onClose,onSave}){
           el('input',{value:ef.title,onChange:ev=>setEf(p=>({...p,title:ev.target.value})),autoFocus:true,
             style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'10px 14px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none'}}),
         ),
+
         el('div',{className:'fg'},
-          el('label',null,'License — who this SOP applies to *'),
-          el('select',{value:ef.license_id,onChange:ev=>setEf(p=>({...p,license_id:ev.target.value})),
-            style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
-            el('option',{value:''},'— Select License —'),
-            LICENSES.map(lic=>el('option',{key:lic.id,value:lic.id},lic.name+' ('+lic.state+')'))
+          el('label',null,'State *'),
+          el('div',{style:{display:'flex',gap:8}},
+            ['Michigan','Missouri'].map(s=>el('button',{key:s,
+              onClick:()=>setEf(p=>({...p,state:s,license_ids:[]})), // reset licenses when state changes
+              style:{flex:1,padding:'9px',borderRadius:'var(--rs)',border:'2px solid',borderColor:ef.state===s?'var(--accent)':'var(--border)',background:ef.state===s?'rgba(245,166,35,.1)':'transparent',color:ef.state===s?'var(--accent)':'var(--text2)',fontFamily:'inherit',fontWeight:600,fontSize:13,cursor:'pointer',transition:'all .15s'}
+            },s))
           ),
         ),
+
         el('div',{className:'fg'},
-          el('label',null,'Department(s) — who must see & acknowledge it'),
+          el('label',null,'License(s) — select all that apply *'),
+          el('div',{style:{display:'flex',flexDirection:'column',gap:6}},
+            stateLicenses.map(lic=>el('label',{key:lic.id,style:{display:'flex',alignItems:'center',gap:8,padding:'8px 12px',background:'var(--surface2)',border:'1px solid',borderColor:(ef.license_ids||[]).includes(lic.id)?'var(--accent)':'var(--border)',borderRadius:8,cursor:'pointer',transition:'all .15s'}},
+              el('input',{type:'checkbox',checked:(ef.license_ids||[]).includes(lic.id),onChange:()=>toggleLicense(lic.id),style:{accentColor:'var(--accent)'}}),
+              el('div',null,
+                el('div',{style:{fontSize:12,fontWeight:600,color:(ef.license_ids||[]).includes(lic.id)?'var(--accent)':'var(--text)'}},lic.name),
+                el('div',{style:{fontSize:11,color:'var(--text3)'}},lic.license_type),
+              )
+            )),
+          ),
+          stateLicenses.length===0&&el('div',{style:{fontSize:12,color:'var(--text3)'}},'No licenses configured for '+ef.state),
+        ),
+
+        el('div',{className:'fg'},
+          el('label',null,'Department(s) — who must see & acknowledge it *'),
           el('div',{style:{display:'flex',flexWrap:'wrap',gap:5}},
             Object.keys(DEPT_TREE).map(gm=>el('div',{key:gm,
-              onClick:()=>setEf(p=>{const cur=new Set(p.depts||[]);cur.has(gm)?cur.delete(gm):cur.add(gm);return{...p,depts:[...cur]};}),
+              onClick:()=>toggleDept(gm),
               style:{padding:'5px 12px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:600,cursor:'pointer',userSelect:'none',transition:'all .15s',
                 background:(ef.depts||[]).includes(gm)?'var(--accent)':'var(--surface2)',
                 color:(ef.depts||[]).includes(gm)?'#0a0f1e':'var(--text2)',
@@ -4626,9 +4670,15 @@ function SOPEditModal({sop,cu,onClose,onSave}){
               }
             },gm))
           ),
-          (ef.depts||[]).length===0&&el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:4}},'No departments selected — SOP will only be visible to admins'),
+          (ef.depts||[]).length===0&&el('div',{style:{fontSize:11,color:'var(--red)',marginTop:4}},'Select at least one department'),
         ),
-        error&&el('div',{style:{background:'rgba(239,68,68,.1)',border:'1px solid rgba(239,68,68,.3)',borderRadius:8,padding:'10px 14px',fontSize:13,color:'var(--red)',marginBottom:8}},error),
+
+        el('div',{style:{background:'rgba(139,92,246,.06)',border:'1px solid rgba(139,92,246,.2)',borderRadius:8,padding:'10px 14px',fontSize:11,color:'var(--text2)'}},
+          '🔒 Only employees assigned to ',el('strong',{style:{color:'#c4b5fd'}},ef.state),' + the selected license(s) + the selected department(s) will see and be required to acknowledge this SOP.'
+        ),
+
+        error&&el('div',{style:{background:'rgba(239,68,68,.1)',border:'1px solid rgba(239,68,68,.3)',borderRadius:8,padding:'10px 14px',fontSize:13,color:'var(--red)',marginTop:10}},error),
+
         el('div',{className:'mf'},
           el('button',{className:'btn b-ghost',onClick:onClose},'Cancel'),
           el('button',{className:'btn b-blue',onClick:save,disabled:saving},saving?'Saving...':'Save Changes'),
@@ -5371,9 +5421,10 @@ function SOPs({sops,setSops,cu,users}){
     // not been assigned any license yet, fall through to the department check below
     // instead of hard-blocking them — prevents new/un-migrated accounts from losing
     // all SOP visibility during rollout.
-    if((s.license_id||s.license_name)&&(cu.licenses||[]).length>0){
-      const sopLicId=s.license_id||LICENSES.find(l=>l.name===s.license_name)?.id;
-      if(!sopLicId||!cu.licenses.includes(sopLicId)) return false;
+    const sopLicIds=s.license_ids&&s.license_ids.length>0?s.license_ids:(s.license_id?[s.license_id]:(s.license_name?[LICENSES.find(l=>l.name===s.license_name)?.id].filter(Boolean):[]));
+    if(sopLicIds.length>0&&(cu.licenses||[]).length>0){
+      const hasMatch=sopLicIds.some(id=>cu.licenses.includes(id));
+      if(!hasMatch) return false;
     }
     // Dept check: if SOP has visible_to_depts, user MUST be in one of them.
     if((s.visible_to_depts||[]).length>0){
@@ -5393,13 +5444,16 @@ function SOPs({sops,setSops,cu,users}){
       // Admins/owners always count as in-scope so they can track and audit every SOP.
       const isUserAdmin=u.role==='admin';
       if(isUserAdmin) return true;
-      if(sop.license_id||sop.license_name){
-        const sopLicId=sop.license_id||LICENSES.find(l=>l.name===sop.license_name)?.id;
+      {
+        const sopLicIds=sop.license_ids&&sop.license_ids.length>0?sop.license_ids:(sop.license_id?[sop.license_id]:(sop.license_name?[LICENSES.find(l=>l.name===sop.license_name)?.id].filter(Boolean):[]));
         const userLicenses=u.licenses||[];
         // If the user record has no licenses assigned yet (not onboarded into the
         // license system), don't silently exclude them — fall back to matching by
         // department only, so existing employees aren't invisible during rollout.
-        if(userLicenses.length>0&&sopLicId&&!userLicenses.includes(sopLicId)) return false;
+        if(sopLicIds.length>0&&userLicenses.length>0){
+          const hasMatch=sopLicIds.some(id=>userLicenses.includes(id));
+          if(!hasMatch) return false;
+        }
       }
       if((sop.visible_to_depts||[]).length>0){
         const userDepts=[...(u.depts||[]),u.dept].filter(Boolean);
@@ -5894,7 +5948,7 @@ function SOPs({sops,setSops,cu,users}){
         el('div',{className:'mf',style:{justifyContent:'space-between'}},
           el('div',{style:{display:'flex',gap:8}},
             el('button',{className:'btn b-ghost',onClick:()=>exportSopPdf(sel)},'📄 Download PDF'),
-            isAdmin&&el('button',{className:'btn b-ghost',onClick:()=>setShowEditSop(true)},'✏️ Edit'),
+            (isAdmin||canCreate)&&el('button',{className:'btn b-ghost',onClick:()=>{console.log('Edit clicked, sel=',sel);setShowEditSop(true);}},'✏️ Edit'),
             canCreate&&sel.status==='draft'&&el('button',{className:'btn b-green',onClick:()=>publishSOP(sel)},'📢 Publish & Notify'),
             isAdmin&&sel.status==='published'&&el('button',{
               onClick:()=>setShowRevise(true),
