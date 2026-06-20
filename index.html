@@ -4721,15 +4721,61 @@ function SOPEditModal({sop,cu,onClose,onSave}){
 
         el('div',{className:'fg'},
           el('label',null,'Department(s) — who must see & acknowledge it *'),
-          el('div',{style:{display:'flex',flexWrap:'wrap',gap:5}},
-            Object.keys(DEPT_TREE).map(gm=>el('div',{key:gm,
-              onClick:()=>toggleDept(gm),
-              style:{padding:'5px 12px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:600,cursor:'pointer',userSelect:'none',transition:'all .15s',
-                background:(ef.depts||[]).includes(gm)?'var(--accent)':'var(--surface2)',
-                color:(ef.depts||[]).includes(gm)?'#0a0f1e':'var(--text2)',
-                borderColor:(ef.depts||[]).includes(gm)?'var(--accent)':'var(--border)',
-              }
-            },gm))
+          el('div',{style:{fontSize:11,color:'var(--text3)',marginBottom:8,lineHeight:1.5}},
+            'Select any combination of top-level departments, mid-level departments, or specific micro-departments. Selecting a parent does not require selecting its children — only the items you check apply.'
+          ),
+          el('div',{style:{display:'flex',flexDirection:'column',gap:8,maxHeight:320,overflowY:'auto',paddingRight:4}},
+            Object.entries(DEPT_TREE).map(([gm,mothers])=>{
+              const gmSelected=(ef.depts||[]).includes(gm);
+              return el('div',{key:gm,style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:10,padding:10}},
+                // Grandmother (top-level) row
+                el('div',{
+                  onClick:()=>toggleDept(gm),
+                  style:{display:'flex',alignItems:'center',gap:8,cursor:'pointer',marginBottom:Object.keys(mothers).length>0?8:0,userSelect:'none'},
+                },
+                  el('div',{style:{width:16,height:16,borderRadius:4,border:'2px solid',borderColor:gmSelected?'var(--accent)':'var(--text3)',background:gmSelected?'var(--accent)':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}},
+                    gmSelected&&el('span',{style:{color:'#0a0f1e',fontSize:9,fontWeight:900}},'✓')
+                  ),
+                  el('span',{style:{fontSize:12,fontWeight:700,color:gmSelected?'var(--accent)':'var(--text)'}},gm),
+                  el('span',{style:{fontSize:10,color:'var(--text3)'}},'(top-level)'),
+                ),
+                // Mother (mid-level) + children (micro) rows
+                Object.keys(mothers).length>0&&el('div',{style:{paddingLeft:14,display:'flex',flexDirection:'column',gap:6}},
+                  Object.entries(mothers).map(([mother,children])=>{
+                    const mSelected=(ef.depts||[]).includes(mother);
+                    return el('div',{key:mother},
+                      el('div',{
+                        onClick:()=>toggleDept(mother),
+                        style:{display:'flex',alignItems:'center',gap:8,cursor:'pointer',marginBottom:children.length>0?5:0,userSelect:'none'},
+                      },
+                        el('div',{style:{width:14,height:14,borderRadius:4,border:'2px solid',borderColor:mSelected?'var(--blue)':'var(--text3)',background:mSelected?'var(--blue)':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}},
+                          mSelected&&el('span',{style:{color:'#fff',fontSize:8,fontWeight:900}},'✓')
+                        ),
+                        el('span',{style:{fontSize:12,fontWeight:600,color:mSelected?'#93c5fd':'var(--text2)'}},mother),
+                        el('span',{style:{fontSize:9,color:'var(--text3)'}},'(mid-level)'),
+                      ),
+                      children.length>0&&el('div',{style:{paddingLeft:22,display:'flex',flexWrap:'wrap',gap:4}},
+                        children.map(child=>{
+                          const cSelected=(ef.depts||[]).includes(child);
+                          return el('div',{key:child,
+                            onClick:()=>toggleDept(child),
+                            style:{padding:'3px 9px',borderRadius:14,border:'1px solid',fontSize:10.5,fontWeight:500,cursor:'pointer',userSelect:'none',transition:'all .15s',
+                              background:cSelected?'var(--green)':'var(--surface)',
+                              color:cSelected?'#fff':'var(--text3)',
+                              borderColor:cSelected?'var(--green)':'var(--border)',
+                            }
+                          },(cSelected?'✓ ':'')+child);
+                        })
+                      ),
+                    );
+                  })
+                ),
+              );
+            })
+          ),
+          (ef.depts||[]).length>0&&el('div',{style:{marginTop:8,display:'flex',flexWrap:'wrap',gap:4}},
+            el('span',{style:{fontSize:10,color:'var(--text3)',marginRight:4}},'Selected:'),
+            (ef.depts||[]).map(d=>el('span',{key:d,style:{background:'rgba(245,166,35,.12)',color:'var(--accent)',border:'1px solid rgba(245,166,35,.3)',borderRadius:4,padding:'1px 7px',fontSize:10,fontWeight:600}},d))
           ),
           (ef.depts||[]).length===0&&el('div',{style:{fontSize:11,color:'var(--red)',marginTop:4}},'Select at least one department'),
         ),
