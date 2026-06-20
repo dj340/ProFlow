@@ -40,7 +40,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(245,166,35,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(245,166,35,.025) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
 .auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;z-index:1;}
 .auth-box{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:44px 40px;width:440px;max-width:95vw;box-shadow:var(--glow),inset 0 1px 0 rgba(255,255,255,.04);}
-.logo{font-size:26px;font-weight:800;color:var(--accent);letter-spacing:-1px;}
+.logo{display:flex;align-items:center;}
 .logo span{color:var(--text2);font-weight:400;}
 .auth-sub{color:var(--text2);font-size:13px;margin-top:3px;margin-bottom:28px;letter-spacing:.3px;}
 .auth-tabs{display:flex;gap:3px;background:var(--bg);border-radius:var(--rs);padding:3px;margin-bottom:24px;border:1px solid var(--border);}
@@ -60,7 +60,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .app{display:flex;min-height:100vh;position:relative;z-index:1;}
 .sb{width:248px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:20px 14px;position:fixed;top:0;left:0;bottom:0;z-index:100;overflow-y:auto;}
 .sb::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(245,166,35,.3),transparent);}
-.sb-logo{font-size:20px;font-weight:800;color:var(--accent);letter-spacing:-1px;padding:4px 8px;margin-bottom:28px;}
+.sb-logo{display:flex;align-items:center;padding:4px 8px;margin-bottom:28px;}
 .sb-logo span{color:var(--text2);font-weight:400;font-size:16px;}
 .sb-label{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;padding:0 8px;margin-bottom:6px;}
 .nav{display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:var(--rs);cursor:pointer;font-size:13px;font-weight:500;color:var(--text2);border:none;background:none;width:100%;text-align:left;position:relative;transition:all .15s;}
@@ -724,6 +724,25 @@ function getWorkflowStepObj(task){
 
 function avatarColor(name){return`hsl(${(name.charCodeAt(0)*47)%360},50%,35%)`;}
 
+// ── HENDRIX OMS LOGO MARK ──────────────────────────────────────────────────────
+// Hexagonal badge with double-ring border and a bold geometric H monogram —
+// black field, gold ink. Used on login, sidebar, and PWA install prompts.
+function LogoMark({size=32}){
+  return el('svg',{width:size,height:size,viewBox:'0 0 64 64',xmlns:'http://www.w3.org/2000/svg',style:{flexShrink:0}},
+    el('polygon',{points:'32,2 58,17 58,47 32,62 6,47 6,17',fill:'#000000',stroke:'#f5a623',strokeWidth:'1.5'}),
+    el('polygon',{points:'32,8 52,19.5 52,44.5 32,56 12,44.5 12,19.5',fill:'none',stroke:'#f5a623',strokeWidth:'0.75',opacity:'0.45'}),
+    el('path',{d:'M21 18 L21 46 M21 32 L43 32 M43 18 L43 46',stroke:'#f5a623',strokeWidth:'5.5',strokeLinecap:'round',fill:'none'}),
+  );
+}
+function HendrixLogo({size=32,labelSize=20,className=''}){
+  return el('div',{className,style:{display:'flex',alignItems:'center',gap:size*0.32}},
+    el(LogoMark,{size}),
+    el('div',{style:{fontSize:labelSize,fontWeight:800,letterSpacing:'-0.5px',color:'var(--accent)',whiteSpace:'nowrap'}},
+      'HENDRIX',el('span',{style:{color:'var(--text2)',fontWeight:400}},' OMS')
+    ),
+  );
+}
+
 // Push notifications
 async function sendLocalNotification(title,body){
   if(!('Notification' in window))return;
@@ -778,7 +797,7 @@ function Auth({onLogin}){
   }
 
   if(pend)return el('div',{className:'auth-wrap'},el('div',{className:'auth-box'},
-    el('div',{className:'logo'},'Hendrix',el('span',null,' OMS')),
+    el(HendrixLogo,{size:36,labelSize:24,className:'logo'}),
     el('div',{className:'pending-box',style:{marginTop:16}},
       el('div',{style:{fontSize:32,marginBottom:10}},'⏳'),
       el('div',{style:{fontWeight:700,fontSize:15,marginBottom:8}},'Account Pending Approval'),
@@ -788,7 +807,7 @@ function Auth({onLogin}){
   ));
 
   return el('div',{className:'auth-wrap'},el('div',{className:'auth-box'},
-    el('div',{className:'logo'},'Hendrix',el('span',null,' OMS')),
+    el(HendrixLogo,{size:36,labelSize:24,className:'logo'}),
     el('div',{className:'auth-sub'},'Task Management System'),
     el('div',{className:'auth-tabs'},
       el('button',{className:`atab ${tab==='login'?'on':''}`,onClick:()=>{setTab('login');setMsg('');}}, 'Sign In'),
@@ -905,7 +924,7 @@ function SetupScreen({onDone}){
   function copy(){navigator.clipboard.writeText(SETUP_SQL.trim()).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);});}
   return el('div',{className:'auth-wrap'},
     el('div',{className:'auth-box',style:{width:540}},
-      el('div',{className:'logo'},'Hendrix',el('span',null,' OMS')),
+      el(HendrixLogo,{size:36,labelSize:24,className:'logo'}),
       el('div',{className:'auth-sub'},'One-time setup required'),
       el('div',{style:{background:'var(--bg)',border:'1px solid var(--border)',borderRadius:8,padding:12,marginBottom:14,maxHeight:180,overflowY:'auto'}},
         el('pre',{style:{fontSize:11,color:'var(--text2)',whiteSpace:'pre-wrap',fontFamily:'DM Mono, monospace',lineHeight:1.5}},SETUP_SQL.trim())
@@ -7767,7 +7786,7 @@ function App(){
 
   return el('div',{className:'app'},
     el('div',{className:'sb'},
-      el('div',{className:'sb-logo'},'Hendrix',el('span',null,' OMS')),
+      el(HendrixLogo,{size:28,labelSize:18,className:'sb-logo'}),
       el('div',{style:{marginBottom:16}},
         el('div',{className:'sb-label',style:{marginBottom:8}},'Location'),
         LOCS.filter(l=>isAdmin||l===cu.loc||cu.loc==='Nationwide').map(l=>
