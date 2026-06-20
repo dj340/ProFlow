@@ -3436,12 +3436,16 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
   // Direct reports: users whose `managers` array includes this person's id (up to 3 managers per user).
   const directReports=users.filter(u=>(u.managers||[]).includes(cu.id));
   // Training Matrix scope: Admin sees everyone; Managers/Supervisors see only their direct reports.
-  const trainingMatrixScope=isAdmin?users.filter(u=>u.approved):directReports.filter(u=>u.approved);
+  const trainingMatrixScope=(isAdmin?users.filter(u=>u.approved):directReports.filter(u=>u.approved))
+    .filter(u=>licFilter==='all'||(u.licenses||[]).includes(licFilter));
   const today=new Date().toISOString().slice(0,10);
 
   // Dashboard stats
   // Filter by license
-  const filterByLic=(arr)=>licFilter==='all'?arr:arr.filter(r=>r.license_id===licFilter);
+  const filterByLic=(arr)=>licFilter==='all'?arr:arr.filter(r=>{
+    if(r.license_ids&&r.license_ids.length>0) return r.license_ids.includes(licFilter);
+    return r.license_id===licFilter;
+  });
   const openDeviations=filterByLic(deviations).filter(d=>d.status==='open');
   const openCAPAs=capas.filter(c=>c.status==='open'||c.status==='in_progress');
   const overdueCAPAs=capas.filter(c=>c.due_date&&c.due_date<today&&c.status!=='closed');
