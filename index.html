@@ -7269,7 +7269,15 @@ function Calendar({events,setEvents,tasks,cu,users,locFilter,meetingNotes,setMee
     });
     return evts.filter(e=>{
       if(e._task) return true;
-      if(e.personal&&e.created_by_id!==cu.id) return false;
+      // Creator always sees their own event. Admin sees everything for oversight.
+      if(e.created_by_id===cu.id||cu.role==='admin') return true;
+      // Invitees only see it once they've accepted — pending or rejected invites stay hidden.
+      const myStatus=(e.attendee_status||{})[cu.id];
+      if(myStatus) return myStatus==='accepted';
+      // No attendee_status entry and not the creator means this is someone else's personal item.
+      return false;
+    }).filter(e=>{
+      if(e._task) return true;
       if(locFilter&&locFilter!=='Nationwide'&&e.loc&&e.loc!=='Nationwide'&&e.loc!==locFilter) return false;
       return true;
     });
@@ -7296,12 +7304,16 @@ function Calendar({events,setEvents,tasks,cu,users,locFilter,meetingNotes,setMee
     if(!f.title||!f.date)return;
     setSaving(true);
     const meetLink=f.type==='meeting'?getMeetLink():f.meet_link||'';
-    const ev={id:'ev-'+Date.now(),...f,meet_link:meetLink,created_by:cu.name,created_by_id:cu.id,created_at:new Date().toISOString(),updated_at:new Date().toISOString()};
+    // Every invited attendee starts as 'pending' until they accept or reject — the event
+    // only appears on their calendar once they accept. The creator always sees their own event.
+    const attendee_status={};
+    f.attendees.filter(a=>a.id!==cu.id).forEach(a=>{attendee_status[a.id]='pending';});
+    const ev={id:'ev-'+Date.now(),...f,meet_link:meetLink,attendee_status,created_by:cu.name,created_by_id:cu.id,created_at:new Date().toISOString(),updated_at:new Date().toISOString()};
     try{await db.insert('pf_events',ev);}catch(e){console.error(e);}
     setEvents(p=>[...p,ev]);
-    if(f.attendees.length>0&&f.type==='meeting'){
+    if(f.attendees.length>0){
       f.attendees.filter(a=>a.email&&a.id!==cu.id).forEach(a=>{
-        sendEmail({to:a.email,subject:`📅 Meeting invite: "${f.title}"`,
+        sendEmail({to:a.email,subject:`📅 Invite: "${f.title}"`,
           html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
             <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:4px">📅 Hendrix OMS</div>
             <div style="font-size:18px;font-weight:700;margin-bottom:16px">${f.title}</div>
@@ -7310,7 +7322,8 @@ function Calendar({events,setEvents,tasks,cu,users,locFilter,meetingNotes,setMee
               ${f.location?`<div style="margin-bottom:8px">📍 ${f.location}</div>`:''}
               ${meetLink?`<div>🎥 <a href="${meetLink}" style="color:#f5a623">${meetLink}</a></div>`:''}
             </div>
-            ${meetLink?`<a href="${meetLink}" style="background:#f5a623;color:#000000;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:700">🎥 Join Meeting</a>`:''}
+            <p style="font-size:13px;color:#7b8db8">${cu.name} invited you. Log in to Hendrix OMS to accept or decline.</p>
+            <a href="${APP_URL}" style="display:inline-block;background:#f5a623;color:#000000;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:700;margin-top:8px">Review Invite →</a>
           </div>`
         });
       });
@@ -7524,16 +7537,40 @@ function Calendar({events,setEvents,tasks,cu,users,locFilter,meetingNotes,setMee
           (sel.attendees||[]).length>0&&el('div',{style:{marginBottom:12}},
             el('div',{style:{fontSize:11,color:'var(--text3)',marginBottom:8,fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px'}},'Attendees ('+sel.attendees.length+')'),
             el('div',{style:{display:'flex',flexDirection:'column',gap:6}},
-              (sel.attendees||[]).map(a=>el('div',{key:a.id,style:{display:'flex',alignItems:'center',gap:8}},
-                el('div',{className:'avatar',style:{background:`hsl(${(a.name.charCodeAt(0)*47)%360},50%,35%)`}},a.name.charAt(0).toUpperCase()),
-                el('span',{style:{fontSize:13}},a.name),
-              ))
+              (sel.attendees||[]).map(a=>{
+                const status=(sel.attendee_status||{})[a.id];
+                return el('div',{key:a.id,style:{display:'flex',alignItems:'center',gap:8,justifyContent:'space-between'}},
+                  el('div',{style:{display:'flex',alignItems:'center',gap:8}},
+                    el('div',{className:'avatar',style:{background:`hsl(${(a.name.charCodeAt(0)*47)%360},50%,35%)`}},a.name.charAt(0).toUpperCase()),
+                    el('span',{style:{fontSize:13}},a.name),
+                  ),
+                  (sel.created_by_id===cu.id||cu.role==='admin')&&status&&el('span',{style:{fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:4,background:status==='accepted'?'rgba(16,185,129,.1)':status==='rejected'?'rgba(239,68,68,.1)':'rgba(245,166,35,.1)',color:status==='accepted'?'var(--green)':status==='rejected'?'var(--red)':'var(--accent)'}},status),
+                );
+              })
             ),
           ),
         ),
         el('div',{className:'mf',style:{justifyContent:'space-between'}},
           el('div',null,!sel._task&&(sel.created_by_id===cu.id||cu.role==='admin')&&el('button',{className:'btn b-red',onClick:()=>deleteEvent(sel.id)},'Delete')),
           el('div',{style:{display:'flex',gap:8,flexWrap:'wrap'}},
+            !sel._task&&sel.created_by_id!==cu.id&&(sel.attendee_status||{})[cu.id]==='pending'&&el('button',{
+              onClick:async()=>{
+                const update={attendee_status:{...(sel.attendee_status||{}),[cu.id]:'rejected'},updated_at:new Date().toISOString()};
+                try{await db.update('pf_events',sel.id,update);}catch(e){console.error(e);}
+                setEvents(p=>p.map(e=>e.id===sel.id?{...e,...update}:e));
+                setSel(null);
+              },
+              className:'btn b-ghost',
+            },'Decline'),
+            !sel._task&&sel.created_by_id!==cu.id&&(sel.attendee_status||{})[cu.id]==='pending'&&el('button',{
+              onClick:async()=>{
+                const update={attendee_status:{...(sel.attendee_status||{}),[cu.id]:'accepted'},updated_at:new Date().toISOString()};
+                try{await db.update('pf_events',sel.id,update);}catch(e){console.error(e);}
+                setEvents(p=>p.map(e=>e.id===sel.id?{...e,...update}:e));
+                setSel(null);
+              },
+              style:{background:'var(--green)',color:'#fff',border:'none',borderRadius:8,padding:'9px 16px',fontWeight:700,fontSize:13,cursor:'pointer',fontFamily:'inherit'},
+            },'Accept'),
             sel.meet_link&&!sel._task&&el('button',{onClick:()=>{setSel(null);onJoinCall(sel.meet_link.split('/').pop(),sel.title,sel.meet_link);},style:{background:'#10b981',color:'#fff',padding:'9px 16px',borderRadius:8,border:'none',fontWeight:700,fontSize:13,display:'inline-flex',alignItems:'center',gap:6,cursor:'pointer',fontFamily:'inherit'}},'🎥 Join'),
             !sel._task&&(sel.type==='meeting'||(sel.attendees||[]).length>0)&&el('button',{onClick:()=>{setSel(null);setNotesEvent(sel);},style:{background:'rgba(245,166,35,.1)',color:'var(--accent)',border:'1px solid rgba(245,166,35,.3)',padding:'9px 16px',borderRadius:8,fontWeight:700,fontSize:13,cursor:'pointer',fontFamily:'inherit',display:'inline-flex',alignItems:'center',gap:6}},'🤖 AI Notes'+(meetingNotes?.find(n=>n.event_id===sel.id)?' ✓':'')),
             el('button',{className:'btn b-ghost',onClick:()=>setSel(null)},'Close'),
@@ -7594,6 +7631,7 @@ function App(){
   const[dbReady,setDbReady]=useState(null);
   const[page,setPage]=useState('board');
   const[holdAlert,setHoldAlert]=useState(null);
+  const[inviteAlert,setInviteAlert]=useState(null);
   const[activeCall,setActiveCall]=useState(null);
   const[locFilter,setLocFilter]=useState(()=>{try{const s=localStorage.getItem('pf_session');const u=s?JSON.parse(s):null;return u?.loc||'Nationwide';}catch{return 'Nationwide';}});
 
@@ -7688,6 +7726,18 @@ function App(){
       if(myHeld.length>0) setHoldAlert(myHeld[0]);
     }).catch(()=>{});
   },[cu,dbReady]);
+
+  // Detect pending calendar/meeting invites for this user and surface a one-time popup,
+  // same pattern as the on-hold task alert.
+  useEffect(()=>{
+    if(!cu||!events||events.length===0) return;
+    const myPending=events.filter(e=>
+      e.created_by_id!==cu.id&&
+      (e.attendee_status||{})[cu.id]==='pending'&&
+      !sessionStorage.getItem('invite-dismissed-'+e.id)
+    );
+    if(myPending.length>0) setInviteAlert(myPending[0]);
+  },[events,cu]);
 
   if(dbReady===null) return el('div',{className:'loading'},el('div',{className:'spinner'}),el('div',null,'Connecting...'));
   if(dbReady===false) return el(SetupScreen,{onDone:()=>setDbReady(true)});
@@ -7804,6 +7854,38 @@ function App(){
         holdAlert.hold_reason&&el('div',{style:{fontSize:14,opacity:.9,marginBottom:16,lineHeight:1.5}},'"'+holdAlert.hold_reason+'"'),
         el('div',{style:{fontSize:13,opacity:.8,marginBottom:20}},'Placed on hold by '+holdAlert.hold_by),
         el('button',{onClick:()=>{sessionStorage.setItem('hold-dismissed-'+holdAlert.id,'1');setHoldAlert(null);},style:{background:'rgba(255,255,255,.2)',border:'2px solid rgba(255,255,255,.5)',borderRadius:10,padding:'10px 28px',color:'#fff',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer'}},'I Understand'),
+      )
+    ),
+    inviteAlert&&el('div',{className:'on-hold-alert',style:{background:'rgba(0,0,0,.85)'}},
+      el('div',{className:'on-hold-banner',style:{background:'linear-gradient(135deg,#1a2d4f,#0f1e38)'}},
+        el('div',{style:{fontSize:40,marginBottom:12}},'📅'),
+        el('div',{style:{fontSize:22,fontWeight:800,marginBottom:8,letterSpacing:'-.5px'}},"YOU'RE INVITED"),
+        el('div',{style:{fontSize:16,fontWeight:700,marginBottom:6}},inviteAlert.title),
+        el('div',{style:{fontSize:13,opacity:.85,marginBottom:4}},inviteAlert.date+(inviteAlert.start_time?' at '+inviteAlert.start_time:'')),
+        inviteAlert.location&&el('div',{style:{fontSize:13,opacity:.85,marginBottom:12}},'📍 '+inviteAlert.location),
+        el('div',{style:{fontSize:13,opacity:.8,marginBottom:20}},'Invited by '+inviteAlert.created_by),
+        el('div',{style:{display:'flex',gap:10,justifyContent:'center'}},
+          el('button',{
+            onClick:async()=>{
+              const update={attendee_status:{...(inviteAlert.attendee_status||{}),[cu.id]:'rejected'},updated_at:new Date().toISOString()};
+              try{await db.update('pf_events',inviteAlert.id,update);}catch(e){console.error(e);}
+              setEvents(p=>p.map(e=>e.id===inviteAlert.id?{...e,...update}:e));
+              sessionStorage.setItem('invite-dismissed-'+inviteAlert.id,'1');
+              setInviteAlert(null);
+            },
+            style:{background:'rgba(239,68,68,.2)',border:'2px solid rgba(239,68,68,.5)',borderRadius:10,padding:'10px 24px',color:'#fff',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer'}
+          },'Decline'),
+          el('button',{
+            onClick:async()=>{
+              const update={attendee_status:{...(inviteAlert.attendee_status||{}),[cu.id]:'accepted'},updated_at:new Date().toISOString()};
+              try{await db.update('pf_events',inviteAlert.id,update);}catch(e){console.error(e);}
+              setEvents(p=>p.map(e=>e.id===inviteAlert.id?{...e,...update}:e));
+              sessionStorage.setItem('invite-dismissed-'+inviteAlert.id,'1');
+              setInviteAlert(null);
+            },
+            style:{background:'rgba(16,185,129,.25)',border:'2px solid rgba(16,185,129,.6)',borderRadius:10,padding:'10px 24px',color:'#fff',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer'}
+          },'Accept'),
+        ),
       )
     ),
     el('div',{className:'mobile-nav'},
