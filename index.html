@@ -16,12 +16,12 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 :root{
-  --bg:#050c1a;
-  --surface:#0a1628;
-  --surface2:#0f1e38;
-  --surface3:#162440;
-  --border:#1a2d4f;
-  --border2:#243a60;
+  --bg:#121212;
+  --surface:#181818;
+  --surface2:#202020;
+  --surface3:#292929;
+  --border:#333333;
+  --border2:#424242;
   --accent:#f5a623;
   --accent2:#ffbf4d;
   --accent-dim:rgba(245,166,35,.12);
@@ -29,15 +29,15 @@
   --red:#ef4444;
   --blue:#3b82f6;
   --purple:#8b5cf6;
-  --text:#eef2ff;
-  --text2:#7b92c8;
-  --text3:#3a4f7a;
+  --text:#f0eee8;
+  --text2:#9d9a92;
+  --text3:#54514a;
   --r:14px;--rs:10px;
-  --glow:0 0 40px rgba(245,166,35,.06);
+  --glow:0 0 40px rgba(245,166,35,.08);
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
-body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(245,166,35,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(245,166,35,.02) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(245,166,35,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(245,166,35,.025) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
 .auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;z-index:1;}
 .auth-box{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:44px 40px;width:440px;max-width:95vw;box-shadow:var(--glow),inset 0 1px 0 rgba(255,255,255,.04);}
 .logo{font-size:26px;font-weight:800;color:var(--accent);letter-spacing:-1px;}
@@ -52,7 +52,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(245,166,35,.1);}
 .fg select option{background:var(--surface);}
 .fg textarea{resize:vertical;min-height:80px;}
-.btn-primary{width:100%;background:var(--accent);color:#0a0f1e;border:none;border-radius:var(--rs);padding:12px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px;transition:all .15s;letter-spacing:.3px;}
+.btn-primary{width:100%;background:var(--accent);color:#000000;border:none;border-radius:var(--rs);padding:12px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px;transition:all .15s;letter-spacing:.3px;}
 .btn-primary:hover{background:var(--accent2);transform:translateY(-1px);}
 .btn-primary:active{transform:translateY(0);}
 .auth-note{font-size:11px;color:var(--text3);text-align:center;margin-top:12px;}
@@ -74,7 +74,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .sb-out:hover{color:var(--red);}
 .main{margin-left:248px;flex:1;padding:28px 32px;max-width:1400px;}
 .btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:var(--rs);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .15s;}
-.b-blue{background:var(--accent);color:#0a0f1e;}.b-blue:hover{background:var(--accent2);transform:translateY(-1px);}
+.b-blue{background:var(--accent);color:#000000;}.b-blue:hover{background:var(--accent2);transform:translateY(-1px);}
 .b-ghost{background:transparent;color:var(--text2);border:1px solid var(--border);}.b-ghost:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim);}
 .b-red{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.2);}.b-red:hover{background:rgba(239,68,68,.15);}
 .b-green{background:rgba(16,185,129,.1);color:var(--green);border:1px solid rgba(16,185,129,.2);}
@@ -103,7 +103,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .avatar{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;border:2px solid var(--surface2);flex-shrink:0;}
 .pipeline{display:flex;gap:4px;margin-bottom:18px;}
 .pipe-btn{flex:1;padding:8px 4px;border-radius:9px;border:1px solid var(--border);background:transparent;color:var(--text3);cursor:pointer;font-size:11px;font-weight:700;transition:all .15s;font-family:inherit;text-transform:uppercase;letter-spacing:.5px;}
-.pipe-btn.active{color:#0a0f1e;font-weight:800;}
+.pipe-btn.active{color:#000000;font-weight:800;}
 .pipe-btn:hover:not(:disabled){border-color:rgba(245,166,35,.4);color:var(--text);}
 .pipe-btn:disabled{opacity:.3;cursor:not-allowed;}
 .ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;gap:12px;flex-wrap:wrap;}
@@ -171,7 +171,7 @@ tr:hover td{background:rgba(245,166,35,.02);}
 @media(max-width:900px){
   .mobile-nav{display:grid;}
   .main{margin-left:0;padding:16px 14px 90px;}
-  .update-banner{position:fixed;top:0;left:0;right:0;background:var(--accent);color:#0a0f1e;padding:12px 16px;text-align:center;font-size:13px;font-weight:700;z-index:9999;display:flex;justify-content:space-between;align-items:center;}
+  .update-banner{position:fixed;top:0;left:0;right:0;background:var(--accent);color:#000000;padding:12px 16px;text-align:center;font-size:13px;font-weight:700;z-index:9999;display:flex;justify-content:space-between;align-items:center;}
 }
 </style>
 </head>
@@ -300,12 +300,12 @@ function notifyTask({task, actor, subject, body, skipId=null}){
   recipients.forEach(r=>{
     if(r.email){
       sendEmail({to:r.email,subject,
-        html:`<div style="font-family:sans-serif;background:#0a0f1e;color:#e8edf8;padding:24px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
+        html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:24px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
           <div style="color:#f5a623;font-size:18px;font-weight:800;margin-bottom:12px">📋 Hendrix TMS</div>
           <div style="font-size:15px;font-weight:700;margin-bottom:8px">${task.title}</div>
           <div style="background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.15);border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;line-height:1.6">${bodyText}</div>
           ${actor?`<div style="font-size:12px;color:#7b8db8">By ${actor}</div>`:''}
-          <a href="${APP_URL}" style="display:inline-block;margin-top:14px;background:#f5a623;color:#0a0f1e;padding:9px 20px;border-radius:8px;text-decoration:none;font-weight:700">Open Task →</a>
+          <a href="${APP_URL}" style="display:inline-block;margin-top:14px;background:#f5a623;color:#000000;padding:9px 20px;border-radius:8px;text-decoration:none;font-weight:700">Open Task →</a>
         </div>`
       });
     }
@@ -831,7 +831,7 @@ function Auth({onLogin}){
             onClick:()=>setF(p=>{const cur=new Set(p.depts||[]);cur.has(gm)?cur.delete(gm):cur.add(gm);return{...p,depts:[...cur],dept:cur.size>0?[...cur][0]:'Production'};}),
             style:{padding:'5px 12px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:600,cursor:'pointer',userSelect:'none',transition:'all .15s',
               background:(f.depts||[]).includes(gm)?'var(--accent)':'var(--surface2)',
-              color:(f.depts||[]).includes(gm)?'#0a0f1e':'var(--text2)',
+              color:(f.depts||[]).includes(gm)?'#000000':'var(--text2)',
               borderColor:(f.depts||[]).includes(gm)?'var(--accent)':'var(--border)',
             }
           },gm))
@@ -1013,7 +1013,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
       if(creator?.email&&creator.id!==cu.id){
         sendEmail({to:creator.email,
           subject:`👁 Task completed & awaiting your review: "${task.title}"`,
-          html:`<div style="font-family:sans-serif;background:#0a0f1e;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
+          html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
             <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Hendrix TMS</div>
             <div style="background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.25);border-radius:10px;padding:20px;margin-bottom:20px;text-align:center">
               <div style="font-size:36px;margin-bottom:10px">👁</div>
@@ -1034,7 +1034,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
         const u=users.find(x=>x.id===a.id);
         if(u?.email) sendEmail({to:u.email,
           subject:`✅ Task approved & done: "${task.title}"`,
-          html:`<div style="font-family:sans-serif;background:#0a0f1e;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
+          html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
             <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Hendrix TMS</div>
             <div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:10px;padding:20px;margin-bottom:20px;text-align:center">
               <div style="font-size:40px;margin-bottom:10px">🎉</div>
@@ -1055,7 +1055,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
         const u=users.find(x=>x.id===a.id);
         if(u?.email) sendEmail({to:u.email,
           subject:`❌ Task rejected: "${task.title}"`,
-          html:`<div style="font-family:sans-serif;background:#0a0f1e;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #7f1d1d">
+          html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #7f1d1d">
             <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Hendrix TMS</div>
             <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:20px;margin-bottom:20px;text-align:center">
               <div style="font-size:40px;margin-bottom:10px">❌</div>
@@ -1121,7 +1121,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
       const creator=users.find(u=>u.id===task.created_by_id);
       if(creator?.email) sendEmail({to:creator.email,
         subject:`🎉 Cart task fully completed: "${task.title}"`,
-        html:`<div style="font-family:sans-serif;background:#0a0f1e;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f"><div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Hendrix TMS</div><div style="text-align:center;padding:20px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:10px;margin-bottom:20px"><div style="font-size:40px">🎉</div><div style="font-size:17px;font-weight:700;margin-top:8px">All Steps Complete!</div><div style="font-size:13px;color:#6ee7b7;margin-top:4px">"${task.title}"</div></div><p style="font-size:13px;color:#7b8db8">All ${CART_WORKFLOW.length} production steps completed successfully. Task is now Done.</p><a href="${APP_URL}" style="display:inline-block;margin-top:16px;background:#10b981;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">View Task →</a></div>`
+        html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f"><div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Hendrix TMS</div><div style="text-align:center;padding:20px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:10px;margin-bottom:20px"><div style="font-size:40px">🎉</div><div style="font-size:17px;font-weight:700;margin-top:8px">All Steps Complete!</div><div style="font-size:13px;color:#6ee7b7;margin-top:4px">"${task.title}"</div></div><p style="font-size:13px;color:#7b8db8">All ${CART_WORKFLOW.length} production steps completed successfully. Task is now Done.</p><a href="${APP_URL}" style="display:inline-block;margin-top:16px;background:#10b981;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">View Task →</a></div>`
       });
       return;
     }
@@ -1148,7 +1148,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
     allNotify.forEach(u=>{
       sendEmail({to:u.email,
         subject:`📋 Production step advanced: "${task.title}" → ${nextStep.label}`,
-        html:`<div style="font-family:sans-serif;background:#0a0f1e;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
+        html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
           <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Hendrix TMS — Production Workflow</div>
           <div style="display:flex;align-items:center;gap:12px;background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.2);border-radius:10px;padding:16px;margin-bottom:20px">
             <div style="font-size:28px">✅</div>
@@ -1169,7 +1169,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
             <div style="display:flex;gap:4px">'+CART_WORKFLOW.map((s,i)=>'<div style="flex:1;height:4px;border-radius:2px;background:'+(i<=cwfIdx?'#10b981':'#1a2d4f')+'"></div>').join('')+'</div>
             <div style="font-size:11px;color:#7b8db8;margin-top:6px">Step ${nextIdx+1} of ${CART_WORKFLOW.length}: ${nextStep.label}</div>
           </div>
-          <a href="${APP_URL}" style="display:inline-block;background:#f5a623;color:#0a0f1e;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">View Task →</a>
+          <a href="${APP_URL}" style="display:inline-block;background:#f5a623;color:#000000;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">View Task →</a>
         </div>`
       });
     });
@@ -1197,7 +1197,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
       allNotify.forEach(u=>{
         sendEmail({to:u.email,
           subject:`🚨 Testing FAILED & task on hold: "${task.title}"`,
-          html:`<div style="font-family:sans-serif;background:#0a0f1e;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #7f1d1d">
+          html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #7f1d1d">
             <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Hendrix TMS</div>
             <div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.4);border-radius:10px;padding:20px;margin-bottom:20px;text-align:center">
               <div style="font-size:40px;margin-bottom:8px">🚨</div>
@@ -1486,7 +1486,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
                       await advanceWorkflow();
                     }
                   },
-                  style:{background:'var(--accent)',color:'#0a0f1e',border:'none',borderRadius:8,padding:'8px 16px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:6}
+                  style:{background:'var(--accent)',color:'#000000',border:'none',borderRadius:8,padding:'8px 16px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:6}
                 },`✅ Complete & Send to ${cwfIdx+1<CART_WORKFLOW.length?CART_WORKFLOW[cwfIdx+1].label:'Done'}`),
                 // If on hold (failed testing) - manager can release back
                 task.status==='on_hold'&&task.testing_result==='failed'&&(isAdmin||isCCManager)&&el('button',{
@@ -1540,7 +1540,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
             ),
             el('button',{
               onClick:()=>setShowNewMicro(p=>!p),
-              style:{background:showNewMicro?'var(--surface2)':'var(--accent)',color:showNewMicro?'var(--text2)':'#0a0f1e',border:'1px solid',borderColor:showNewMicro?'var(--border)':'var(--accent)',borderRadius:'var(--rs)',padding:'5px 12px',fontFamily:'inherit',fontSize:12,fontWeight:700,cursor:'pointer',transition:'all .15s'}
+              style:{background:showNewMicro?'var(--surface2)':'var(--accent)',color:showNewMicro?'var(--text2)':'#000000',border:'1px solid',borderColor:showNewMicro?'var(--border)':'var(--accent)',borderRadius:'var(--rs)',padding:'5px 12px',fontFamily:'inherit',fontSize:12,fontWeight:700,cursor:'pointer',transition:'all .15s'}
             },showNewMicro?'✕ Cancel':'＋ Add Sub-Task'),
           ),
 
@@ -1586,7 +1586,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
               el('button',{
                 onClick:addMicroTask,
                 disabled:!newMicro.title.trim(),
-                style:{background:'var(--accent)',color:'#0a0f1e',border:'none',borderRadius:'var(--rs)',padding:'7px 14px',fontFamily:'inherit',fontSize:12,fontWeight:700,cursor:'pointer'},
+                style:{background:'var(--accent)',color:'#000000',border:'none',borderRadius:'var(--rs)',padding:'7px 14px',fontFamily:'inherit',fontSize:12,fontWeight:700,cursor:'pointer'},
               },'Add'),
             ),
           ),
@@ -1696,7 +1696,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
                       el('button',{
                         onClick:()=>postMicroNote(mt.id),
                         disabled:!(microNote[mt.id]||'').trim()&&!(microNoteFiles[mt.id]||[]).length,
-                        style:{background:'var(--accent)',color:'#0a0f1e',border:'none',borderRadius:6,padding:'3px 10px',fontFamily:'inherit',fontSize:11,fontWeight:700,cursor:'pointer'},
+                        style:{background:'var(--accent)',color:'#000000',border:'none',borderRadius:6,padding:'3px 10px',fontFamily:'inherit',fontSize:11,fontWeight:700,cursor:'pointer'},
                       },'Post'),
                     ),
                   ),
@@ -1855,7 +1855,7 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter}){
           allNotify.push({email:m.email,name:m.name,role:'manager'});
       });
     });
-    const emailBody=`<div style="font-family:sans-serif;background:#0a0f1e;color:#e8edf8;padding:24px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f"><div style="color:#f5a623;font-size:18px;font-weight:800;margin-bottom:12px">📋 New Task Assigned</div><div style="font-size:15px;font-weight:700;margin-bottom:8px">${f.title}</div><div style="background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.15);border-radius:8px;padding:12px;margin-bottom:14px;font-size:13px">${f.description||'No description'}${f.due_date?`<div style="margin-top:8px;color:#f5a623">📅 Due: ${f.due_date}</div>`:''}<div style="margin-top:6px;color:#7b8db8">📍 ${f.loc} · ${f.section}</div></div><div style="font-size:12px;color:#7b8db8">Assigned by ${cu.name}</div><a href="${APP_URL}" style="display:inline-block;margin-top:14px;background:#f5a623;color:#0a0f1e;padding:9px 20px;border-radius:8px;text-decoration:none;font-weight:700">Open Task →</a></div>`;
+    const emailBody=`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:24px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f"><div style="color:#f5a623;font-size:18px;font-weight:800;margin-bottom:12px">📋 New Task Assigned</div><div style="font-size:15px;font-weight:700;margin-bottom:8px">${f.title}</div><div style="background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.15);border-radius:8px;padding:12px;margin-bottom:14px;font-size:13px">${f.description||'No description'}${f.due_date?`<div style="margin-top:8px;color:#f5a623">📅 Due: ${f.due_date}</div>`:''}<div style="margin-top:6px;color:#7b8db8">📍 ${f.loc} · ${f.section}</div></div><div style="font-size:12px;color:#7b8db8">Assigned by ${cu.name}</div><a href="${APP_URL}" style="display:inline-block;margin-top:14px;background:#f5a623;color:#000000;padding:9px 20px;border-radius:8px;text-decoration:none;font-weight:700">Open Task →</a></div>`;
     allNotify.filter(a=>a.email).forEach(a=>{
       sendEmail({to:a.email,subject:`📋 New task assigned: "${f.title}"`,html:emailBody});
     });
@@ -2100,7 +2100,7 @@ function Team({users,setUsers,cu}){
       setUsers(p=>p.map(u=>u.id===id?{...u,approved:true}:u));
       const user=users.find(u=>u.id===id);
       sendLocalNotification('✅ Account Approved','Welcome to Hendrix TMS!').catch(()=>{});
-      if(user?.email) sendEmail({to:user.email,subject:'Your Hendrix TMS account is approved',html:`<div style="font-family:sans-serif;background:#0f1117;color:#e8eaf0;padding:24px;border-radius:12px;max-width:500px"><div style="color:#f5a623;font-size:20px;font-weight:700;margin-bottom:12px">Hendrix TMS</div><p>Hi ${user.name}, your account has been approved.</p><a href="${APP_URL}" style="display:inline-block;background:#f5a623;color:#0a0f1e;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:600;margin-top:12px">Sign In →</a></div>`});
+      if(user?.email) sendEmail({to:user.email,subject:'Your Hendrix TMS account is approved',html:`<div style="font-family:sans-serif;background:#0f1117;color:#e8eaf0;padding:24px;border-radius:12px;max-width:500px"><div style="color:#f5a623;font-size:20px;font-weight:700;margin-bottom:12px">Hendrix TMS</div><p>Hi ${user.name}, your account has been approved.</p><a href="${APP_URL}" style="display:inline-block;background:#f5a623;color:#000000;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:600;margin-top:12px">Sign In →</a></div>`});
     }catch(e){console.error('approve error:',e);}
   }
 
@@ -2401,7 +2401,7 @@ function Team({users,setUsers,cu}){
                     style:{display:'flex',alignItems:'center',gap:8,cursor:'pointer',marginBottom:Object.keys(mothers).length>0?10:0},
                   },
                     el('div',{style:{width:18,height:18,borderRadius:4,border:'2px solid',borderColor:gmSelected?'var(--accent)':'var(--text3)',background:gmSelected?'var(--accent)':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,transition:'all .15s'}},
-                      gmSelected&&el('span',{style:{color:'#0a0f1e',fontSize:10,fontWeight:900}},'✓')
+                      gmSelected&&el('span',{style:{color:'#000000',fontSize:10,fontWeight:900}},'✓')
                     ),
                     el('span',{style:{fontSize:13,fontWeight:700,color:gmSelected?'var(--accent)':'var(--text)'}},gm),
                     el('span',{style:{fontSize:10,color:'var(--text3)',marginLeft:4}},'(all sub-depts)'),
@@ -2476,7 +2476,7 @@ function Team({users,setUsers,cu}){
             (editU.managers||[]).length>0&&el('div',{style:{marginTop:8,display:'flex',flexDirection:'column',gap:6}},
               (editU.managers||[]).map((m,i)=>el('div',{key:m.id,style:{display:'flex',alignItems:'center',justifyContent:'space-between',background:'var(--surface2)',borderRadius:8,padding:'8px 12px'}},
                 el('div',{style:{display:'flex',alignItems:'center',gap:8}},
-                  el('div',{style:{background:'var(--accent)',color:'#0a0f1e',borderRadius:5,padding:'2px 7px',fontSize:10,fontWeight:800}},'M'+(i+1)),
+                  el('div',{style:{background:'var(--accent)',color:'#000000',borderRadius:5,padding:'2px 7px',fontSize:10,fontWeight:800}},'M'+(i+1)),
                   el('div',null,
                     el('div',{style:{fontSize:12,fontWeight:600}},m.name),
                     el('div',{style:{fontSize:11,color:'var(--text2)'}},RLABEL[m.role]||m.role)
@@ -2612,7 +2612,7 @@ function SalesMarketing({salesTasks,setSalesTasks,cu,users,locFilter}){
     sendEmail({
         to:assignee.email,
         subject:`🏪 New Sales Task: "${task.title}"`,
-        html:`<div style="font-family:sans-serif;background:#0a0f1e;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
+        html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
           <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">🏪 Sales & Marketing Task</div>
           <div style="font-size:17px;font-weight:700;margin-bottom:12px">${task.title}</div>
           <div style="background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.2);border-radius:10px;padding:14px;margin-bottom:20px">
@@ -2622,7 +2622,7 @@ function SalesMarketing({salesTasks,setSalesTasks,cu,users,locFilter}){
             ${f.state?`<div>🗺 ${f.state}</div>`:''}
           </div>
           ${f.description?`<p style="color:#7b8db8;margin-bottom:20px">${f.description}</p>`:''}
-          <a href="${APP_URL}" style="background:#f5a623;color:#0a0f1e;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">View Task →</a>
+          <a href="${APP_URL}" style="background:#f5a623;color:#000000;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">View Task →</a>
         </div>`
       });
     }
@@ -2645,7 +2645,7 @@ function SalesMarketing({salesTasks,setSalesTasks,cu,users,locFilter}){
       const assignee=users.find(u=>u.id===task.assigned_id);
       if(assignee?.email){
         sendEmail({to:assignee.email,subject:`🚫 Sales Task Cancelled: "${task.title}"`,
-          html:`<div style="font-family:sans-serif;background:#0a0f1e;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #7f1d1d">
+          html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #7f1d1d">
             <div style="background:#ef4444;color:#fff;padding:16px;border-radius:10px;margin-bottom:20px;text-align:center">
               <div style="font-size:32px;margin-bottom:8px">🚫</div>
               <div style="font-size:20px;font-weight:800">TASK CANCELLED</div>
@@ -2686,14 +2686,14 @@ function SalesMarketing({salesTasks,setSalesTasks,cu,users,locFilter}){
       sendEmail({
         to:creator.email,
         subject:`📋 Report submitted: "${sel.title}"`,
-        html:`<div style="font-family:sans-serif;background:#0a0f1e;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
+        html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
           <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Visit Report Submitted</div>
           <div style="font-size:16px;font-weight:700;margin-bottom:12px">${sel.title}</div>
           <div style="background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.2);border-radius:10px;padding:14px;margin-bottom:20px">
             <div style="font-size:13px;line-height:1.6">${report}</div>
           </div>
           <div style="font-size:12px;color:#7b8db8;">Submitted by ${cu.name}</div>
-          <a href="${APP_URL}" style="display:inline-block;margin-top:16px;background:#f5a623;color:#0a0f1e;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">View Report →</a>
+          <a href="${APP_URL}" style="display:inline-block;margin-top:16px;background:#f5a623;color:#000000;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">View Report →</a>
         </div>`
       });
     }
@@ -3040,7 +3040,7 @@ Create comprehensive meeting notes in this EXACT JSON format (no markdown, just 
       const decisionsHtml=(notes.decisions||[]).map(d=>`<li>${d}</li>`).join('');
       recipients.forEach(a=>{
         sendEmail({to:a.email,subject:`📋 Meeting Notes: ${event.title} — ${event.date}`,
-          html:`<div style="font-family:sans-serif;background:#0a0f1e;color:#e8edf8;padding:32px;border-radius:12px;max-width:620px;border:1px solid #1a2d4f">
+          html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:32px;border-radius:12px;max-width:620px;border:1px solid #1a2d4f">
             <div style="color:#f5a623;font-size:22px;font-weight:800;margin-bottom:4px">📋 Hendrix TMS</div>
             <div style="font-size:13px;color:#7b8db8;margin-bottom:24px">AI-Generated Meeting Notes</div>
             <div style="font-size:20px;font-weight:700;margin-bottom:6px">${event.title}</div>
@@ -3051,7 +3051,7 @@ Create comprehensive meeting notes in this EXACT JSON format (no markdown, just 
             </div>
             ${actionItemsHtml?`<div style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:16px;margin-bottom:20px"><div style="font-size:11px;font-weight:700;color:#ef4444;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Action Items</div><ul style="padding-left:20px;color:#e8edf8">${actionItemsHtml}</ul></div>`:''}
             ${decisionsHtml?`<div style="margin-bottom:20px"><div style="font-size:11px;font-weight:700;color:#10b981;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Decisions Made</div><ul style="padding-left:20px;color:#e8edf8">${decisionsHtml}</ul></div>`:''}
-            <a href="${APP_URL}" style="background:#f5a623;color:#0a0f1e;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">View in App →</a>
+            <a href="${APP_URL}" style="background:#f5a623;color:#000000;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">View in App →</a>
           </div>`
         });
       });
@@ -3095,7 +3095,7 @@ Create comprehensive meeting notes in this EXACT JSON format (no markdown, just 
             el('textarea',{value:transcript+(interimText?' ['+interimText+']':''),onChange:ev=>setTranscript(ev.target.value),placeholder:'Transcript will appear here as you speak...\n\nOr paste/type the meeting transcript manually.',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:200,resize:'vertical',lineHeight:1.6}}),
           ),
           el('div',{style:{display:'flex',gap:10,justifyContent:'flex-end',marginTop:8}},
-            el('button',{onClick:processWithAI,disabled:processing||!transcript.trim(),style:{background:transcript.trim()&&!processing?'var(--accent)':'rgba(245,166,35,.2)',color:transcript.trim()&&!processing?'#0a0f1e':'var(--text3)',border:'none',borderRadius:10,padding:'12px 28px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:transcript.trim()&&!processing?'pointer':'not-allowed',display:'flex',alignItems:'center',gap:8,transition:'all .2s'}},
+            el('button',{onClick:processWithAI,disabled:processing||!transcript.trim(),style:{background:transcript.trim()&&!processing?'var(--accent)':'rgba(245,166,35,.2)',color:transcript.trim()&&!processing?'#000000':'var(--text3)',border:'none',borderRadius:10,padding:'12px 28px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:transcript.trim()&&!processing?'pointer':'not-allowed',display:'flex',alignItems:'center',gap:8,transition:'all .2s'}},
               processing?el('div',{style:{width:16,height:16,border:'2px solid rgba(0,0,0,.3)',borderTopColor:'#000',borderRadius:'50%',animation:'spin .6s linear infinite'}}):'🤖',
               processing?'AI is analyzing...':'Generate AI Notes',
             ),
@@ -3151,7 +3151,7 @@ Create comprehensive meeting notes in this EXACT JSON format (no markdown, just 
         el('div',{style:{fontSize:12,color:'var(--text3)'}},(event.attendees||[]).length>0?'Will email notes to '+(event.attendees||[]).length+' attendee(s)':'No attendees to email'),
         el('div',{style:{display:'flex',gap:8}},
           el('button',{className:'btn b-ghost',onClick:onClose},'Close'),
-          tab==='notes'&&notes&&el('button',{onClick:saveAndShare,style:{background:'var(--accent)',color:'#0a0f1e',border:'none',borderRadius:'var(--rs)',padding:'9px 20px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer'}},saved?'✓ Saved!':'💾 Save & Email Attendees'),
+          tab==='notes'&&notes&&el('button',{onClick:saveAndShare,style:{background:'var(--accent)',color:'#000000',border:'none',borderRadius:'var(--rs)',padding:'9px 20px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer'}},saved?'✓ Saved!':'💾 Save & Email Attendees'),
         ),
       ),
     ),
@@ -3534,13 +3534,13 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
     // License filter
     el('div',{style:{display:'flex',gap:6,marginBottom:12,flexWrap:'wrap',alignItems:'center'}},
       el('span',{style:{fontSize:11,fontWeight:700,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'.5px'}},'License:'),
-      el('button',{onClick:()=>setLicFilter('all'),style:{padding:'4px 12px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:500,cursor:'pointer',background:licFilter==='all'?'var(--accent)':'transparent',color:licFilter==='all'?'#0a0f1e':'var(--text2)',borderColor:licFilter==='all'?'var(--accent)':'var(--border)',transition:'all .15s'}},'All Licenses'),
-      ...LICENSES.map(lic=>el('button',{key:lic.id,onClick:()=>setLicFilter(lic.id),style:{padding:'4px 12px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:500,cursor:'pointer',background:licFilter===lic.id?'var(--accent)':'transparent',color:licFilter===lic.id?'#0a0f1e':'var(--text2)',borderColor:licFilter===lic.id?'var(--accent)':'var(--border)',transition:'all .15s'}},lic.name)),
+      el('button',{onClick:()=>setLicFilter('all'),style:{padding:'4px 12px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:500,cursor:'pointer',background:licFilter==='all'?'var(--accent)':'transparent',color:licFilter==='all'?'#000000':'var(--text2)',borderColor:licFilter==='all'?'var(--accent)':'var(--border)',transition:'all .15s'}},'All Licenses'),
+      ...LICENSES.map(lic=>el('button',{key:lic.id,onClick:()=>setLicFilter(lic.id),style:{padding:'4px 12px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:500,cursor:'pointer',background:licFilter===lic.id?'var(--accent)':'transparent',color:licFilter===lic.id?'#000000':'var(--text2)',borderColor:licFilter===lic.id?'var(--accent)':'var(--border)',transition:'all .15s'}},lic.name)),
     ),
 
     // Tabs — Supervisors only get Dashboard + Training Matrix (read-only everywhere else)
     el('div',{style:{display:'flex',gap:4,flexWrap:'wrap',marginBottom:20,background:'var(--surface)',border:'1px solid var(--border)',borderRadius:'var(--r)',padding:4}},
-      QMS_TABS.filter(t=>isAdmin||isManager||['dashboard','training'].includes(t.id)).map(t=>el('button',{key:t.id,onClick:()=>{setTab(t.id);setNew(false);setSel(null);},style:{display:'flex',alignItems:'center',gap:6,padding:'8px 14px',borderRadius:8,border:'none',background:tab===t.id?'var(--accent)':'transparent',color:tab===t.id?'#0a0f1e':'var(--text2)',fontFamily:'inherit',fontSize:12,fontWeight:tab===t.id?700:500,cursor:'pointer',transition:'all .15s'}},
+      QMS_TABS.filter(t=>isAdmin||isManager||['dashboard','training'].includes(t.id)).map(t=>el('button',{key:t.id,onClick:()=>{setTab(t.id);setNew(false);setSel(null);},style:{display:'flex',alignItems:'center',gap:6,padding:'8px 14px',borderRadius:8,border:'none',background:tab===t.id?'var(--accent)':'transparent',color:tab===t.id?'#000000':'var(--text2)',fontFamily:'inherit',fontSize:12,fontWeight:tab===t.id?700:500,cursor:'pointer',transition:'all .15s'}},
         el('span',null,t.ico),t.label,
         // Badges
         t.id==='deviations'&&openDeviations.length>0&&el('span',{style:{background:'rgba(239,68,68,.8)',color:'#fff',borderRadius:10,padding:'0 5px',fontSize:10,fontWeight:700}},openDeviations.length),
@@ -4124,7 +4124,7 @@ function Scoreboard({tasks,cu,users}){
       el('div',null,el('div',{className:'pt'},'Scoreboard'),el('div',{className:'ps'},'Task performance — who\'s crushing it, who needs support')),
       el('div',{style:{display:'flex',gap:6}},
         [{id:'week',l:'This Week'},{id:'month',l:'This Month'},{id:'all',l:'All Time'}].map(p=>
-          el('button',{key:p.id,onClick:()=>setPeriod(p.id),style:{padding:'6px 14px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:500,cursor:'pointer',background:period===p.id?'var(--accent)':'transparent',color:period===p.id?'#0a0f1e':'var(--text2)',borderColor:period===p.id?'var(--accent)':'var(--border)',transition:'all .15s'}},p.l)
+          el('button',{key:p.id,onClick:()=>setPeriod(p.id),style:{padding:'6px 14px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:500,cursor:'pointer',background:period===p.id?'var(--accent)':'transparent',color:period===p.id?'#000000':'var(--text2)',borderColor:period===p.id?'var(--accent)':'var(--border)',transition:'all .15s'}},p.l)
         )
       )
     ),
@@ -4359,7 +4359,7 @@ function exportSopPdf(sop){
   const margin=50;
   let y=0;
 
-  const NAVY=[5,12,26],GOLD=[245,166,35],TEXT=[20,20,20],TEXT2=[90,90,90],BORDER=[210,210,215];
+  const NAVY=[18,18,18],GOLD=[245,166,35],TEXT=[20,20,20],TEXT2=[90,90,90],BORDER=[210,210,215];
   const gen=sop.generated_content?JSON.parse(sop.generated_content):null;
 
   function header(){
@@ -4738,7 +4738,7 @@ function SOPEditModal({sop,cu,onClose,onSave}){
                   style:{display:'flex',alignItems:'center',gap:8,cursor:'pointer',marginBottom:Object.keys(mothers).length>0?8:0,userSelect:'none'},
                 },
                   el('div',{style:{width:16,height:16,borderRadius:4,border:'2px solid',borderColor:gmSelected?'var(--accent)':'var(--text3)',background:gmSelected?'var(--accent)':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}},
-                    gmSelected&&el('span',{style:{color:'#0a0f1e',fontSize:9,fontWeight:900}},'✓')
+                    gmSelected&&el('span',{style:{color:'#000000',fontSize:9,fontWeight:900}},'✓')
                   ),
                   el('span',{style:{fontSize:12,fontWeight:700,color:gmSelected?'var(--accent)':'var(--text)'}},gm),
                   el('span',{style:{fontSize:10,color:'var(--text3)'}},'(top-level)'),
@@ -4931,7 +4931,7 @@ Respond with the FULL updated SOP in this EXACT JSON format (respond with JSON o
           el('div',{style:{display:'flex',gap:8}},
             [{n:1,l:'Describe Changes'},{n:2,l:'AI Revising'},{n:3,l:'Review & Approve'}].map(({n,l})=>
               el('div',{key:n,style:{display:'flex',alignItems:'center',gap:4,fontSize:11,color:step>=n?'var(--accent)':'var(--text3)',fontWeight:step===n?700:400}},
-                el('div',{style:{width:18,height:18,borderRadius:'50%',background:step>=n?'var(--accent)':'var(--surface2)',border:'1px solid',borderColor:step>=n?'var(--accent)':'var(--border)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,fontWeight:700,color:step>=n?'#0a0f1e':'var(--text3)'}},n),
+                el('div',{style:{width:18,height:18,borderRadius:'50%',background:step>=n?'var(--accent)':'var(--surface2)',border:'1px solid',borderColor:step>=n?'var(--accent)':'var(--border)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,fontWeight:700,color:step>=n?'#000000':'var(--text3)'}},n),
                 l,n<3&&el('span',{style:{color:'var(--border)'}},'→'),
               )
             )
@@ -4967,7 +4967,7 @@ Respond with the FULL updated SOP in this EXACT JSON format (respond with JSON o
             el('button',{className:'btn b-ghost',onClick:onClose},'Cancel'),
             el('button',{
               onClick:generateRevision,disabled:!changeRequest.trim(),
-              style:{background:changeRequest.trim()?'var(--accent)':'rgba(245,166,35,.2)',color:changeRequest.trim()?'#0a0f1e':'var(--text3)',border:'none',borderRadius:'var(--rs)',padding:'10px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:changeRequest.trim()?'pointer':'not-allowed',display:'flex',alignItems:'center',gap:8}
+              style:{background:changeRequest.trim()?'var(--accent)':'rgba(245,166,35,.2)',color:changeRequest.trim()?'#000000':'var(--text3)',border:'none',borderRadius:'var(--rs)',padding:'10px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:changeRequest.trim()?'pointer':'not-allowed',display:'flex',alignItems:'center',gap:8}
             },el('span',null,'🤖'),'Generate Revised SOP'),
           ),
         ),
@@ -5001,7 +5001,7 @@ Respond with the FULL updated SOP in this EXACT JSON format (respond with JSON o
             (editedSOP.steps||[]).length>0&&el('div',{style:{marginBottom:14}},
               el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:8}},'Procedure Steps ('+(editedSOP.steps||[]).length+')'),
               (editedSOP.steps||[]).map((s,i)=>el('div',{key:i,style:{display:'flex',gap:10,marginBottom:8,background:s.critical?'rgba(239,68,68,.04)':'var(--surface2)',border:'1px solid',borderColor:s.critical?'rgba(239,68,68,.2)':'var(--border)',borderLeft:'3px solid',borderLeftColor:s.critical?'var(--red)':'var(--accent)',borderRadius:8,padding:'10px 14px'}},
-                el('div',{style:{width:24,height:24,borderRadius:'50%',background:s.critical?'var(--red)':'var(--accent)',color:'#0a0f1e',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:800,flexShrink:0}},s.step_number||i+1),
+                el('div',{style:{width:24,height:24,borderRadius:'50%',background:s.critical?'var(--red)':'var(--accent)',color:'#000000',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:800,flexShrink:0}},s.step_number||i+1),
                 el('div',{style:{flex:1}},
                   el('div',{style:{fontWeight:600,fontSize:12,marginBottom:3}},s.title),
                   el('div',{style:{fontSize:12,color:'var(--text2)',lineHeight:1.5}},s.instruction),
@@ -5257,7 +5257,7 @@ Respond with ONLY this JSON (no markdown, be concise, this must NOT be truncated
           el('div',{style:{display:'flex',gap:8}},
             [{n:1,l:'Setup'},{n:2,l:'Generating'},{n:3,l:'Review & Save'}].map(({n,l})=>
               el('div',{key:n,style:{display:'flex',alignItems:'center',gap:4,fontSize:11,color:step>=n?'var(--accent)':'var(--text3)',fontWeight:step===n?700:400}},
-                el('div',{style:{width:18,height:18,borderRadius:'50%',background:step>=n?'var(--accent)':'var(--surface2)',border:'1px solid',borderColor:step>=n?'var(--accent)':'var(--border)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,fontWeight:700,color:step>=n?'#0a0f1e':'var(--text3)'}},n),
+                el('div',{style:{width:18,height:18,borderRadius:'50%',background:step>=n?'var(--accent)':'var(--surface2)',border:'1px solid',borderColor:step>=n?'var(--accent)':'var(--border)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,fontWeight:700,color:step>=n?'#000000':'var(--text3)'}},n),
                 l,
                 n<3&&el('span',{style:{color:'var(--border)'}},'→'),
               )
@@ -5341,7 +5341,7 @@ Respond with ONLY this JSON (no markdown, be concise, this must NOT be truncated
             el('button',{
               onClick:generateSOP,
               disabled:!title.trim(),
-              style:{background:title.trim()?'var(--accent)':'rgba(245,166,35,.2)',color:title.trim()?'#0a0f1e':'var(--text3)',border:'none',borderRadius:'var(--rs)',padding:'10px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:title.trim()?'pointer':'not-allowed',display:'flex',alignItems:'center',gap:8,transition:'all .2s'}
+              style:{background:title.trim()?'var(--accent)':'rgba(245,166,35,.2)',color:title.trim()?'#000000':'var(--text3)',border:'none',borderRadius:'var(--rs)',padding:'10px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:title.trim()?'pointer':'not-allowed',display:'flex',alignItems:'center',gap:8,transition:'all .2s'}
             },
               el('span',{style:{fontSize:16}},'🤖'),
               'Generate SOP with AI',
@@ -5445,7 +5445,7 @@ Respond with ONLY this JSON (no markdown, be concise, this must NOT be truncated
             (editedSOP.steps||[]).length>0&&el('div',{style:{marginBottom:12}},
               el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:8}},'Procedure Steps ('+( editedSOP.steps||[]).length+')'),
               (editedSOP.steps||[]).map((step,i)=>el('div',{key:i,style:{display:'flex',gap:10,marginBottom:8,background:step.critical?'rgba(239,68,68,.04)':'var(--surface2)',border:'1px solid',borderColor:step.critical?'rgba(239,68,68,.2)':'var(--border)',borderLeft:'3px solid',borderLeftColor:step.critical?'var(--red)':'var(--accent)',borderRadius:8,padding:'10px 14px'}},
-                el('div',{style:{width:24,height:24,borderRadius:'50%',background:step.critical?'var(--red)':'var(--accent)',color:'#0a0f1e',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:800,flexShrink:0}},step.step_number||i+1),
+                el('div',{style:{width:24,height:24,borderRadius:'50%',background:step.critical?'var(--red)':'var(--accent)',color:'#000000',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:800,flexShrink:0}},step.step_number||i+1),
                 el('div',{style:{flex:1}},
                   el('div',{style:{fontWeight:600,fontSize:12,marginBottom:3,color:'var(--text)'}},step.title||('Step '+(i+1))),
                   el('div',{style:{fontSize:12,color:'var(--text2)',lineHeight:1.5,marginBottom:step.regulatory_note?4:0}},step.instruction||step),
@@ -5485,7 +5485,7 @@ Respond with ONLY this JSON (no markdown, be concise, this must NOT be truncated
               el('button',{
                 onClick:saveSOP,
                 disabled:saving,
-                style:{background:'var(--accent)',color:'#0a0f1e',border:'none',borderRadius:'var(--rs)',padding:'10px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:8}
+                style:{background:'var(--accent)',color:'#000000',border:'none',borderRadius:'var(--rs)',padding:'10px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:8}
               },
                 saving?'Saving...':'💾 Save to SOP Library',
               ),
@@ -5634,7 +5634,7 @@ function SOPs({sops,setSops,cu,users}){
       sendLocalNotification('📋 New SOP Published',sop.title+' — '+sop.dept).catch(()=>{});
       users.filter(u=>u.approved&&u.email).forEach(u=>{
         sendEmail({to:u.email,subject:`📋 New SOP Published: "${sop.title}"`,
-          html:`<div style="font-family:sans-serif;background:#0a0f1e;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
+          html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
             <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:4px">📋 Hendrix TMS</div>
             <div style="font-size:18px;font-weight:700;margin-bottom:12px">${sop.title}</div>
             <div style="background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.2);border-radius:10px;padding:14px;margin-bottom:20px">
@@ -5643,7 +5643,7 @@ function SOPs({sops,setSops,cu,users}){
               <div>👤 Published by: <strong>${cu.name}</strong></div>
             </div>
             <p style="color:#7b8db8;margin-bottom:20px">Please review and acknowledge this SOP in the Hendrix TMS app.</p>
-            <a href="${APP_URL}" style="background:#f5a623;color:#0a0f1e;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">Review SOP →</a>
+            <a href="${APP_URL}" style="background:#f5a623;color:#000000;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">Review SOP →</a>
           </div>`
         });
       });
@@ -5727,13 +5727,13 @@ function SOPs({sops,setSops,cu,users}){
     // License filter tabs
     el('div',{style:{display:'flex',gap:6,flexWrap:'wrap',marginBottom:10,alignItems:'center'}},
       el('span',{style:{fontSize:11,fontWeight:700,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'.5px'}},'License:'),
-      el('button',{onClick:()=>setLicFilter('all'),style:{padding:'5px 14px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:500,cursor:'pointer',background:licFilter==='all'?'var(--accent)':'transparent',color:licFilter==='all'?'#0a0f1e':'var(--text2)',borderColor:licFilter==='all'?'var(--accent)':'var(--border)',transition:'all .15s'}},'All Licenses'),
-      ...LICENSES.map(lic=>el('button',{key:lic.id,onClick:()=>setLicFilter(lic.id),style:{padding:'5px 14px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:500,cursor:'pointer',background:licFilter===lic.id?'var(--accent)':'transparent',color:licFilter===lic.id?'#0a0f1e':'var(--text2)',borderColor:licFilter===lic.id?'var(--accent)':'var(--border)',transition:'all .15s'}},lic.name)),
+      el('button',{onClick:()=>setLicFilter('all'),style:{padding:'5px 14px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:500,cursor:'pointer',background:licFilter==='all'?'var(--accent)':'transparent',color:licFilter==='all'?'#000000':'var(--text2)',borderColor:licFilter==='all'?'var(--accent)':'var(--border)',transition:'all .15s'}},'All Licenses'),
+      ...LICENSES.map(lic=>el('button',{key:lic.id,onClick:()=>setLicFilter(lic.id),style:{padding:'5px 14px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:500,cursor:'pointer',background:licFilter===lic.id?'var(--accent)':'transparent',color:licFilter===lic.id?'#000000':'var(--text2)',borderColor:licFilter===lic.id?'var(--accent)':'var(--border)',transition:'all .15s'}},lic.name)),
     ),
 
     // Dept filter tabs
     el('div',{style:{display:'flex',gap:6,flexWrap:'wrap',marginBottom:16}},
-      depts.map(d=>el('button',{key:d,onClick:()=>setDeptFilter(d),style:{padding:'5px 14px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:500,cursor:'pointer',background:deptFilter===d?'var(--accent)':'transparent',color:deptFilter===d?'#0a0f1e':'var(--text2)',borderColor:deptFilter===d?'var(--accent)':'var(--border)',transition:'all .15s'}},d))
+      depts.map(d=>el('button',{key:d,onClick:()=>setDeptFilter(d),style:{padding:'5px 14px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:500,cursor:'pointer',background:deptFilter===d?'var(--accent)':'transparent',color:deptFilter===d?'#000000':'var(--text2)',borderColor:deptFilter===d?'var(--accent)':'var(--border)',transition:'all .15s'}},d))
     ),
 
     // Needs acknowledgement alert
@@ -5814,7 +5814,7 @@ function SOPs({sops,setSops,cu,users}){
                   el('div',{style:{flex:1,display:'flex',flexWrap:'wrap',gap:4}},
                     (f.depts||[]).length===0
                       ?el('span',{style:{color:'var(--text3)'}},'Select departments...')
-                      :(f.depts||[]).map(d=>el('span',{key:d,style:{background:'var(--accent)',color:'#0a0f1e',borderRadius:4,padding:'2px 8px',fontSize:11,fontWeight:700,display:'flex',alignItems:'center',gap:4}},
+                      :(f.depts||[]).map(d=>el('span',{key:d,style:{background:'var(--accent)',color:'#000000',borderRadius:4,padding:'2px 8px',fontSize:11,fontWeight:700,display:'flex',alignItems:'center',gap:4}},
                           d,
                           el('span',{style:{cursor:'pointer',fontWeight:900,marginLeft:2},onClick:ev=>{ev.stopPropagation();setF(p=>{const cur=new Set(p.depts);cur.delete(d);return{...p,depts:[...cur]};})}},'×')
                         ))
@@ -5832,7 +5832,7 @@ function SOPs({sops,setSops,cu,users}){
                       onMouseLeave:ev=>ev.currentTarget.style.background=(f.depts||[]).includes(gm)?'rgba(245,166,35,.1)':'transparent',
                     },
                       el('div',{style:{width:16,height:16,borderRadius:3,border:'2px solid',borderColor:(f.depts||[]).includes(gm)?'var(--accent)':'var(--text3)',background:(f.depts||[]).includes(gm)?'var(--accent)':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}},
-                        (f.depts||[]).includes(gm)&&el('span',{style:{color:'#0a0f1e',fontSize:9,fontWeight:900}},'✓')
+                        (f.depts||[]).includes(gm)&&el('span',{style:{color:'#000000',fontSize:9,fontWeight:900}},'✓')
                       ),
                       el('span',{style:{fontWeight:700,fontSize:13,color:(f.depts||[]).includes(gm)?'var(--accent)':'var(--text)'}},'🏭 '+gm),
                     ),
@@ -5866,7 +5866,7 @@ function SOPs({sops,setSops,cu,users}){
                   // Close button
                   el('div',{style:{padding:'8px 14px',borderTop:'1px solid var(--border)',display:'flex',justifyContent:'space-between',alignItems:'center'}},
                     el('span',{style:{fontSize:11,color:'var(--text3)'}},(f.depts||[]).length+' selected'),
-                    el('button',{onClick:ev=>{ev.stopPropagation();setF(p=>({...p,_deptOpen:false}));},style:{background:'var(--accent)',color:'#0a0f1e',border:'none',borderRadius:6,padding:'4px 12px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}},'Done'),
+                    el('button',{onClick:ev=>{ev.stopPropagation();setF(p=>({...p,_deptOpen:false}));},style:{background:'var(--accent)',color:'#000000',border:'none',borderRadius:6,padding:'4px 12px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}},'Done'),
                   ),
                 ),
               ),
@@ -5888,7 +5888,7 @@ function SOPs({sops,setSops,cu,users}){
           el('div',{className:'divider'}),
           el('div',{style:{fontWeight:700,fontSize:14,marginBottom:10}},'Steps'),
           f.steps.map((step,i)=>el('div',{key:step.id,style:{display:'flex',gap:8,marginBottom:8,alignItems:'flex-start'}},
-            el('div',{style:{width:24,height:24,borderRadius:'50%',background:'var(--accent)',color:'#0a0f1e',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:800,flexShrink:0,marginTop:8}},i+1),
+            el('div',{style:{width:24,height:24,borderRadius:'50%',background:'var(--accent)',color:'#000000',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:800,flexShrink:0,marginTop:8}},i+1),
             el('textarea',{value:step.text,onChange:ev=>updateStep(step.id,ev.target.value),placeholder:`Step ${i+1}...`,style:{flex:1,background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px 12px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',resize:'vertical',minHeight:60}}),
             f.steps.length>1&&el('button',{onClick:()=>removeStep(step.id),style:{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:18,marginTop:6,padding:'2px 4px'}},'×'),
           )),
@@ -5953,7 +5953,7 @@ function SOPs({sops,setSops,cu,users}){
         notifyUsers.forEach(u=>{
           if(u.email) sendEmail({to:u.email,
             subject:`📋 SOP Updated — Re-acknowledgement Required: "${updated.title}"`,
-            html:`<div style="font-family:sans-serif;background:#0a0f1e;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
+            html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
               <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Hendrix TMS</div>
               <div style="background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.25);border-radius:10px;padding:20px;margin-bottom:20px;text-align:center">
                 <div style="font-size:36px;margin-bottom:10px">🔄</div>
@@ -5988,7 +5988,7 @@ function SOPs({sops,setSops,cu,users}){
           (sel.steps||[]).length>0&&el('div',{style:{marginBottom:20}},
             el('div',{style:{fontWeight:700,fontSize:14,marginBottom:12}},'Procedure'),
             (sel.steps||[]).map((step,i)=>el('div',{key:step.id||i,style:{display:'flex',gap:12,marginBottom:12,alignItems:'flex-start'}},
-              el('div',{style:{width:28,height:28,borderRadius:'50%',background:'var(--accent)',color:'#0a0f1e',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:800,flexShrink:0}},i+1),
+              el('div',{style:{width:28,height:28,borderRadius:'50%',background:'var(--accent)',color:'#000000',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:800,flexShrink:0}},i+1),
               el('div',{style:{flex:1,background:'var(--surface2)',borderRadius:10,padding:'10px 14px',fontSize:13,lineHeight:1.6}},step.text||step),
             ))
           ),
@@ -6131,7 +6131,7 @@ function Calendar({events,setEvents,tasks,cu,users,locFilter,meetingNotes,setMee
     if(f.attendees.length>0&&f.type==='meeting'){
       f.attendees.filter(a=>a.email&&a.id!==cu.id).forEach(a=>{
         sendEmail({to:a.email,subject:`📅 Meeting invite: "${f.title}"`,
-          html:`<div style="font-family:sans-serif;background:#0a0f1e;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
+          html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
             <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:4px">📅 Hendrix TMS</div>
             <div style="font-size:18px;font-weight:700;margin-bottom:16px">${f.title}</div>
             <div style="background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.2);border-radius:10px;padding:16px;margin-bottom:20px">
@@ -6139,7 +6139,7 @@ function Calendar({events,setEvents,tasks,cu,users,locFilter,meetingNotes,setMee
               ${f.location?`<div style="margin-bottom:8px">📍 ${f.location}</div>`:''}
               ${meetLink?`<div>🎥 <a href="${meetLink}" style="color:#f5a623">${meetLink}</a></div>`:''}
             </div>
-            ${meetLink?`<a href="${meetLink}" style="background:#f5a623;color:#0a0f1e;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:700">🎥 Join Meeting</a>`:''}
+            ${meetLink?`<a href="${meetLink}" style="background:#f5a623;color:#000000;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:700">🎥 Join Meeting</a>`:''}
           </div>`
         });
       });
@@ -6199,7 +6199,7 @@ function Calendar({events,setEvents,tasks,cu,users,locFilter,meetingNotes,setMee
             onMouseEnter:ev=>ev.currentTarget.style.borderColor='rgba(245,166,35,.3)',
             onMouseLeave:ev=>ev.currentTarget.style.borderColor=isToday?'rgba(245,166,35,.4)':'var(--border)',
           },
-            el('div',{style:{fontWeight:isToday?700:500,fontSize:13,width:22,height:22,borderRadius:'50%',background:isToday?'var(--accent)':'transparent',display:'flex',alignItems:'center',justifyContent:'center',color:isToday?'#0a0f1e':'var(--text)',marginBottom:4}},day.getDate()),
+            el('div',{style:{fontWeight:isToday?700:500,fontSize:13,width:22,height:22,borderRadius:'50%',background:isToday?'var(--accent)':'transparent',display:'flex',alignItems:'center',justifyContent:'center',color:isToday?'#000000':'var(--text)',marginBottom:4}},day.getDate()),
             dayEvts.slice(0,3).map(ev=>el('div',{key:ev.id,onClick:e=>{e.stopPropagation();setSel(ev);},style:{fontSize:10,fontWeight:600,color:'#fff',background:ev.color||'#f5a623',borderRadius:4,padding:'1px 5px',marginBottom:2,overflow:'hidden',whiteSpace:'nowrap',textOverflow:'ellipsis'}},ev.title)),
             dayEvts.length>3&&el('div',{style:{fontSize:10,color:'var(--text2)'}},`+${dayEvts.length-3} more`),
           );
@@ -6589,7 +6589,7 @@ function App(){
               await sendEmail({
                 to:cu.email,
                 subject:'✅ Hendrix TMS — Email Test',
-                html:`<div style="font-family:sans-serif;background:#0a0f1e;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
+                html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
                   <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">✅ Email Working!</div>
                   <p>Hi ${cu.name},</p>
                   <p style="margin:12px 0;color:#7b8db8">This is a test email from Hendrix TMS. If you received this, email notifications are working correctly.</p>
@@ -6619,7 +6619,7 @@ function App(){
     el('div',{id:'ptr-indicator',style:{display:'none',position:'fixed',top:10,left:'50%',transform:'translateX(-50%)',background:'var(--surface)',border:'1px solid var(--border)',borderRadius:20,padding:'8px 16px',zIndex:9998,alignItems:'center',gap:8,fontSize:12,color:'var(--text2)',boxShadow:'0 4px 12px rgba(0,0,0,.3)'}},'↓ Pull to refresh'),
     el('div',{id:'update-banner',style:{display:'none'},className:'update-banner'},
       el('span',null,'🆕 New version available!'),
-      el('button',{onClick:()=>window.location.reload(true),style:{background:'rgba(0,0,0,.2)',border:'none',borderRadius:6,padding:'5px 14px',color:'#0a0f1e',fontFamily:'inherit',fontSize:12,fontWeight:700,cursor:'pointer'}},'Update Now'),
+      el('button',{onClick:()=>window.location.reload(true),style:{background:'rgba(0,0,0,.2)',border:'none',borderRadius:6,padding:'5px 14px',color:'#000000',fontFamily:'inherit',fontSize:12,fontWeight:700,cursor:'pointer'}},'Update Now'),
     ),
     holdAlert&&el('div',{className:'on-hold-alert',onClick:()=>setHoldAlert(null)},
       el('div',{className:'on-hold-banner'},
@@ -6707,7 +6707,7 @@ window.addEventListener('beforeinstallprompt', e => {
     if(deferredPrompt) {
       const banner = document.createElement('div');
       banner.id = 'install-banner';
-      banner.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#f5a623;color:#0a0f1e;padding:12px 20px;border-radius:12px;font-family:Inter,sans-serif;font-size:13px;font-weight:700;cursor:pointer;z-index:9999;box-shadow:0 8px 24px rgba(245,166,35,.4);display:flex;align-items:center;gap:10px;';
+      banner.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#f5a623;color:#000000;padding:12px 20px;border-radius:12px;font-family:Inter,sans-serif;font-size:13px;font-weight:700;cursor:pointer;z-index:9999;box-shadow:0 8px 24px rgba(245,166,35,.4);display:flex;align-items:center;gap:10px;';
       banner.innerHTML = '<span>📱</span><span>Add Hendrix TMS to Home Screen</span><span style="margin-left:8px;opacity:.6">×</span>';
       banner.onclick = (e) => {
         if(e.target.textContent === '×') { banner.remove(); return; }
