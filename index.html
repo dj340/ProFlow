@@ -3167,6 +3167,7 @@ const QMS_TABS=[
   {id:'changes',label:'Change Control',ico:'📝'},
   {id:'complaints',label:'Complaints',ico:'📣'},
   {id:'suppliers',label:'Suppliers',ico:'🏭'},
+  {id:'corrective',label:'Corrective Actions',ico:'⚖️'},
   {id:'training',label:'Training Matrix',ico:'🎓'},
 ];
 
@@ -6418,6 +6419,7 @@ function App(){
   const[qmsChanges,setQmsChanges]=useState([]);
   const[qmsComplaints,setQmsComplaints]=useState([]);
   const[qmsSuppliers,setQmsSuppliers]=useState([]);
+  const[qmsCorrective,setQmsCorrective]=useState([]);
   const[loading,setLoading]=useState(false);
   const[dbReady,setDbReady]=useState(null);
   const[page,setPage]=useState('board');
@@ -6441,7 +6443,8 @@ function App(){
       db.get('pf_qms_changes','order=created_at.desc').catch(()=>[]),
       db.get('pf_qms_complaints','order=created_at.desc').catch(()=>[]),
       db.get('pf_qms_suppliers','order=created_at.desc').catch(()=>[]),
-    ]).then(([_tasks,_sales,_users,_events,_notes,_sops,_dev,_cap,_aud,_chg,_comp,_sup])=>{
+      db.get('pf_qms_corrective','order=created_at.desc').catch(()=>[]),
+    ]).then(([_tasks,_sales,_users,_events,_notes,_sops,_dev,_cap,_aud,_chg,_comp,_sup,_corr])=>{
       setTasks(_tasks||[]);
       setSalesTasks(_sales||[]);
       setUsers(_users||[]);
@@ -6454,6 +6457,7 @@ function App(){
       setQmsChanges(_chg||[]);
       setQmsComplaints(_comp||[]);
       setQmsSuppliers(_sup||[]);
+      setQmsCorrective(_corr||[]);
     });
   },[cu,dbReady]);
 
