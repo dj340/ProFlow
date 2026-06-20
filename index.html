@@ -3736,6 +3736,8 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
   const[editing,setEditing]=useState(null);
   const[licFilter,setLicFilter]=useState('all');
   const[showCAGenerator,setShowCAGenerator]=useState(false);
+  const[showSignModal,setShowSignModal]=useState(false);
+  const[signatureName,setSignatureName]=useState('');
   const isAdmin=cu.role==='admin'||['coo','director_production','director_operations','general_manager','compliance_manager','director_sales_marketing'].includes(cu.role);
   const qmsRoleGroup=ROLE_GROUPS.find(g=>g.roles.includes(cu.role))?.label;
   const isManager=qmsRoleGroup==='Managers';
@@ -4356,7 +4358,21 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
                     el('span',{style:{fontSize:12,color:'var(--text2)'}},'Issued: '+sel.created_at?.slice(0,10)+' by '+sel.issued_by),
                   ),
                 ),
-                el('span',{style:{background:sel.status==='acknowledged'?'rgba(16,185,129,.1)':'rgba(239,68,68,.1)',color:sel.status==='acknowledged'?'var(--green)':'var(--red)',border:'1px solid',borderColor:sel.status==='acknowledged'?'rgba(16,185,129,.3)':'rgba(239,68,68,.3)',borderRadius:6,padding:'5px 12px',fontSize:12,fontWeight:700}},sel.status==='acknowledged'?'✓ Acknowledged '+sel.acknowledged_at?.slice(0,10):'⏳ Pending Acknowledgement'),
+                el('span',{style:{background:sel.status==='acknowledged'?'rgba(16,185,129,.1)':'rgba(239,68,68,.1)',color:sel.status==='acknowledged'?'var(--green)':'var(--red)',border:'1px solid',borderColor:sel.status==='acknowledged'?'rgba(16,185,129,.3)':'rgba(239,68,68,.3)',borderRadius:6,padding:'5px 12px',fontSize:12,fontWeight:700}},sel.status==='acknowledged'?'Acknowledged '+sel.acknowledged_at?.slice(0,10):'Pending Acknowledgement'),
+              ),
+            ),
+
+            sel.status==='acknowledged'&&el('div',{style:{background:'rgba(16,185,129,.06)',border:'1px solid rgba(16,185,129,.25)',borderRadius:10,padding:'14px 18px',marginBottom:16}},
+              el('div',{style:{fontSize:11,fontWeight:700,color:'var(--green)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:8}},'Signed Acknowledgement'),
+              el('div',{style:{display:'flex',alignItems:'baseline',gap:16,flexWrap:'wrap'}},
+                el('div',null,
+                  el('div',{style:{fontFamily:'cursive',fontSize:22,color:'var(--text)',borderBottom:'1px solid var(--border2)',paddingBottom:4,marginBottom:3}},sel.signature_name||sel.employee_name),
+                  el('div',{style:{fontSize:10,color:'var(--text3)'}},'Employee Signature'),
+                ),
+                el('div',null,
+                  el('div',{style:{fontFamily:'cursive',fontSize:18,color:'var(--text)',borderBottom:'1px solid var(--border2)',paddingBottom:4,marginBottom:3}},sel.acknowledged_at?.slice(0,10)),
+                  el('div',{style:{fontSize:10,color:'var(--text3)'}},'Date'),
+                ),
               ),
             ),
 
@@ -4390,25 +4406,57 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
             el('div',{style:{display:'flex',gap:8,marginTop:16}},
               el('button',{className:'btn b-ghost',onClick:()=>exportCorrectiveActionPdf(sel)},'📄 Download PDF'),
               canAck&&el('button',{
-                onClick:async()=>{
-                  const update={status:'acknowledged',acknowledged_at:new Date().toISOString(),updated_at:new Date().toISOString(),updated_by:cu.name};
-                  try{
-                    await db.update('pf_qms_corrective',sel.id,update);
-                    setCorrective(p=>p.map(c=>c.id===sel.id?{...c,...update}:c));
-                    setSel(p=>({...p,...update}));
-                    // Notify the issuer that it's been acknowledged
-                    const issuer=users.find(u=>u.id===sel.issued_by_id);
-                    if(issuer?.email) sendEmail({to:issuer.email,
-                      subject:`✓ Corrective Action Acknowledged — ${sel.employee_name}`,
-                      html:`<div style="font-family:sans-serif;background:#121212;color:#f0eee8;padding:24px;border-radius:12px;max-width:480px;border:1px solid #333">
-                        <div style="color:#f5a623;font-size:18px;font-weight:800;margin-bottom:12px">⚖️ Hendrix OMS</div>
-                        <p style="font-size:14px">${sel.employee_name} has acknowledged corrective action ${sel.ca_number} ("${sel.title}").</p>
-                      </div>`
-                    });
-                  }catch(e){console.error(e);alert('Failed to save acknowledgement: '+e.message);}
-                },
+                onClick:()=>{setSignatureName(cu.name);setShowSignModal(true);},
                 style:{background:'var(--green)',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'10px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer'}
-              },'✓ I Have Read and Understood This Notice'),
+              },'I Have Read and Understood This Notice'),
+
+              showSignModal&&el('div',{className:'mo',style:{zIndex:1200},onClick:ev=>ev.target===ev.currentTarget&&setShowSignModal(false)},
+                el('div',{className:'md',style:{width:480}},
+                  el('div',{className:'mh'},
+                    el('div',{className:'mt2'},'Sign & Acknowledge'),
+                    el('button',{className:'mc',onClick:()=>setShowSignModal(false)},'×'),
+                  ),
+                  el('div',{className:'mbd'},
+                    el('div',{style:{fontSize:13,color:'var(--text2)',marginBottom:16,lineHeight:1.6}},
+                      gen.employee_acknowledgement_text||'I acknowledge that I have read and understand this Corrective Action Notice.'
+                    ),
+                    el('div',{className:'fg'},
+                      el('label',null,'Type your full legal name to sign *'),
+                      el('input',{
+                        value:signatureName,onChange:ev=>setSignatureName(ev.target.value),
+                        placeholder:sel.employee_name,
+                        autoFocus:true,
+                        style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'10px 14px',color:'var(--text)',fontFamily:'cursive,inherit',fontSize:18,outline:'none'},
+                      }),
+                      el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:4}},'Signature date: '+new Date().toISOString().slice(0,10)),
+                    ),
+                    el('div',{className:'mf'},
+                      el('button',{className:'btn b-ghost',onClick:()=>setShowSignModal(false)},'Cancel'),
+                      el('button',{
+                        disabled:signatureName.trim().length<3,
+                        onClick:async()=>{
+                          const update={status:'acknowledged',acknowledged_at:new Date().toISOString(),signature_name:signatureName.trim(),updated_at:new Date().toISOString(),updated_by:cu.name};
+                          try{
+                            await db.update('pf_qms_corrective',sel.id,update);
+                            setCorrective(p=>p.map(c=>c.id===sel.id?{...c,...update}:c));
+                            setSel(p=>({...p,...update}));
+                            setShowSignModal(false);
+                            const issuer=users.find(u=>u.id===sel.issued_by_id);
+                            if(issuer?.email) sendEmail({to:issuer.email,
+                              subject:`Corrective Action Acknowledged — ${sel.employee_name}`,
+                              html:`<div style="font-family:sans-serif;background:#121212;color:#f0eee8;padding:24px;border-radius:12px;max-width:480px;border:1px solid #333">
+                                <div style="color:#f5a623;font-size:18px;font-weight:800;margin-bottom:12px">⚖️ Hendrix OMS</div>
+                                <p style="font-size:14px">${sel.employee_name} has signed and acknowledged corrective action ${sel.ca_number} ("${sel.title}") on ${update.acknowledged_at.slice(0,10)}.</p>
+                              </div>`
+                            });
+                          }catch(e){console.error(e);alert('Failed to save acknowledgement: '+e.message);}
+                        },
+                        style:{background:signatureName.trim().length>=3?'var(--green)':'rgba(16,185,129,.3)',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'10px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:signatureName.trim().length>=3?'pointer':'not-allowed'}
+                      },'Sign & Submit'),
+                    ),
+                  ),
+                )
+              ),
               !canAck&&!isMe&&sel.status==='acknowledged'&&el('div',{style:{fontSize:12,color:'var(--green)',fontWeight:600,display:'flex',alignItems:'center'}},'✓ Acknowledged by employee — record is now locked'),
             ),
           );
@@ -4988,7 +5036,7 @@ function exportSopPdf(sop){
         doc.setFont('helvetica','bold');
         doc.setFontSize(8);
         doc.setTextColor(180,40,40);
-        doc.text('⚠ CRITICAL STEP',margin+22,y);
+        doc.text('CRITICAL STEP',margin+22,y);
         y+=11;
       }
       y+=8;
@@ -4998,7 +5046,7 @@ function exportSopPdf(sop){
   // Quality checks & documentation
   if((gen?.quality_checks||[]).length>0){
     sectionTitle('Quality Checks');
-    gen.quality_checks.forEach(q=>bodyText('✓ '+q,{size:9,spaceAfter:3}));
+    gen.quality_checks.forEach(q=>bodyText('- '+q,{size:9,spaceAfter:3}));
     y+=4;
   }
   if((gen?.documentation_required||[]).length>0){
@@ -5395,6 +5443,16 @@ function exportCorrectiveActionPdf(ca){
   y+=12;
   doc.setFontSize(8);
   doc.setTextColor(...TEXT2);
+  if(ca.status==='acknowledged'){
+    // Render the employee's typed signature ABOVE the line, like a real signed document
+    doc.setFont('helvetica','italic');
+    doc.setFontSize(15);
+    doc.setTextColor(30,30,30);
+    doc.text(ca.signature_name||ca.employee_name||'',margin+4,y-6);
+    doc.setFont('helvetica','italic');
+    doc.setFontSize(13);
+    doc.text(ca.acknowledged_at?.slice(0,10)||'',margin+264,y-6);
+  }
   doc.text('Employee Signature',margin,y);
   doc.text('Date',margin+260,y);
   if(ca.status==='acknowledged'){
@@ -5402,7 +5460,7 @@ function exportCorrectiveActionPdf(ca){
     doc.setFont('helvetica','bold');
     doc.setTextColor(40,140,80);
     doc.setFontSize(9);
-    doc.text('✓ Digitally acknowledged via Hendrix OMS on '+(ca.acknowledged_at?.slice(0,10)||''),margin,y);
+    doc.text('Digitally acknowledged via Hendrix OMS on '+(ca.acknowledged_at?.slice(0,10)||''),margin,y);
   }
 
   const pageCount=doc.internal.getNumberOfPages();
