@@ -3569,7 +3569,7 @@ Write a formal, professional Corrective Action notice. Be factual, specific, and
       onSave(rec);
     }catch(e){
       console.error(e);
-      alert('Save failed: '+e.message+'\\n\\nRun this SQL in Supabase:\\nCREATE TABLE IF NOT EXISTS pf_qms_corrective (id text primary key, employee_id text, employee_name text, employee_email text, license_id text, license_name text, violation_type text, severity text, generated_content text, title text, ca_number text, status text default \\'pending\\', acknowledged_at text, issued_by text, issued_by_id text, created_at text, updated_at text, updated_by text);\\nALTER TABLE pf_qms_corrective DISABLE ROW LEVEL SECURITY;');
+      alert('Save failed: '+e.message+'. Make sure the pf_qms_corrective table exists in Supabase.');
     }
     setSaving(false);
   }
