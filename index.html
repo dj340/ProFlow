@@ -3738,6 +3738,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
   const[showCAGenerator,setShowCAGenerator]=useState(false);
   const[showSignModal,setShowSignModal]=useState(false);
   const[signatureName,setSignatureName]=useState('');
+  const[caSearch,setCaSearch]=useState('');
   const isAdmin=cu.role==='admin'||['coo','director_production','director_operations','general_manager','compliance_manager','director_sales_marketing'].includes(cu.role);
   const qmsRoleGroup=ROLE_GROUPS.find(g=>g.roles.includes(cu.role))?.label;
   const isManager=qmsRoleGroup==='Managers';
@@ -4313,17 +4314,49 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
     // ── CORRECTIVE ACTIONS ──────────────────────────────────────────────────────
     tab==='corrective'&&el('div',null,
       !sel&&el('div',null,
-        el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}},
-          el('div',{style:{fontSize:13,color:'var(--text2)'}},filterByLic(corrective).length+' corrective action'+(filterByLic(corrective).length!==1?'s':'')),
-          (isAdmin||isManager)&&el('button',{
-            onClick:()=>setShowCAGenerator(true),
-            style:{background:'var(--red)',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'9px 16px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:6}
-          },'⚖️ New Corrective Action'),
+        el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12,flexWrap:'wrap',gap:10}},
+          el('div',{style:{fontSize:13,color:'var(--text2)'}},
+            (()=>{
+              const filtered=filterByLic(corrective).filter(c=>{
+                if(!caSearch.trim()) return true;
+                const q=caSearch.trim().toLowerCase();
+                const gen=c.generated_content?(()=>{try{return JSON.parse(c.generated_content);}catch(e){return{};}})():{};
+                return (c.employee_name||'').toLowerCase().includes(q)
+                  ||(c.violation_type||'').toLowerCase().includes(q)
+                  ||(c.title||'').toLowerCase().includes(q)
+                  ||(gen.incident_summary||'').toLowerCase().includes(q)
+                  ||(c.ca_number||'').toLowerCase().includes(q);
+              });
+              return filtered.length+' corrective action'+(filtered.length!==1?'s':'');
+            })()
+          ),
+          el('div',{style:{display:'flex',gap:8,alignItems:'center'}},
+            el('input',{
+              value:caSearch,onChange:ev=>setCaSearch(ev.target.value),
+              placeholder:'Search by name or reason (e.g. "safety")...',
+              style:{background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:12,outline:'none',width:240},
+            }),
+            (isAdmin||isManager)&&el('button',{
+              onClick:()=>setShowCAGenerator(true),
+              style:{background:'var(--red)',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'9px 16px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:6,whiteSpace:'nowrap'}
+            },'⚖️ New Corrective Action'),
+          ),
         ),
-        filterByLic(corrective).length===0?el('div',{className:'empty'},el('div',{className:'eico'},'⚖️'),el('div',{className:'etxt'},'No corrective actions on record')):
-        el('div',{style:{display:'flex',flexDirection:'column',gap:6}},
-          filterByLic(corrective).map(c=>el('div',{key:c.id,onClick:()=>setSel(c),style:{background:'var(--surface)',border:'1px solid var(--border)',borderLeft:'3px solid '+(c.status==='acknowledged'?'var(--green)':'var(--red)'),borderRadius:10,padding:'14px 16px',cursor:'pointer',transition:'all .15s'},onMouseEnter:ev=>ev.currentTarget.style.borderColor='rgba(245,166,35,.3)',onMouseLeave:ev=>ev.currentTarget.style.borderColor='var(--border)'},
-            el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},
+        (()=>{
+          const filtered=filterByLic(corrective).filter(c=>{
+            if(!caSearch.trim()) return true;
+            const q=caSearch.trim().toLowerCase();
+            const gen=c.generated_content?(()=>{try{return JSON.parse(c.generated_content);}catch(e){return{};}})():{};
+            return (c.employee_name||'').toLowerCase().includes(q)
+              ||(c.violation_type||'').toLowerCase().includes(q)
+              ||(c.title||'').toLowerCase().includes(q)
+              ||(gen.incident_summary||'').toLowerCase().includes(q)
+              ||(c.ca_number||'').toLowerCase().includes(q);
+          });
+          return filtered.length===0?el('div',{className:'empty'},el('div',{className:'eico'},'⚖️'),el('div',{className:'etxt'},caSearch.trim()?'No matching corrective actions':'No corrective actions on record')):
+          el('div',{style:{display:'flex',flexDirection:'column',gap:6}},
+            filtered.map(c=>el('div',{key:c.id,onClick:()=>setSel(c),style:{background:'var(--surface)',border:'1px solid var(--border)',borderLeft:'3px solid '+(c.status==='acknowledged'?'var(--green)':'var(--red)'),borderRadius:10,padding:'14px 16px',cursor:'pointer',transition:'all .15s'},onMouseEnter:ev=>ev.currentTarget.style.borderColor='rgba(245,166,35,.3)',onMouseLeave:ev=>ev.currentTarget.style.borderColor='var(--border)'},
+              el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},
               el('div',{style:{flex:1}},
                 el('div',{style:{display:'flex',gap:6,marginBottom:5,flexWrap:'wrap'}},
                   el('span',{style:{background:c.status==='acknowledged'?'rgba(16,185,129,.1)':'rgba(239,68,68,.1)',color:c.status==='acknowledged'?'var(--green)':'var(--red)',border:'1px solid',borderColor:c.status==='acknowledged'?'rgba(16,185,129,.3)':'rgba(239,68,68,.3)',borderRadius:4,padding:'2px 7px',fontSize:11,fontWeight:700}},c.status==='acknowledged'?'✓ Acknowledged':'⏳ Pending'),
@@ -4333,10 +4366,22 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
                 el('div',{style:{fontSize:14,fontWeight:700,marginBottom:3}},c.title),
                 el('div',{style:{fontSize:12,color:'var(--text2)'}},'Employee: '+c.employee_name+' · Issued by '+c.issued_by),
               ),
-              el('div',{style:{fontSize:11,color:'var(--text3)',flexShrink:0,marginLeft:12}},c.created_at?.slice(0,10)),
+              el('div',{style:{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:6,flexShrink:0,marginLeft:12}},
+                el('div',{style:{fontSize:11,color:'var(--text3)'}},c.created_at?.slice(0,10)),
+                isAdmin&&el('button',{
+                  onClick:ev=>{
+                    ev.stopPropagation();
+                    if(!window.confirm('Delete this corrective action permanently?')) return;
+                    db.remove('pf_qms_corrective',c.id).then(()=>setCorrective(p=>p.filter(x=>x.id!==c.id))).catch(e=>alert('Delete failed: '+e.message));
+                  },
+                  style:{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:13,padding:0},
+                  onMouseEnter:ev=>ev.currentTarget.style.color='var(--red)',
+                  onMouseLeave:ev=>ev.currentTarget.style.color='var(--text3)',
+                },'🗑'),
+              ),
             ),
-          ))
-        ),
+          )));
+        })(),
       ),
 
       // ── DETAIL VIEW ────────────────────────────────────────────────────────
@@ -4405,6 +4450,17 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
 
             el('div',{style:{display:'flex',gap:8,marginTop:16}},
               el('button',{className:'btn b-ghost',onClick:()=>exportCorrectiveActionPdf(sel)},'📄 Download PDF'),
+              isAdmin&&el('button',{
+                onClick:async()=>{
+                  if(!window.confirm('Delete this corrective action permanently? This cannot be undone.')) return;
+                  try{
+                    await db.remove('pf_qms_corrective',sel.id);
+                    setCorrective(p=>p.filter(c=>c.id!==sel.id));
+                    setSel(null);
+                  }catch(e){console.error(e);alert('Delete failed: '+e.message);}
+                },
+                className:'btn b-red',
+              },'🗑 Delete'),
               canAck&&el('button',{
                 onClick:()=>{setSignatureName(cu.name);setShowSignModal(true);},
                 style:{background:'var(--green)',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'10px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer'}
@@ -4483,6 +4539,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
               el('th',{style:{textAlign:'left',fontSize:11,fontWeight:700,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'1px',padding:'10px 14px',borderBottom:'1px solid var(--border)',whiteSpace:'nowrap',minWidth:150}},'Team Member'),
               ...publishedSOPs.map(s=>el('th',{key:s.id,style:{fontSize:10,fontWeight:700,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'.5px',padding:'10px 8px',borderBottom:'1px solid var(--border)',textAlign:'center',maxWidth:100,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}},s.title.slice(0,20)+(s.title.length>20?'...':''))),
               el('th',{style:{fontSize:11,fontWeight:700,color:'var(--text3)',textTransform:'uppercase',padding:'10px 14px',borderBottom:'1px solid var(--border)',textAlign:'center'}},'Rate'),
+              el('th',{style:{fontSize:11,fontWeight:700,color:'var(--text3)',textTransform:'uppercase',padding:'10px 14px',borderBottom:'1px solid var(--border)',textAlign:'center'}},'Report'),
             )
           ),
           el('tbody',null,
@@ -4510,6 +4567,15 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
                 }),
                 el('td',{style:{padding:'10px 14px',borderBottom:'1px solid var(--border)',textAlign:'center'}},
                   el('div',{style:{fontSize:12,fontWeight:700,color:rate===100?'var(--green)':rate>=80?'var(--accent)':'var(--red)'}},rate+'%'),
+                ),
+                el('td',{style:{padding:'10px 14px',borderBottom:'1px solid var(--border)',textAlign:'center'}},
+                  el('button',{
+                    onClick:()=>exportEmployeeTrainingPdf(u,applicableSOPs),
+                    title:'Download training report for '+u.name,
+                    style:{background:'none',border:'1px solid var(--border)',borderRadius:6,padding:'4px 9px',color:'var(--text2)',cursor:'pointer',fontSize:11},
+                    onMouseEnter:ev=>{ev.currentTarget.style.borderColor='var(--accent)';ev.currentTarget.style.color='var(--accent)';},
+                    onMouseLeave:ev=>{ev.currentTarget.style.borderColor='var(--border)';ev.currentTarget.style.color='var(--text2)';},
+                  },'📄 PDF'),
                 ),
               );
             })
@@ -5471,6 +5537,170 @@ function exportCorrectiveActionPdf(ca){
 
   const filename=(ca.ca_number||'CA').replace(/[^a-z0-9]/gi,'_')+'_'+(ca.employee_name||'employee').replace(/[^a-z0-9]/gi,'_')+'.pdf';
   doc.save(filename);
+}
+
+// ── EMPLOYEE TRAINING REPORT PDF EXPORT ───────────────────────────────────────
+function exportEmployeeTrainingPdf(employee,applicableSOPs){
+  const{jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:'pt',format:'letter'});
+  const W=612,H=792;
+  const margin=50;
+  let y=0;
+
+  const DARK=[18,18,18],GOLD=[245,166,35],GREEN=[16,150,90],TEXT=[20,20,20],TEXT2=[90,90,90],BORDER=[210,210,215];
+
+  function header(){
+    doc.setFillColor(...DARK);
+    doc.rect(0,0,W,70,'F');
+    doc.setFillColor(...GOLD);
+    doc.rect(0,68,W,2,'F');
+    doc.setTextColor(...GOLD);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(16);
+    doc.text('HENDRIX OMS',margin,32);
+    doc.setTextColor(230,230,230);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(9);
+    doc.text('Employee Training Report',margin,48);
+    doc.setTextColor(...GOLD);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(10);
+    doc.text(new Date().toISOString().slice(0,10),W-margin,32,{align:'right'});
+    y=95;
+  }
+
+  function footer(pageNum){
+    doc.setDrawColor(...BORDER);
+    doc.line(margin,H-50,W-margin,H-50);
+    doc.setTextColor(...TEXT2);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(7);
+    doc.text('CONFIDENTIAL — Employee Training Record',margin,H-35);
+    doc.text('Page '+pageNum,W-margin,H-35,{align:'right'});
+  }
+
+  function checkPageBreak(neededHeight){
+    if(y+neededHeight>H-70){
+      doc.addPage();
+      header();
+    }
+  }
+
+  header();
+
+  doc.setTextColor(...DARK);
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(18);
+  doc.text(employee.name,margin,y);
+  y+=22;
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(11);
+  doc.setTextColor(...TEXT2);
+  doc.text((RLABEL[employee.role]||employee.role)+(employee.dept?' · '+employee.dept:''),margin,y);
+  y+=20;
+
+  doc.setDrawColor(...BORDER);
+  doc.setLineWidth(0.5);
+  doc.line(margin,y,W-margin,y);
+  y+=16;
+
+  const acked=applicableSOPs.filter(s=>(s.acknowledgements||[]).some(a=>a.id===employee.id));
+  const pending=applicableSOPs.filter(s=>!(s.acknowledgements||[]).some(a=>a.id===employee.id));
+  const rate=applicableSOPs.length>0?Math.round(acked.length/applicableSOPs.length*100):0;
+
+  // Summary stat boxes
+  const boxW=(W-margin*2-16)/3;
+  function statBox(x,label,value,color){
+    doc.setFillColor(245,246,250);
+    doc.roundedRect?doc.roundedRect(x,y,boxW,54,4,4,'F'):doc.rect(x,y,boxW,54,'F');
+    doc.setTextColor(...color);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(20);
+    doc.text(String(value),x+12,y+30);
+    doc.setTextColor(...TEXT2);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(8.5);
+    doc.text(label.toUpperCase(),x+12,y+44);
+  }
+  statBox(margin,'SOPs Required',applicableSOPs.length,DARK);
+  statBox(margin+boxW+8,'Signed',acked.length,GREEN);
+  statBox(margin+(boxW+8)*2,'Compliance Rate',rate+'%',rate===100?GREEN:rate>=80?GOLD:[200,60,60]);
+  y+=70;
+
+  // Signed SOPs
+  if(acked.length>0){
+    checkPageBreak(30);
+    doc.setFillColor(245,246,250);
+    doc.rect(margin,y,W-margin*2,22,'F');
+    doc.setDrawColor(...GREEN);
+    doc.setLineWidth(2);
+    doc.line(margin,y,margin,y+22);
+    doc.setTextColor(...DARK);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(11);
+    doc.text('SIGNED & ACKNOWLEDGED ('+acked.length+')',margin+10,y+15);
+    y+=32;
+
+    acked.forEach(s=>{
+      const a=(s.acknowledgements||[]).find(a=>a.id===employee.id);
+      checkPageBreak(28);
+      doc.setFillColor(...GREEN);
+      doc.circle(margin+8,y+2,7,'F');
+      doc.setTextColor(255,255,255);
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(9);
+      doc.text('✓',margin+8,y+4.5,{align:'center'});
+      doc.setTextColor(...TEXT);
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(10);
+      doc.text(s.title,margin+22,y+4);
+      doc.setFont('helvetica','normal');
+      doc.setFontSize(8.5);
+      doc.setTextColor(...TEXT2);
+      doc.text('Rev '+(s.version||'1.0')+' — Signed '+(a?.at?.slice(0,10)||''),margin+22,y+16);
+      y+=26;
+    });
+    y+=8;
+  }
+
+  // Pending SOPs
+  if(pending.length>0){
+    checkPageBreak(30);
+    doc.setFillColor(245,246,250);
+    doc.rect(margin,y,W-margin*2,22,'F');
+    doc.setDrawColor(200,60,60);
+    doc.setLineWidth(2);
+    doc.line(margin,y,margin,y+22);
+    doc.setTextColor(...DARK);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(11);
+    doc.text('PENDING ACKNOWLEDGEMENT ('+pending.length+')',margin+10,y+15);
+    y+=32;
+
+    pending.forEach(s=>{
+      checkPageBreak(24);
+      doc.setDrawColor(200,60,60);
+      doc.setLineWidth(1.5);
+      doc.circle(margin+8,y+2,7);
+      doc.setTextColor(...TEXT);
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(10);
+      doc.text(s.title,margin+22,y+4);
+      doc.setFont('helvetica','normal');
+      doc.setFontSize(8.5);
+      doc.setTextColor(...TEXT2);
+      doc.text('Rev '+(s.version||'1.0')+' — Not yet signed',margin+22,y+16);
+      y+=26;
+    });
+  }
+
+  const pageCount=doc.internal.getNumberOfPages();
+  for(let i=1;i<=pageCount;i++){
+    doc.setPage(i);
+    footer(i);
+  }
+
+  doc.save('Training_Report_'+employee.name.replace(/[^a-z0-9]/gi,'_')+'.pdf');
 }
 
 // ── SOP REVISION MODAL ────────────────────────────────────────────────────────
