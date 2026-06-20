@@ -2119,6 +2119,8 @@ function Team({users,setUsers,cu}){
     const update={
       role:editU.role,
       dept:editU.dept,
+      depts:editU.depts||[],
+      licenses:editU.licenses||[],
       loc:editU.loc,
       managers:editU.managers||[],
       oversees_depts:editU.oversees_depts||[],
@@ -2150,7 +2152,7 @@ function Team({users,setUsers,cu}){
       if(e.message.startsWith('MISSING_COLUMN')){
         // Save without oversees_depts so at least other fields persist
         setSaveMsg('Adding column… retrying…');
-        const fallback={role:editU.role,dept:editU.dept,loc:editU.loc,managers:editU.managers||[]};
+        const fallback={role:editU.role,dept:editU.dept,depts:editU.depts||[],licenses:editU.licenses||[],loc:editU.loc,managers:editU.managers||[]};
         try{
           await fetch(`${SUPA_URL}/rest/v1/pf_users?id=eq.${editU.id}`,{method:'PATCH',headers:{...H.headers,'Prefer':'return=representation'},body:JSON.stringify(fallback)});
           setUsers(p=>p.map(u=>u.id===editU.id?{...u,...fallback}:u));
@@ -3413,10 +3415,16 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
   function targetUsersForSop(sop){
     return users.filter(u=>{
       if(!u.approved) return false;
+      // Admins/owners always count as in-scope so they can track and audit every SOP.
+      const isUserAdmin=u.role==='admin';
+      if(isUserAdmin) return true;
       if(sop.license_id||sop.license_name){
         const sopLicId=sop.license_id||LICENSES.find(l=>l.name===sop.license_name)?.id;
         const userLicenses=u.licenses||[];
-        if(!sopLicId||!userLicenses.includes(sopLicId)) return false;
+        // If the user record has no licenses assigned yet (not onboarded into the
+        // license system), don't silently exclude them — fall back to matching by
+        // department only, so existing employees aren't invisible during rollout.
+        if(userLicenses.length>0&&sopLicId&&!userLicenses.includes(sopLicId)) return false;
       }
       if((sop.visible_to_depts||[]).length>0){
         const userDepts=[...(u.depts||[]),u.dept].filter(Boolean);
@@ -4551,6 +4559,85 @@ function exportSopPdf(sop){
   doc.save(filename);
 }
 
+// ── SOP EDIT MODAL (title, license, departments — admin only, any status) ─────
+function SOPEditModal({sop,cu,onClose,onSave}){
+  const[ef,setEf]=useState({
+    title:sop.title||'',
+    license_id:sop.license_id||(LICENSES.find(l=>l.name===sop.license_name)?.id)||'',
+    depts:sop.visible_to_depts||sop.depts||[],
+  });
+  const[saving,setSaving]=useState(false);
+  const[error,setError]=useState('');
+
+  async function save(){
+    if(!ef.title.trim()){setError('Title is required.');return;}
+    if(!ef.license_id){setError('Please select a license.');return;}
+    setSaving(true);setError('');
+    const selectedLic=LICENSES.find(l=>l.id===ef.license_id);
+    const update={
+      title:ef.title.trim(),
+      license_id:ef.license_id,
+      license_name:selectedLic?.name||sop.license_name,
+      state:selectedLic?.state||sop.state,
+      depts:ef.depts,
+      visible_to_depts:ef.depts,
+      updated_at:new Date().toISOString(),
+      updated_by:cu.name,
+    };
+    try{
+      await db.update('pf_sops',sop.id,update);
+      onSave({...sop,...update});
+    }catch(e){
+      console.error(e);
+      setError('Save failed: '+e.message);
+    }
+    setSaving(false);
+  }
+
+  return el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&onClose()},
+    el('div',{className:'md',style:{width:560}},
+      el('div',{className:'mh'},
+        el('div',{className:'mt2'},'Edit SOP — '+sop.title),
+        el('button',{className:'mc',onClick:onClose},'×'),
+      ),
+      el('div',{className:'mbd'},
+        el('div',{className:'fg'},
+          el('label',null,'Title *'),
+          el('input',{value:ef.title,onChange:ev=>setEf(p=>({...p,title:ev.target.value})),autoFocus:true,
+            style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'10px 14px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none'}}),
+        ),
+        el('div',{className:'fg'},
+          el('label',null,'License — who this SOP applies to *'),
+          el('select',{value:ef.license_id,onChange:ev=>setEf(p=>({...p,license_id:ev.target.value})),
+            style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+            el('option',{value:''},'— Select License —'),
+            LICENSES.map(lic=>el('option',{key:lic.id,value:lic.id},lic.name+' ('+lic.state+')'))
+          ),
+        ),
+        el('div',{className:'fg'},
+          el('label',null,'Department(s) — who must see & acknowledge it'),
+          el('div',{style:{display:'flex',flexWrap:'wrap',gap:5}},
+            Object.keys(DEPT_TREE).map(gm=>el('div',{key:gm,
+              onClick:()=>setEf(p=>{const cur=new Set(p.depts||[]);cur.has(gm)?cur.delete(gm):cur.add(gm);return{...p,depts:[...cur]};}),
+              style:{padding:'5px 12px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:600,cursor:'pointer',userSelect:'none',transition:'all .15s',
+                background:(ef.depts||[]).includes(gm)?'var(--accent)':'var(--surface2)',
+                color:(ef.depts||[]).includes(gm)?'#0a0f1e':'var(--text2)',
+                borderColor:(ef.depts||[]).includes(gm)?'var(--accent)':'var(--border)',
+              }
+            },gm))
+          ),
+          (ef.depts||[]).length===0&&el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:4}},'No departments selected — SOP will only be visible to admins'),
+        ),
+        error&&el('div',{style:{background:'rgba(239,68,68,.1)',border:'1px solid rgba(239,68,68,.3)',borderRadius:8,padding:'10px 14px',fontSize:13,color:'var(--red)',marginBottom:8}},error),
+        el('div',{className:'mf'},
+          el('button',{className:'btn b-ghost',onClick:onClose},'Cancel'),
+          el('button',{className:'btn b-blue',onClick:save,disabled:saving},saving?'Saving...':'Save Changes'),
+        ),
+      ),
+    )
+  );
+}
+
 // ── SOP REVISION MODAL ────────────────────────────────────────────────────────
 function SOPReviseModal({sop,cu,onClose,onSave}){
   const[step,setStep]=useState(1); // 1=describe changes, 2=generating, 3=review
@@ -4562,7 +4649,8 @@ function SOPReviseModal({sop,cu,onClose,onSave}){
   const[editMode,setEditMode]=useState(false);
   const[saving,setSaving]=useState(false);
 
-  const original=sop.generated_content?JSON.parse(sop.generated_content):null;
+  let original=null;
+  try{ original=sop.generated_content?JSON.parse(sop.generated_content):null; }catch(e){ original=null; }
   const license=LICENSES.find(l=>l.id===sop.license_id)||LICENSES.find(l=>l.name===sop.license_name)||LICENSES[0];
   const state=sop.state||license.state;
   const nextRevision=(()=>{
@@ -5254,8 +5342,11 @@ function SOPs({sops,setSops,cu,users}){
   const[showNew,setNew]=useState(false);
   const[showGenerator,setShowGenerator]=useState(false);
   const[showRevise,setShowRevise]=useState(false);
+  const[showEditSop,setShowEditSop]=useState(false);
+  const[editSopData,setEditSopData]=useState(null);
   const[search,setSearch]=useState('');
   const[deptFilter,setDeptFilter]=useState('All');
+  const[licFilter,setLicFilter]=useState('all');
   const[saving,setSaving]=useState(false);
   const[ackMsg,setAckMsg]=useState('');
   const[f,setF]=useState({
@@ -5275,12 +5366,14 @@ function SOPs({sops,setSops,cu,users}){
   const visibleSops=sops.filter(s=>{
     if(isAdmin) return true;
     if(s.status==='draft'&&s.created_by_id!==cu.id) return false;
-    // License check: if SOP is tied to a license, user MUST have that license assigned.
-    // No license on the user record = no access (restrictive by default).
-    if(s.license_id||s.license_name){
+    // License check: if SOP is tied to a license AND the current user already has at
+    // least one license assigned, they must be on this SOP's license. If the user has
+    // not been assigned any license yet, fall through to the department check below
+    // instead of hard-blocking them — prevents new/un-migrated accounts from losing
+    // all SOP visibility during rollout.
+    if((s.license_id||s.license_name)&&(cu.licenses||[]).length>0){
       const sopLicId=s.license_id||LICENSES.find(l=>l.name===s.license_name)?.id;
-      const userLicenses=cu.licenses||[];
-      if(!sopLicId||!userLicenses.includes(sopLicId)) return false;
+      if(!sopLicId||!cu.licenses.includes(sopLicId)) return false;
     }
     // Dept check: if SOP has visible_to_depts, user MUST be in one of them.
     if((s.visible_to_depts||[]).length>0){
@@ -5297,10 +5390,16 @@ function SOPs({sops,setSops,cu,users}){
   function targetUsersForSop(sop){
     return users.filter(u=>{
       if(!u.approved) return false;
+      // Admins/owners always count as in-scope so they can track and audit every SOP.
+      const isUserAdmin=u.role==='admin';
+      if(isUserAdmin) return true;
       if(sop.license_id||sop.license_name){
         const sopLicId=sop.license_id||LICENSES.find(l=>l.name===sop.license_name)?.id;
         const userLicenses=u.licenses||[];
-        if(!sopLicId||!userLicenses.includes(sopLicId)) return false;
+        // If the user record has no licenses assigned yet (not onboarded into the
+        // license system), don't silently exclude them — fall back to matching by
+        // department only, so existing employees aren't invisible during rollout.
+        if(userLicenses.length>0&&sopLicId&&!userLicenses.includes(sopLicId)) return false;
       }
       if((sop.visible_to_depts||[]).length>0){
         const userDepts=[...(u.depts||[]),u.dept].filter(Boolean);
@@ -5313,6 +5412,10 @@ function SOPs({sops,setSops,cu,users}){
   }
 
   const filtered=visibleSops.filter(s=>{
+    if(licFilter!=='all'){
+      const sopLicId=s.license_id||LICENSES.find(l=>l.name===s.license_name)?.id;
+      if(sopLicId!==licFilter) return false;
+    }
     if(deptFilter!=='All'&&!(s.depts||[s.dept]).includes(deptFilter)) return false;
     if(search&&!s.title.toLowerCase().includes(search.toLowerCase())&&!s.dept.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
@@ -5454,6 +5557,13 @@ function SOPs({sops,setSops,cu,users}){
         el('div',{style:{fontSize:28}},ico),
         el('div',null,el('div',{className:'sl'},l),el('div',{className:'sv',style:{color:c,fontSize:24}},v)),
       ))
+    ),
+
+    // License filter tabs
+    el('div',{style:{display:'flex',gap:6,flexWrap:'wrap',marginBottom:10,alignItems:'center'}},
+      el('span',{style:{fontSize:11,fontWeight:700,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'.5px'}},'License:'),
+      el('button',{onClick:()=>setLicFilter('all'),style:{padding:'5px 14px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:500,cursor:'pointer',background:licFilter==='all'?'var(--accent)':'transparent',color:licFilter==='all'?'#0a0f1e':'var(--text2)',borderColor:licFilter==='all'?'var(--accent)':'var(--border)',transition:'all .15s'}},'All Licenses'),
+      ...LICENSES.map(lic=>el('button',{key:lic.id,onClick:()=>setLicFilter(lic.id),style:{padding:'5px 14px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:500,cursor:'pointer',background:licFilter===lic.id?'var(--accent)':'transparent',color:licFilter===lic.id?'#0a0f1e':'var(--text2)',borderColor:licFilter===lic.id?'var(--accent)':'var(--border)',transition:'all .15s'}},lic.name)),
     ),
 
     // Dept filter tabs
@@ -5647,6 +5757,15 @@ function SOPs({sops,setSops,cu,users}){
       onClose:()=>setShowGenerator(false),
       onSave:(sop)=>{setSops(p=>[sop,...p]);setShowGenerator(false);setSel(sop);},
     }),
+    showEditSop&&sel&&el(SOPEditModal,{
+      sop:sel,cu,
+      onClose:()=>setShowEditSop(false),
+      onSave:(updated)=>{
+        setSops(p=>p.map(s=>s.id===updated.id?updated:s));
+        setShowEditSop(false);
+        setSel(updated);
+      },
+    }),
     showRevise&&sel&&el(SOPReviseModal,{
       sop:sel,cu,
       onClose:()=>setShowRevise(false),
@@ -5775,6 +5894,7 @@ function SOPs({sops,setSops,cu,users}){
         el('div',{className:'mf',style:{justifyContent:'space-between'}},
           el('div',{style:{display:'flex',gap:8}},
             el('button',{className:'btn b-ghost',onClick:()=>exportSopPdf(sel)},'📄 Download PDF'),
+            isAdmin&&el('button',{className:'btn b-ghost',onClick:()=>setShowEditSop(true)},'✏️ Edit'),
             canCreate&&sel.status==='draft'&&el('button',{className:'btn b-green',onClick:()=>publishSOP(sel)},'📢 Publish & Notify'),
             isAdmin&&sel.status==='published'&&el('button',{
               onClick:()=>setShowRevise(true),
