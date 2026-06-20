@@ -3739,6 +3739,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
   const[showSignModal,setShowSignModal]=useState(false);
   const[signatureName,setSignatureName]=useState('');
   const[caSearch,setCaSearch]=useState('');
+  const[profileEmployee,setProfileEmployee]=useState(null);
   const isAdmin=cu.role==='admin'||['coo','director_production','director_operations','general_manager','compliance_manager','director_sales_marketing'].includes(cu.role);
   const qmsRoleGroup=ROLE_GROUPS.find(g=>g.roles.includes(cu.role))?.label;
   const isManager=qmsRoleGroup==='Managers';
@@ -4364,7 +4365,14 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
                   el('span',{style:{background:'var(--surface2)',color:'var(--text2)',border:'1px solid var(--border)',borderRadius:4,padding:'2px 7px',fontSize:11}},c.violation_type),
                 ),
                 el('div',{style:{fontSize:14,fontWeight:700,marginBottom:3}},c.title),
-                el('div',{style:{fontSize:12,color:'var(--text2)'}},'Employee: '+c.employee_name+' · Issued by '+c.issued_by),
+                el('div',{style:{fontSize:12,color:'var(--text2)'}},
+                  'Employee: ',
+                  el('span',{
+                    onClick:ev=>{ev.stopPropagation();const emp=users.find(u=>u.id===c.employee_id);if(emp)setProfileEmployee(emp);},
+                    style:{color:'var(--accent)',cursor:'pointer',fontWeight:600,textDecoration:'underline'},
+                  },c.employee_name),
+                  ' · Issued by '+c.issued_by,
+                ),
               ),
               el('div',{style:{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:6,flexShrink:0,marginLeft:12}},
                 el('div',{style:{fontSize:11,color:'var(--text3)'}},c.created_at?.slice(0,10)),
@@ -4550,9 +4558,14 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
               const rate=applicableSOPs.length>0?Math.round(acked.length/applicableSOPs.length*100):0;
               return el('tr',{key:u.id},
                 el('td',{style:{padding:'10px 14px',borderBottom:'1px solid var(--border)',whiteSpace:'nowrap'}},
-                  el('div',{style:{display:'flex',alignItems:'center',gap:8}},
+                  el('div',{
+                    onClick:()=>setProfileEmployee(u),
+                    style:{display:'flex',alignItems:'center',gap:8,cursor:'pointer'},
+                    onMouseEnter:ev=>ev.currentTarget.querySelector('.emp-name').style.color='var(--accent)',
+                    onMouseLeave:ev=>ev.currentTarget.querySelector('.emp-name').style.color='var(--text)',
+                  },
                     el('div',{className:'avatar',style:{background:avatarColor(u.name),width:24,height:24,fontSize:10}},u.name.charAt(0).toUpperCase()),
-                    el('div',null,el('div',{style:{fontSize:12,fontWeight:600}},u.name),el('div',{style:{fontSize:10,color:'var(--text3)'}},RLABEL[u.role]||u.role)),
+                    el('div',null,el('div',{className:'emp-name',style:{fontSize:12,fontWeight:600,color:'var(--text)',transition:'color .15s'}},u.name),el('div',{style:{fontSize:10,color:'var(--text3)'}},RLABEL[u.role]||u.role)),
                   )
                 ),
                 ...publishedSOPs.map(s=>{
@@ -4583,6 +4596,16 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
         )
       ),
     ),
+
+    profileEmployee&&el(EmployeeProfileModal,{
+      employee:profileEmployee,
+      cu,users,
+      publishedSOPs,
+      corrective:filterByLic(corrective).filter(c=>c.employee_id===profileEmployee.id),
+      targetUsersForSop,
+      onClose:()=>setProfileEmployee(null),
+      onOpenCA:(c)=>{setProfileEmployee(null);setTab('corrective');setSel(c);},
+    }),
   );
 }
 
@@ -5701,6 +5724,96 @@ function exportEmployeeTrainingPdf(employee,applicableSOPs){
   }
 
   doc.save('Training_Report_'+employee.name.replace(/[^a-z0-9]/gi,'_')+'.pdf');
+}
+
+// ── EMPLOYEE PROFILE MODAL (Training + Corrective Actions combined) ──────────
+function EmployeeProfileModal({employee,cu,users,publishedSOPs,corrective,targetUsersForSop,onClose,onOpenCA}){
+  const isAdmin=cu.role==='admin';
+  const applicableSOPs=publishedSOPs.filter(s=>targetUsersForSop(s).some(t=>t.id===employee.id));
+  const acked=applicableSOPs.filter(s=>(s.acknowledgements||[]).some(a=>a.id===employee.id));
+  const pending=applicableSOPs.filter(s=>!(s.acknowledgements||[]).some(a=>a.id===employee.id));
+  const rate=applicableSOPs.length>0?Math.round(acked.length/applicableSOPs.length*100):0;
+
+  const caPending=corrective.filter(c=>c.status!=='acknowledged');
+  const caAcked=corrective.filter(c=>c.status==='acknowledged');
+
+  return el('div',{className:'mo',style:{zIndex:1100},onClick:ev=>ev.target===ev.currentTarget&&onClose()},
+    el('div',{className:'md',style:{width:760,maxHeight:'92vh',overflowY:'auto'}},
+      el('div',{className:'mh'},
+        el('div',{style:{display:'flex',alignItems:'center',gap:10}},
+          el('div',{className:'avatar',style:{background:avatarColor(employee.name),width:38,height:38,fontSize:15}},employee.name.charAt(0).toUpperCase()),
+          el('div',null,
+            el('div',{className:'mt2'},employee.name),
+            el('div',{style:{fontSize:11,color:'var(--text3)'}},(RLABEL[employee.role]||employee.role)+(employee.dept?' · '+employee.dept:'')+(employee.email?' · '+employee.email:'')),
+          ),
+        ),
+        el('button',{className:'mc',onClick:onClose},'×'),
+      ),
+
+      el('div',{className:'mbd'},
+
+        // Summary stat row
+        el('div',{style:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8,marginBottom:20}},
+          [
+            ['SOPs Signed',acked.length+'/'+applicableSOPs.length,'var(--accent)'],
+            ['Compliance Rate',rate+'%',rate===100?'var(--green)':rate>=80?'var(--accent)':'var(--red)'],
+            ['Corrective Actions',corrective.length,corrective.length>0?'var(--red)':'var(--text2)'],
+            ['Pending Signatures',caPending.length+pending.length,(caPending.length+pending.length)>0?'var(--red)':'var(--green)'],
+          ].map(([label,val,color])=>el('div',{key:label,style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:10,padding:'12px 14px',textAlign:'center'}},
+            el('div',{style:{fontSize:20,fontWeight:800,color}},val),
+            el('div',{style:{fontSize:10,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'.5px',marginTop:3}},label),
+          ))
+        ),
+
+        // ── TRAINING SECTION ───────────────────────────────────────────────
+        el('div',{style:{fontSize:12,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:8,display:'flex',alignItems:'center',gap:6}},'🎓 Training & SOP Acknowledgements'),
+        applicableSOPs.length===0?el('div',{style:{fontSize:12,color:'var(--text3)',marginBottom:20}},"No SOPs apply to this employee's license/department."):
+        el('div',{style:{display:'flex',flexDirection:'column',gap:5,marginBottom:20}},
+          acked.map(s=>{
+            const a=(s.acknowledgements||[]).find(a=>a.id===employee.id);
+            return el('div',{key:s.id,style:{display:'flex',justifyContent:'space-between',alignItems:'center',background:'var(--surface2)',border:'1px solid var(--border)',borderLeft:'3px solid var(--green)',borderRadius:8,padding:'8px 12px'}},
+              el('div',null,
+                el('div',{style:{fontSize:12,fontWeight:600}},s.title),
+                el('div',{style:{fontSize:10,color:'var(--text3)'}},'Rev '+(s.version||'1.0')),
+              ),
+              el('div',{style:{fontSize:11,color:'var(--green)',fontWeight:600}},'✓ Signed '+(a?.at?.slice(0,10)||'')),
+            );
+          }),
+          pending.map(s=>el('div',{key:s.id,style:{display:'flex',justifyContent:'space-between',alignItems:'center',background:'var(--surface2)',border:'1px solid var(--border)',borderLeft:'3px solid var(--red)',borderRadius:8,padding:'8px 12px'}},
+            el('div',null,
+              el('div',{style:{fontSize:12,fontWeight:600}},s.title),
+              el('div',{style:{fontSize:10,color:'var(--text3)'}},'Rev '+(s.version||'1.0')),
+            ),
+            el('div',{style:{fontSize:11,color:'var(--red)',fontWeight:600}},'Pending'),
+          )),
+        ),
+
+        // ── CORRECTIVE ACTIONS SECTION ─────────────────────────────────────
+        el('div',{style:{fontSize:12,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:8,display:'flex',alignItems:'center',gap:6}},'⚖️ Corrective Action History'),
+        corrective.length===0?el('div',{style:{fontSize:12,color:'var(--text3)'}},'No corrective actions on record for this employee.'):
+        el('div',{style:{display:'flex',flexDirection:'column',gap:6}},
+          corrective.map(c=>el('div',{key:c.id,
+            onClick:()=>onOpenCA(c),
+            style:{background:'var(--surface)',border:'1px solid var(--border)',borderLeft:'3px solid '+(c.status==='acknowledged'?'var(--green)':'var(--red)'),borderRadius:8,padding:'10px 14px',cursor:'pointer',transition:'all .15s'},
+            onMouseEnter:ev=>ev.currentTarget.style.borderColor='rgba(245,166,35,.3)',
+            onMouseLeave:ev=>ev.currentTarget.style.borderColor='var(--border)',
+          },
+            el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},
+              el('div',null,
+                el('div',{style:{display:'flex',gap:6,marginBottom:4,flexWrap:'wrap'}},
+                  el('span',{style:{background:c.status==='acknowledged'?'rgba(16,185,129,.1)':'rgba(239,68,68,.1)',color:c.status==='acknowledged'?'var(--green)':'var(--red)',border:'1px solid',borderColor:c.status==='acknowledged'?'rgba(16,185,129,.3)':'rgba(239,68,68,.3)',borderRadius:4,padding:'2px 7px',fontSize:10,fontWeight:700}},c.status==='acknowledged'?'Acknowledged':'Pending'),
+                  el('span',{style:{background:'var(--surface2)',color:'var(--text2)',border:'1px solid var(--border)',borderRadius:4,padding:'2px 7px',fontSize:10}},c.ca_number),
+                  el('span',{style:{background:'var(--surface2)',color:'var(--text2)',border:'1px solid var(--border)',borderRadius:4,padding:'2px 7px',fontSize:10}},c.violation_type),
+                ),
+                el('div',{style:{fontSize:13,fontWeight:600}},c.title),
+              ),
+              el('div',{style:{fontSize:10,color:'var(--text3)',flexShrink:0,marginLeft:10}},c.created_at?.slice(0,10)),
+            ),
+          ))
+        ),
+      ),
+    )
+  );
 }
 
 // ── SOP REVISION MODAL ────────────────────────────────────────────────────────
