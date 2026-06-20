@@ -3401,6 +3401,15 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
   const[editing,setEditing]=useState(null);
   const[licFilter,setLicFilter]=useState('all');
   const isAdmin=cu.role==='admin'||['coo','director_production','director_operations','general_manager','compliance_manager','director_sales_marketing'].includes(cu.role);
+  const qmsRoleGroup=ROLE_GROUPS.find(g=>g.roles.includes(cu.role))?.label;
+  const isManager=qmsRoleGroup==='Managers';
+  const isSupervisor=qmsRoleGroup==='Supervisors';
+  // Managers and above can report Deviations/CAPAs/Audits; Supervisors are read-only in those tabs.
+  const canReport=isAdmin||isManager;
+  // Direct reports: users whose `managers` array includes this person's id (up to 3 managers per user).
+  const directReports=users.filter(u=>(u.managers||[]).includes(cu.id));
+  // Training Matrix scope: Admin sees everyone; Managers/Supervisors see only their direct reports.
+  const trainingMatrixScope=isAdmin?users.filter(u=>u.approved):directReports.filter(u=>u.approved);
   const today=new Date().toISOString().slice(0,10);
 
   // Dashboard stats
@@ -3447,7 +3456,9 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
     return sum+(targets.length>0?acked/targets.length:0);
   },0)/publishedSOPs.length*100):0;
   // Training: users who have NOT acked all SOPs that target them specifically
-  const untrainedUsers=approvedUsers.filter(u=>publishedSOPs.some(s=>{
+  // Non-admins only see training gaps among their own direct reports on this dashboard panel.
+  const dashboardScope=isAdmin?approvedUsers:approvedUsers.filter(u=>directReports.some(d=>d.id===u.id));
+  const untrainedUsers=dashboardScope.filter(u=>publishedSOPs.some(s=>{
     const targets=targetUsersForSop(s);
     const isTargeted=targets.some(t=>t.id===u.id);
     return isTargeted&&!(s.acknowledgements||[]).some(a=>a.id===u.id);
@@ -3468,10 +3479,13 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
 
   // Generic list renderer
   function RecordList({items,emptyMsg,renderRow,onNew,newLabel}){
+    // Managers+Admin can report Deviations/CAPAs/Audits. Complaints, Change Control,
+    // and Suppliers stay admin-only creation (compliance-sensitive records).
+    const canCreateThisTab=isAdmin||(canReport&&['deviations','capas','audits'].includes(tab));
     return el('div',null,
       el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}},
         el('div',{style:{fontSize:13,color:'var(--text2)'}},(items.length)+' record'+(items.length!==1?'s':'')),
-        (isAdmin||tab==='deviations')&&el('button',{className:'btn b-blue',onClick:onNew},newLabel||'+ New'),
+        canCreateThisTab&&el('button',{className:'btn b-blue',onClick:onNew},newLabel||'+ New'),
       ),
       items.length===0?el('div',{className:'empty'},el('div',{className:'eico'},'📋'),el('div',{className:'etxt'},emptyMsg)):
       el('div',{style:{display:'flex',flexDirection:'column',gap:6}},items.map(renderRow)),
@@ -3493,9 +3507,9 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
       ...LICENSES.map(lic=>el('button',{key:lic.id,onClick:()=>setLicFilter(lic.id),style:{padding:'4px 12px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:500,cursor:'pointer',background:licFilter===lic.id?'var(--accent)':'transparent',color:licFilter===lic.id?'#0a0f1e':'var(--text2)',borderColor:licFilter===lic.id?'var(--accent)':'var(--border)',transition:'all .15s'}},lic.name)),
     ),
 
-    // Tabs
+    // Tabs — Supervisors only get Dashboard + Training Matrix (read-only everywhere else)
     el('div',{style:{display:'flex',gap:4,flexWrap:'wrap',marginBottom:20,background:'var(--surface)',border:'1px solid var(--border)',borderRadius:'var(--r)',padding:4}},
-      QMS_TABS.map(t=>el('button',{key:t.id,onClick:()=>{setTab(t.id);setNew(false);setSel(null);},style:{display:'flex',alignItems:'center',gap:6,padding:'8px 14px',borderRadius:8,border:'none',background:tab===t.id?'var(--accent)':'transparent',color:tab===t.id?'#0a0f1e':'var(--text2)',fontFamily:'inherit',fontSize:12,fontWeight:tab===t.id?700:500,cursor:'pointer',transition:'all .15s'}},
+      QMS_TABS.filter(t=>isAdmin||isManager||['dashboard','training'].includes(t.id)).map(t=>el('button',{key:t.id,onClick:()=>{setTab(t.id);setNew(false);setSel(null);},style:{display:'flex',alignItems:'center',gap:6,padding:'8px 14px',borderRadius:8,border:'none',background:tab===t.id?'var(--accent)':'transparent',color:tab===t.id?'#0a0f1e':'var(--text2)',fontFamily:'inherit',fontSize:12,fontWeight:tab===t.id?700:500,cursor:'pointer',transition:'all .15s'}},
         el('span',null,t.ico),t.label,
         // Badges
         t.id==='deviations'&&openDeviations.length>0&&el('span',{style:{background:'rgba(239,68,68,.8)',color:'#fff',borderRadius:10,padding:'0 5px',fontSize:10,fontWeight:700}},openDeviations.length),
@@ -3938,7 +3952,9 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
 
     // ── TRAINING MATRIX ───────────────────────────────────────────────────────
     tab==='training'&&el('div',null,
-      el('div',{style:{fontWeight:700,fontSize:14,marginBottom:14,color:'var(--text2)'}},'SOP Acknowledgement Tracking — '+publishedSOPs.length+' Published SOPs · '+approvedUsers.length+' Team Members'),
+      el('div',{style:{fontWeight:700,fontSize:14,marginBottom:4,color:'var(--text2)'}},'SOP Acknowledgement Tracking — '+publishedSOPs.length+' Published SOPs · '+trainingMatrixScope.length+' Team Members'),
+      !isAdmin&&el('div',{style:{fontSize:11,color:'var(--text3)',marginBottom:14}},'Showing your direct reports only'),
+      isAdmin&&el('div',{style:{marginBottom:14}}),
       publishedSOPs.length===0?el('div',{className:'empty'},el('div',{className:'eico'},'📚'),el('div',{className:'etxt'},'No published SOPs yet — publish SOPs to track training')):
       el('div',{className:'card',style:{padding:0,overflowX:'auto'}},
         el('table',{style:{width:'100%',borderCollapse:'collapse',minWidth:600}},
@@ -3950,7 +3966,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
             )
           ),
           el('tbody',null,
-            approvedUsers.map(u=>{
+            trainingMatrixScope.map(u=>{
               // Only count SOPs that actually target this user (their license + dept)
               const applicableSOPs=publishedSOPs.filter(s=>targetUsersForSop(s).some(t=>t.id===u.id));
               const acked=applicableSOPs.filter(s=>(s.acknowledgements||[]).some(a=>a.id===u.id));
@@ -4621,7 +4637,7 @@ function SOPEditModal({sop,cu,onClose,onSave}){
     setSaving(false);
   }
 
-  return el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&onClose()},
+  return el('div',{className:'mo',style:{zIndex:1100},onClick:ev=>ev.target===ev.currentTarget&&onClose()},
     el('div',{className:'md',style:{width:600,maxHeight:'88vh',overflowY:'auto'}},
       el('div',{className:'mh'},
         el('div',{className:'mt2'},'Edit SOP'),
@@ -4809,7 +4825,7 @@ Respond with the FULL updated SOP in this EXACT JSON format (respond with JSON o
     setSaving(false);
   }
 
-  return el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&onClose()},
+  return el('div',{className:'mo',style:{zIndex:1100},onClick:ev=>ev.target===ev.currentTarget&&onClose()},
     el('div',{className:'md',style:{width:750,maxHeight:'94vh'}},
       el('div',{className:'mh'},
         el('div',{style:{flex:1}},
@@ -5948,7 +5964,7 @@ function SOPs({sops,setSops,cu,users}){
         el('div',{className:'mf',style:{justifyContent:'space-between'}},
           el('div',{style:{display:'flex',gap:8}},
             el('button',{className:'btn b-ghost',onClick:()=>exportSopPdf(sel)},'📄 Download PDF'),
-            (isAdmin||canCreate)&&el('button',{className:'btn b-ghost',onClick:()=>{console.log('Edit clicked, sel=',sel);setShowEditSop(true);}},'✏️ Edit'),
+            isAdmin&&el('button',{className:'btn b-ghost',onClick:()=>setShowEditSop(true)},'✏️ Edit'),
             canCreate&&sel.status==='draft'&&el('button',{className:'btn b-green',onClick:()=>publishSOP(sel)},'📢 Publish & Notify'),
             isAdmin&&sel.status==='published'&&el('button',{
               onClick:()=>setShowRevise(true),
@@ -6411,6 +6427,10 @@ function App(){
 
   const pending=users.filter(u=>!u.approved).length;
   const isAdmin=cu.role==='admin';
+  // QMS access: Admin, Managers, and Supervisors. Employees, Leads, and Staff
+  // get SOPs only (per Hendrix QMS RBAC policy).
+  const qmsRoleGroup=ROLE_GROUPS.find(g=>g.roles.includes(cu.role))?.label;
+  const canAccessQms=isAdmin||['Executive','Directors','Managers','Supervisors'].includes(qmsRoleGroup);
   const today=new Date().toISOString().slice(0,10);
   const myTasks=tasks.filter(t=>(t.assignees||[]).some(a=>a.id===cu.id)&&!['archived'].includes(t.status));
   const overdueCt=tasks.filter(t=>!['done','archived'].includes(t.status)&&t.due_date&&t.due_date<today).length;
@@ -6420,7 +6440,7 @@ function App(){
     {id:'calendar',ico:'📅',label:'Calendar'},
     (cu.role==='admin'||cu.dept==='Sales'||cu.dept==='Marketing')&&{id:'sales',ico:'🏪',label:'Sales & Marketing'},
     {id:'sops',ico:'📋',label:'SOPs'},
-    {id:'qms',ico:'🛡️',label:'QMS'},
+    canAccessQms&&{id:'qms',ico:'🛡️',label:'QMS'},
     {id:'scores',ico:'🏆',label:'Scoreboard'},
     isAdmin&&{id:'team',ico:'👥',label:'Team & Access',badge:pending||null},
   ].filter(Boolean);
@@ -6542,7 +6562,7 @@ function App(){
       page==='calendar'&&el(Calendar,{events,setEvents,tasks,cu,users,locFilter,meetingNotes,setMeetingNotes,onJoinCall:(room,title,meetLink)=>setActiveCall({room,title,meetLink})}),
       page==='sales'&&el(SalesMarketing,{salesTasks,setSalesTasks,cu,users,locFilter}),
       page==='sops'&&el(SOPs,{sops,setSops,cu,users}),
-      page==='qms'&&el(QMS,{cu,users,tasks,sops,
+      page==='qms'&&canAccessQms&&el(QMS,{cu,users,tasks,sops,
         deviations:qmsDeviations,setDeviations:setQmsDeviations,
         capas:qmsCAPAs,setCapas:setQmsCAPAs,
         audits:qmsAudits,setAudits:setQmsAudits,
