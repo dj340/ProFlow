@@ -3853,7 +3853,10 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
 
     // Tabs — Supervisors only get Dashboard + Training Matrix (read-only everywhere else)
     el('div',{style:{display:'flex',gap:4,flexWrap:'wrap',marginBottom:20,background:'var(--surface)',border:'1px solid var(--border)',borderRadius:'var(--r)',padding:4}},
-      QMS_TABS.filter(t=>isAdmin||isManager||['dashboard','training'].includes(t.id)).map(t=>el('button',{key:t.id,onClick:()=>{setTab(t.id);setNew(false);setSel(null);},style:{display:'flex',alignItems:'center',gap:6,padding:'8px 14px',borderRadius:8,border:'none',background:tab===t.id?'var(--accent)':'transparent',color:tab===t.id?'#000000':'var(--text2)',fontFamily:'inherit',fontSize:12,fontWeight:tab===t.id?700:500,cursor:'pointer',transition:'all .15s'}},
+      QMS_TABS.filter(t=>{
+        if(t.id==='corrective') return isAdmin; // Disciplinary records are admin-only — nobody else can see this tab
+        return isAdmin||isManager||['dashboard','training'].includes(t.id);
+      }).map(t=>el('button',{key:t.id,onClick:()=>{setTab(t.id);setNew(false);setSel(null);},style:{display:'flex',alignItems:'center',gap:6,padding:'8px 14px',borderRadius:8,border:'none',background:tab===t.id?'var(--accent)':'transparent',color:tab===t.id?'#000000':'var(--text2)',fontFamily:'inherit',fontSize:12,fontWeight:tab===t.id?700:500,cursor:'pointer',transition:'all .15s'}},
         el('span',null,t.ico),t.label,
         // Badges
         t.id==='deviations'&&openDeviations.length>0&&el('span',{style:{background:'rgba(239,68,68,.8)',color:'#fff',borderRadius:10,padding:'0 5px',fontSize:10,fontWeight:700}},openDeviations.length),
@@ -4601,7 +4604,9 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
       employee:profileEmployee,
       cu,users,
       publishedSOPs,
-      corrective:filterByLic(corrective).filter(c=>c.employee_id===profileEmployee.id),
+      // Disciplinary history is admin-only, even when viewing a profile from the Training Matrix.
+      corrective:isAdmin?filterByLic(corrective).filter(c=>c.employee_id===profileEmployee.id):[],
+      showCorrectiveSection:isAdmin,
       targetUsersForSop,
       onClose:()=>setProfileEmployee(null),
       onOpenCA:(c)=>{setProfileEmployee(null);setTab('corrective');setSel(c);},
@@ -5727,7 +5732,7 @@ function exportEmployeeTrainingPdf(employee,applicableSOPs){
 }
 
 // ── EMPLOYEE PROFILE MODAL (Training + Corrective Actions combined) ──────────
-function EmployeeProfileModal({employee,cu,users,publishedSOPs,corrective,targetUsersForSop,onClose,onOpenCA}){
+function EmployeeProfileModal({employee,cu,users,publishedSOPs,corrective,showCorrectiveSection,targetUsersForSop,onClose,onOpenCA}){
   const isAdmin=cu.role==='admin';
   const applicableSOPs=publishedSOPs.filter(s=>targetUsersForSop(s).some(t=>t.id===employee.id));
   const acked=applicableSOPs.filter(s=>(s.acknowledgements||[]).some(a=>a.id===employee.id));
@@ -5753,12 +5758,14 @@ function EmployeeProfileModal({employee,cu,users,publishedSOPs,corrective,target
       el('div',{className:'mbd'},
 
         // Summary stat row
-        el('div',{style:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8,marginBottom:20}},
+        el('div',{style:{display:'grid',gridTemplateColumns:showCorrectiveSection?'repeat(4,1fr)':'repeat(2,1fr)',gap:8,marginBottom:20}},
           [
             ['SOPs Signed',acked.length+'/'+applicableSOPs.length,'var(--accent)'],
             ['Compliance Rate',rate+'%',rate===100?'var(--green)':rate>=80?'var(--accent)':'var(--red)'],
-            ['Corrective Actions',corrective.length,corrective.length>0?'var(--red)':'var(--text2)'],
-            ['Pending Signatures',caPending.length+pending.length,(caPending.length+pending.length)>0?'var(--red)':'var(--green)'],
+            ...(showCorrectiveSection?[
+              ['Corrective Actions',corrective.length,corrective.length>0?'var(--red)':'var(--text2)'],
+              ['Pending Signatures',caPending.length+pending.length,(caPending.length+pending.length)>0?'var(--red)':'var(--green)'],
+            ]:[]),
           ].map(([label,val,color])=>el('div',{key:label,style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:10,padding:'12px 14px',textAlign:'center'}},
             el('div',{style:{fontSize:20,fontWeight:800,color}},val),
             el('div',{style:{fontSize:10,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'.5px',marginTop:3}},label),
@@ -5788,9 +5795,9 @@ function EmployeeProfileModal({employee,cu,users,publishedSOPs,corrective,target
           )),
         ),
 
-        // ── CORRECTIVE ACTIONS SECTION ─────────────────────────────────────
-        el('div',{style:{fontSize:12,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:8,display:'flex',alignItems:'center',gap:6}},'⚖️ Corrective Action History'),
-        corrective.length===0?el('div',{style:{fontSize:12,color:'var(--text3)'}},'No corrective actions on record for this employee.'):
+        // ── CORRECTIVE ACTIONS SECTION (Admin-only) ────────────────────────
+        showCorrectiveSection&&el('div',{style:{fontSize:12,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:8,display:'flex',alignItems:'center',gap:6}},'⚖️ Corrective Action History'),
+        showCorrectiveSection&&(corrective.length===0?el('div',{style:{fontSize:12,color:'var(--text3)'}},'No corrective actions on record for this employee.'):
         el('div',{style:{display:'flex',flexDirection:'column',gap:6}},
           corrective.map(c=>el('div',{key:c.id,
             onClick:()=>onOpenCA(c),
@@ -5810,9 +5817,156 @@ function EmployeeProfileModal({employee,cu,users,publishedSOPs,corrective,target
               el('div',{style:{fontSize:10,color:'var(--text3)',flexShrink:0,marginLeft:10}},c.created_at?.slice(0,10)),
             ),
           ))
-        ),
+        )),
       ),
     )
+  );
+}
+
+// ── MY DOCUMENTS (personal view — employee sees only their own corrective actions) ──
+function MyDocuments({cu,corrective,setCorrective}){
+  const[sel,setSel]=useState(null);
+  const[showSignModal,setShowSignModal]=useState(false);
+  const[signatureName,setSignatureName]=useState('');
+
+  // Hard scope: only records issued to this specific person, regardless of role.
+  const myRecords=corrective.filter(c=>c.employee_id===cu.id);
+
+  if(!sel){
+    return el('div',null,
+      el('div',{className:'ph'},
+        el('div',null,
+          el('div',{className:'pt'},'My Documents'),
+          el('div',{className:'ps'},'Personnel records issued to you — only visible to you and Admin'),
+        ),
+      ),
+      myRecords.length===0?el('div',{className:'empty'},el('div',{className:'eico'},'📁'),el('div',{className:'etxt'},'No documents on file')):
+      el('div',{style:{display:'flex',flexDirection:'column',gap:6}},
+        myRecords.map(c=>el('div',{key:c.id,onClick:()=>setSel(c),style:{background:'var(--surface)',border:'1px solid var(--border)',borderLeft:'3px solid '+(c.status==='acknowledged'?'var(--green)':'var(--red)'),borderRadius:10,padding:'14px 16px',cursor:'pointer',transition:'all .15s'},onMouseEnter:ev=>ev.currentTarget.style.borderColor='rgba(245,166,35,.3)',onMouseLeave:ev=>ev.currentTarget.style.borderColor='var(--border)'},
+          el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},
+            el('div',{style:{flex:1}},
+              el('div',{style:{display:'flex',gap:6,marginBottom:5,flexWrap:'wrap'}},
+                el('span',{style:{background:c.status==='acknowledged'?'rgba(16,185,129,.1)':'rgba(239,68,68,.1)',color:c.status==='acknowledged'?'var(--green)':'var(--red)',border:'1px solid',borderColor:c.status==='acknowledged'?'rgba(16,185,129,.3)':'rgba(239,68,68,.3)',borderRadius:4,padding:'2px 7px',fontSize:11,fontWeight:700}},c.status==='acknowledged'?'Acknowledged':'Pending — Action Required'),
+                el('span',{style:{background:'var(--surface2)',color:'var(--text2)',border:'1px solid var(--border)',borderRadius:4,padding:'2px 7px',fontSize:11}},c.ca_number),
+              ),
+              el('div',{style:{fontSize:14,fontWeight:700,marginBottom:3}},c.title),
+            ),
+            el('div',{style:{fontSize:11,color:'var(--text3)',flexShrink:0,marginLeft:12}},c.created_at?.slice(0,10)),
+          ),
+        ))
+      ),
+    );
+  }
+
+  // ── DETAIL VIEW ───────────────────────────────────────────────────────────
+  const gen=sel.generated_content?JSON.parse(sel.generated_content):{};
+  const canAck=sel.status!=='acknowledged';
+
+  return el('div',null,
+    el('button',{className:'btn b-ghost btn-sm',onClick:()=>setSel(null),style:{marginBottom:14}},'← Back to My Documents'),
+
+    el('div',{style:{background:'rgba(239,68,68,.06)',border:'1px solid rgba(239,68,68,.2)',borderRadius:10,padding:'16px 18px',marginBottom:16}},
+      el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:8}},
+        el('div',null,
+          el('div',{style:{fontSize:11,fontWeight:700,color:'var(--red)',textTransform:'uppercase',letterSpacing:'.8px',marginBottom:4}},sel.ca_number),
+          el('div',{style:{fontSize:18,fontWeight:800}},sel.title),
+          el('div',{style:{display:'flex',gap:10,flexWrap:'wrap',marginTop:6}},
+            el('span',{style:{fontSize:12,color:'var(--text2)'}},'Issued: '+sel.created_at?.slice(0,10)),
+          ),
+        ),
+        el('span',{style:{background:sel.status==='acknowledged'?'rgba(16,185,129,.1)':'rgba(239,68,68,.1)',color:sel.status==='acknowledged'?'var(--green)':'var(--red)',border:'1px solid',borderColor:sel.status==='acknowledged'?'rgba(16,185,129,.3)':'rgba(239,68,68,.3)',borderRadius:6,padding:'5px 12px',fontSize:12,fontWeight:700}},sel.status==='acknowledged'?'Acknowledged '+sel.acknowledged_at?.slice(0,10):'Pending Acknowledgement'),
+      ),
+    ),
+
+    sel.status==='acknowledged'&&el('div',{style:{background:'rgba(16,185,129,.06)',border:'1px solid rgba(16,185,129,.25)',borderRadius:10,padding:'14px 18px',marginBottom:16}},
+      el('div',{style:{fontSize:11,fontWeight:700,color:'var(--green)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:8}},'Signed Acknowledgement'),
+      el('div',{style:{display:'flex',alignItems:'baseline',gap:16,flexWrap:'wrap'}},
+        el('div',null,
+          el('div',{style:{fontFamily:'cursive',fontSize:22,color:'var(--text)',borderBottom:'1px solid var(--border2)',paddingBottom:4,marginBottom:3}},sel.signature_name||sel.employee_name),
+          el('div',{style:{fontSize:10,color:'var(--text3)'}},'Employee Signature'),
+        ),
+        el('div',null,
+          el('div',{style:{fontFamily:'cursive',fontSize:18,color:'var(--text)',borderBottom:'1px solid var(--border2)',paddingBottom:4,marginBottom:3}},sel.acknowledged_at?.slice(0,10)),
+          el('div',{style:{fontSize:10,color:'var(--text3)'}},'Date'),
+        ),
+      ),
+    ),
+
+    [['Incident Summary',gen.incident_summary],['Policy/SOP Violated',gen.policy_reference],['Expected Standard',gen.expected_standard]].filter(([,v])=>v).map(([label,val])=>
+      el('div',{key:label,style:{marginBottom:12}},
+        el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:5}},label),
+        el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:'10px 14px',fontSize:13,lineHeight:1.6,color:'var(--text2)'}},val),
+      )
+    ),
+
+    (gen.corrective_steps||[]).length>0&&el('div',{style:{marginBottom:12}},
+      el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:6}},'Corrective Steps Required'),
+      gen.corrective_steps.map((s,i)=>el('div',{key:i,style:{display:'flex',gap:8,marginBottom:6,alignItems:'flex-start'}},
+        el('div',{style:{width:20,height:20,borderRadius:'50%',background:'var(--accent)',color:'#000',display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:800,flexShrink:0,marginTop:1}},i+1),
+        el('div',{style:{fontSize:13,color:'var(--text2)',lineHeight:1.5}},s),
+      )),
+    ),
+
+    [['Consequences if Repeated',gen.consequences_of_recurrence],['Support Offered',gen.support_offered]].filter(([,v])=>v).map(([label,val])=>
+      el('div',{key:label,style:{marginBottom:12}},
+        el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:5}},label),
+        el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:'10px 14px',fontSize:13,lineHeight:1.6,color:'var(--text2)'}},val),
+      )
+    ),
+
+    gen.employee_acknowledgement_text&&el('div',{style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:10,padding:'14px 16px',marginTop:16,marginBottom:16}},
+      el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:6}},'Acknowledgement Statement'),
+      el('div',{style:{fontSize:12,color:'var(--text2)',lineHeight:1.6,fontStyle:'italic'}},gen.employee_acknowledgement_text),
+    ),
+
+    el('div',{style:{display:'flex',gap:8,marginTop:16}},
+      el('button',{className:'btn b-ghost',onClick:()=>exportCorrectiveActionPdf(sel)},'📄 Download PDF'),
+      canAck&&el('button',{
+        onClick:()=>{setSignatureName(cu.name);setShowSignModal(true);},
+        style:{background:'var(--green)',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'10px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer'}
+      },'I Have Read and Understood This Notice'),
+      !canAck&&el('div',{style:{fontSize:12,color:'var(--green)',fontWeight:600,display:'flex',alignItems:'center'}},'This document has been signed and is locked'),
+    ),
+
+    showSignModal&&el('div',{className:'mo',style:{zIndex:1200},onClick:ev=>ev.target===ev.currentTarget&&setShowSignModal(false)},
+      el('div',{className:'md',style:{width:480}},
+        el('div',{className:'mh'},
+          el('div',{className:'mt2'},'Sign & Acknowledge'),
+          el('button',{className:'mc',onClick:()=>setShowSignModal(false)},'×'),
+        ),
+        el('div',{className:'mbd'},
+          el('div',{style:{fontSize:13,color:'var(--text2)',marginBottom:16,lineHeight:1.6}},
+            gen.employee_acknowledgement_text||'I acknowledge that I have read and understand this Corrective Action Notice.'
+          ),
+          el('div',{className:'fg'},
+            el('label',null,'Type your full legal name to sign *'),
+            el('input',{
+              value:signatureName,onChange:ev=>setSignatureName(ev.target.value),
+              placeholder:cu.name,
+              autoFocus:true,
+              style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'10px 14px',color:'var(--text)',fontFamily:'cursive,inherit',fontSize:18,outline:'none'},
+            }),
+            el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:4}},'Signature date: '+new Date().toISOString().slice(0,10)),
+          ),
+          el('div',{className:'mf'},
+            el('button',{className:'btn b-ghost',onClick:()=>setShowSignModal(false)},'Cancel'),
+            el('button',{
+              disabled:signatureName.trim().length<3,
+              onClick:async()=>{
+                const update={status:'acknowledged',acknowledged_at:new Date().toISOString(),signature_name:signatureName.trim(),updated_at:new Date().toISOString(),updated_by:cu.name};
+                try{
+                  await db.update('pf_qms_corrective',sel.id,update);
+                  setCorrective(p=>p.map(c=>c.id===sel.id?{...c,...update}:c));
+                  setSel(p=>({...p,...update}));
+                  setShowSignModal(false);
+                }catch(e){console.error(e);alert('Failed to save acknowledgement: '+e.message);}
+              },
+              style:{background:signatureName.trim().length>=3?'var(--green)':'rgba(16,185,129,.3)',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'10px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:signatureName.trim().length>=3?'pointer':'not-allowed'}
+            },'Sign & Submit'),
+          ),
+        ),
+      )
+    ),
   );
 }
 
@@ -7556,6 +7710,7 @@ function App(){
     (cu.role==='admin'||cu.dept==='Sales'||cu.dept==='Marketing')&&{id:'sales',ico:'🏪',label:'Sales & Marketing'},
     {id:'sops',ico:'📋',label:'SOPs'},
     canAccessQms&&{id:'qms',ico:'🛡️',label:'QMS'},
+    {id:'mydocs',ico:'📁',label:'My Documents'},
     {id:'scores',ico:'🏆',label:'Scoreboard'},
     isAdmin&&{id:'team',ico:'👥',label:'Team & Access',badge:pending||null},
   ].filter(Boolean);
@@ -7686,6 +7841,7 @@ function App(){
         suppliers:qmsSuppliers,setSuppliers:setQmsSuppliers,
         corrective:qmsCorrective,setCorrective:setQmsCorrective,
       }),
+      page==='mydocs'&&el(MyDocuments,{cu,corrective:qmsCorrective,setCorrective:setQmsCorrective}),
       page==='scores'&&el(Scoreboard,{tasks,cu,users}),
       page==='team'&&isAdmin&&el(Team,{users,setUsers,cu}),
     )
