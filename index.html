@@ -7,11 +7,11 @@
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<meta name="apple-mobile-web-app-title" content="Hendrix TMS"/>
+<meta name="apple-mobile-web-app-title" content="Hendrix OMS"/>
 <link rel="manifest" href="manifest.json"/>
 <link rel="apple-touch-icon" href="icon-192.png"/>
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png"/>
-<title>Hendrix Task Management</title>
+<title>Hendrix Operation Management System</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
@@ -275,7 +275,7 @@ async function sendEmail({to,subject,html}){
             to_email:recipient,
             subject:subject,
             message_html:html,
-            from_name:'Hendrix TMS',
+            from_name:'Hendrix OMS',
           },
         }),
       });
@@ -301,7 +301,7 @@ function notifyTask({task, actor, subject, body, skipId=null}){
     if(r.email){
       sendEmail({to:r.email,subject,
         html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:24px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
-          <div style="color:#f5a623;font-size:18px;font-weight:800;margin-bottom:12px">📋 Hendrix TMS</div>
+          <div style="color:#f5a623;font-size:18px;font-weight:800;margin-bottom:12px">📋 Hendrix OMS</div>
           <div style="font-size:15px;font-weight:700;margin-bottom:8px">${task.title}</div>
           <div style="background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.15);border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;line-height:1.6">${bodyText}</div>
           ${actor?`<div style="font-size:12px;color:#7b8db8">By ${actor}</div>`:''}
@@ -778,7 +778,7 @@ function Auth({onLogin}){
   }
 
   if(pend)return el('div',{className:'auth-wrap'},el('div',{className:'auth-box'},
-    el('div',{className:'logo'},'Hendrix',el('span',null,' TMS')),
+    el('div',{className:'logo'},'Hendrix',el('span',null,' OMS')),
     el('div',{className:'pending-box',style:{marginTop:16}},
       el('div',{style:{fontSize:32,marginBottom:10}},'⏳'),
       el('div',{style:{fontWeight:700,fontSize:15,marginBottom:8}},'Account Pending Approval'),
@@ -788,7 +788,7 @@ function Auth({onLogin}){
   ));
 
   return el('div',{className:'auth-wrap'},el('div',{className:'auth-box'},
-    el('div',{className:'logo'},'Hendrix',el('span',null,' TMS')),
+    el('div',{className:'logo'},'Hendrix',el('span',null,' OMS')),
     el('div',{className:'auth-sub'},'Task Management System'),
     el('div',{className:'auth-tabs'},
       el('button',{className:`atab ${tab==='login'?'on':''}`,onClick:()=>{setTab('login');setMsg('');}}, 'Sign In'),
@@ -905,7 +905,7 @@ function SetupScreen({onDone}){
   function copy(){navigator.clipboard.writeText(SETUP_SQL.trim()).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);});}
   return el('div',{className:'auth-wrap'},
     el('div',{className:'auth-box',style:{width:540}},
-      el('div',{className:'logo'},'Hendrix',el('span',null,' TMS')),
+      el('div',{className:'logo'},'Hendrix',el('span',null,' OMS')),
       el('div',{className:'auth-sub'},'One-time setup required'),
       el('div',{style:{background:'var(--bg)',border:'1px solid var(--border)',borderRadius:8,padding:12,marginBottom:14,maxHeight:180,overflowY:'auto'}},
         el('pre',{style:{fontSize:11,color:'var(--text2)',whiteSpace:'pre-wrap',fontFamily:'DM Mono, monospace',lineHeight:1.5}},SETUP_SQL.trim())
@@ -1014,7 +1014,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
         sendEmail({to:creator.email,
           subject:`👁 Task completed & awaiting your review: "${task.title}"`,
           html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
-            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Hendrix TMS</div>
+            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Hendrix OMS</div>
             <div style="background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.25);border-radius:10px;padding:20px;margin-bottom:20px;text-align:center">
               <div style="font-size:36px;margin-bottom:10px">👁</div>
               <div style="font-size:17px;font-weight:700;margin-bottom:6px">Task Completed — Awaiting Your Review</div>
@@ -1035,7 +1035,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
         if(u?.email) sendEmail({to:u.email,
           subject:`✅ Task approved & done: "${task.title}"`,
           html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
-            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Hendrix TMS</div>
+            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Hendrix OMS</div>
             <div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:10px;padding:20px;margin-bottom:20px;text-align:center">
               <div style="font-size:40px;margin-bottom:10px">🎉</div>
               <div style="font-size:17px;font-weight:700;margin-bottom:6px">Task Approved & Done!</div>
@@ -1056,7 +1056,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
         if(u?.email) sendEmail({to:u.email,
           subject:`❌ Task rejected: "${task.title}"`,
           html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #7f1d1d">
-            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Hendrix TMS</div>
+            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Hendrix OMS</div>
             <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:20px;margin-bottom:20px;text-align:center">
               <div style="font-size:40px;margin-bottom:10px">❌</div>
               <div style="font-size:17px;font-weight:700;margin-bottom:6px">Task Rejected</div>
@@ -1121,7 +1121,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
       const creator=users.find(u=>u.id===task.created_by_id);
       if(creator?.email) sendEmail({to:creator.email,
         subject:`🎉 Cart task fully completed: "${task.title}"`,
-        html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f"><div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Hendrix TMS</div><div style="text-align:center;padding:20px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:10px;margin-bottom:20px"><div style="font-size:40px">🎉</div><div style="font-size:17px;font-weight:700;margin-top:8px">All Steps Complete!</div><div style="font-size:13px;color:#6ee7b7;margin-top:4px">"${task.title}"</div></div><p style="font-size:13px;color:#7b8db8">All ${CART_WORKFLOW.length} production steps completed successfully. Task is now Done.</p><a href="${APP_URL}" style="display:inline-block;margin-top:16px;background:#10b981;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">View Task →</a></div>`
+        html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f"><div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Hendrix OMS</div><div style="text-align:center;padding:20px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:10px;margin-bottom:20px"><div style="font-size:40px">🎉</div><div style="font-size:17px;font-weight:700;margin-top:8px">All Steps Complete!</div><div style="font-size:13px;color:#6ee7b7;margin-top:4px">"${task.title}"</div></div><p style="font-size:13px;color:#7b8db8">All ${CART_WORKFLOW.length} production steps completed successfully. Task is now Done.</p><a href="${APP_URL}" style="display:inline-block;margin-top:16px;background:#10b981;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">View Task →</a></div>`
       });
       return;
     }
@@ -1149,7 +1149,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
       sendEmail({to:u.email,
         subject:`📋 Production step advanced: "${task.title}" → ${nextStep.label}`,
         html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
-          <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Hendrix TMS — Production Workflow</div>
+          <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Hendrix OMS — Production Workflow</div>
           <div style="display:flex;align-items:center;gap:12px;background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.2);border-radius:10px;padding:16px;margin-bottom:20px">
             <div style="font-size:28px">✅</div>
             <div>
@@ -1198,7 +1198,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
         sendEmail({to:u.email,
           subject:`🚨 Testing FAILED & task on hold: "${task.title}"`,
           html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #7f1d1d">
-            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Hendrix TMS</div>
+            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Hendrix OMS</div>
             <div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.4);border-radius:10px;padding:20px;margin-bottom:20px;text-align:center">
               <div style="font-size:40px;margin-bottom:8px">🚨</div>
               <div style="font-size:18px;font-weight:800;color:#ef4444">TESTING FAILED</div>
@@ -2099,8 +2099,8 @@ function Team({users,setUsers,cu}){
       await db.update('pf_users',id,{approved:true});
       setUsers(p=>p.map(u=>u.id===id?{...u,approved:true}:u));
       const user=users.find(u=>u.id===id);
-      sendLocalNotification('✅ Account Approved','Welcome to Hendrix TMS!').catch(()=>{});
-      if(user?.email) sendEmail({to:user.email,subject:'Your Hendrix TMS account is approved',html:`<div style="font-family:sans-serif;background:#0f1117;color:#e8eaf0;padding:24px;border-radius:12px;max-width:500px"><div style="color:#f5a623;font-size:20px;font-weight:700;margin-bottom:12px">Hendrix TMS</div><p>Hi ${user.name}, your account has been approved.</p><a href="${APP_URL}" style="display:inline-block;background:#f5a623;color:#000000;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:600;margin-top:12px">Sign In →</a></div>`});
+      sendLocalNotification('✅ Account Approved','Welcome to Hendrix OMS!').catch(()=>{});
+      if(user?.email) sendEmail({to:user.email,subject:'Your Hendrix OMS account is approved',html:`<div style="font-family:sans-serif;background:#0f1117;color:#e8eaf0;padding:24px;border-radius:12px;max-width:500px"><div style="color:#f5a623;font-size:20px;font-weight:700;margin-bottom:12px">Hendrix OMS</div><p>Hi ${user.name}, your account has been approved.</p><a href="${APP_URL}" style="display:inline-block;background:#f5a623;color:#000000;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:600;margin-top:12px">Sign In →</a></div>`});
     }catch(e){console.error('approve error:',e);}
   }
 
@@ -3041,7 +3041,7 @@ Create comprehensive meeting notes in this EXACT JSON format (no markdown, just 
       recipients.forEach(a=>{
         sendEmail({to:a.email,subject:`📋 Meeting Notes: ${event.title} — ${event.date}`,
           html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:32px;border-radius:12px;max-width:620px;border:1px solid #1a2d4f">
-            <div style="color:#f5a623;font-size:22px;font-weight:800;margin-bottom:4px">📋 Hendrix TMS</div>
+            <div style="color:#f5a623;font-size:22px;font-weight:800;margin-bottom:4px">📋 Hendrix OMS</div>
             <div style="font-size:13px;color:#7b8db8;margin-bottom:24px">AI-Generated Meeting Notes</div>
             <div style="font-size:20px;font-weight:700;margin-bottom:6px">${event.title}</div>
             <div style="font-size:13px;color:#7b8db8;margin-bottom:24px">📅 ${event.date}${event.start_time?' at '+event.start_time:''} · Notes by ${cu.name}</div>
@@ -3555,7 +3555,7 @@ Write a formal, professional Corrective Action notice. Be factual, specific, and
         await sendEmail({to:employee.email,
           subject:`⚖️ Corrective Action Notice — ${editedCA.title}`,
           html:`<div style="font-family:sans-serif;background:#121212;color:#f0eee8;padding:28px;border-radius:12px;max-width:520px;border:1px solid #333">
-            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">⚖️ Hendrix TMS</div>
+            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">⚖️ Hendrix OMS</div>
             <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:20px;margin-bottom:20px;text-align:center">
               <div style="font-size:36px;margin-bottom:10px">⚖️</div>
               <div style="font-size:17px;font-weight:700;margin-bottom:6px">Corrective Action Notice</div>
@@ -4401,7 +4401,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
                     if(issuer?.email) sendEmail({to:issuer.email,
                       subject:`✓ Corrective Action Acknowledged — ${sel.employee_name}`,
                       html:`<div style="font-family:sans-serif;background:#121212;color:#f0eee8;padding:24px;border-radius:12px;max-width:480px;border:1px solid #333">
-                        <div style="color:#f5a623;font-size:18px;font-weight:800;margin-bottom:12px">⚖️ Hendrix TMS</div>
+                        <div style="color:#f5a623;font-size:18px;font-weight:800;margin-bottom:12px">⚖️ Hendrix OMS</div>
                         <p style="font-size:14px">${sel.employee_name} has acknowledged corrective action ${sel.ca_number} ("${sel.title}").</p>
                       </div>`
                     });
@@ -5232,6 +5232,10 @@ function exportCorrectiveActionPdf(ca){
 
   const DARK=[18,18,18],RED=[239,68,68],TEXT=[20,20,20],TEXT2=[90,90,90],BORDER=[210,210,215];
   const gen=ca.generated_content?JSON.parse(ca.generated_content):{};
+  // Missouri-licensed entities are issued under HMBF Management Inc per company structure.
+  const lic=LICENSES.find(l=>l.id===ca.license_id)||LICENSES.find(l=>l.name===ca.license_name);
+  const isMissouri=(lic?.state||ca.state)==='Missouri';
+  const headerCompanyName=isMissouri?'HMBF MANAGEMENT INC':'HENDRIX';
 
   function header(){
     doc.setFillColor(...DARK);
@@ -5240,8 +5244,8 @@ function exportCorrectiveActionPdf(ca){
     doc.rect(0,68,W,2,'F');
     doc.setTextColor(...RED);
     doc.setFont('helvetica','bold');
-    doc.setFontSize(16);
-    doc.text('HENDRIX',margin,32);
+    doc.setFontSize(isMissouri?14:16);
+    doc.text(headerCompanyName,margin,32);
     doc.setTextColor(230,230,230);
     doc.setFont('helvetica','normal');
     doc.setFontSize(9);
@@ -5263,7 +5267,7 @@ function exportCorrectiveActionPdf(ca){
     doc.setTextColor(...TEXT2);
     doc.setFont('helvetica','normal');
     doc.setFontSize(7);
-    doc.text('CONFIDENTIAL — '+(ca.license_name||'Hendrix')+' — Employee Personnel Record',margin,H-35);
+    doc.text('CONFIDENTIAL — '+(ca.license_name||lic?.name||'Hendrix')+' — Employee Personnel Record',margin,H-35);
     doc.text('Page '+pageNum,W-margin,H-35,{align:'right'});
   }
 
@@ -5398,7 +5402,7 @@ function exportCorrectiveActionPdf(ca){
     doc.setFont('helvetica','bold');
     doc.setTextColor(40,140,80);
     doc.setFontSize(9);
-    doc.text('✓ Digitally acknowledged via Hendrix TMS on '+(ca.acknowledged_at?.slice(0,10)||''),margin,y);
+    doc.text('✓ Digitally acknowledged via Hendrix OMS on '+(ca.acknowledged_at?.slice(0,10)||''),margin,y);
   }
 
   const pageCount=doc.internal.getNumberOfPages();
@@ -6247,14 +6251,14 @@ function SOPs({sops,setSops,cu,users}){
       users.filter(u=>u.approved&&u.email).forEach(u=>{
         sendEmail({to:u.email,subject:`📋 New SOP Published: "${sop.title}"`,
           html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
-            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:4px">📋 Hendrix TMS</div>
+            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:4px">📋 Hendrix OMS</div>
             <div style="font-size:18px;font-weight:700;margin-bottom:12px">${sop.title}</div>
             <div style="background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.2);border-radius:10px;padding:14px;margin-bottom:20px">
               <div style="margin-bottom:6px">📂 Department: <strong>${sop.dept}</strong></div>
               <div style="margin-bottom:6px">📝 Version: <strong>${sop.version}</strong></div>
               <div>👤 Published by: <strong>${cu.name}</strong></div>
             </div>
-            <p style="color:#7b8db8;margin-bottom:20px">Please review and acknowledge this SOP in the Hendrix TMS app.</p>
+            <p style="color:#7b8db8;margin-bottom:20px">Please review and acknowledge this SOP in the Hendrix OMS app.</p>
             <a href="${APP_URL}" style="background:#f5a623;color:#000000;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">Review SOP →</a>
           </div>`
         });
@@ -6566,7 +6570,7 @@ function SOPs({sops,setSops,cu,users}){
           if(u.email) sendEmail({to:u.email,
             subject:`📋 SOP Updated — Re-acknowledgement Required: "${updated.title}"`,
             html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
-              <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Hendrix TMS</div>
+              <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Hendrix OMS</div>
               <div style="background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.25);border-radius:10px;padding:20px;margin-bottom:20px;text-align:center">
                 <div style="font-size:36px;margin-bottom:10px">🔄</div>
                 <div style="font-size:17px;font-weight:700;margin-bottom:6px">SOP Revised — v${updated.version}</div>
@@ -6744,7 +6748,7 @@ function Calendar({events,setEvents,tasks,cu,users,locFilter,meetingNotes,setMee
       f.attendees.filter(a=>a.email&&a.id!==cu.id).forEach(a=>{
         sendEmail({to:a.email,subject:`📅 Meeting invite: "${f.title}"`,
           html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
-            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:4px">📅 Hendrix TMS</div>
+            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:4px">📅 Hendrix OMS</div>
             <div style="font-size:18px;font-weight:700;margin-bottom:16px">${f.title}</div>
             <div style="background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.2);border-radius:10px;padding:16px;margin-bottom:20px">
               <div style="margin-bottom:8px">📅 ${f.date}${f.start_time?' at '+f.start_time:''}</div>
@@ -7105,7 +7109,7 @@ function App(){
     if('Notification' in window&&Notification.permission==='default'){
       Notification.requestPermission().then(p=>{
         if(p==='granted'){
-          new Notification('🔔 Hendrix TMS',{body:'Notifications enabled! You will be notified of all task updates.',icon:'/ProFlow/icon-192.png'});
+          new Notification('🔔 Hendrix OMS',{body:'Notifications enabled! You will be notified of all task updates.',icon:'/ProFlow/icon-192.png'});
         }
       });
     }
@@ -7157,7 +7161,7 @@ function App(){
 
   return el('div',{className:'app'},
     el('div',{className:'sb'},
-      el('div',{className:'sb-logo'},'Hendrix',el('span',null,' TMS')),
+      el('div',{className:'sb-logo'},'Hendrix',el('span',null,' OMS')),
       el('div',{style:{marginBottom:16}},
         el('div',{className:'sb-label',style:{marginBottom:8}},'Location'),
         LOCS.filter(l=>isAdmin||l===cu.loc||cu.loc==='Nationwide').map(l=>
@@ -7191,7 +7195,7 @@ function App(){
               return;
             }
             const perm=await Notification.requestPermission();
-            if(perm==='granted'){requestPushPermission(cu.id);new Notification('Hendrix TMS',{body:'Notifications enabled!',icon:'/ProFlow/icon-192.png'});}
+            if(perm==='granted'){requestPushPermission(cu.id);new Notification('Hendrix OMS',{body:'Notifications enabled!',icon:'/ProFlow/icon-192.png'});}
             else if(perm==='denied'){alert('Notifications blocked.\n\nTo fix:\n1. Click the 🔒 lock icon in your browser address bar\n2. Find Notifications\n3. Set to Allow\n4. Refresh the page');}
           },
           style:{marginTop:8,width:'100%',background:typeof Notification!=='undefined'&&Notification.permission==='granted'?'rgba(16,185,129,.08)':'rgba(245,166,35,.06)',border:'1px solid',borderColor:typeof Notification!=='undefined'&&Notification.permission==='granted'?'rgba(16,185,129,.2)':'rgba(245,166,35,.2)',borderRadius:'var(--rs)',padding:'8px',color:typeof Notification!=='undefined'&&Notification.permission==='granted'?'var(--green)':'var(--accent)',fontFamily:'inherit',fontSize:12,fontWeight:600,cursor:'pointer',transition:'all .15s',letterSpacing:'.3px'}
@@ -7203,11 +7207,11 @@ function App(){
             try{
               await sendEmail({
                 to:cu.email,
-                subject:'✅ Hendrix TMS — Email Test',
+                subject:'✅ Hendrix OMS — Email Test',
                 html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
                   <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">✅ Email Working!</div>
                   <p>Hi ${cu.name},</p>
-                  <p style="margin:12px 0;color:#7b8db8">This is a test email from Hendrix TMS. If you received this, email notifications are working correctly.</p>
+                  <p style="margin:12px 0;color:#7b8db8">This is a test email from Hendrix OMS. If you received this, email notifications are working correctly.</p>
                   <div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:8px;padding:12px;margin-top:16px;font-size:13px;color:#10b981">
                     ✅ Resend API connected<br>✅ Email delivery confirmed
                   </div>
@@ -7257,7 +7261,7 @@ function App(){
           if(!('Notification' in window)){alert('Not supported');return;}
           if(Notification.permission==='granted'){alert('Notifications already enabled ✓');return;}
           const p=await Notification.requestPermission();
-          if(p==='granted'){requestPushPermission(cu.id);new Notification('Hendrix TMS',{body:'Notifications enabled!',icon:'/ProFlow/icon-192.png'});}
+          if(p==='granted'){requestPushPermission(cu.id);new Notification('Hendrix OMS',{body:'Notifications enabled!',icon:'/ProFlow/icon-192.png'});}
           else alert('Blocked — go to browser settings to allow notifications');
         }},
         el('span',{className:'mnav-ico'},typeof Notification!=='undefined'&&Notification.permission==='granted'?'🔔':'🔕'),'Alerts'
@@ -7324,7 +7328,7 @@ window.addEventListener('beforeinstallprompt', e => {
       const banner = document.createElement('div');
       banner.id = 'install-banner';
       banner.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#f5a623;color:#000000;padding:12px 20px;border-radius:12px;font-family:Inter,sans-serif;font-size:13px;font-weight:700;cursor:pointer;z-index:9999;box-shadow:0 8px 24px rgba(245,166,35,.4);display:flex;align-items:center;gap:10px;';
-      banner.innerHTML = '<span>📱</span><span>Add Hendrix TMS to Home Screen</span><span style="margin-left:8px;opacity:.6">×</span>';
+      banner.innerHTML = '<span>📱</span><span>Add Hendrix OMS to Home Screen</span><span style="margin-left:8px;opacity:.6">×</span>';
       banner.onclick = (e) => {
         if(e.target.textContent === '×') { banner.remove(); return; }
         deferredPrompt.prompt();
