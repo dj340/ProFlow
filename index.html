@@ -3759,12 +3759,16 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
   const[signatureName,setSignatureName]=useState('');
   const[caSearch,setCaSearch]=useState('');
   const[profileEmployee,setProfileEmployee]=useState(null);
-  const isAdmin=cu.role==='admin'||['coo','director_production','director_operations','general_manager','compliance_manager','director_sales_marketing'].includes(cu.role);
+  const isAdmin=cu.role==='admin';
+  // Senior leadership roles get elevated OPERATIONAL access (creating deviations/CAPAs/audits,
+  // seeing the full QMS dashboard) but are NOT treated as Admin for privacy-sensitive checks
+  // like disciplinary records or full Training Matrix visibility — those stay strict isAdmin only.
+  const isElevated=isAdmin||['coo','director_production','director_operations','general_manager','compliance_manager','director_sales_marketing'].includes(cu.role);
   const qmsRoleGroup=ROLE_GROUPS.find(g=>g.roles.includes(cu.role))?.label;
   const isManager=qmsRoleGroup==='Managers';
   const isSupervisor=qmsRoleGroup==='Supervisors';
   // Managers and above can report Deviations/CAPAs/Audits; Supervisors are read-only in those tabs.
-  const canReport=isAdmin||isManager;
+  const canReport=isElevated||isManager;
   // Direct reports: users whose `managers` array includes this person's id (up to 3 managers per user).
   const directReports=users.filter(u=>(u.managers||[]).includes(cu.id));
   // Training Matrix scope: Admin sees everyone; Managers/Supervisors see only their direct reports.
@@ -3844,7 +3848,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
   function RecordList({items,emptyMsg,renderRow,onNew,newLabel}){
     // Managers+Admin can report Deviations/CAPAs/Audits. Complaints, Change Control,
     // and Suppliers stay admin-only creation (compliance-sensitive records).
-    const canCreateThisTab=isAdmin||(canReport&&['deviations','capas','audits'].includes(tab));
+    const canCreateThisTab=isElevated||(canReport&&['deviations','capas','audits'].includes(tab));
     return el('div',null,
       el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}},
         el('div',{style:{fontSize:13,color:'var(--text2)'}},(items.length)+' record'+(items.length!==1?'s':'')),
@@ -3874,7 +3878,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
     el('div',{style:{display:'flex',gap:4,flexWrap:'wrap',marginBottom:20,background:'var(--surface)',border:'1px solid var(--border)',borderRadius:'var(--r)',padding:4}},
       QMS_TABS.filter(t=>{
         if(t.id==='corrective') return isAdmin; // Disciplinary records are admin-only — nobody else can see this tab
-        return isAdmin||isManager||['dashboard','training'].includes(t.id);
+        return isElevated||isManager||['dashboard','training'].includes(t.id);
       }).map(t=>el('button',{key:t.id,onClick:()=>{setTab(t.id);setNew(false);setSel(null);},style:{display:'flex',alignItems:'center',gap:6,padding:'8px 14px',borderRadius:8,border:'none',background:tab===t.id?'var(--accent)':'transparent',color:tab===t.id?'#000000':'var(--text2)',fontFamily:'inherit',fontSize:12,fontWeight:tab===t.id?700:500,cursor:'pointer',transition:'all .15s'}},
         el('span',null,t.ico),t.label,
         // Badges
@@ -3990,7 +3994,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
           ),
           el('div',{style:{display:'flex',gap:6}},
             el('button',{className:'btn b-ghost btn-sm',onClick:()=>setEditing(sel)},'Edit'),
-            isAdmin&&el('button',{className:'btn b-red btn-sm',onClick:()=>deleteRec('deviation',sel.id,setDeviations)},'Delete'),
+            isElevated&&el('button',{className:'btn b-red btn-sm',onClick:()=>deleteRec('deviation',sel.id,setDeviations)},'Delete'),
             el('button',{className:'btn b-ghost btn-sm',onClick:()=>setSel(null)},'← Back'),
           ),
         ),
@@ -4050,7 +4054,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
           ),
           el('div',{style:{display:'flex',gap:6}},
             el('button',{className:'btn b-ghost btn-sm',onClick:()=>setEditing(sel)},'Edit'),
-            isAdmin&&el('button',{className:'btn b-red btn-sm',onClick:()=>deleteRec('capa',sel.id,setCapas)},'Delete'),
+            isElevated&&el('button',{className:'btn b-red btn-sm',onClick:()=>deleteRec('capa',sel.id,setCapas)},'Delete'),
             el('button',{className:'btn b-ghost btn-sm',onClick:()=>setSel(null)},'← Back'),
           ),
         ),
@@ -4106,7 +4110,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
           ),
           el('div',{style:{display:'flex',gap:6}},
             el('button',{className:'btn b-ghost btn-sm',onClick:()=>setEditing(sel)},'Edit'),
-            isAdmin&&el('button',{className:'btn b-red btn-sm',onClick:()=>deleteRec('audit',sel.id,setAudits)},'Delete'),
+            isElevated&&el('button',{className:'btn b-red btn-sm',onClick:()=>deleteRec('audit',sel.id,setAudits)},'Delete'),
             el('button',{className:'btn b-ghost btn-sm',onClick:()=>setSel(null)},'← Back'),
           ),
         ),
@@ -4198,7 +4202,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
       sel&&!editing&&el('div',{className:'card'},
         el('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:16}},
           el('div',null,el('div',{style:{display:'flex',gap:6,marginBottom:8}},el(QMSBadge,{status:sel.status}),el('span',{style:{background:'var(--surface2)',color:'var(--text2)',border:'1px solid var(--border)',borderRadius:4,padding:'2px 7px',fontSize:11}},sel.change_type)),el('div',{style:{fontSize:18,fontWeight:700}},sel.title)),
-          el('div',{style:{display:'flex',gap:6}},isAdmin&&el('button',{className:'btn b-red btn-sm',onClick:()=>deleteRec('change',sel.id,setChanges)},'Delete'),el('button',{className:'btn b-ghost btn-sm',onClick:()=>setSel(null)},'← Back')),
+          el('div',{style:{display:'flex',gap:6}},isElevated&&el('button',{className:'btn b-red btn-sm',onClick:()=>deleteRec('change',sel.id,setChanges)},'Delete'),el('button',{className:'btn b-ghost btn-sm',onClick:()=>setSel(null)},'← Back')),
         ),
         [['Description',sel.description],['Impact Assessment',sel.impact_assessment],['Implementation Plan',sel.implementation_plan]].filter(([,v])=>v).map(([label,val])=>
           el('div',{key:label,style:{marginBottom:14}},el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:5}},label),el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:'10px 14px',fontSize:13,lineHeight:1.6}},val))
@@ -4259,7 +4263,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
       sel&&el('div',{className:'card'},
         el('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:16}},
           el('div',null,el('div',{style:{display:'flex',gap:6,marginBottom:8}},el(QMSBadge,{status:sel.status})),el('div',{style:{fontSize:18,fontWeight:700}},sel.title),el('div',{style:{fontSize:12,color:'var(--text3)',marginTop:4}},sel.created_at?.slice(0,10))),
-          el('div',{style:{display:'flex',gap:6}},isAdmin&&el('button',{className:'btn b-red btn-sm',onClick:()=>deleteRec('complaint',sel.id,setComplaints)},'Delete'),el('button',{className:'btn b-ghost btn-sm',onClick:()=>setSel(null)},'← Back')),
+          el('div',{style:{display:'flex',gap:6}},isElevated&&el('button',{className:'btn b-red btn-sm',onClick:()=>deleteRec('complaint',sel.id,setComplaints)},'Delete'),el('button',{className:'btn b-ghost btn-sm',onClick:()=>setSel(null)},'← Back')),
         ),
         sel.product&&el('div',{style:{display:'flex',gap:20,background:'rgba(245,166,35,.06)',border:'1px solid rgba(245,166,35,.15)',borderRadius:8,padding:'10px 14px',marginBottom:14}},
           el('div',null,el('div',{style:{fontSize:10,color:'var(--accent)',fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px'}},'Product'),el('div',{style:{fontSize:13,fontWeight:600}},sel.product)),
@@ -4325,7 +4329,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
       sel&&el('div',{className:'card'},
         el('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:16}},
           el('div',null,el('div',{style:{display:'flex',gap:6,marginBottom:8}},el('span',{style:{background:sel.status==='approved'?'rgba(16,185,129,.1)':'rgba(245,158,11,.1)',color:sel.status==='approved'?'var(--green)':'var(--accent)',borderRadius:4,padding:'2px 8px',fontSize:11,fontWeight:700}},sel.status==='approved'?'✅ Approved':'⏳ Pending')),el('div',{style:{fontSize:18,fontWeight:700}},sel.name),el('div',{style:{fontSize:12,color:'var(--text3)',marginTop:4}},sel.category)),
-          el('div',{style:{display:'flex',gap:6}},isAdmin&&el('button',{className:'btn b-red btn-sm',onClick:()=>deleteRec('supplier',sel.id,setSuppliers)},'Delete'),el('button',{className:'btn b-ghost btn-sm',onClick:()=>setSel(null)},'← Back')),
+          el('div',{style:{display:'flex',gap:6}},isElevated&&el('button',{className:'btn b-red btn-sm',onClick:()=>deleteRec('supplier',sel.id,setSuppliers)},'Delete'),el('button',{className:'btn b-ghost btn-sm',onClick:()=>setSel(null)},'← Back')),
         ),
         el('div',{style:{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:12,marginBottom:14}},
           [['Products Supplied',sel.products_supplied],['Contact',sel.contact_name+(sel.contact_email?' · '+sel.contact_email:'')],['COA Expiry',sel.coa_expiry||'—'],['Last Audit',sel.last_audit||'—']].map(([k,v])=>v&&v!=='—'?el('div',{key:k,style:{background:'var(--surface2)',borderRadius:8,padding:'10px 12px'}},el('div',{style:{fontSize:10,color:'var(--text3)',fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px',marginBottom:3}},k),el('div',{style:{fontSize:13,fontWeight:600}},v)):null)
@@ -4359,7 +4363,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
               placeholder:'Search by name or reason (e.g. "safety")...',
               style:{background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:12,outline:'none',width:240},
             }),
-            (isAdmin||isManager)&&el('button',{
+            isAdmin&&el('button',{
               onClick:()=>setShowCAGenerator(true),
               style:{background:'var(--red)',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'9px 16px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:6,whiteSpace:'nowrap'}
             },'⚖️ New Corrective Action'),
@@ -6710,12 +6714,13 @@ function SOPs({sops,setSops,cu,users}){
     license_id:'',
   });
 
-  const isAdmin=cu.role==='admin'||['coo','director_production','director_operations','director_sales_marketing','general_manager'].includes(cu.role);
-  const canCreate=isAdmin||['facility_manager','production_manager','compliance_manager','warehouse_manager','distribution_manager','extraction_manager','maintenance_manager','sales_marketing_manager'].includes(cu.role);
+  const isAdmin=cu.role==='admin';
+  const isElevated=isAdmin||['coo','director_production','director_operations','director_sales_marketing','general_manager'].includes(cu.role);
+  const canCreate=isElevated||['facility_manager','production_manager','compliance_manager','warehouse_manager','distribution_manager','extraction_manager','maintenance_manager','sales_marketing_manager'].includes(cu.role);
 
   // Filter SOPs visible to this user
   const visibleSops=sops.filter(s=>{
-    if(isAdmin) return true;
+    if(isElevated) return true;
     if(s.status==='draft'&&s.created_by_id!==cu.id) return false;
     // License check: if SOP is tied to a license AND the current user already has at
     // least one license assigned, they must be on this SOP's license. If the user has
