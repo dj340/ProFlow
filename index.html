@@ -4193,8 +4193,12 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
                 status:'open',created_by:cu.name,created_by_id:cu.id,
                 created_at:new Date().toISOString(),updated_at:new Date().toISOString(),updated_by:cu.name,
               };
-              try{await db.insert('pf_qms_changes',rec);}catch(e){alert('Create table pf_qms_changes first.');}
-              handleSave('change',rec,setChanges,changes);
+              try{
+                await db.insert('pf_qms_changes',rec);
+                handleSave('change',rec,setChanges,changes);
+              }catch(e){
+                alert('Save failed: '+e.message+'. Make sure the pf_qms_changes table exists in Supabase — this change record was NOT saved.');
+              }
             }},'Submit Change Record'),
           ),
         ),
@@ -4254,8 +4258,12 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
               if(!title) return;
               if(!license_id){alert('Please select which license this complaint applies to.');return;}
               const rec={id:'comp-'+Date.now(),title,license_id,type:document.getElementById('comp-type').value,priority:document.getElementById('comp-pri').value,product:document.getElementById('comp-prod').value,lot_number:document.getElementById('comp-lot').value,description:document.getElementById('comp-desc').value,resolution:document.getElementById('comp-res').value,status:'open',created_by:cu.name,created_by_id:cu.id,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),updated_by:cu.name};
-              try{await db.insert('pf_qms_complaints',rec);}catch(e){alert('Create table pf_qms_complaints first.');}
-              handleSave('complaint',rec,setComplaints,complaints);
+              try{
+                await db.insert('pf_qms_complaints',rec);
+                handleSave('complaint',rec,setComplaints,complaints);
+              }catch(e){
+                alert('Save failed: '+e.message+'. Make sure the pf_qms_complaints table exists in Supabase — this complaint was NOT saved.');
+              }
             }},'Log Complaint'),
           ),
         ),
@@ -4320,8 +4328,12 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
               if(!name) return;
               if(!license_id){alert('Please select which license this supplier applies to.');return;}
               const rec={id:'sup-'+Date.now(),name,license_id,category:document.getElementById('sup-cat').value,status:document.getElementById('sup-status').value,products_supplied:document.getElementById('sup-prods').value,contact_name:document.getElementById('sup-contact').value,contact_email:document.getElementById('sup-email').value,coa_expiry:document.getElementById('sup-coa').value,last_audit:document.getElementById('sup-audit').value,notes:document.getElementById('sup-notes').value,created_by:cu.name,created_by_id:cu.id,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),updated_by:cu.name};
-              try{await db.insert('pf_qms_suppliers',rec);}catch(e){alert('Create table pf_qms_suppliers first.');}
-              handleSave('supplier',rec,setSuppliers,suppliers);
+              try{
+                await db.insert('pf_qms_suppliers',rec);
+                handleSave('supplier',rec,setSuppliers,suppliers);
+              }catch(e){
+                alert('Save failed: '+e.message+'. Make sure the pf_qms_suppliers table exists in Supabase — this supplier was NOT saved.');
+              }
             }},'Add Supplier'),
           ),
         ),
