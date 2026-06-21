@@ -4574,7 +4574,14 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
 
     // ── TRAINING MATRIX ───────────────────────────────────────────────────────
     tab==='training'&&el('div',null,
-      el('div',{style:{fontWeight:700,fontSize:14,marginBottom:4,color:'var(--text2)'}},'SOP Acknowledgement Tracking — '+publishedSOPs.length+' Published SOPs · '+trainingMatrixScope.length+' Team Members'),
+      el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:10,marginBottom:4}},
+        el('div',{style:{fontWeight:700,fontSize:14,color:'var(--text2)'}},'SOP Acknowledgement Tracking — '+publishedSOPs.length+' Published SOPs · '+trainingMatrixScope.length+' Team Members'),
+        isAdmin&&licFilter!=='all'&&el('button',{
+          onClick:()=>exportComplianceSnapshotPdf(LICENSES.find(l=>l.id===licFilter),publishedSOPs,trainingMatrixScope,targetUsersForSop),
+          style:{background:'var(--accent)',color:'#000',border:'none',borderRadius:'var(--rs)',padding:'8px 16px',fontFamily:'inherit',fontSize:12,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:6,whiteSpace:'nowrap'}
+        },'📋 Compliance Snapshot PDF'),
+        isAdmin&&licFilter==='all'&&el('div',{style:{fontSize:11,color:'var(--text3)'}},'Select a specific license above to generate a Compliance Snapshot'),
+      ),
       !isAdmin&&el('div',{style:{fontSize:11,color:'var(--text3)',marginBottom:14}},'Showing your direct reports only'),
       isAdmin&&el('div',{style:{marginBottom:14}}),
       publishedSOPs.length===0?el('div',{className:'empty'},el('div',{className:'eico'},'📚'),el('div',{className:'etxt'},'No published SOPs yet — publish SOPs to track training')):
@@ -6003,6 +6010,163 @@ function MyDocuments({cu,corrective,setCorrective}){
       )
     ),
   );
+}
+
+// ── LICENSE-WIDE COMPLIANCE SNAPSHOT PDF ──────────────────────────────────────
+// One-click audit-ready report: every active SOP for a license, every employee
+// who's required to have signed it, and who has/hasn't — with timestamps.
+// This is the document you hand an inspector who walks in unannounced.
+function exportComplianceSnapshotPdf(license,publishedSOPs,scopeUsers,targetUsersForSop){
+  const{jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:'pt',format:'letter'});
+  const W=612,H=792;
+  const margin=50;
+  let y=0;
+
+  const DARK=[18,18,18],GOLD=[245,166,35],GREEN=[16,150,90],RED=[200,60,60],TEXT=[20,20,20],TEXT2=[90,90,90],BORDER=[210,210,215];
+
+  function header(){
+    doc.setFillColor(...DARK);
+    doc.rect(0,0,W,70,'F');
+    doc.setFillColor(...GOLD);
+    doc.rect(0,68,W,2,'F');
+    doc.setTextColor(...GOLD);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(16);
+    doc.text('HENDRIX OMS',margin,32);
+    doc.setTextColor(230,230,230);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(9);
+    doc.text('Compliance Snapshot — SOP Training Status',margin,48);
+    doc.setTextColor(...GOLD);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(10);
+    doc.text(new Date().toISOString().slice(0,10),W-margin,32,{align:'right'});
+    y=95;
+  }
+
+  function footer(pageNum){
+    doc.setDrawColor(...BORDER);
+    doc.line(margin,H-50,W-margin,H-50);
+    doc.setTextColor(...TEXT2);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(7);
+    doc.text('CONFIDENTIAL — Generated for regulatory/audit purposes — '+license.name,margin,H-35);
+    doc.text('Page '+pageNum,W-margin,H-35,{align:'right'});
+  }
+
+  function checkPageBreak(neededHeight){
+    if(y+neededHeight>H-70){
+      doc.addPage();
+      header();
+    }
+  }
+
+  header();
+
+  doc.setTextColor(...DARK);
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(18);
+  doc.text(license.name,margin,y);
+  y+=20;
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(11);
+  doc.setTextColor(...TEXT2);
+  doc.text(license.state+' — '+(license.license_type||''),margin,y);
+  y+=22;
+
+  doc.setDrawColor(...BORDER);
+  doc.setLineWidth(0.5);
+  doc.line(margin,y,W-margin,y);
+  y+=16;
+
+  // Overall summary stats across all SOPs for this license
+  let totalRequired=0,totalSigned=0;
+  const sopStats=publishedSOPs.map(s=>{
+    const targets=targetUsersForSop(s).filter(t=>scopeUsers.some(u=>u.id===t.id));
+    const signed=targets.filter(t=>(s.acknowledgements||[]).some(a=>a.id===t.id));
+    totalRequired+=targets.length;
+    totalSigned+=signed.length;
+    return{sop:s,targets,signed};
+  });
+  const overallRate=totalRequired>0?Math.round(totalSigned/totalRequired*100):100;
+
+  const boxW=(W-margin*2-16)/3;
+  function statBox(x,label,value,color){
+    doc.setFillColor(245,246,250);
+    doc.rect(x,y,boxW,54,'F');
+    doc.setTextColor(...color);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(20);
+    doc.text(String(value),x+12,y+30);
+    doc.setTextColor(...TEXT2);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(8.5);
+    doc.text(label.toUpperCase(),x+12,y+44);
+  }
+  statBox(margin,'Active SOPs',publishedSOPs.length,DARK);
+  statBox(margin+boxW+8,'Team Members in Scope',scopeUsers.length,DARK);
+  statBox(margin+(boxW+8)*2,'Overall Sign-Off Rate',overallRate+'%',overallRate===100?GREEN:overallRate>=90?GOLD:RED);
+  y+=72;
+
+  // Per-SOP breakdown
+  sopStats.forEach(({sop,targets,signed})=>{
+    checkPageBreak(50);
+    const rate=targets.length>0?Math.round(signed.length/targets.length*100):100;
+    doc.setFillColor(245,246,250);
+    doc.rect(margin,y,W-margin*2,28,'F');
+    doc.setDrawColor(...(rate===100?GREEN:rate>=80?GOLD:RED));
+    doc.setLineWidth(2.5);
+    doc.line(margin,y,margin,y+28);
+    doc.setTextColor(...DARK);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(11);
+    doc.text(sop.title,margin+12,y+13);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(...TEXT2);
+    doc.text('Rev '+(sop.version||'1.0')+' — Published '+(sop.published_at?.slice(0,10)||sop.created_at?.slice(0,10)||''),margin+12,y+24);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(11);
+    doc.setTextColor(...(rate===100?GREEN:rate>=80?GOLD:RED));
+    doc.text(signed.length+'/'+targets.length+' signed ('+rate+'%)',W-margin-12,y+17,{align:'right'});
+    y+=34;
+
+    // List the people who have NOT signed — this is the actionable part of the report
+    const unsigned=targets.filter(t=>!signed.some(s2=>s2.id===t.id));
+    if(unsigned.length>0){
+      checkPageBreak(unsigned.length*13+10);
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(8);
+      doc.setTextColor(...RED);
+      doc.text('PENDING SIGNATURE:',margin+12,y);
+      y+=12;
+      doc.setFont('helvetica','normal');
+      doc.setFontSize(8.5);
+      doc.setTextColor(...TEXT);
+      unsigned.forEach(u=>{
+        checkPageBreak(13);
+        doc.text('• '+u.name+(u.dept?' ('+u.dept+')':''),margin+18,y);
+        y+=12.5;
+      });
+    }
+    y+=10;
+  });
+
+  if(publishedSOPs.length===0){
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(11);
+    doc.setTextColor(...TEXT2);
+    doc.text('No published SOPs apply to this license.',margin,y);
+  }
+
+  const pageCount=doc.internal.getNumberOfPages();
+  for(let i=1;i<=pageCount;i++){
+    doc.setPage(i);
+    footer(i);
+  }
+
+  doc.save('Compliance_Snapshot_'+license.name.replace(/[^a-z0-9]/gi,'_')+'_'+new Date().toISOString().slice(0,10)+'.pdf');
 }
 
 // ── SOP REVISION MODAL ────────────────────────────────────────────────────────
