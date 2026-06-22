@@ -403,7 +403,7 @@ const RLABEL={
   biomass_lead:'Biomass Lead',concentrate_lead:'Concentrate Lead',cart_priming_lead:'Cart Priming Lead',cart_filling_lead:'Cart Filling Lead',cart_cleaning_lead:'Cart Cleaning Lead',cart_packaging_lead:'Cart Packaging Lead',pre_roll_lead:'Pre Roll Lead',edible_lead:'Edible Lead',qc_lead:'QC Lead',
   cart_filling_supervisor:'Cart Filling Supervisor',cart_cleaning_supervisor:'Cart Cleaning Supervisor',cart_packaging_supervisor:'Cart Packaging Supervisor',pre_roll_supervisor:'Pre Roll Supervisor',edible_supervisor:'Edible Supervisor',qc_supervisor:'QC Supervisor',facility_supervisor:'Facility Supervisor',
   compliance_manager:'Compliance Manager',distribution_manager:'Distribution Manager',warehouse_manager:'Warehouse Manager',extraction_manager:'Extraction Manager',production_manager:'Production Manager',maintenance_manager:'Maintenance Manager',facility_manager:'Facility Manager',
-  sales_marketing_manager:'Sales & Marketing Manager',general_manager:'General Manager',
+  sales_marketing_manager:'Sales & Marketing Manager',general_manager:'General Manager',assistant_general_manager:'Assistant General Manager',
   director_sales_marketing:'Director of Sales & Marketing',director_production:'Director of Production',director_operations:'Director of Operations',
   coo:'COO',admin:'Admin'
 };
@@ -420,7 +420,7 @@ const RCOLOR={
 const ROLE_GROUPS=[
   {label:'Executive',roles:['coo','admin']},
   {label:'Directors',roles:['director_sales_marketing','director_production','director_operations']},
-  {label:'Managers',roles:['general_manager','sales_marketing_manager','facility_manager','production_manager','compliance_manager','distribution_manager','warehouse_manager','extraction_manager','maintenance_manager']},
+  {label:'Managers',roles:['general_manager','assistant_general_manager','sales_marketing_manager','facility_manager','production_manager','compliance_manager','distribution_manager','warehouse_manager','extraction_manager','maintenance_manager']},
   {label:'Supervisors',roles:['facility_supervisor','cart_filling_supervisor','cart_cleaning_supervisor','cart_packaging_supervisor','pre_roll_supervisor','edible_supervisor','qc_supervisor']},
   {label:'Leads',roles:['marketing_lead','cart_priming_lead','cart_filling_lead','cart_cleaning_lead','cart_packaging_lead','pre_roll_lead','edible_lead','qc_lead','biomass_lead','concentrate_lead']},
   {label:'Staff',roles:['brand_ambassador','employee']},
@@ -3771,9 +3771,14 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
   const canReport=isElevated||isManager;
   // Direct reports: users whose `managers` array includes this person's id (up to 3 managers per user).
   const directReports=users.filter(u=>(u.managers||[]).includes(cu.id));
-  // Training Matrix scope: Admin sees everyone; Managers/Supervisors see only their direct reports.
-  const trainingMatrixScope=(isAdmin?users.filter(u=>u.approved):directReports.filter(u=>u.approved))
-    .filter(u=>licFilter==='all'||(u.licenses||[]).includes(licFilter));
+  // Training Matrix scope — uses full role-based visibility hierarchy.
+  // getVisibleUsers() implements the complete per-role visibility rules:
+  // Employee=self, Lead=self+reports, Supervisor=self+leads+employees,
+  // Manager=self+supervisors+leads+employees (scoped by license),
+  // GM/AGM=everyone in their facility, Director=their dept across all licenses,
+  // COO/Admin=everyone.
+  const trainingMatrixScope=getVisibleUsers(cu,users)
+    .filter(u=>licFilter==='all'||(u.licenses||[]).includes(licFilter)||u.loc==='Nationwide');
   const today=new Date().toISOString().slice(0,10);
 
   // Dashboard stats
@@ -3831,8 +3836,9 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
     return sum+(targets.length>0?acked/targets.length:0);
   },0)/publishedSOPs.length*100):0;
   // Training: users who have NOT acked all SOPs that target them specifically
-  // Non-admins only see training gaps among their own direct reports on this dashboard panel.
-  const dashboardScope=isAdmin?approvedUsers:approvedUsers.filter(u=>directReports.some(d=>d.id===u.id));
+  // Dashboard training gap panel uses same visibility hierarchy as Training Matrix.
+  const dashboardScope=getVisibleUsers(cu,users)
+    .filter(u=>licFilter==='all'||(u.licenses||[]).includes(licFilter)||u.loc==='Nationwide');
   const untrainedUsers=dashboardScope.filter(u=>publishedSOPs.some(s=>{
     const targets=targetUsersForSop(s);
     const isTargeted=targets.some(t=>t.id===u.id);
@@ -7464,6 +7470,132 @@ function SOPs({sops,setSops,cu,users}){
 
 // ── CALENDAR ──────────────────────────────────────────────────────────────────
 const EVENT_COLORS=['#f5a623','#3b82f6','#10b981','#ef4444','#8b5cf6','#f97316','#06b6d4','#ec4899'];
+
+// ── ROLE-BASED VISIBILITY HIERARCHY ──────────────────────────────────────────
+// Determines which users a given person (viewer) can see in training matrix,
+// employee profiles, and other HR/compliance views.
+//
+// Rules:
+// Employee        → themselves only
+// Lead            → self + employees under them (managers field)
+// Supervisor      → self + leads + employees under them
+// Manager         → self + supervisors + leads + employees under them
+//                   scoped to their assigned licenses
+// General Manager / Assistant General Manager
+//                 → everyone assigned to their license(s)
+// Director        → everyone in their department (production/operations/compliance)
+//                   across ALL licenses
+// COO / Admin     → everyone everywhere
+
+// Director department mapping — which roles fall under each director's scope
+const DIRECTOR_DEPT_ROLES = {
+  director_production: [
+    'production_manager','extraction_manager','maintenance_manager','warehouse_manager',
+    'cart_filling_supervisor','cart_cleaning_supervisor','cart_packaging_supervisor',
+    'pre_roll_supervisor','edible_supervisor','qc_supervisor',
+    'cart_priming_lead','cart_filling_lead','cart_cleaning_lead','cart_packaging_lead',
+    'pre_roll_lead','edible_lead','qc_lead','biomass_lead','concentrate_lead',
+    'employee','brand_ambassador',
+  ],
+  director_operations: [
+    'facility_manager','distribution_manager','compliance_manager',
+    'facility_supervisor','qc_supervisor',
+    'qc_lead',
+    'employee','brand_ambassador',
+  ],
+  director_sales_marketing: [
+    'sales_marketing_manager',
+    'marketing_lead',
+    'brand_ambassador','employee',
+  ],
+};
+
+// Department keyword matching for director scope — used to filter by dept too
+const DIRECTOR_DEPT_KEYWORDS = {
+  director_production: ['cart','pre-roll','pre roll','edible','extraction','biomass','concentrate','production','warehouse','maintenance'],
+  director_operations: ['facility','distribution','compliance','operations','qc','quality'],
+  director_sales_marketing: ['sales','marketing'],
+};
+
+function getVisibleUsers(viewer, allUsers){
+  const role = viewer.role;
+  const viewerLics = viewer.licenses || [];
+  const rg = ROLE_GROUPS.find(g=>g.roles.includes(role))?.label;
+
+  // Admin and COO see everyone
+  if(role==='admin'||role==='coo') return allUsers.filter(u=>u.approved);
+
+  // Directors see everyone in their department across all licenses
+  if(role==='director_production'||role==='director_operations'||role==='director_sales_marketing'){
+    const deptRoles = DIRECTOR_DEPT_ROLES[role]||[];
+    const keywords = DIRECTOR_DEPT_KEYWORDS[role]||[];
+    return allUsers.filter(u=>{
+      if(!u.approved) return false;
+      if(u.id===viewer.id) return true;
+      // Include roles that fall under this director's scope
+      if(deptRoles.includes(u.role)) return true;
+      // Also match by department keyword for employees without specific roles
+      const dept = (u.dept||'').toLowerCase();
+      if(keywords.some(k=>dept.includes(k))) return true;
+      return false;
+    });
+  }
+
+  // General Manager and Assistant General Manager see everyone in their license(s)
+  if(role==='general_manager'||role==='assistant_general_manager'){
+    return allUsers.filter(u=>{
+      if(!u.approved) return false;
+      if(u.id===viewer.id) return true;
+      // Same license(s) as this GM
+      const uLics = u.licenses||[];
+      if(viewerLics.length>0&&uLics.length>0){
+        return viewerLics.some(l=>uLics.includes(l));
+      }
+      // Nationwide GM sees everyone (across all facilities)
+      if(viewer.loc==='Nationwide') return true;
+      return false;
+    });
+  }
+
+  // Other managers — see themselves + supervisors + leads + employees under them
+  // scoped to their license(s)
+  if(rg==='Managers'){
+    // Build the set of people who report (directly or indirectly) to this manager
+    // by walking the managers[] field on each user
+    const directReports = allUsers.filter(u=>
+      u.approved && u.id!==viewer.id &&
+      (u.managers||[]).includes(viewer.id)
+    );
+    const reportIds = new Set(directReports.map(u=>u.id));
+    reportIds.add(viewer.id);
+    return allUsers.filter(u=>u.approved&&reportIds.has(u.id));
+  }
+
+  // Supervisors — see themselves + leads + employees under them
+  if(rg==='Supervisors'){
+    const directReports = allUsers.filter(u=>
+      u.approved && u.id!==viewer.id &&
+      (u.managers||[]).includes(viewer.id)
+    );
+    const reportIds = new Set(directReports.map(u=>u.id));
+    reportIds.add(viewer.id);
+    return allUsers.filter(u=>u.approved&&reportIds.has(u.id));
+  }
+
+  // Leads — see themselves + employees under them
+  if(rg==='Leads'){
+    const directReports = allUsers.filter(u=>
+      u.approved && u.id!==viewer.id &&
+      (u.managers||[]).includes(viewer.id)
+    );
+    const reportIds = new Set(directReports.map(u=>u.id));
+    reportIds.add(viewer.id);
+    return allUsers.filter(u=>u.approved&&reportIds.has(u.id));
+  }
+
+  // Staff/Employee — see only themselves
+  return allUsers.filter(u=>u.approved&&u.id===viewer.id);
+}
 
 function getMeetLink(){return'https://meet.jit.si/hendrix-'+Math.random().toString(36).slice(2,12);}
 
