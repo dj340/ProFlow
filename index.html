@@ -2477,35 +2477,12 @@ function Team({users,setUsers,cu}){
 
           el('div',{className:'divider'}),
 
-          // Reports To (managers)
-          el('div',{className:'fg'},
-            el('label',null,'Reports To (up to 3)'),
-            el('select',{value:'',onChange:ev=>{
-              const u=users.find(x=>x.id===ev.target.value);
-              if(!u)return;
-              const mgrs=editU.managers||[];
-              if(mgrs.length>=3){alert('Max 3 managers.');return;}
-              if(mgrs.find(m=>m.id===u.id))return;
-              setEditU(p=>({...p,managers:[...mgrs,{id:u.id,name:u.name,email:u.email,role:u.role}]}));
-              ev.target.value='';
-            },style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
-              el('option',{value:''},'+ Add manager...'),
-              ...users.filter(u=>u.approved&&u.id!==editU.id&&!(editU.managers||[]).find(m=>m.id===u.id)).map(u=>el('option',{key:u.id,value:u.id},`${u.name} — ${RLABEL[u.role]||u.role}`))
-            ),
-            (editU.managers||[]).length>0&&el('div',{style:{marginTop:8,display:'flex',flexDirection:'column',gap:6}},
-              (editU.managers||[]).map((m,i)=>el('div',{key:m.id,style:{display:'flex',alignItems:'center',justifyContent:'space-between',background:'var(--surface2)',borderRadius:8,padding:'8px 12px'}},
-                el('div',{style:{display:'flex',alignItems:'center',gap:8}},
-                  el('div',{style:{background:'var(--accent)',color:'#000000',borderRadius:5,padding:'2px 7px',fontSize:10,fontWeight:800}},'M'+(i+1)),
-                  el('div',null,
-                    el('div',{style:{fontSize:12,fontWeight:600}},m.name),
-                    el('div',{style:{fontSize:11,color:'var(--text2)'}},RLABEL[m.role]||m.role)
-                  )
-                ),
-                el('button',{style:{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:18,lineHeight:1},onClick:()=>setEditU(p=>({...p,managers:p.managers.filter(x=>x.id!==m.id)}))},'×')
-              ))
-            ),
-            (editU.managers||[]).length===0&&el('div',{style:{fontSize:12,color:'var(--text3)',marginTop:6}},'No managers assigned'),
-          ),
+          // Reports To (managers) — typeahead
+          el(ManagerTypeahead,{
+            editU,
+            setEditU,
+            users,
+          }),
         ),
         el('div',{className:'mf',style:{justifyContent:'space-between',alignItems:'center'}},
           el('div',{style:{fontSize:13,fontWeight:600,color:saveMsg.includes('❌')?'var(--red)':saveMsg.includes('✓')?'var(--green)':'var(--text2)'}},saveMsg),
@@ -3769,7 +3746,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
   const isSupervisor=qmsRoleGroup==='Supervisors';
   // Managers and above can report Deviations/CAPAs/Audits; Supervisors are read-only in those tabs.
   const canReport=isElevated||isManager;
-  // Direct reports: users whose `managers` array includes this person's id (up to 3 managers per user).
+  // Direct reports: users whose `managers` array includes this person's id (up to 5 managers per user).
   const directReports=users.filter(u=>(u.managers||[]).some(m=>(m.id||m)===cu.id));
   // Training Matrix scope — uses full role-based visibility hierarchy.
   // getVisibleUsers() implements the complete per-role visibility rules:
@@ -5785,6 +5762,90 @@ function exportEmployeeTrainingPdf(employee,applicableSOPs){
   }
 
   doc.save('Training_Report_'+employee.name.replace(/[^a-z0-9]/gi,'_')+'.pdf');
+}
+
+// ── MANAGER TYPEAHEAD (up to 5, search by typing 3+ chars) ───────────────────
+function ManagerTypeahead({editU,setEditU,users}){
+  const [query,setQuery]=React.useState('');
+  const [open,setOpen]=React.useState(false);
+  const inputRef=React.useRef(null);
+  const dropRef=React.useRef(null);
+  const mgrs=editU.managers||[];
+  const canAdd=mgrs.length<5;
+
+  const filtered=React.useMemo(()=>{
+    if(query.length<3)return[];
+    const q=query.toLowerCase();
+    return users.filter(u=>
+      u.approved&&
+      u.id!==editU.id&&
+      !mgrs.find(m=>m.id===u.id)&&
+      u.name&&u.name.toLowerCase().includes(q)
+    ).slice(0,8);
+  },[query,users,editU.id,mgrs]);
+
+  // close on outside click
+  React.useEffect(()=>{
+    function handler(e){
+      if(dropRef.current&&!dropRef.current.contains(e.target)&&!inputRef.current.contains(e.target)){
+        setOpen(false);
+      }
+    }
+    document.addEventListener('mousedown',handler);
+    return()=>document.removeEventListener('mousedown',handler);
+  },[]);
+
+  function addManager(u){
+    setEditU(p=>({...p,managers:[...(p.managers||[]),{id:u.id,name:u.name,email:u.email,role:u.role}]}));
+    setQuery('');
+    setOpen(false);
+    inputRef.current&&inputRef.current.focus();
+  }
+
+  return el('div',{className:'fg'},
+    el('label',null,'Reports To (up to 5)'),
+    canAdd&&el('div',{style:{position:'relative'}},
+      el('input',{
+        ref:inputRef,
+        type:'text',
+        value:query,
+        placeholder:'Type 3+ letters to search...',
+        onChange:e=>{setQuery(e.target.value);setOpen(true);},
+        onFocus:()=>query.length>=3&&setOpen(true),
+        style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,boxSizing:'border-box'}
+      }),
+      open&&filtered.length>0&&el('div',{
+        ref:dropRef,
+        style:{position:'absolute',top:'calc(100% + 4px)',left:0,right:0,background:'var(--surface)',border:'1px solid var(--border)',borderRadius:'var(--rs)',zIndex:999,maxHeight:220,overflowY:'auto',boxShadow:'0 4px 16px rgba(0,0,0,0.4)'}
+      },
+        filtered.map(u=>el('div',{
+          key:u.id,
+          onMouseDown:e=>{e.preventDefault();addManager(u);},
+          style:{padding:'9px 13px',cursor:'pointer',fontSize:13,display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:'1px solid var(--border)'}
+        },
+          el('span',{style:{fontWeight:600}},u.name),
+          el('span',{style:{fontSize:11,color:'var(--text2)',marginLeft:8}},RLABEL[u.role]||u.role)
+        ))
+      ),
+      open&&query.length>=3&&filtered.length===0&&el('div',{
+        style:{position:'absolute',top:'calc(100% + 4px)',left:0,right:0,background:'var(--surface)',border:'1px solid var(--border)',borderRadius:'var(--rs)',zIndex:999,padding:'10px 13px',fontSize:12,color:'var(--text3)'}
+      },'No matching users found')
+    ),
+    !canAdd&&el('div',{style:{fontSize:12,color:'var(--text3)',marginTop:4}},'Max 5 managers reached'),
+    mgrs.length>0&&el('div',{style:{marginTop:8,display:'flex',flexDirection:'column',gap:6}},
+      mgrs.map((m,i)=>el('div',{key:m.id,style:{display:'flex',alignItems:'center',justifyContent:'space-between',background:'var(--surface2)',borderRadius:8,padding:'8px 12px'}},
+        el('div',{style:{display:'flex',alignItems:'center',gap:8}},
+          el('div',{style:{background:'var(--accent)',color:'#000000',borderRadius:5,padding:'2px 7px',fontSize:10,fontWeight:800}},'M'+(i+1)),
+          el('div',null,
+            el('div',{style:{fontSize:12,fontWeight:600}},m.name),
+            el('div',{style:{fontSize:11,color:'var(--text2)'}},RLABEL[m.role]||m.role)
+          )
+        ),
+        el('button',{style:{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:18,lineHeight:1},onClick:()=>setEditU(p=>({...p,managers:p.managers.filter(x=>x.id!==m.id)}))},'×')
+      ))
+    ),
+    mgrs.length===0&&el('div',{style:{fontSize:12,color:'var(--text3)',marginTop:6}},'No managers assigned'),
+  );
 }
 
 // ── EMPLOYEE PROFILE MODAL (Training + Corrective Actions combined) ──────────
