@@ -3380,7 +3380,7 @@ function AuditForm({cu,users,onSave,onCancel,existing}){
       if(existing){await db.update('pf_qms_audits',existing.id,rec);}
       else{await db.insert('pf_qms_audits',rec);}
       onSave(rec);
-    }catch(e){console.error(e);alert('Save failed. Create table pf_qms_audits in Supabase.');}
+    }catch(e){console.error(e);alert('Audit save failed: '+e.message);}
     setSaving(false);
   }
   return el('div',{className:'mbd'},
