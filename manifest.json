@@ -1,24 +1,21 @@
 {
-  "name": "Hendrix Task Management",
-  "short_name": "Hendrix TMS",
-  "description": "Hendrix Task Management System",
+  "name": "Hendrix OMS",
+  "short_name": "Hendrix OMS",
+  "description": "Hendrix Operation Management System",
   "start_url": "/ProFlow/",
   "display": "standalone",
-  "background_color": "#050c1a",
+  "background_color": "#121212",
   "theme_color": "#f5a623",
-  "orientation": "portrait-primary",
   "icons": [
     {
       "src": "icon-192.png",
       "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/png"
     },
     {
       "src": "icon-512.png",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/png"
     }
   ]
 }
