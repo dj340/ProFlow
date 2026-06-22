@@ -425,6 +425,121 @@ const ROLE_GROUPS=[
   {label:'Leads',roles:['marketing_lead','cart_priming_lead','cart_filling_lead','cart_cleaning_lead','cart_packaging_lead','pre_roll_lead','edible_lead','qc_lead','biomass_lead','concentrate_lead']},
   {label:'Staff',roles:['brand_ambassador','employee']},
 ];
+// ── ROLE REPORTING HIERARCHY ──────────────────────────────────────────────────
+// Defines who each role reports to. Used to auto-wire the managers field
+// so the visibility hierarchy always stays correct regardless of who holds each role.
+// Format: role -> array of manager roles (in priority order, up to 3 levels)
+const ROLE_REPORTS_TO = {
+  // Staff report to their department lead
+  'employee':           ['cart_filling_lead','cart_cleaning_lead','cart_packaging_lead','cart_priming_lead','pre_roll_lead','edible_lead','qc_lead','biomass_lead','concentrate_lead','marketing_lead'],
+  'brand_ambassador':   ['marketing_lead','sales_marketing_manager'],
+
+  // Leads report to their supervisor
+  'cart_priming_lead':     ['cart_filling_supervisor'],
+  'cart_filling_lead':     ['cart_filling_supervisor'],
+  'cart_cleaning_lead':    ['cart_cleaning_supervisor'],
+  'cart_packaging_lead':   ['cart_packaging_supervisor'],
+  'pre_roll_lead':         ['pre_roll_supervisor'],
+  'edible_lead':           ['edible_supervisor'],
+  'qc_lead':               ['qc_supervisor'],
+  'biomass_lead':          ['extraction_manager','production_manager'],
+  'concentrate_lead':      ['extraction_manager','production_manager'],
+  'marketing_lead':        ['sales_marketing_manager','director_sales_marketing'],
+
+  // Supervisors report to production manager
+  'cart_filling_supervisor':  ['production_manager'],
+  'cart_cleaning_supervisor': ['production_manager'],
+  'cart_packaging_supervisor':['production_manager'],
+  'pre_roll_supervisor':      ['production_manager'],
+  'edible_supervisor':        ['production_manager'],
+  'qc_supervisor':            ['production_manager','compliance_manager'],
+  'facility_supervisor':      ['facility_manager','general_manager'],
+
+  // Managers report to GM/Director
+  'production_manager':    ['general_manager','assistant_general_manager'],
+  'extraction_manager':    ['general_manager','director_production'],
+  'maintenance_manager':   ['general_manager','facility_manager'],
+  'warehouse_manager':     ['general_manager','distribution_manager'],
+  'distribution_manager':  ['general_manager','director_operations'],
+  'compliance_manager':    ['general_manager','director_operations'],
+  'facility_manager':      ['general_manager','director_operations'],
+  'sales_marketing_manager':['director_sales_marketing'],
+  'assistant_general_manager':['general_manager'],
+
+  // GMs and Directors report to COO
+  'general_manager':          ['director_production','coo'],
+  'director_production':      ['coo'],
+  'director_operations':      ['coo'],
+  'director_sales_marketing': ['coo'],
+
+  // COO reports to Admin
+  'coo': ['admin'],
+};
+
+// Auto-wire managers field for a set of users based on role hierarchy.
+// Returns updated user records — does NOT write to DB unless user actually changed.
+// Called after user list loads to keep hierarchy always current.
+async function autoWireManagers(allUsers){
+  const updates = [];
+
+  for(const user of allUsers){
+    if(!user.approved) continue;
+    const reportRoles = ROLE_REPORTS_TO[user.role];
+    if(!reportRoles) continue;
+
+    // For employees with a dept, find the most specific lead for their department
+    // Otherwise find any user holding one of the manager roles in the same license(s)
+    const userLics = user.licenses||[];
+
+    // Find manager candidates: users holding one of the reportTo roles,
+    // preferring same license, then same loc, then any
+    let managers = [];
+    for(const mgrRole of reportRoles){
+      const candidates = allUsers.filter(u=>
+        u.approved &&
+        u.role===mgrRole &&
+        u.id!==user.id
+      );
+      if(candidates.length===0) continue;
+
+      // Prefer same license match
+      const sameL = candidates.filter(u=>{
+        const ul=u.licenses||[];
+        return userLics.length===0||ul.length===0||userLics.some(l=>ul.includes(l));
+      });
+      const best = sameL.length>0?sameL[0]:candidates[0];
+      if(best&&!managers.find(m=>m.id===best.id)){
+        managers.push({id:best.id,name:best.name,email:best.email||'',role:best.role});
+      }
+      if(managers.length>=3) break; // METRC allows up to 3 managers per user
+    }
+
+    if(managers.length===0) continue;
+
+    // Check if already correctly wired — avoid unnecessary DB writes
+    const current = user.managers||[];
+    const same = managers.length===current.length &&
+      managers.every(m=>current.some(c=>(c.id||c)===m.id));
+    if(!same){
+      updates.push({user, managers});
+    }
+  }
+
+  // Write updates to DB in parallel (max 5 at a time to avoid rate limiting)
+  for(let i=0;i<updates.length;i+=5){
+    const batch = updates.slice(i,i+5);
+    await Promise.all(batch.map(({user,managers})=>
+      fetch(`${SUPA_URL}/rest/v1/pf_users?id=eq.${user.id}`,{
+        method:'PATCH',
+        headers:{...H.headers,'Prefer':'return=minimal'},
+        body:JSON.stringify({managers}),
+      }).catch(e=>console.warn('Auto-wire failed for',user.name,e))
+    ));
+  }
+
+  return updates.length;
+}
+
 // ── SECTIONS (mirrors DEPT_TREE hierarchy) ───────────────────────────────────
 const SECTION_TREE={
   'Michigan Production':{
@@ -8020,6 +8135,16 @@ function App(){
       setQmsComplaints(_comp||[]);
       setQmsSuppliers(_sup||[]);
       setQmsCorrective(_corr||[]);
+      // Auto-wire managers based on role hierarchy — runs silently after load
+      // Only updates records where the managers field is wrong or missing
+      const allLoaded=_users||[];
+      autoWireManagers(allLoaded).then(n=>{
+        if(n>0){
+          // Refresh user list to pick up the newly wired managers
+          db.get('pf_users').then(fresh=>{ if(fresh) setUsers(fresh); }).catch(()=>{});
+          console.log('Auto-wired managers for',n,'users');
+        }
+      }).catch(e=>console.warn('Auto-wire error:',e));
     });
   },[cu,dbReady]);
 
