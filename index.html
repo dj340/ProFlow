@@ -3791,18 +3791,22 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
   function targetUsersForSop(sop){
     return users.filter(u=>{
       if(!u.approved) return false;
-      // Admins/owners always count as in-scope so they can track and audit every SOP.
-      const isUserAdmin=u.role==='admin';
-      if(isUserAdmin) return true;
-      {
-        const sopLicIds=sop.license_ids&&sop.license_ids.length>0?sop.license_ids:(sop.license_id?[sop.license_id]:(sop.license_name?[LICENSES.find(l=>l.name===sop.license_name)?.id].filter(Boolean):[]));
-        const userLicenses=u.licenses||[];
-        // If the user record has no licenses assigned yet (not onboarded into the
-        // license system), don't silently exclude them — fall back to matching by
-        // department only, so existing employees aren't invisible during rollout.
-        if(sopLicIds.length>0&&userLicenses.length>0){
-          const hasMatch=sopLicIds.some(id=>userLicenses.includes(id));
-          if(!hasMatch) return false;
+      // Step 1: License check — if the SOP is tied to specific licenses,
+      // only include users who are assigned to at least one of those licenses.
+      // Users with no licenses assigned are excluded (not counted as required signers)
+      // unless they are the admin, who is always counted for oversight tracking only.
+      const sopLicIds=sop.license_ids&&sop.license_ids.length>0?sop.license_ids:(sop.license_id?[sop.license_id]:(sop.license_name?[LICENSES.find(l=>l.name===sop.license_name)?.id].filter(Boolean):[]));
+      if(sopLicIds.length>0){
+        // Admin is counted but only if they have this license assigned OR if they
+        // have no licenses at all (legacy admin setup). This prevents admin from
+        // inflating the count on licenses they don't belong to.
+        if(u.role==='admin'){
+          const adminLics=u.licenses||[];
+          if(adminLics.length>0&&!sopLicIds.some(id=>adminLics.includes(id))) return false;
+        } else {
+          const userLicenses=u.licenses||[];
+          // Strictly require license match — empty licenses = excluded
+          if(!sopLicIds.some(id=>userLicenses.includes(id))) return false;
         }
       }
       if((sop.visible_to_depts||[]).length>0){
@@ -6923,18 +6927,22 @@ function SOPs({sops,setSops,cu,users}){
   function targetUsersForSop(sop){
     return users.filter(u=>{
       if(!u.approved) return false;
-      // Admins/owners always count as in-scope so they can track and audit every SOP.
-      const isUserAdmin=u.role==='admin';
-      if(isUserAdmin) return true;
-      {
-        const sopLicIds=sop.license_ids&&sop.license_ids.length>0?sop.license_ids:(sop.license_id?[sop.license_id]:(sop.license_name?[LICENSES.find(l=>l.name===sop.license_name)?.id].filter(Boolean):[]));
-        const userLicenses=u.licenses||[];
-        // If the user record has no licenses assigned yet (not onboarded into the
-        // license system), don't silently exclude them — fall back to matching by
-        // department only, so existing employees aren't invisible during rollout.
-        if(sopLicIds.length>0&&userLicenses.length>0){
-          const hasMatch=sopLicIds.some(id=>userLicenses.includes(id));
-          if(!hasMatch) return false;
+      // Step 1: License check — if the SOP is tied to specific licenses,
+      // only include users who are assigned to at least one of those licenses.
+      // Users with no licenses assigned are excluded (not counted as required signers)
+      // unless they are the admin, who is always counted for oversight tracking only.
+      const sopLicIds=sop.license_ids&&sop.license_ids.length>0?sop.license_ids:(sop.license_id?[sop.license_id]:(sop.license_name?[LICENSES.find(l=>l.name===sop.license_name)?.id].filter(Boolean):[]));
+      if(sopLicIds.length>0){
+        // Admin is counted but only if they have this license assigned OR if they
+        // have no licenses at all (legacy admin setup). This prevents admin from
+        // inflating the count on licenses they don't belong to.
+        if(u.role==='admin'){
+          const adminLics=u.licenses||[];
+          if(adminLics.length>0&&!sopLicIds.some(id=>adminLics.includes(id))) return false;
+        } else {
+          const userLicenses=u.licenses||[];
+          // Strictly require license match — empty licenses = excluded
+          if(!sopLicIds.some(id=>userLicenses.includes(id))) return false;
         }
       }
       if((sop.visible_to_depts||[]).length>0){
