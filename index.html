@@ -3803,6 +3803,10 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
         if(u.role==='admin'){
           const adminLics=u.licenses||[];
           if(adminLics.length>0&&!sopLicIds.some(id=>adminLics.includes(id))) return false;
+        } else if(u.loc==='Nationwide'){
+          // Nationwide users work across all states — they bypass the license check
+          // entirely and are scoped only by department below.
+          // e.g. Cart Cleaning Supervisor Nationwide sees Cart SOPs in both MI and MO.
         } else {
           const userLicenses=u.licenses||[];
           // Strictly require license match — empty licenses = excluded
@@ -6939,6 +6943,10 @@ function SOPs({sops,setSops,cu,users}){
         if(u.role==='admin'){
           const adminLics=u.licenses||[];
           if(adminLics.length>0&&!sopLicIds.some(id=>adminLics.includes(id))) return false;
+        } else if(u.loc==='Nationwide'){
+          // Nationwide users work across all states — they bypass the license check
+          // entirely and are scoped only by department below.
+          // e.g. Cart Cleaning Supervisor Nationwide sees Cart SOPs in both MI and MO.
         } else {
           const userLicenses=u.licenses||[];
           // Strictly require license match — empty licenses = excluded
