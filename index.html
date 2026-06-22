@@ -3770,7 +3770,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
   // Managers and above can report Deviations/CAPAs/Audits; Supervisors are read-only in those tabs.
   const canReport=isElevated||isManager;
   // Direct reports: users whose `managers` array includes this person's id (up to 3 managers per user).
-  const directReports=users.filter(u=>(u.managers||[]).includes(cu.id));
+  const directReports=users.filter(u=>(u.managers||[]).some(m=>(m.id||m)===cu.id));
   // Training Matrix scope — uses full role-based visibility hierarchy.
   // getVisibleUsers() implements the complete per-role visibility rules:
   // Employee=self, Lead=self+reports, Supervisor=self+leads+employees,
@@ -6918,9 +6918,14 @@ function SOPs({sops,setSops,cu,users}){
     // instead of hard-blocking them — prevents new/un-migrated accounts from losing
     // all SOP visibility during rollout.
     const sopLicIds=s.license_ids&&s.license_ids.length>0?s.license_ids:(s.license_id?[s.license_id]:(s.license_name?[LICENSES.find(l=>l.name===s.license_name)?.id].filter(Boolean):[]));
-    if(sopLicIds.length>0&&(cu.licenses||[]).length>0){
-      const hasMatch=sopLicIds.some(id=>cu.licenses.includes(id));
-      if(!hasMatch) return false;
+    if(sopLicIds.length>0){
+      // Nationwide users bypass license check — scoped by dept only
+      if(cu.loc!=='Nationwide'){
+        if((cu.licenses||[]).length>0){
+          const hasMatch=sopLicIds.some(id=>cu.licenses.includes(id));
+          if(!hasMatch) return false;
+        }
+      }
     }
     // Dept check: if SOP has visible_to_depts, user MUST be in one of them.
     if((s.visible_to_depts||[]).length>0){
@@ -7564,7 +7569,7 @@ function getVisibleUsers(viewer, allUsers){
     // by walking the managers[] field on each user
     const directReports = allUsers.filter(u=>
       u.approved && u.id!==viewer.id &&
-      (u.managers||[]).includes(viewer.id)
+      (u.managers||[]).some(m=>(m.id||m)===viewer.id)
     );
     const reportIds = new Set(directReports.map(u=>u.id));
     reportIds.add(viewer.id);
@@ -7575,7 +7580,7 @@ function getVisibleUsers(viewer, allUsers){
   if(rg==='Supervisors'){
     const directReports = allUsers.filter(u=>
       u.approved && u.id!==viewer.id &&
-      (u.managers||[]).includes(viewer.id)
+      (u.managers||[]).some(m=>(m.id||m)===viewer.id)
     );
     const reportIds = new Set(directReports.map(u=>u.id));
     reportIds.add(viewer.id);
@@ -7586,7 +7591,7 @@ function getVisibleUsers(viewer, allUsers){
   if(rg==='Leads'){
     const directReports = allUsers.filter(u=>
       u.approved && u.id!==viewer.id &&
-      (u.managers||[]).includes(viewer.id)
+      (u.managers||[]).some(m=>(m.id||m)===viewer.id)
     );
     const reportIds = new Set(directReports.map(u=>u.id));
     reportIds.add(viewer.id);
