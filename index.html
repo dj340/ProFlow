@@ -3725,6 +3725,213 @@ Write a formal, professional Corrective Action notice. Be factual, specific, and
 }
 
 // ── MAIN QMS COMPONENT ────────────────────────────────────────────────────────
+// ── SUPPLIER TAB (list + add + edit + certificates) ──────────────────────────
+function SupplierTab({cu,isElevated,suppliers,setSuppliers,filterByLic,handleSave,deleteRec,db,LICENSES,showNew,setNew,sel,setSel}){
+  const[editMode,setEditMode]=React.useState(false);
+  const[editData,setEditData]=React.useState(null);
+  const[certUploading,setCertUploading]=React.useState(false);
+  const[certMsg,setCertMsg]=React.useState('');
+  const[savingEdit,setSavingEdit]=React.useState(false);
+
+  // ── field helpers ──
+  const INP=(id,opts={})=>el('input',{id,style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,boxSizing:'border-box'},...opts});
+  const SEL=(id,children,opts={})=>el('select',{id,style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13},...opts},...children);
+  const CAT_OPTS=['Cones/Pre-roll Supplies','Packaging','Distillate/Extract','Terpenes','Ingredients','Testing Lab','Equipment','Labels','Other'];
+
+  // ── supplier form fields (shared by Add and Edit) ──
+  function SupplierForm({defaults={},idPfx='sup'}){
+    return el('div',null,
+      el('div',{className:'fg'},el('label',null,'License *'),
+        SEL(idPfx+'-license',[el('option',{key:'',value:''},'— Select License —'),...LICENSES.map(lic=>el('option',{key:lic.id,value:lic.id,selected:defaults.license_id===lic.id},lic.name+' ('+lic.state+')'))]),
+      ),
+      el('div',{className:'fg'},el('label',null,'Supplier Name *'),INP(idPfx+'-name',{placeholder:'e.g. Futurola USA',defaultValue:defaults.name||'',autoFocus:true})),
+      el('div',{className:'g2'},
+        el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Category'),
+          SEL(idPfx+'-cat',CAT_OPTS.map(c=>el('option',{key:c,value:c,selected:defaults.category===c},c)))
+        ),
+        el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Status'),
+          SEL(idPfx+'-status',[el('option',{value:'pending',selected:defaults.status!=='approved'},'Pending Approval'),el('option',{value:'approved',selected:defaults.status==='approved'},'Approved')])
+        ),
+      ),
+      el('div',{className:'fg'},el('label',null,'Products Supplied'),INP(idPfx+'-prods',{placeholder:'e.g. 98mm cones, 109mm cones',defaultValue:defaults.products_supplied||''})),
+      el('div',{className:'g2'},
+        el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Contact Name'),INP(idPfx+'-contact',{placeholder:'Sales rep name',defaultValue:defaults.contact_name||''})),
+        el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Contact Email/Phone'),INP(idPfx+'-email',{placeholder:'contact@supplier.com',defaultValue:defaults.contact_email||''})),
+      ),
+      el('div',{className:'g2',style:{marginTop:13}},
+        el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'COA Expiry Date'),el('input',{type:'date',id:idPfx+'-coa',defaultValue:defaults.coa_expiry||'',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,boxSizing:'border-box'}})),
+        el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Last Audit Date'),el('input',{type:'date',id:idPfx+'-audit',defaultValue:defaults.last_audit||'',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,boxSizing:'border-box'}})),
+      ),
+      el('div',{className:'fg'},el('label',null,'Notes / Certifications'),el('textarea',{id:idPfx+'-notes',placeholder:'Any certifications, qualifications, or notes...',defaultValue:defaults.notes||'',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,minHeight:80,resize:'vertical',boxSizing:'border-box'}})),
+    );
+  }
+
+  function readVals(pfx){
+    const g=id=>document.getElementById(pfx+'-'+id)?.value||'';
+    return{name:g('name').trim(),license_id:g('license'),category:g('cat'),status:g('status'),products_supplied:g('prods'),contact_name:g('contact'),contact_email:g('email'),coa_expiry:g('coa'),last_audit:g('audit'),notes:g('notes')};
+  }
+
+  // ── certificate upload ──
+  async function handleCertUpload(e,supplier){
+    const file=e.target.files[0];
+    if(!file)return;
+    if(file.size>5*1024*1024){alert('File must be under 5MB.');return;}
+    setCertUploading(true);setCertMsg('Uploading...');
+    try{
+      const reader=new FileReader();
+      reader.onload=async ev=>{
+        const cert={id:'cert-'+Date.now(),name:file.name,type:file.type,size:file.size,data:ev.target.result,uploaded_by:cu.name,uploaded_at:new Date().toISOString()};
+        const existing=supplier.certificates||[];
+        const updated={...supplier,certificates:[...existing,cert],updated_at:new Date().toISOString(),updated_by:cu.name};
+        await db.update('pf_qms_suppliers',supplier.id,{certificates:[...existing,cert],updated_at:updated.updated_at,updated_by:cu.name});
+        setSuppliers(prev=>prev.map(s=>s.id===supplier.id?updated:s));
+        setSel(updated);
+        setCertMsg('✓ Uploaded');setTimeout(()=>setCertMsg(''),3000);
+        setCertUploading(false);
+      };
+      reader.readAsDataURL(file);
+    }catch(err){setCertMsg('❌ Failed: '+err.message);setCertUploading(false);}
+  }
+
+  async function deleteCert(supplier,certId){
+    if(!confirm('Remove this certificate?'))return;
+    const updated={...supplier,certificates:(supplier.certificates||[]).filter(c=>c.id!==certId),updated_at:new Date().toISOString(),updated_by:cu.name};
+    await db.update('pf_qms_suppliers',supplier.id,{certificates:updated.certificates,updated_at:updated.updated_at,updated_by:cu.name});
+    setSuppliers(prev=>prev.map(s=>s.id===supplier.id?updated:s));
+    setSel(updated);
+  }
+
+  function certIcon(type){
+    if(type&&type.includes('pdf'))return '📄';
+    if(type&&type.includes('image'))return '🖼️';
+    return '📎';
+  }
+  function fmtSize(bytes){return bytes>1024*1024?(bytes/1024/1024).toFixed(1)+'MB':(bytes/1024).toFixed(0)+'KB';}
+
+  // ── list view ──
+  if(!showNew&&!sel){
+    return el(RecordList,{
+      items:filterByLic(suppliers),emptyMsg:'No suppliers qualified',newLabel:'+ Add Supplier',onNew:()=>setNew(true),
+      renderRow:s=>el('div',{key:s.id,onClick:()=>{setSel(s);setEditMode(false);},style:{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:10,padding:'14px 16px',cursor:'pointer',transition:'all .15s'},onMouseEnter:ev=>ev.currentTarget.style.borderColor='rgba(245,166,35,.3)',onMouseLeave:ev=>ev.currentTarget.style.borderColor='var(--border)'},
+        el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},
+          el('div',{style:{flex:1}},
+            el('div',{style:{display:'flex',gap:6,marginBottom:5}},
+              el('span',{style:{background:s.status==='approved'?'rgba(16,185,129,.1)':'rgba(245,158,11,.1)',color:s.status==='approved'?'var(--green)':'var(--accent)',border:'1px solid',borderColor:s.status==='approved'?'rgba(16,185,129,.3)':'rgba(245,158,11,.3)',borderRadius:4,padding:'2px 7px',fontSize:11,fontWeight:700}},s.status==='approved'?'✅ Approved':'⏳ Pending'),
+              el('span',{style:{background:'var(--surface2)',color:'var(--text2)',border:'1px solid var(--border)',borderRadius:4,padding:'2px 7px',fontSize:11}},s.category),
+              (s.certificates||[]).length>0&&el('span',{style:{background:'rgba(99,102,241,.12)',color:'#818cf8',border:'1px solid rgba(99,102,241,.3)',borderRadius:4,padding:'2px 7px',fontSize:11}},`📎 ${(s.certificates||[]).length} cert${(s.certificates||[]).length!==1?'s':''}`)
+            ),
+            el('div',{style:{fontSize:14,fontWeight:700,marginBottom:3}},s.name),
+            el('div',{style:{fontSize:12,color:'var(--text2)'}},s.products_supplied),
+          ),
+          el('div',{style:{fontSize:11,color:'var(--text3)',flexShrink:0,marginLeft:12}},s.coa_expiry?'COA: '+s.coa_expiry:''),
+        ),
+      ),
+    });
+  }
+
+  // ── add form ──
+  if(showNew){
+    return el('div',{className:'card'},
+      el('div',{className:'mh'},el('div',{className:'mt2'},'Add Supplier'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
+      el('div',{className:'mbd'},
+        el(SupplierForm,{defaults:{},idPfx:'sup'}),
+        el('div',{className:'mf'},
+          el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),
+          el('button',{className:'btn b-blue',onClick:async()=>{
+            const vals=readVals('sup');
+            if(!vals.name)return;
+            if(!vals.license_id){alert('Please select which license this supplier applies to.');return;}
+            const rec={id:'sup-'+Date.now(),...vals,certificates:[],created_by:cu.name,created_by_id:cu.id,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),updated_by:cu.name};
+            try{
+              await db.insert('pf_qms_suppliers',rec);
+              handleSave('supplier',rec,setSuppliers,suppliers);
+            }catch(e){alert('Save failed: '+e.message);}
+          }},'Add Supplier'),
+        ),
+      ),
+    );
+  }
+
+  // ── detail / edit view ──
+  if(sel){
+    return el('div',{className:'card'},
+      // header
+      el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:16}},
+        el('div',null,
+          el('div',{style:{display:'flex',gap:6,marginBottom:8}},
+            el('span',{style:{background:sel.status==='approved'?'rgba(16,185,129,.1)':'rgba(245,158,11,.1)',color:sel.status==='approved'?'var(--green)':'var(--accent)',borderRadius:4,padding:'2px 8px',fontSize:11,fontWeight:700}},sel.status==='approved'?'✅ Approved':'⏳ Pending'),
+          ),
+          el('div',{style:{fontSize:18,fontWeight:700}},sel.name),
+          el('div',{style:{fontSize:12,color:'var(--text3)',marginTop:4}},sel.category),
+        ),
+        el('div',{style:{display:'flex',gap:6,flexWrap:'wrap'}},
+          isElevated&&!editMode&&el('button',{className:'btn b-ghost btn-sm',onClick:()=>{setEditMode(true);}},'✏️ Edit'),
+          isElevated&&el('button',{className:'btn b-red btn-sm',onClick:()=>deleteRec('supplier',sel.id,setSuppliers)},'Delete'),
+          el('button',{className:'btn b-ghost btn-sm',onClick:()=>{setSel(null);setEditMode(false);}},'← Back'),
+        ),
+      ),
+
+      // edit form
+      editMode?el('div',null,
+        el(SupplierForm,{defaults:sel,idPfx:'sedit'}),
+        el('div',{className:'mf'},
+          el('button',{className:'btn b-ghost',onClick:()=>setEditMode(false)},'Cancel'),
+          el('button',{className:'btn b-blue',disabled:savingEdit,onClick:async()=>{
+            const vals=readVals('sedit');
+            if(!vals.name)return;
+            if(!vals.license_id){alert('Please select a license.');return;}
+            setSavingEdit(true);
+            try{
+              const updated={...sel,...vals,updated_at:new Date().toISOString(),updated_by:cu.name};
+              await db.update('pf_qms_suppliers',sel.id,{...vals,updated_at:updated.updated_at,updated_by:cu.name});
+              setSuppliers(prev=>prev.map(s=>s.id===sel.id?updated:s));
+              setSel(updated);
+              setEditMode(false);
+            }catch(e){alert('Save failed: '+e.message);}
+            setSavingEdit(false);
+          }},savingEdit?'Saving...':'Save Changes'),
+        ),
+      )
+
+      // read-only detail
+      :el('div',null,
+        el('div',{style:{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:12,marginBottom:14}},
+          [['Products Supplied',sel.products_supplied],['Contact',sel.contact_name+(sel.contact_email?' · '+sel.contact_email:'')],['COA Expiry',sel.coa_expiry||'—'],['Last Audit',sel.last_audit||'—'],['License',LICENSES.find(l=>l.id===sel.license_id)?.name||sel.license_id||'—']].map(([k,v])=>v&&v.trim&&v.trim()&&v!=='—'?el('div',{key:k,style:{background:'var(--surface2)',borderRadius:8,padding:'10px 12px'}},el('div',{style:{fontSize:10,color:'var(--text3)',fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px',marginBottom:3}},k),el('div',{style:{fontSize:13,fontWeight:600}},v)):null)
+        ),
+        sel.notes&&el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:'10px 14px',fontSize:13,lineHeight:1.6,marginBottom:14}},sel.notes),
+
+        // ── CERTIFICATES ──
+        el('div',{style:{borderTop:'1px solid var(--border)',paddingTop:16,marginTop:4}},
+          el('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}},
+            el('div',{style:{fontSize:13,fontWeight:700}},'📎 Certificates & Documents'),
+            el('label',{style:{cursor:'pointer'}},
+              el('span',{style:{background:'var(--accent)',color:'#000',borderRadius:'var(--rs)',padding:'6px 14px',fontSize:12,fontWeight:700,cursor:certUploading?'not-allowed':'pointer',opacity:certUploading?.6:1}},certUploading?'Uploading...':'+ Upload'),
+              el('input',{type:'file',accept:'.pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xlsx',style:{display:'none'},disabled:certUploading,onChange:e=>handleCertUpload(e,sel)})
+            ),
+          ),
+          certMsg&&el('div',{style:{fontSize:12,color:certMsg.includes('❌')?'var(--red)':'var(--green)',marginBottom:8}},certMsg),
+          (sel.certificates||[]).length===0
+            ?el('div',{style:{fontSize:12,color:'var(--text3)',padding:'12px 0'}},'No certificates uploaded yet. Upload COAs, lab results, compliance docs, or any relevant files.')
+            :el('div',{style:{display:'flex',flexDirection:'column',gap:8}},
+              (sel.certificates||[]).map(cert=>el('div',{key:cert.id,style:{display:'flex',alignItems:'center',justifyContent:'space-between',background:'var(--surface2)',borderRadius:8,padding:'10px 14px'}},
+                el('div',{style:{display:'flex',alignItems:'center',gap:10,flex:1,minWidth:0}},
+                  el('span',{style:{fontSize:20,flexShrink:0}},certIcon(cert.type)),
+                  el('div',{style:{minWidth:0}},
+                    el('a',{href:cert.data,download:cert.name,style:{fontSize:13,fontWeight:600,color:'var(--accent)',textDecoration:'none',display:'block',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},cert.name),
+                    el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:1}},fmtSize(cert.size)+' · '+cert.uploaded_by+' · '+new Date(cert.uploaded_at).toLocaleDateString())
+                  ),
+                ),
+                isElevated&&el('button',{style:{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:16,flexShrink:0,marginLeft:8},onClick:()=>deleteCert(sel,cert.id)},'×'),
+              ))
+            ),
+          el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:8}},'Supported: PDF, PNG, JPG, WEBP, DOC, DOCX, XLSX · Max 5MB per file'),
+        ),
+      ),
+    );
+  }
+  return null;
+}
+
 function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits,setAudits,changes,setChanges,complaints,setComplaints,suppliers,setSuppliers,corrective,setCorrective}){
   const[tab,setTab]=useState('dashboard');
   const[showNew,setNew]=useState(false);
@@ -4273,73 +4480,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
     ),
 
     // ── SUPPLIERS ─────────────────────────────────────────────────────────────
-    tab==='suppliers'&&el('div',null,
-      !showNew&&!sel&&el(RecordList,{
-        items:filterByLic(suppliers),emptyMsg:'No suppliers qualified',newLabel:'+ Add Supplier',onNew:()=>setNew(true),
-        renderRow:s=>el('div',{key:s.id,onClick:()=>setSel(s),style:{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:10,padding:'14px 16px',cursor:'pointer',transition:'all .15s'},onMouseEnter:ev=>ev.currentTarget.style.borderColor='rgba(245,166,35,.3)',onMouseLeave:ev=>ev.currentTarget.style.borderColor='var(--border)'},
-          el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},
-            el('div',{style:{flex:1}},
-              el('div',{style:{display:'flex',gap:6,marginBottom:5}},el('span',{style:{background:s.status==='approved'?'rgba(16,185,129,.1)':'rgba(245,158,11,.1)',color:s.status==='approved'?'var(--green)':'var(--accent)',border:'1px solid',borderColor:s.status==='approved'?'rgba(16,185,129,.3)':'rgba(245,158,11,.3)',borderRadius:4,padding:'2px 7px',fontSize:11,fontWeight:700}},s.status==='approved'?'✅ Approved':'⏳ Pending'),el('span',{style:{background:'var(--surface2)',color:'var(--text2)',border:'1px solid var(--border)',borderRadius:4,padding:'2px 7px',fontSize:11}},s.category)),
-              el('div',{style:{fontSize:14,fontWeight:700,marginBottom:3}},s.name),
-              el('div',{style:{fontSize:12,color:'var(--text2)'}},s.products_supplied),
-            ),
-            el('div',{style:{fontSize:11,color:'var(--text3)',flexShrink:0,marginLeft:12}},s.coa_expiry?'COA: '+s.coa_expiry:''),
-          ),
-        ),
-      }),
-      showNew&&el('div',{className:'card'},
-        el('div',{className:'mh'},el('div',{className:'mt2'},'Add Supplier'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
-        el('div',{className:'mbd'},
-          el('div',{className:'fg'},el('label',null,'License *'),el('select',{id:'sup-license',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
-            el('option',{value:''},'— Select License —'),
-            LICENSES.map(lic=>el('option',{key:lic.id,value:lic.id},lic.name+' ('+lic.state+')'))
-          )),
-          el('div',{className:'fg'},el('label',null,'Supplier Name *'),el('input',{id:'sup-name',placeholder:'e.g. Futurola USA',autoFocus:true})),
-          el('div',{className:'g2'},
-            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Category'),el('select',{id:'sup-cat',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
-              ['Cones/Pre-roll Supplies','Packaging','Distillate/Extract','Terpenes','Ingredients','Testing Lab','Equipment','Labels','Other'].map(c=>el('option',{key:c,value:c},c))
-            )),
-            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Status'),el('select',{id:'sup-status',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},el('option',{value:'pending'},'Pending Approval'),el('option',{value:'approved'},'Approved'))),
-          ),
-          el('div',{className:'fg'},el('label',null,'Products Supplied'),el('input',{id:'sup-prods',placeholder:'e.g. 98mm cones, 109mm cones'})),
-          el('div',{className:'g2'},
-            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Contact Name'),el('input',{id:'sup-contact',placeholder:'Sales rep name'})),
-            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Contact Email/Phone'),el('input',{id:'sup-email',placeholder:'contact@supplier.com'})),
-          ),
-          el('div',{className:'g2',style:{marginTop:13}},
-            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'COA Expiry Date'),el('input',{type:'date',id:'sup-coa'})),
-            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Last Audit Date'),el('input',{type:'date',id:'sup-audit'})),
-          ),
-          el('div',{className:'fg'},el('label',null,'Notes / Certifications'),el('textarea',{id:'sup-notes',placeholder:'Any certifications, qualifications, or notes...'})),
-          el('div',{className:'mf'},
-            el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),
-            el('button',{className:'btn b-blue',onClick:async()=>{
-              const name=document.getElementById('sup-name').value.trim();
-              const license_id=document.getElementById('sup-license').value;
-              if(!name) return;
-              if(!license_id){alert('Please select which license this supplier applies to.');return;}
-              const rec={id:'sup-'+Date.now(),name,license_id,category:document.getElementById('sup-cat').value,status:document.getElementById('sup-status').value,products_supplied:document.getElementById('sup-prods').value,contact_name:document.getElementById('sup-contact').value,contact_email:document.getElementById('sup-email').value,coa_expiry:document.getElementById('sup-coa').value,last_audit:document.getElementById('sup-audit').value,notes:document.getElementById('sup-notes').value,created_by:cu.name,created_by_id:cu.id,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),updated_by:cu.name};
-              try{
-                await db.insert('pf_qms_suppliers',rec);
-                handleSave('supplier',rec,setSuppliers,suppliers);
-              }catch(e){
-                alert('Save failed: '+e.message+'. Make sure the pf_qms_suppliers table exists in Supabase — this supplier was NOT saved.');
-              }
-            }},'Add Supplier'),
-          ),
-        ),
-      ),
-      sel&&el('div',{className:'card'},
-        el('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:16}},
-          el('div',null,el('div',{style:{display:'flex',gap:6,marginBottom:8}},el('span',{style:{background:sel.status==='approved'?'rgba(16,185,129,.1)':'rgba(245,158,11,.1)',color:sel.status==='approved'?'var(--green)':'var(--accent)',borderRadius:4,padding:'2px 8px',fontSize:11,fontWeight:700}},sel.status==='approved'?'✅ Approved':'⏳ Pending')),el('div',{style:{fontSize:18,fontWeight:700}},sel.name),el('div',{style:{fontSize:12,color:'var(--text3)',marginTop:4}},sel.category)),
-          el('div',{style:{display:'flex',gap:6}},isElevated&&el('button',{className:'btn b-red btn-sm',onClick:()=>deleteRec('supplier',sel.id,setSuppliers)},'Delete'),el('button',{className:'btn b-ghost btn-sm',onClick:()=>setSel(null)},'← Back')),
-        ),
-        el('div',{style:{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:12,marginBottom:14}},
-          [['Products Supplied',sel.products_supplied],['Contact',sel.contact_name+(sel.contact_email?' · '+sel.contact_email:'')],['COA Expiry',sel.coa_expiry||'—'],['Last Audit',sel.last_audit||'—']].map(([k,v])=>v&&v!=='—'?el('div',{key:k,style:{background:'var(--surface2)',borderRadius:8,padding:'10px 12px'}},el('div',{style:{fontSize:10,color:'var(--text3)',fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px',marginBottom:3}},k),el('div',{style:{fontSize:13,fontWeight:600}},v)):null)
-        ),
-        sel.notes&&el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:'10px 14px',fontSize:13,lineHeight:1.6}},sel.notes),
-      ),
-    ),
+    tab==='suppliers'&&el(SupplierTab,{cu,isElevated,suppliers,setSuppliers,filterByLic,handleSave,deleteRec,db,LICENSES,showNew,setNew,sel,setSel}),
 
     // ── CORRECTIVE ACTIONS ──────────────────────────────────────────────────────
     tab==='corrective'&&el('div',null,
