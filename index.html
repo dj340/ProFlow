@@ -6409,50 +6409,24 @@ function SOPReviseModal({sop,cu,onClose,onSave}){
     if(!changeRequest.trim()){setError('Please describe what needs to change.');return;}
     setGenerating(true);setError('');setStep(2);
 
-    const prompt=`You are revising an existing cannabis SOP. Here is the CURRENT SOP in full:
-
-${JSON.stringify(original||{title:sop.title,steps:sop.steps,description:sop.description},null,2)}
+    const _origData=original||{title:sop.title,steps:sop.steps||[],description:sop.description||''};
+    const prompt=`You are revising an existing cannabis SOP. Current SOP (JSON): ${JSON.stringify(_origData)}
 
 LICENSE: ${license.name} (${state})
 REGULATORY CONTEXT: ${STATE_REGS[state].agency} — ${STATE_REGS[state].code}
 
-REQUESTED CHANGES:
-${changeRequest}
+REQUESTED CHANGES: ${changeRequest}
 
-Create a REVISED version of this SOP incorporating the requested changes. Keep everything that wasn't asked to change the same. Increment the revision to "${nextRevision}". Add a new entry to revision_history describing what changed and why, dated ${new Date().toISOString().slice(0,10)}.
-
-Respond with the FULL updated SOP in this EXACT JSON format (respond with JSON only, no markdown, keep fields concise to avoid truncation):
-{
-  "sop_number": "${original?.sop_number||sop.sop_number||''}",
-  "title": "SOP title",
-  "revision": "${nextRevision}",
-  "effective_date": "${new Date().toISOString().slice(0,10)}",
-  "review_frequency": "...",
-  "department": "...",
-  "license_name": "${license.name}",
-  "state": "${state}",
-  "regulatory_references": ["..."],
-  "purpose": "...",
-  "scope": "...",
-  "responsibilities": [{"role":"...","responsibility":"..."}],
-  "definitions": [{"term":"...","definition":"..."}],
-  "required_materials": ["..."],
-  "steps": [{"step_number":1,"title":"...","instruction":"...","regulatory_note":"...","critical":false}],
-  "quality_checks": ["..."],
-  "documentation_required": ["..."],
-  "deviation_procedure": "...",
-  "training_requirements": "...",
-  "revision_history": [/* include ALL previous entries PLUS the new one for this revision */]
-}`;
+Return a REVISED version as JSON only (no markdown). Increment revision to "${nextRevision}". Add entry to revision_history dated ${new Date().toISOString().slice(0,10)}. Keep all unchanged fields identical. Fields: sop_number, title, revision, effective_date, review_frequency, department, license_name, state, regulatory_references, purpose, scope, responsibilities, definitions, required_materials, steps (each: step_number,title,instruction,regulatory_note,critical), quality_checks, documentation_required, deviation_procedure, training_requirements, revision_history.`;
 
     try{
       const res=await fetch(`${SUPA_URL}/functions/v1/claude-proxy`,{
         method:'POST',
         headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPA_KEY},
-        body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:8000,messages:[{role:'user',content:prompt}]}),
+        body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:4000,messages:[{role:'user',content:prompt}]}),
       });
       const data=await res.json();
-      if(!res.ok||data.error){throw new Error(data.error?.message||'API call failed');}
+      if(!res.ok||data.error){const msg=data.error?.message||data.message||(typeof data.error==='string'?data.error:null)||('HTTP '+res.status);throw new Error(msg);}
       const raw=data.content?.[0]?.text||'';
       let clean=raw.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
       if(!clean.endsWith('}')){
@@ -6464,12 +6438,13 @@ Respond with the FULL updated SOP in this EXACT JSON format (respond with JSON o
           while(depth>0){clean+='}';depth--;}
         }
       }
-      const parsed=JSON.parse(clean);
+      let parsed;
+      try{parsed=JSON.parse(clean);}catch(pe){throw new Error('Could not parse Claude response as JSON. Try again.');}
       setRevisedSOP(parsed);
       setEditedSOP(parsed);
       setStep(3);
     }catch(e){
-      console.error(e);
+      console.error('SOP revision error:',e);
       setError('Revision failed: '+e.message);
       setStep(1);
     }
