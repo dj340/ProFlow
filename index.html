@@ -3720,7 +3720,7 @@ ${caAttachments.length>0?'SUPPORTING EVIDENCE: '+caAttachments.length+' file(s) 
 Write a formal, professional Corrective Action notice. Be factual, specific, and fair — this is a real HR document that the employee will read and sign. Respond with ONLY this JSON (no markdown):
 {
   "title": "CA — [Violation Type] — [Employee Name]",
-  "ca_number": "CA-[3 digits]",
+  "ca_number": "${license.state==='Missouri'?'MO':'MI'}-[3 digits]",
   "date_issued": "${new Date().toISOString().slice(0,10)}",
   "incident_summary": "2-3 sentences on what happened",
   "policy_reference": "Policy or SOP violated",
@@ -3755,7 +3755,7 @@ Write a formal, professional Corrective Action notice. Be factual, specific, and
         const extractArr=(key)=>{const m=clean.match(new RegExp('"'+key+'"\s*:\s*\[([^\]]*?)\]?'));if(!m)return[];return m[1].split('","').map(s=>s.replace(/^["\s]+|["\s]+$/g,'').trim()).filter(Boolean);};
         parsed={
           title:extract('title')||'Corrective Action — '+violationType,
-          ca_number:extract('ca_number')||'CA-'+Date.now().toString().slice(-3),
+          ca_number:extract('ca_number')||(license?.state==='Missouri'?'MO':'MI')+'-'+Date.now().toString().slice(-3),
           date_issued:new Date().toISOString().slice(0,10),
           incident_summary:extract('incident_summary')||violationDesc,
           policy_reference:extract('policy_reference')||'Company SOP',
@@ -4030,13 +4030,37 @@ Write a formal, professional Corrective Action notice. Be factual, specific, and
 
           error&&el('div',{style:{background:'rgba(239,68,68,.1)',border:'1px solid rgba(239,68,68,.3)',borderRadius:8,padding:'10px 14px',fontSize:13,color:'var(--red)',marginBottom:8}},error),
 
-          el('div',{className:'mf',style:{justifyContent:'space-between'}},
-            el('div',{style:{fontSize:12,color:'var(--text3)'}},'Will be emailed to '+employee.name+' for review and acknowledgement'),
-            el('div',{style:{display:'flex',gap:8}},
-              el('button',{className:'btn b-ghost',onClick:()=>setStep(1)},'← Back'),
+          el('div',{style:{background:'rgba(30,58,95,.05)',border:'1px solid rgba(30,58,95,.12)',borderRadius:10,padding:'12px 16px',marginBottom:12,fontSize:12,color:'var(--text2)'}},
+            '✅ Review the document above. Preview the PDF to confirm everything looks correct before sending to ',el('strong',null,employee.name),'.'
+          ),
+          el('div',{className:'mf',style:{justifyContent:'space-between',flexWrap:'wrap',gap:8}},
+            el('button',{className:'btn b-ghost',onClick:()=>setStep(1)},'← Back'),
+            el('div',{style:{display:'flex',gap:8,flexWrap:'wrap'}},
+              el('button',{
+                className:'btn b-ghost',
+                onClick:()=>{
+                  // Build a draft CA record for preview
+                  const draftCa={
+                    ...editedCA,
+                    title:editedCA.title,
+                    ca_number:editedCA.ca_number,
+                    employee_name:employee.name,
+                    employee_email:employee.email,
+                    license_id:license.id,
+                    license_name:license.name,
+                    violation_type:violationType,
+                    severity,
+                    generated_content:JSON.stringify(editedCA),
+                    status:'pending',
+                    issued_by:cu.name,
+                    created_at:new Date().toISOString(),
+                  };
+                  exportCorrectiveActionPdf(draftCa);
+                }
+              },'👁️ Preview PDF'),
               el('button',{
                 onClick:sendToEmployee,disabled:saving,
-                style:{background:'var(--red)',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'10px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer'}
+                style:{background:'var(--red)',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'10px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:saving?'not-allowed':'pointer'}
               },saving?'Sending...':'📨 Send to '+employee.name.split(' ')[0]),
             ),
           ),
@@ -5517,14 +5541,14 @@ function exportSopPdf(sop){
     if(!txt) return;
     doc.setTextColor(...(opts.color||TEXT));
     doc.setFont('helvetica',opts.bold?'bold':'normal');
-    doc.setFontSize(opts.size||9.5);
+    doc.setFontSize(opts.size||10.5);
     const lines=doc.splitTextToSize(txt,W-margin*2-(opts.indent||0));
-    checkPageBreak(lines.length*13+10);
+    checkPageBreak(lines.length*15+12);
     lines.forEach(line=>{
       doc.text(line,margin+(opts.indent||0),y);
-      y+=13;
+      y+=15;
     });
-    y+=opts.spaceAfter!==undefined?opts.spaceAfter:6;
+    y+=opts.spaceAfter!==undefined?opts.spaceAfter:8;
   }
 
   function infoRow(label,value){
@@ -6000,17 +6024,17 @@ function exportCorrectiveActionPdf(ca){
   }
 
   function sectionTitle(txt){
-    checkPageBreak(30);
-    doc.setFillColor(245,246,250);
-    doc.rect(margin,y,W-margin*2,22,'F');
+    checkPageBreak(36);
+    doc.setFillColor(240,244,252);
+    doc.rect(margin,y,W-margin*2,26,'F');
     doc.setDrawColor(...RED);
-    doc.setLineWidth(2);
-    doc.line(margin,y,margin,y+22);
+    doc.setLineWidth(3);
+    doc.line(margin,y,margin,y+26);
     doc.setTextColor(...DARK);
     doc.setFont('helvetica','bold');
-    doc.setFontSize(11);
-    doc.text(txt.toUpperCase(),margin+10,y+15);
-    y+=32;
+    doc.setFontSize(12);
+    doc.text(txt.toUpperCase(),margin+12,y+17);
+    y+=36;
   }
 
   function bodyText(txt,opts={}){
@@ -6029,26 +6053,26 @@ function exportCorrectiveActionPdf(ca){
 
   function infoRow(label,value){
     if(!value) return;
-    checkPageBreak(16);
+    checkPageBreak(20);
     doc.setTextColor(...TEXT2);
     doc.setFont('helvetica','bold');
-    doc.setFontSize(8.5);
+    doc.setFontSize(9);
     doc.text(label.toUpperCase()+':',margin,y);
     doc.setTextColor(...TEXT);
     doc.setFont('helvetica','normal');
-    doc.setFontSize(9.5);
-    doc.text(String(value),margin+130,y);
-    y+=15;
+    doc.setFontSize(10.5);
+    doc.text(String(value),margin+140,y);
+    y+=18;
   }
 
   header();
 
   doc.setTextColor(...DARK);
   doc.setFont('helvetica','bold');
-  doc.setFontSize(17);
+  doc.setFontSize(18);
   const titleLines=doc.splitTextToSize(ca.title||gen.title||'Corrective Action Notice',W-margin*2);
-  titleLines.forEach(line=>{doc.text(line,margin,y);y+=20;});
-  y+=8;
+  titleLines.forEach(line=>{doc.text(line,margin,y);y+=22;});
+  y+=12;
 
   doc.setDrawColor(...BORDER);
   doc.setLineWidth(0.5);
@@ -6092,8 +6116,9 @@ function exportCorrectiveActionPdf(ca){
       doc.setFont('helvetica','normal');
       doc.setFontSize(9.5);
       const lines=doc.splitTextToSize(s,W-margin*2-22);
-      lines.forEach(line=>{doc.text(line,margin+22,y+3);y+=13;});
-      y+=6;
+      doc.setFontSize(10.5);
+      lines.forEach(line=>{doc.text(line,margin+22,y+3);y+=15;});
+      y+=8;
     });
     y+=4;
   }
