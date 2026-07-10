@@ -3794,7 +3794,8 @@ Write a formal, professional Corrective Action notice. Be factual, specific, and
       ca_number:editedCA.ca_number,
       status:'pending', // pending -> acknowledged
       acknowledged_at:null,
-      attachments:caAttachments,
+      // Store only metadata in DB to avoid timeout — full data in sessionStorage
+      attachments:(caAttachments||[]).map(a=>({id:a.id,name:a.name,type:a.type,size:a.size})),
       issued_by:cu.name,
       issued_by_id:cu.id,
       created_at:new Date().toISOString(),
@@ -3802,7 +3803,13 @@ Write a formal, professional Corrective Action notice. Be factual, specific, and
       updated_by:cu.name,
     };
     try{
-      await db.insert('pf_qms_corrective',rec);
+      // Use direct fetch with longer timeout for CA saves
+      const caInsertRes=await fetch(`${SUPA_URL}/rest/v1/pf_qms_corrective`,{
+        method:'POST',
+        headers:{...H.headers,'Prefer':'return=representation','statement_timeout':'30000'},
+        body:JSON.stringify(rec),
+      });
+      if(!caInsertRes.ok){const err=await caInsertRes.json();throw new Error(err.message||err.details||'Insert failed');}
       // Notify the employee
       if(employee.email){
         await sendEmail({to:employee.email,
@@ -3914,11 +3921,30 @@ Write a formal, professional Corrective Action notice. Be factual, specific, and
                     const files=Array.from(ev.target.files);
                     files.forEach(file=>{
                       if(file.size>5*1024*1024){alert(file.name+' exceeds 5MB limit.');return;}
-                      const reader=new FileReader();
-                      reader.onload=re=>{
-                        setCaAttachments(p=>[...p,{id:'att-'+Date.now()+Math.random(),name:file.name,type:file.type,size:file.size,data:re.target.result}]);
-                      };
-                      reader.readAsDataURL(file);
+                      if(file.type.startsWith('image/')){
+                        // Compress images before storing
+                        const img=new Image();
+                        const url=URL.createObjectURL(file);
+                        img.onload=()=>{
+                          const canvas=document.createElement('canvas');
+                          const MAX=800;
+                          let w=img.width,h=img.height;
+                          if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}
+                          if(h>MAX){w=Math.round(w*MAX/h);h=MAX;}
+                          canvas.width=w;canvas.height=h;
+                          canvas.getContext('2d').drawImage(img,0,0,w,h);
+                          const compressed=canvas.toDataURL('image/jpeg',0.7);
+                          URL.revokeObjectURL(url);
+                          setCaAttachments(p=>[...p,{id:'att-'+Date.now()+Math.random(),name:file.name,type:'image/jpeg',size:Math.round(compressed.length*0.75),data:compressed}]);
+                        };
+                        img.src=url;
+                      } else {
+                        const reader=new FileReader();
+                        reader.onload=re=>{
+                          setCaAttachments(p=>[...p,{id:'att-'+Date.now()+Math.random(),name:file.name,type:file.type,size:file.size,data:re.target.result}]);
+                        };
+                        reader.readAsDataURL(file);
+                      }
                     });
                     ev.target.value='';
                   }
