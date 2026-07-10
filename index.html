@@ -3618,6 +3618,67 @@ function EmployeeTypeahead({users,value,onChange,placeholder}){
 }
 
 // ── CORRECTIVE ACTION GENERATOR ───────────────────────────────────────────────
+// ── SIGNATURE PAD (canvas draw + clear) ──────────────────────────────────────
+function SignaturePad({onSave,onClear,label='Draw your signature below'}){
+  const canvasRef=React.useRef(null);
+  const drawing=React.useRef(false);
+  const[hasStrokes,setHasStrokes]=React.useState(false);
+
+  function getPos(e,canvas){
+    const r=canvas.getBoundingClientRect();
+    const src=e.touches?e.touches[0]:e;
+    return{x:(src.clientX-r.left)*(canvas.width/r.width),y:(src.clientY-r.top)*(canvas.height/r.height)};
+  }
+  function start(e){
+    e.preventDefault();
+    const canvas=canvasRef.current;
+    const ctx=canvas.getContext('2d');
+    const{x,y}=getPos(e,canvas);
+    ctx.beginPath();ctx.moveTo(x,y);
+    drawing.current=true;
+  }
+  function move(e){
+    e.preventDefault();
+    if(!drawing.current)return;
+    const canvas=canvasRef.current;
+    const ctx=canvas.getContext('2d');
+    const{x,y}=getPos(e,canvas);
+    ctx.lineTo(x,y);
+    ctx.strokeStyle='#0f172a';ctx.lineWidth=2.5;ctx.lineCap='round';ctx.lineJoin='round';
+    ctx.stroke();
+    setHasStrokes(true);
+  }
+  function end(e){e.preventDefault();drawing.current=false;}
+  function clear(){
+    const canvas=canvasRef.current;
+    canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);
+    setHasStrokes(false);
+    onClear&&onClear();
+  }
+  function save(){
+    if(!hasStrokes)return;
+    const dataUrl=canvasRef.current.toDataURL('image/png');
+    onSave(dataUrl);
+  }
+
+  return el('div',null,
+    el('div',{style:{fontSize:12,color:'var(--text2)',marginBottom:6}},label),
+    el('div',{style:{position:'relative',border:'2px solid var(--border)',borderRadius:8,background:'#ffffff',touchAction:'none'}},
+      el('canvas',{
+        ref:canvasRef,width:520,height:120,
+        style:{display:'block',width:'100%',height:120,cursor:'crosshair',borderRadius:6},
+        onMouseDown:start,onMouseMove:move,onMouseUp:end,onMouseLeave:end,
+        onTouchStart:start,onTouchMove:move,onTouchEnd:end,
+      }),
+      el('div',{style:{position:'absolute',bottom:6,left:8,fontSize:10,color:'rgba(0,0,0,.25)',pointerEvents:'none',fontStyle:'italic'}},'Sign here'),
+    ),
+    el('div',{style:{display:'flex',gap:8,marginTop:8}},
+      el('button',{onClick:clear,className:'btn b-ghost btn-sm'},'Clear'),
+      el('button',{onClick:save,disabled:!hasStrokes,className:'btn b-blue btn-sm',style:{opacity:hasStrokes?1:.4}},'✓ Apply Signature'),
+    ),
+  );
+}
+
 function CorrectiveActionGenerator({cu,users,onClose,onSave}){
   const[step,setStep]=useState(1); // 1=setup, 2=generating, 3=review/edit, 4=sent
   const[employee,setEmployee]=useState(null);
@@ -3631,6 +3692,8 @@ function CorrectiveActionGenerator({cu,users,onClose,onSave}){
   const[editedCA,setEditedCA]=useState(null);
   const[editMode,setEditMode]=useState(false);
   const[saving,setSaving]=useState(false);
+  const[caAttachments,setCaAttachments]=useState([]);
+  const[sig,setSig]=useState(null); // admin signature dataURL
 
   const VIOLATION_TYPES=['SOP Non-Compliance','Safety Violation','Attendance/Punctuality','METRC/Compliance Error','Quality Control Failure','Conduct/Behavior','Equipment Misuse','Other'];
   const SEVERITY_LEVELS=[
@@ -3652,6 +3715,7 @@ LICENSE/FACILITY: ${license.name} (${license.state})
 VIOLATION TYPE: ${violationType}
 SEVERITY: ${SEVERITY_LEVELS.find(s=>s.id===severity)?.label}
 WHAT HAPPENED (as reported by management): ${violationDesc}
+${caAttachments.length>0?'SUPPORTING EVIDENCE: '+caAttachments.length+' file(s) attached by management — '+caAttachments.map(a=>a.name).join(', ')+'. Reference these in your incident summary as supporting documentation.':''}
 
 Write a formal, professional Corrective Action notice. Be factual, specific, and fair — this is a real HR document that the employee will read and sign. Respond with ONLY this JSON (no markdown):
 {
@@ -3704,6 +3768,7 @@ Write a formal, professional Corrective Action notice. Be factual, specific, and
       ca_number:editedCA.ca_number,
       status:'pending', // pending -> acknowledged
       acknowledged_at:null,
+      attachments:caAttachments,
       issued_by:cu.name,
       issued_by_id:cu.id,
       created_at:new Date().toISOString(),
@@ -3809,6 +3874,45 @@ Write a formal, professional Corrective Action notice. Be factual, specific, and
             }),
           ),
 
+          // ── SUPPORTING DOCUMENTS / PHOTOS ────────────────────────────────
+          el('div',{style:{background:'rgba(30,58,95,.04)',border:'1px solid rgba(30,58,95,.12)',borderRadius:10,padding:'14px 16px',marginBottom:14}},
+            el('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}},
+              el('div',{style:{fontWeight:700,fontSize:13}},'📎 Supporting Evidence'),
+              el('div',{style:{fontSize:11,color:'var(--text2)'}},'Photos, docs, or screenshots — AI will reference these'),
+            ),
+            el('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:8}},
+              el('label',{style:{cursor:'pointer'}},
+                el('span',{className:'btn b-ghost btn-sm'},'+ Add Photo / Doc'),
+                el('input',{type:'file',accept:'.pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xlsx,.csv',multiple:true,style:{display:'none'},
+                  onChange:ev=>{
+                    const files=Array.from(ev.target.files);
+                    files.forEach(file=>{
+                      if(file.size>5*1024*1024){alert(file.name+' exceeds 5MB limit.');return;}
+                      const reader=new FileReader();
+                      reader.onload=re=>{
+                        setCaAttachments(p=>[...p,{id:'att-'+Date.now()+Math.random(),name:file.name,type:file.type,size:file.size,data:re.target.result}]);
+                      };
+                      reader.readAsDataURL(file);
+                    });
+                    ev.target.value='';
+                  }
+                }),
+              ),
+              el('span',{style:{fontSize:11,color:'var(--text3)'}},'Max 5MB per file · PDF, PNG, JPG, DOCX'),
+            ),
+            caAttachments.length>0&&el('div',{style:{display:'flex',flexDirection:'column',gap:6}},
+              caAttachments.map((att,i)=>el('div',{key:att.id,style:{display:'flex',alignItems:'center',gap:8,background:'var(--surface2)',borderRadius:6,padding:'6px 10px'}},
+                el('span',{style:{fontSize:16}},att.type&&att.type.includes('image')?'🖼️':'📄'),
+                el('div',{style:{flex:1,minWidth:0}},
+                  el('div',{style:{fontSize:12,fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},att.name),
+                  el('div',{style:{fontSize:10,color:'var(--text3)'}},(att.size>1024*1024?(att.size/1024/1024).toFixed(1)+'MB':(att.size/1024).toFixed(0)+'KB')),
+                ),
+                el('button',{onClick:()=>setCaAttachments(p=>p.filter((_,j)=>j!==i)),style:{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:16}},'×'),
+              ))
+            ),
+            caAttachments.length===0&&el('div',{style:{fontSize:12,color:'var(--text3)'}},'No files added yet'),
+          ),
+
           error&&el('div',{style:{background:'rgba(239,68,68,.1)',border:'1px solid rgba(239,68,68,.3)',borderRadius:8,padding:'10px 14px',fontSize:13,color:'var(--red)',marginBottom:8}},error),
 
           el('div',{className:'mf'},
@@ -3816,7 +3920,7 @@ Write a formal, professional Corrective Action notice. Be factual, specific, and
             el('button',{
               onClick:generate,
               disabled:!employee||!violationDesc.trim(),
-              style:{background:(employee&&violationDesc.trim())?'var(--accent)':'rgba(30,58,95,.15)',color:(employee&&violationDesc.trim())?'#000':'var(--text3)',border:'none',borderRadius:'var(--rs)',padding:'10px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:(employee&&violationDesc.trim())?'pointer':'not-allowed',display:'flex',alignItems:'center',gap:8}
+              style:{background:(employee&&violationDesc.trim())?'var(--accent)':'rgba(30,58,95,.15)',color:(employee&&violationDesc.trim())?'#ffffff':'var(--text3)',border:'none',borderRadius:'var(--rs)',padding:'10px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:(employee&&violationDesc.trim())?'pointer':'not-allowed',display:'flex',alignItems:'center',gap:8}
             },el('span',null,'🤖'),'Generate Corrective Action'),
           ),
         ),
@@ -4857,21 +4961,20 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
                       gen.employee_acknowledgement_text||'I acknowledge that I have read and understand this Corrective Action Notice.'
                     ),
                     el('div',{className:'fg'},
-                      el('label',null,'Type your full legal name to sign *'),
-                      el('input',{
-                        value:signatureName,onChange:ev=>setSignatureName(ev.target.value),
-                        placeholder:sel.employee_name,
-                        autoFocus:true,
-                        style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'10px 14px',color:'var(--text)',fontFamily:'cursive,inherit',fontSize:18,outline:'none'},
+                      el('label',null,'Sign below to acknowledge *'),
+                      el(SignaturePad,{
+                        label:'Draw your signature — by signing you confirm you have read and understand this notice',
+                        onSave:dataUrl=>{setSignatureName(sel.employee_name||cu.name);window._caSigData=dataUrl;},
+                        onClear:()=>{setSignatureName('');window._caSigData=null;},
                       }),
-                      el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:4}},'Signature date: '+new Date().toISOString().slice(0,10)),
+                      el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:6}},'Signing as: '+sel.employee_name+' · Date: '+new Date().toISOString().slice(0,10)),
                     ),
                     el('div',{className:'mf'},
-                      el('button',{className:'btn b-ghost',onClick:()=>setShowSignModal(false)},'Cancel'),
+                      el('button',{className:'btn b-ghost',onClick:()=>{setShowSignModal(false);setSignatureName('');window._caSigData=null;}},'Cancel'),
                       el('button',{
-                        disabled:signatureName.trim().length<3,
+                        disabled:!signatureName,
                         onClick:async()=>{
-                          const update={status:'acknowledged',acknowledged_at:new Date().toISOString(),signature_name:signatureName.trim(),updated_at:new Date().toISOString(),updated_by:cu.name};
+                          const update={status:'acknowledged',acknowledged_at:new Date().toISOString(),signature_name:signatureName.trim(),signature_image:window._caSigData||null,updated_at:new Date().toISOString(),updated_by:cu.name};
                           try{
                             await db.update('pf_qms_corrective',sel.id,update);
                             setCorrective(p=>p.map(c=>c.id===sel.id?{...c,...update}:c));
@@ -4887,7 +4990,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
                             });
                           }catch(e){console.error(e);alert('Failed to save acknowledgement: '+e.message);}
                         },
-                        style:{background:signatureName.trim().length>=3?'var(--green)':'rgba(16,185,129,.3)',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'10px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:signatureName.trim().length>=3?'pointer':'not-allowed'}
+                        style:{background:signatureName?'var(--green)':'rgba(16,185,129,.3)',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'10px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:signatureName?'pointer':'not-allowed'}
                       },'Sign & Submit'),
                     ),
                   ),
@@ -5544,18 +5647,66 @@ function exportSopPdf(sop){
   }
 
   // Acknowledgement signature section
-  checkPageBreak(80);
-  sectionTitle('Acknowledgement');
-  bodyText('I have read, understood, and agree to follow this Standard Operating Procedure in full.',{size:9});
-  y+=10;
-  doc.setDrawColor(...TEXT2);
-  doc.line(margin,y,margin+200,y);
-  doc.line(margin+260,y,margin+360,y);
-  y+=12;
-  doc.setFontSize(8);
-  doc.setTextColor(...TEXT2);
-  doc.text('Employee Signature',margin,y);
-  doc.text('Date',margin+260,y);
+  const sopAcks=sop.acknowledgements||[];
+  if(sopAcks.length>0){
+    sectionTitle('Acknowledgement Records');
+    bodyText('The following employees have read, understood, and signed this SOP:',{size:9});
+    y+=6;
+    sopAcks.forEach((ack,idx)=>{
+      checkPageBreak(60);
+      doc.setFont('helvetica','normal');
+      doc.setFontSize(9);
+      doc.setTextColor(...TEXT2);
+      doc.text((idx+1)+'. '+ack.name+' — '+(ack.role||'')+' — Signed: '+(ack.at?.slice(0,10)||''),margin,y);
+      y+=10;
+      if(ack.signature_image){
+        try{
+          doc.addImage(ack.signature_image,'PNG',margin,y,90,24);
+          doc.setDrawColor(...TEXT2);
+          doc.line(margin,y+26,margin+100,y+26);
+          y+=32;
+        }catch(e){
+          // fallback text sig
+          doc.setFont('helvetica','italic');
+          doc.setFontSize(12);
+          doc.setTextColor(30,30,30);
+          doc.text(ack.signature_name||ack.name,margin,y+8);
+          doc.setDrawColor(...TEXT2);
+          doc.line(margin,y+10,margin+100,y+10);
+          y+=18;
+        }
+      } else {
+        doc.setFont('helvetica','italic');
+        doc.setFontSize(12);
+        doc.setTextColor(30,30,30);
+        doc.text(ack.signature_name||ack.name,margin,y+8);
+        doc.setDrawColor(...TEXT2);
+        doc.line(margin,y+10,margin+100,y+10);
+        y+=18;
+      }
+      y+=4;
+    });
+    y+=6;
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(8);
+    doc.setTextColor(40,140,80);
+    doc.text('Electronically signed via BFM OMS. Records are tamper-evident.',margin,y);
+    y+=10;
+  } else {
+    // Blank signature block for printing
+    checkPageBreak(60);
+    sectionTitle('Acknowledgement');
+    bodyText('I have read, understood, and agree to follow this Standard Operating Procedure in full.',{size:9});
+    y+=10;
+    doc.setDrawColor(...TEXT2);
+    doc.line(margin,y,margin+200,y);
+    doc.line(margin+260,y,margin+360,y);
+    y+=12;
+    doc.setFontSize(8);
+    doc.setTextColor(...TEXT2);
+    doc.text('Employee Signature',margin,y);
+    doc.text('Date',margin+260,y);
+  }
 
   // Footer on all pages
   const pageCount=doc.internal.getNumberOfPages();
@@ -5914,23 +6065,40 @@ function exportCorrectiveActionPdf(ca){
   doc.setFontSize(8);
   doc.setTextColor(...TEXT2);
   if(ca.status==='acknowledged'){
-    // Render the employee's typed signature ABOVE the line, like a real signed document
-    doc.setFont('helvetica','italic');
-    doc.setFontSize(15);
-    doc.setTextColor(30,30,30);
-    doc.text(ca.signature_name||ca.employee_name||'',margin+4,y-6);
+    if(ca.signature_image){
+      // Embed the drawn signature image above the line
+      try{
+        doc.addImage(ca.signature_image,'PNG',margin,y-32,100,28);
+      }catch(e){
+        // fallback to text if image fails
+        doc.setFont('helvetica','italic');
+        doc.setFontSize(15);
+        doc.setTextColor(30,30,30);
+        doc.text(ca.signature_name||ca.employee_name||'',margin+4,y-6);
+      }
+    } else {
+      doc.setFont('helvetica','italic');
+      doc.setFontSize(15);
+      doc.setTextColor(30,30,30);
+      doc.text(ca.signature_name||ca.employee_name||'',margin+4,y-6);
+    }
     doc.setFont('helvetica','italic');
     doc.setFontSize(13);
+    doc.setTextColor(30,30,30);
     doc.text(ca.acknowledged_at?.slice(0,10)||'',margin+264,y-6);
   }
   doc.text('Employee Signature',margin,y);
   doc.text('Date',margin+260,y);
   if(ca.status==='acknowledged'){
-    y+=20;
+    y+=18;
     doc.setFont('helvetica','bold');
     doc.setTextColor(40,140,80);
     doc.setFontSize(9);
-    doc.text('Digitally acknowledged via BFM OMS on '+(ca.acknowledged_at?.slice(0,10)||''),margin,y);
+    doc.text('Electronically signed & acknowledged via BFM OMS on '+(ca.acknowledged_at?.slice(0,10)||''),margin,y);
+    y+=8;
+    doc.setFont('helvetica','normal');
+    doc.setTextColor(...TEXT2);
+    doc.text('Signature verified: '+ca.signature_name+' | Record ID: '+(ca.id||''),margin,y);
   }
 
   const pageCount=doc.internal.getNumberOfPages();
@@ -6399,29 +6567,29 @@ function MyDocuments({cu,corrective,setCorrective}){
             gen.employee_acknowledgement_text||'I acknowledge that I have read and understand this Corrective Action Notice.'
           ),
           el('div',{className:'fg'},
-            el('label',null,'Type your full legal name to sign *'),
-            el('input',{
-              value:signatureName,onChange:ev=>setSignatureName(ev.target.value),
-              placeholder:cu.name,
-              autoFocus:true,
-              style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'10px 14px',color:'var(--text)',fontFamily:'cursive,inherit',fontSize:18,outline:'none'},
+            el('label',null,'Sign below to acknowledge *'),
+            el(SignaturePad,{
+              label:'Draw your signature to confirm you have read and understand this notice',
+              onSave:dataUrl=>{setSignatureName(cu.name);window._caSigData=dataUrl;},
+              onClear:()=>{setSignatureName('');window._caSigData=null;},
             }),
-            el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:4}},'Signature date: '+new Date().toISOString().slice(0,10)),
+            el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:6}},'Signing as: '+cu.name+' · Date: '+new Date().toISOString().slice(0,10)),
           ),
           el('div',{className:'mf'},
-            el('button',{className:'btn b-ghost',onClick:()=>setShowSignModal(false)},'Cancel'),
+            el('button',{className:'btn b-ghost',onClick:()=>{setShowSignModal(false);setSignatureName('');window._caSigData=null;}},'Cancel'),
             el('button',{
-              disabled:signatureName.trim().length<3,
+              disabled:!signatureName,
               onClick:async()=>{
-                const update={status:'acknowledged',acknowledged_at:new Date().toISOString(),signature_name:signatureName.trim(),updated_at:new Date().toISOString(),updated_by:cu.name};
+                const update={status:'acknowledged',acknowledged_at:new Date().toISOString(),signature_name:signatureName.trim(),signature_image:window._caSigData||null,updated_at:new Date().toISOString(),updated_by:cu.name};
                 try{
                   await db.update('pf_qms_corrective',sel.id,update);
                   setCorrective(p=>p.map(c=>c.id===sel.id?{...c,...update}:c));
                   setSel(p=>({...p,...update}));
                   setShowSignModal(false);
+                  window._caSigData=null;
                 }catch(e){console.error(e);alert('Failed to save acknowledgement: '+e.message);}
               },
-              style:{background:signatureName.trim().length>=3?'var(--green)':'rgba(16,185,129,.3)',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'10px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:signatureName.trim().length>=3?'pointer':'not-allowed'}
+              style:{background:signatureName?'var(--green)':'rgba(16,185,129,.3)',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'10px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:signatureName?'pointer':'not-allowed'}
             },'Sign & Submit'),
           ),
         ),
@@ -7455,18 +7623,34 @@ function SOPs({sops,setSops,cu,users}){
     }catch(e){console.error(e);}
   }
 
-  async function acknowledgeSOP(sop){
+  const[showSopSigModal,setShowSopSigModal]=useState(false);
+  const[sopToSign,setSopToSign]=useState(null);
+  const[sopSigName,setSopSigName]=useState('');
+
+  function acknowledgeSOP(sop){
     const already=(sop.acknowledgements||[]).some(a=>a.id===cu.id);
     if(already) return;
-    const ack={id:cu.id,name:cu.name,role:cu.role,at:new Date().toISOString()};
-    const acknowledgements=[...(sop.acknowledgements||[]),ack];
+    setSopToSign(sop);
+    setSopSigName('');
+    window._sopSigData=null;
+    setShowSopSigModal(true);
+  }
+
+  async function submitSopAck(){
+    if(!sopToSign) return;
+    const ack={id:cu.id,name:cu.name,role:cu.role,at:new Date().toISOString(),signature_name:sopSigName,signature_image:window._sopSigData||null};
+    const acknowledgements=[...(sopToSign.acknowledgements||[]),ack];
     try{
-      await db.update('pf_sops',sop.id,{acknowledgements,updated_at:new Date().toISOString(),updated_by:cu.name});
-      setSops(p=>p.map(s=>s.id===sop.id?{...s,acknowledgements}:s));
+      await db.update('pf_sops',sopToSign.id,{acknowledgements,updated_at:new Date().toISOString(),updated_by:cu.name});
+      setSops(p=>p.map(s=>s.id===sopToSign.id?{...s,acknowledgements}:s));
       setSel(s=>s?{...s,acknowledgements}:null);
-      setAckMsg('✓ Acknowledged!');
-      setTimeout(()=>setAckMsg(''),2000);
-    }catch(e){console.error(e);}
+      setShowSopSigModal(false);
+      setSopToSign(null);
+      setSopSigName('');
+      window._sopSigData=null;
+      setAckMsg('✓ Signed & Acknowledged!');
+      setTimeout(()=>setAckMsg(''),3000);
+    }catch(e){console.error(e);alert('Failed: '+e.message);}
   }
 
   async function deleteSOP(id){
@@ -7762,6 +7946,43 @@ function SOPs({sops,setSops,cu,users}){
         });
       },
     }),
+    // ── SOP SIGNATURE MODAL ────────────────────────────────────────────────
+    showSopSigModal&&sopToSign&&el('div',{className:'mo',style:{zIndex:1200}},
+      el('div',{className:'md',style:{width:540,maxHeight:'90vh',overflowY:'auto'}},
+        el('div',{className:'mh'},
+          el('div',{className:'mt2'},'Sign & Acknowledge SOP'),
+          el('button',{className:'mc',onClick:()=>{setShowSopSigModal(false);setSopToSign(null);setSopSigName('');window._sopSigData=null;}},'×'),
+        ),
+        el('div',{className:'mbd'},
+          el('div',{style:{background:'rgba(30,58,95,.05)',border:'1px solid rgba(30,58,95,.12)',borderRadius:10,padding:'14px 16px',marginBottom:16}},
+            el('div',{style:{fontSize:11,fontWeight:700,color:'var(--accent)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:6}},'SOP Being Acknowledged'),
+            el('div',{style:{fontSize:15,fontWeight:700}},sopToSign.title),
+            el('div',{style:{fontSize:12,color:'var(--text2)',marginTop:4}},'Version '+sopToSign.version+' · '+sopToSign.sop_number),
+          ),
+          el('div',{style:{fontSize:13,color:'var(--text2)',marginBottom:16,lineHeight:1.6}},
+            'By signing below, you confirm that you have READ, UNDERSTOOD, and will COMPLY with this Standard Operating Procedure. This signature will be permanently recorded.'
+          ),
+          el('div',{className:'fg'},
+            el('label',null,'Draw your signature *'),
+            el(SignaturePad,{
+              label:'Draw your signature to acknowledge this SOP',
+              onSave:dataUrl=>{setSopSigName(cu.name);window._sopSigData=dataUrl;},
+              onClear:()=>{setSopSigName('');window._sopSigData=null;},
+            }),
+            el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:6}},'Acknowledging as: '+cu.name+' · '+cu.dept+' · '+new Date().toISOString().slice(0,10)),
+          ),
+          el('div',{className:'mf'},
+            el('button',{className:'btn b-ghost',onClick:()=>{setShowSopSigModal(false);setSopToSign(null);setSopSigName('');window._sopSigData=null;}},'Cancel'),
+            el('button',{
+              disabled:!sopSigName,
+              onClick:submitSopAck,
+              style:{background:sopSigName?'var(--green)':'rgba(16,185,129,.3)',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'10px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:sopSigName?'pointer':'not-allowed'}
+            },'✓ Sign & Acknowledge'),
+          ),
+        ),
+      ),
+    ),
+
     // ── SOP DETAIL MODAL ────────────────────────────────────────────────────
     sel&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setSel(null)},
       el('div',{className:'md',style:{width:700,maxHeight:'92vh'}},
@@ -8445,7 +8666,7 @@ function App(){
   // Auto-refresh every 30 seconds
   useEffect(()=>{
     if(!cu||!dbReady) return;
-    const interval=setInterval(()=>doRefresh(),30*1000);
+    const interval=setInterval(()=>doRefresh(),2*60*1000);
     return()=>clearInterval(interval);
   },[cu,dbReady,doRefresh]);
 
@@ -8485,12 +8706,14 @@ function App(){
       db.get('pf_users').catch(()=>[]),
       db.get('pf_events','order=date.asc').catch(()=>[]),
       db.get('pf_meeting_notes','order=created_at.desc').catch(()=>[]),
-    ]).then(([_tasks,_sales,_users,_events,_notes])=>{
+      db.get('pf_sops','order=created_at.desc').catch(()=>[]),
+    ]).then(([_tasks,_sales,_users,_events,_notes,_sops])=>{
       setTasks(_tasks||[]);
       setSalesTasks(_sales||[]);
       setUsers(_users||[]);
       setEvents(_events||[]);
       setMeetingNotes(_notes||[]);
+      setSops(_sops||[]);
     }).catch(console.error).finally(()=>setLoading(false));
     db.get('pf_tasks','status=eq.on_hold&order=updated_at.desc').then(held=>{
       const myHeld=(held||[]).filter(t=>(t.assignees||[]).some(a=>a.id===cu?.id)&&!sessionStorage.getItem('hold-dismissed-'+t.id));
