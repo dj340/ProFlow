@@ -3753,6 +3753,18 @@ Write a formal, professional Corrective Action notice. Be factual, specific, and
 
 // ── MAIN QMS COMPONENT ────────────────────────────────────────────────────────
 // ── SUPPLIER TAB (list + add + edit + certificates) ──────────────────────────
+// ── RECORD LIST (standalone, used by SupplierTab and QMS) ───────────────────
+function RecordList({items,emptyMsg,renderRow,onNew,newLabel,canCreate=true}){
+  return el('div',null,
+    el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}},
+      el('div',{style:{fontSize:13,color:'var(--text2)'}},(items.length)+' record'+(items.length!==1?'s':'')),
+      canCreate&&el('button',{className:'btn b-blue',onClick:onNew},newLabel||'+ New'),
+    ),
+    items.length===0?el('div',{className:'empty'},el('div',{className:'eico'},'📋'),el('div',{className:'etxt'},emptyMsg)):
+    el('div',{style:{display:'flex',flexDirection:'column',gap:6}},items.map(renderRow)),
+  );
+}
+
 function SupplierTab({cu,isElevated,suppliers,setSuppliers,filterByLic,handleSave,deleteRec,db,LICENSES,showNew,setNew,sel,setSel}){
   const[editMode,setEditMode]=React.useState(false);
   const[editData,setEditData]=React.useState(null);
@@ -3838,7 +3850,7 @@ function SupplierTab({cu,isElevated,suppliers,setSuppliers,filterByLic,handleSav
   // ── list view ──
   if(!showNew&&!sel){
     return el(RecordList,{
-      items:filterByLic(suppliers),emptyMsg:'No suppliers qualified',newLabel:'+ Add Supplier',onNew:()=>setNew(true),
+      items:filterByLic(suppliers),emptyMsg:'No suppliers qualified',newLabel:'+ Add Supplier',onNew:()=>setNew(true),canCreate:isElevated,
       renderRow:s=>el('div',{key:s.id,onClick:()=>{setSel(s);setEditMode(false);},style:{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:10,padding:'14px 16px',cursor:'pointer',transition:'all .15s'},onMouseEnter:ev=>ev.currentTarget.style.borderColor='rgba(30,58,95,.25)',onMouseLeave:ev=>ev.currentTarget.style.borderColor='var(--border)'},
         el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},
           el('div',{style:{flex:1}},
@@ -4070,7 +4082,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
   }
 
   // Generic list renderer
-  function RecordList({items,emptyMsg,renderRow,onNew,newLabel}){
+  function QMSRecordList({items,emptyMsg,renderRow,onNew,newLabel}){
     // Managers+Admin can report Deviations/CAPAs/Audits. Complaints, Change Control,
     // and Suppliers stay admin-only creation (compliance-sensitive records).
     const canCreateThisTab=isElevated||(canReport&&['deviations','capas','audits'].includes(tab));
@@ -4190,7 +4202,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
 
     // ── DEVIATIONS ────────────────────────────────────────────────────────────
     tab==='deviations'&&el('div',null,
-      !showNew&&!sel&&el(RecordList,{
+      !showNew&&!sel&&el(QMSRecordList,{
         items:filterByLic(deviations),
         emptyMsg:'No deviations recorded',
         newLabel:'+ Report Deviation',
@@ -4250,7 +4262,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
 
     // ── CAPAs ─────────────────────────────────────────────────────────────────
     tab==='capas'&&el('div',null,
-      !showNew&&!sel&&el(RecordList,{
+      !showNew&&!sel&&el(QMSRecordList,{
         items:filterByLic(capas),emptyMsg:'No CAPAs yet',newLabel:'+ New CAPA',onNew:()=>setNew(true),
         renderRow:c=>el('div',{key:c.id,onClick:()=>setSel(c),style:{background:'var(--surface)',border:'1px solid var(--border)',borderLeft:'3px solid '+(c.status==='closed'?'var(--green)':c.due_date&&c.due_date<today?'var(--red)':'var(--accent)'),borderRadius:10,padding:'14px 16px',cursor:'pointer',transition:'all .15s'},onMouseEnter:ev=>ev.currentTarget.style.borderColor='rgba(30,58,95,.25)',onMouseLeave:ev=>ev.currentTarget.style.borderColor='var(--border)'},
           el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},
@@ -4306,7 +4318,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
 
     // ── AUDITS ────────────────────────────────────────────────────────────────
     tab==='audits'&&el('div',null,
-      !showNew&&!sel&&el(RecordList,{
+      !showNew&&!sel&&el(QMSRecordList,{
         items:filterByLic(audits),emptyMsg:'No audits on record',newLabel:'+ New Audit',onNew:()=>setNew(true),
         renderRow:a=>el('div',{key:a.id,onClick:()=>setSel(a),style:{background:'var(--surface)',border:'1px solid var(--border)',borderLeft:'3px solid '+(a.status==='closed'?'var(--green)':'#3b82f6'),borderRadius:10,padding:'14px 16px',cursor:'pointer',transition:'all .15s'},onMouseEnter:ev=>ev.currentTarget.style.borderColor='rgba(30,58,95,.25)',onMouseLeave:ev=>ev.currentTarget.style.borderColor='var(--border)'},
           el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},
@@ -4366,7 +4378,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
 
     // ── CHANGE CONTROL ────────────────────────────────────────────────────────
     tab==='changes'&&el('div',null,
-      !showNew&&!sel&&el(RecordList,{
+      !showNew&&!sel&&el(QMSRecordList,{
         items:filterByLic(changes),emptyMsg:'No change records',newLabel:'+ New Change',onNew:()=>setNew(true),
         renderRow:c=>el('div',{key:c.id,onClick:()=>setSel(c),style:{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:10,padding:'14px 16px',cursor:'pointer',transition:'all .15s'},onMouseEnter:ev=>ev.currentTarget.style.borderColor='rgba(30,58,95,.25)',onMouseLeave:ev=>ev.currentTarget.style.borderColor='var(--border)'},
           el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},
@@ -4442,7 +4454,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
 
     // ── COMPLAINTS ────────────────────────────────────────────────────────────
     tab==='complaints'&&el('div',null,
-      !showNew&&!sel&&el(RecordList,{
+      !showNew&&!sel&&el(QMSRecordList,{
         items:filterByLic(complaints),emptyMsg:'No complaints on record',newLabel:'+ Log Complaint',onNew:()=>setNew(true),
         renderRow:c=>el('div',{key:c.id,onClick:()=>setSel(c),style:{background:'var(--surface)',border:'1px solid var(--border)',borderLeft:'3px solid '+(c.type==='adverse_event'?'var(--red)':c.status==='open'?'var(--accent)':'var(--green)'),borderRadius:10,padding:'14px 16px',cursor:'pointer',transition:'all .15s'},onMouseEnter:ev=>ev.currentTarget.style.borderColor='rgba(30,58,95,.25)',onMouseLeave:ev=>ev.currentTarget.style.borderColor='var(--border)'},
           el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},
