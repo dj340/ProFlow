@@ -7277,6 +7277,7 @@ function SOPs({sops,setSops,cu,users}){
   const isAdmin=cu.role==='admin';
   const isElevated=isAdmin||['coo','director_production','director_operations','director_sales_marketing','general_manager'].includes(cu.role);
   const canCreate=isElevated||['facility_manager','production_manager','compliance_manager','warehouse_manager','distribution_manager','extraction_manager','maintenance_manager','sales_marketing_manager'].includes(cu.role);
+  const canAiSop=isAdmin||['coo','director_production','director_operations','director_sales_marketing','general_manager','assistant_general_manager'].includes(cu.role);
 
   // Filter SOPs visible to this user
   const isElevatedForSops=isElevated||cu.role==='assistant_general_manager';
@@ -7475,7 +7476,7 @@ function SOPs({sops,setSops,cu,users}){
       ),
       el('div',{style:{display:'flex',gap:8,alignItems:'center'}},
         el('input',{placeholder:'Search SOPs...',value:search,onChange:ev=>setSearch(ev.target.value),style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px 14px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',width:200}}),
-        el('button',{
+        canAiSop&&el('button',{
             onClick:()=>setShowGenerator(true),
             style:{background:'linear-gradient(135deg,#667eea,#764ba2)',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'9px 16px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:6,transition:'all .15s'}
           },'🤖 AI Generate SOP'),
@@ -7688,7 +7689,7 @@ function SOPs({sops,setSops,cu,users}){
       )
     ),
 
-    showGenerator&&el(SOPGenerator,{
+    showGenerator&&canAiSop&&el(SOPGenerator,{
       cu,
       onClose:()=>setShowGenerator(false),
       onSave:(sop)=>{setSops(p=>[sop,...p]);setShowGenerator(false);setSel(sop);},
@@ -7702,7 +7703,7 @@ function SOPs({sops,setSops,cu,users}){
         setSel(updated);
       },
     }),
-    showRevise&&sel&&el(SOPReviseModal,{
+    showRevise&&sel&&canAiSop&&el(SOPReviseModal,{
       sop:sel,cu,
       onClose:()=>setShowRevise(false),
       onSave:(updated)=>{
@@ -7832,7 +7833,7 @@ function SOPs({sops,setSops,cu,users}){
             el('button',{className:'btn b-ghost',onClick:()=>exportSopPdf(sel)},'📄 Download PDF'),
             isAdmin&&el('button',{className:'btn b-ghost',onClick:()=>setShowEditSop(true)},'✏️ Edit'),
             canCreate&&sel.status==='draft'&&el('button',{className:'btn b-green',onClick:()=>publishSOP(sel)},'📢 Publish & Notify'),
-            isAdmin&&sel.status==='published'&&el('button',{
+            canAiSop&&sel.status==='published'&&el('button',{
               onClick:()=>setShowRevise(true),
               style:{background:'linear-gradient(135deg,#667eea,#764ba2)',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'9px 16px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:6}
             },'🔄 Revise SOP'),
