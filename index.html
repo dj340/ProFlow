@@ -3734,7 +3734,7 @@ Write a formal, professional Corrective Action notice. Be factual, specific, and
     try{
       const res=await fetch(`${SUPA_URL}/functions/v1/claude-proxy`,{
         method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPA_KEY},
-        body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:3000,messages:[{role:'user',content:prompt}]}),
+        body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:8000,messages:[{role:'user',content:prompt}]}),
       });
       const data=await res.json();
       if(!res.ok||data.error){throw new Error(data.error?.message||'Generation failed');}
