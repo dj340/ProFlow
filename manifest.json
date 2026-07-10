@@ -2,20 +2,21 @@
   "name": "BFM OMS",
   "short_name": "BFM OMS",
   "description": "Black Fox Manufacturing Operation Management System",
-  "start_url": "/ProFlow/",
+  "start_url": "/BFM/",
+  "scope": "/BFM/",
   "display": "standalone",
   "background_color": "#f0f6ff",
   "theme_color": "#1e3a5f",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/ProFlow/icon-192.png",
+      "src": "/BFM/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/ProFlow/icon-512.png",
+      "src": "/BFM/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
