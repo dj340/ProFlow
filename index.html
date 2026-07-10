@@ -761,6 +761,52 @@ function LogoMark({size=32}){
     el('line',{x1:'32',y1:'58',x2:'38',y2:'70',stroke:'#ffffff',strokeWidth:'1',opacity:'0.2'}),
   );
 }
+// ── SIDEBAR CHANGE PASSWORD (works on mobile/PWA, no prompt()) ───────────────
+function SidebarChangePw({cu,SUPA_URL,SUPA_KEY}){
+  const[open,setOpen]=React.useState(false);
+  const[np,setNp]=React.useState('');
+  const[cp,setCp]=React.useState('');
+  const[msg,setMsg]=React.useState('');
+  const[saving,setSaving]=React.useState(false);
+
+  async function save(){
+    if(np.length<6){setMsg('⚠️ Min 6 characters');return;}
+    if(np!==cp){setMsg('⚠️ Passwords do not match');return;}
+    setSaving(true);setMsg('Saving...');
+    try{
+      const r=await fetch(`${SUPA_URL}/rest/v1/pf_users?id=eq.${cu.id}`,{
+        method:'PATCH',
+        headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=representation'},
+        body:JSON.stringify({pw:np}),
+      });
+      if(!r.ok)throw new Error(await r.text());
+      const updated={...cu,pw:np};
+      localStorage.setItem('pf_session',JSON.stringify(updated));
+      setMsg('✓ Password updated!');
+      setNp('');setCp('');
+      setTimeout(()=>{setMsg('');setOpen(false);},2000);
+    }catch(e){setMsg('❌ '+e.message.slice(0,60));}
+    setSaving(false);
+  }
+
+  return el('div',{style:{marginTop:4}},
+    el('button',{
+      onClick:()=>{setOpen(o=>!o);setMsg('');setNp('');setCp('');},
+      style:{width:'100%',background:'rgba(30,58,95,.08)',border:'1px solid rgba(30,58,95,.2)',borderRadius:'var(--rs)',padding:'8px',color:'var(--accent)',fontFamily:'inherit',fontSize:12,fontWeight:600,cursor:'pointer',transition:'all .15s',textAlign:'center'}
+    },'🔒 '+(open?'Cancel':'Change My Password')),
+    open&&el('div',{style:{marginTop:8,display:'flex',flexDirection:'column',gap:6}},
+      el('input',{type:'password',value:np,onChange:e=>setNp(e.target.value),placeholder:'New password (min 6)...',
+        style:{width:'100%',background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.2)',borderRadius:'var(--rs)',padding:'8px 10px',color:'#fff',fontFamily:'inherit',fontSize:12,outline:'none',boxSizing:'border-box'}}),
+      el('input',{type:'password',value:cp,onChange:e=>setCp(e.target.value),placeholder:'Confirm new password...',
+        style:{width:'100%',background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.2)',borderRadius:'var(--rs)',padding:'8px 10px',color:'#fff',fontFamily:'inherit',fontSize:12,outline:'none',boxSizing:'border-box'}}),
+      msg&&el('div',{style:{fontSize:11,color:msg.includes('✓')?'#6ee7b7':msg.includes('❌')||msg.includes('⚠️')?'#fca5a5':'rgba(255,255,255,.7)',padding:'2px 0'}},msg),
+      el('button',{onClick:save,disabled:saving||np.length<6||np!==cp,
+        style:{width:'100%',background:np.length>=6&&np===cp?'rgba(255,255,255,.9)':'rgba(255,255,255,.2)',color:np.length>=6&&np===cp?'#1e3a5f':'rgba(255,255,255,.5)',border:'none',borderRadius:'var(--rs)',padding:'8px',fontFamily:'inherit',fontSize:12,fontWeight:700,cursor:saving?'not-allowed':'pointer',transition:'all .15s'}}
+      ,saving?'Saving...':'Set New Password'),
+    ),
+  );
+}
+
 function BFMlogo({size=32,labelSize=20,className='',textColor}){
   return el('div',{className,style:{display:'flex',alignItems:'center',gap:size*0.32}},
     el(LogoMark,{size}),
@@ -7233,8 +7279,11 @@ function SOPs({sops,setSops,cu,users}){
   const canCreate=isElevated||['facility_manager','production_manager','compliance_manager','warehouse_manager','distribution_manager','extraction_manager','maintenance_manager','sales_marketing_manager'].includes(cu.role);
 
   // Filter SOPs visible to this user
+  const isElevatedForSops=isElevated||cu.role==='assistant_general_manager';
+  const canSeeArchivedSops=cu.role==='admin'||cu.role==='general_manager'||cu.role==='assistant_general_manager';
   const visibleSops=sops.filter(s=>{
-    if(isElevated) return true;
+    if(s.status==='archived'&&!canSeeArchivedSops) return false;
+    if(isElevatedForSops) return true;
     if(s.status==='draft'&&s.created_by_id!==cu.id) return false;
     // License check: if SOP is tied to a license AND the current user already has at
     // least one license assigned, they must be on this SOP's license. If the user has
@@ -8447,7 +8496,7 @@ function App(){
   // QMS access: Admin, Managers, and Supervisors. Employees, Leads, and Staff
   // get SOPs only (per BFM OMS QMS RBAC policy).
   const qmsRoleGroup=ROLE_GROUPS.find(g=>g.roles.includes(cu.role))?.label;
-  const canAccessQms=isAdmin||['Executive','Directors','Managers','Supervisors'].includes(qmsRoleGroup);
+  const canAccessQms=isAdmin||['Executive','Directors','Managers'].includes(qmsRoleGroup);
   const today=new Date().toISOString().slice(0,10);
   const myTasks=tasks.filter(t=>(t.assignees||[]).some(a=>a.id===cu.id)&&!['archived'].includes(t.status));
   const overdueCt=tasks.filter(t=>!['done','archived'].includes(t.status)&&t.due_date&&t.due_date<today).length;
@@ -8532,27 +8581,7 @@ function App(){
           },
           style:{marginTop:4,width:'100%',background:'rgba(59,130,246,.08)',border:'1px solid rgba(59,130,246,.2)',borderRadius:'var(--rs)',padding:'8px',color:'#93c5fd',fontFamily:'inherit',fontSize:12,fontWeight:600,cursor:'pointer',transition:'all .15s'}
         },'📧 Test Email & Push'),
-        el('button',{
-          onClick:async()=>{
-            const np=prompt('Enter new password (min 6 chars):');
-            if(!np)return;
-            if(np.length<6){alert('Password must be at least 6 characters.');return;}
-            const confirm=prompt('Confirm new password:');
-            if(np!==confirm){alert('Passwords do not match.');return;}
-            try{
-              await fetch(`${SUPA_URL}/rest/v1/pf_users?id=eq.${cu.id}`,{
-                method:'PATCH',
-                headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=representation'},
-                body:JSON.stringify({pw:np}),
-              });
-              // Update session
-              const updated={...cu,pw:np};
-              localStorage.setItem('pf_session',JSON.stringify(updated));
-              alert('✓ Password changed successfully!');
-            }catch(e){alert('❌ Failed: '+e.message);}
-          },
-          style:{marginTop:4,width:'100%',background:'rgba(30,58,95,.08)',border:'1px solid rgba(30,58,95,.2)',borderRadius:'var(--rs)',padding:'8px',color:'var(--accent)',fontFamily:'inherit',fontSize:12,fontWeight:600,cursor:'pointer',transition:'all .15s'}
-        },'🔒 Change My Password'),
+        el(SidebarChangePw,{cu,SUPA_URL,SUPA_KEY}),
         el('button',{
           onClick:()=>{localStorage.removeItem('pf_session');setCu(null);},
           style:{marginTop:6,width:'100%',background:'rgba(239,68,68,.08)',border:'1px solid rgba(239,68,68,.2)',borderRadius:'var(--rs)',padding:'8px',color:'var(--red)',fontFamily:'inherit',fontSize:12,fontWeight:600,cursor:'pointer',transition:'all .15s',letterSpacing:'.3px'}
@@ -8664,7 +8693,7 @@ function App(){
         el('span',{className:'mnav-ico'},typeof Notification!=='undefined'&&Notification.permission==='granted'?'🔔':'🔕'),'Alerts'
       ),
       el('button',{className:`mnav-btn${page==='sops'?' on':''}`,onClick:()=>setPage('sops')},el('span',{className:'mnav-ico'},'📋'),'SOPs'),
-      el('button',{className:`mnav-btn${page==='qms'?' on':''}`,onClick:()=>setPage('qms')},el('span',{className:'mnav-ico'},'🛡️'),'QMS'),
+      canAccessQms&&el('button',{className:`mnav-btn${page==='qms'?' on':''}`,onClick:()=>setPage('qms')},el('span',{className:'mnav-ico'},'🛡️'),'QMS'),
       el('button',{className:`mnav-btn${page==='scores'?' on':''}`,onClick:()=>setPage('scores')},el('span',{className:'mnav-ico'},'🏆'),'Scores'),
       el('button',{className:'mnav-btn',onClick:()=>{if(window.confirm('Sign out?')){localStorage.removeItem('pf_session');window.location.reload();}}},el('span',{className:'mnav-ico'},'⏻'),'Sign Out'),
     ),
