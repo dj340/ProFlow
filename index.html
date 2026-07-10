@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
-<meta name="theme-color" content="#f5a623"/>
+<meta name="theme-color" content="#1e3a5f"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
 <meta name="apple-mobile-web-app-title" content="BFM OMS"/>
 <link rel="manifest" href="manifest.json"/>
 <link rel="apple-touch-icon" href="icon-192.png"/>
@@ -61,7 +61,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .sb{width:248px;background:#1e3a5f;border-right:1px solid #2d5282;display:flex;flex-direction:column;padding:20px 14px;position:fixed;top:0;left:0;bottom:0;z-index:100;overflow-y:auto;}
 .sb::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent);}
 .sb-logo{display:flex;align-items:center;padding:4px 8px;margin-bottom:28px;}
-.sb-logo span{color:rgba(255,255,255,.7);font-weight:400;font-size:16px;}
+.sb-logo span{color:rgba(255,255,255,.6);font-weight:300;font-size:16px;}
 .sb-label{font-size:10px;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:1.5px;padding:0 8px;margin-bottom:6px;}
 .nav{display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:var(--rs);cursor:pointer;font-size:13px;font-weight:500;color:rgba(255,255,255,.75);border:none;background:none;width:100%;text-align:left;position:relative;transition:all .15s;}
 .nav:hover{background:rgba(255,255,255,.1);color:#ffffff;}
@@ -759,10 +759,10 @@ function LogoMark({size=32}){
     el('line',{x1:'32',y1:'58',x2:'38',y2:'70',stroke:'#ffffff',strokeWidth:'1',opacity:'0.2'}),
   );
 }
-function BFMlogo({size=32,labelSize=20,className=''}){
+function BFMlogo({size=32,labelSize=20,className='',textColor}){
   return el('div',{className,style:{display:'flex',alignItems:'center',gap:size*0.32}},
     el(LogoMark,{size}),
-    el('div',{style:{fontSize:labelSize,fontWeight:800,letterSpacing:'-0.5px',color:'var(--accent)',whiteSpace:'nowrap'}},
+    el('div',{style:{fontSize:labelSize,fontWeight:800,letterSpacing:'-0.5px',color:textColor||'var(--accent)',whiteSpace:'nowrap'}},
       'BFM',el('span',{style:{color:'var(--text2)',fontWeight:400}},' OMS')
     ),
   );
@@ -8323,7 +8323,7 @@ function App(){
 
   return el('div',{className:'app'},
     el('div',{className:'sb'},
-      el(BFMlogo,{size:28,labelSize:18,className:'sb-logo'}),
+      el(BFMlogo,{size:28,labelSize:18,className:'sb-logo',textColor:'#ffffff'}),
       el('div',{style:{marginBottom:16}},
         el('div',{className:'sb-label',style:{marginBottom:8}},'Location'),
         LOCS.filter(l=>isAdmin||l===cu.loc||cu.loc==='Nationwide').map(l=>
