@@ -8517,6 +8517,7 @@ function App(){
 
   const pending=users.filter(u=>!u.approved).length;
   const isAdmin=cu.role==='admin';
+  const isElevated=isAdmin||['coo','director_production','director_operations','director_sales_marketing','general_manager','compliance_manager'].includes(cu.role);
   // QMS access: Admin, Managers, and Supervisors. Employees, Leads, and Staff
   // get SOPs only (per BFM OMS QMS RBAC policy).
   const qmsRoleGroup=ROLE_GROUPS.find(g=>g.roles.includes(cu.role))?.label;
