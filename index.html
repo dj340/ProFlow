@@ -3719,27 +3719,53 @@ ${caAttachments.length>0?'SUPPORTING EVIDENCE: '+caAttachments.length+' file(s) 
 
 Write a formal, professional Corrective Action notice. Be factual, specific, and fair — this is a real HR document that the employee will read and sign. Respond with ONLY this JSON (no markdown):
 {
-  "title": "Corrective Action — [Violation Type] — [Employee Name]",
-  "ca_number": "CA-[3 digit number]",
+  "title": "CA — [Violation Type] — [Employee Name]",
+  "ca_number": "CA-[3 digits]",
   "date_issued": "${new Date().toISOString().slice(0,10)}",
-  "incident_summary": "2-3 sentence factual summary of what happened",
-  "policy_reference": "Which company policy or SOP was violated, if identifiable",
-  "expected_standard": "1-2 sentences on what the correct behavior/procedure should have been",
-  "corrective_steps": ["3-5 specific, actionable steps the employee must take going forward"],
-  "consequences_of_recurrence": "1-2 sentences on what happens if this is repeated",
-  "support_offered": "1 sentence on any training, resources, or support being offered",
-  "employee_acknowledgement_text": "Standard statement the employee will sign confirming they read and understand this notice (do not admit guilt, just acknowledge receipt and understanding)"
+  "incident_summary": "2-3 sentences on what happened",
+  "policy_reference": "Policy or SOP violated",
+  "expected_standard": "1-2 sentences on correct behavior",
+  "corrective_steps": ["3-4 specific actionable steps"],
+  "consequences_of_recurrence": "1-2 sentences on consequences",
+  "support_offered": "1 sentence on support/training offered",
+  "employee_acknowledgement_text": "Brief acknowledgement statement (1-2 sentences, no admission of guilt)"
 }`;
 
     try{
       const res=await fetch(`${SUPA_URL}/functions/v1/claude-proxy`,{
         method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPA_KEY},
-        body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1500,messages:[{role:'user',content:prompt}]}),
+        body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:3000,messages:[{role:'user',content:prompt}]}),
       });
       const data=await res.json();
       if(!res.ok||data.error){throw new Error(data.error?.message||'Generation failed');}
       let clean=(data.content?.[0]?.text||'').replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
-      const parsed=JSON.parse(clean);
+      // If JSON is truncated, try to close it gracefully
+      if(!clean.endsWith('}')){
+        // Find last complete key-value pair and close the object
+        const lastComma=clean.lastIndexOf('",');
+        const lastQuote=clean.lastIndexOf('"');
+        if(lastComma>0) clean=clean.slice(0,lastComma)+'"}';}
+      // Ensure arrays are closed
+      clean=clean.replace(/,\s*$/, '').replace(/\[\s*$/, '[]').replace(/,\s*\]/, ']');
+      let parsed;
+      try{parsed=JSON.parse(clean);}
+      catch(pe){
+        // Last resort: extract what we can field by field
+        const extract=(key)=>{const m=clean.match(new RegExp('"'+key+'"\s*:\s*"([^"]*)"'));return m?m[1]:'';};
+        const extractArr=(key)=>{const m=clean.match(new RegExp('"'+key+'"\s*:\s*\[([^\]]*?)\]?'));if(!m)return[];return m[1].split('","').map(s=>s.replace(/^["\s]+|["\s]+$/g,'').trim()).filter(Boolean);};
+        parsed={
+          title:extract('title')||'Corrective Action — '+violationType,
+          ca_number:extract('ca_number')||'CA-'+Date.now().toString().slice(-3),
+          date_issued:new Date().toISOString().slice(0,10),
+          incident_summary:extract('incident_summary')||violationDesc,
+          policy_reference:extract('policy_reference')||'Company SOP',
+          expected_standard:extract('expected_standard')||'Employee must follow all applicable SOPs.',
+          corrective_steps:extractArr('corrective_steps')||['Review and sign applicable SOPs','Meet with supervisor to discuss expectations','Complete required retraining'],
+          consequences_of_recurrence:extract('consequences_of_recurrence')||'Further disciplinary action up to and including termination.',
+          support_offered:extract('support_offered')||'Retraining will be provided.',
+          employee_acknowledgement_text:extract('employee_acknowledgement_text')||'I acknowledge receipt of this corrective action notice.',
+        };
+      }
       setGeneratedCA(parsed);
       setEditedCA(parsed);
       setStep(3);
