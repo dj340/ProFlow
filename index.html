@@ -3436,6 +3436,47 @@ function AuditForm({cu,users,onSave,onCancel,existing}){
       el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Status'),el('select',{value:f.status,onChange:ev=>setF(p=>({...p,status:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},Object.entries(QMS_STATUSES).map(([k,{label}])=>el('option',{key:k,value:k},label)))),
       el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Next Audit Date'),el('input',{type:'date',value:f.next_audit_date,onChange:ev=>setF(p=>({...p,next_audit_date:ev.target.value}))})),
     ),
+
+    // ── ATTACHMENTS ──────────────────────────────────────────────────────────
+    el('div',{className:'divider'}),
+    el('div',{style:{marginBottom:14}},
+      el('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}},
+        el('div',{style:{fontWeight:700,fontSize:14}},'📎 Attachments'),
+        el('label',{style:{cursor:'pointer'}},
+          el('span',{className:'btn b-ghost btn-sm'},'+ Upload File'),
+          el('input',{type:'file',accept:'.pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xlsx,.csv',style:{display:'none'},
+            onChange:ev=>{
+              const file=ev.target.files[0];
+              if(!file)return;
+              if(file.size>5*1024*1024){alert('Max file size is 5MB.');return;}
+              const reader=new FileReader();
+              reader.onload=re=>{
+                const att={id:'att-'+Date.now(),name:file.name,type:file.type,size:file.size,data:re.target.result,uploaded_by:cu.name,uploaded_at:new Date().toISOString()};
+                setF(p=>({...p,attachments:[...(p.attachments||[]),att]}));
+              };
+              reader.readAsDataURL(file);
+              ev.target.value='';
+            }
+          }),
+        ),
+      ),
+      (f.attachments||[]).length===0
+        ?el('div',{style:{fontSize:12,color:'var(--text3)',padding:'10px 0'}},'No attachments yet. Upload audit reports, checklists, photos, or supporting docs.')
+        :el('div',{style:{display:'flex',flexDirection:'column',gap:6}},
+          (f.attachments||[]).map((att,i)=>el('div',{key:att.id,style:{display:'flex',alignItems:'center',justifyContent:'space-between',background:'var(--surface2)',borderRadius:8,padding:'8px 12px'}},
+            el('div',{style:{display:'flex',alignItems:'center',gap:8,flex:1,minWidth:0}},
+              el('span',{style:{fontSize:18,flexShrink:0}},att.type&&att.type.includes('pdf')?'📄':att.type&&att.type.includes('image')?'🖼️':'📎'),
+              el('div',{style:{minWidth:0}},
+                el('a',{href:att.data,download:att.name,style:{fontSize:12,fontWeight:600,color:'var(--accent)',textDecoration:'none',display:'block',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},att.name),
+                el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:1}},(att.size>1024*1024?(att.size/1024/1024).toFixed(1)+'MB':(att.size/1024).toFixed(0)+'KB')+' · '+att.uploaded_by),
+              ),
+            ),
+            el('button',{onClick:()=>setF(p=>({...p,attachments:p.attachments.filter((_,j)=>j!==i)})),style:{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:16,flexShrink:0,marginLeft:6}},'×'),
+          ))
+        ),
+      el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:6}},'Supported: PDF, PNG, JPG, WEBP, DOC, DOCX, XLSX, CSV · Max 5MB per file'),
+    ),
+
     error&&el('div',{style:{background:'rgba(239,68,68,.1)',border:'1px solid rgba(239,68,68,.3)',borderRadius:8,padding:'8px 12px',fontSize:12,color:'var(--red)',marginBottom:10}},error),
     el('div',{className:'mf'},
       el('button',{className:'btn b-ghost',onClick:onCancel},'Cancel'),
@@ -4368,6 +4409,21 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
         ),
         [['Recommendations',sel.recommendations],['Conclusion',sel.conclusion]].filter(([,v])=>v).map(([label,val])=>
           el('div',{key:label,style:{marginBottom:14}},el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:5}},label),el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:'10px 14px',fontSize:13,lineHeight:1.6}},val))
+        ),
+        // Attachments section in detail view
+        el('div',{style:{borderTop:'1px solid var(--border)',paddingTop:14,marginTop:4}},
+          el('div',{style:{fontSize:13,fontWeight:700,marginBottom:10}},'📎 Attachments'),
+          (sel.attachments||[]).length===0
+            ?el('div',{style:{fontSize:12,color:'var(--text3)'}},'No attachments on this audit.')
+            :el('div',{style:{display:'flex',flexDirection:'column',gap:6}},
+              (sel.attachments||[]).map(att=>el('div',{key:att.id,style:{display:'flex',alignItems:'center',gap:10,background:'var(--surface2)',borderRadius:8,padding:'8px 12px'}},
+                el('span',{style:{fontSize:18,flexShrink:0}},att.type&&att.type.includes('pdf')?'📄':att.type&&att.type.includes('image')?'🖼️':'📎'),
+                el('div',{style:{minWidth:0,flex:1}},
+                  el('a',{href:att.data,download:att.name,style:{fontSize:12,fontWeight:600,color:'var(--accent)',textDecoration:'none',display:'block',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},att.name),
+                  el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:1}},(att.size>1024*1024?(att.size/1024/1024).toFixed(1)+'MB':(att.size/1024).toFixed(0)+'KB')+' · '+att.uploaded_by+' · '+new Date(att.uploaded_at).toLocaleDateString()),
+                ),
+              ))
+            ),
         ),
       ),
       editing&&el('div',{className:'card',style:{padding:0,maxHeight:'85vh',overflowY:'auto'}},
