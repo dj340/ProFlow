@@ -8203,6 +8203,26 @@ function App(){
   const[holdAlert,setHoldAlert]=useState(null);
   const[inviteAlert,setInviteAlert]=useState(null);
   const[activeCall,setActiveCall]=useState(null);
+  const[installPrompt,setInstallPrompt]=useState(null);
+  const[showInstallBanner,setShowInstallBanner]=useState(false);
+
+  // Capture the beforeinstallprompt event for PWA install
+  React.useEffect(()=>{
+    const handler=e=>{e.preventDefault();setInstallPrompt(e);};
+    window.addEventListener('beforeinstallprompt',handler);
+    window.addEventListener('appinstalled',()=>{setShowInstallBanner(false);setInstallPrompt(null);});
+    return()=>window.removeEventListener('beforeinstallprompt',handler);
+  },[]);
+
+  // Show install banner 2s after login if not already installed/dismissed
+  React.useEffect(()=>{
+    if(!cu)return;
+    const dismissed=localStorage.getItem('bfm_install_dismissed');
+    const isStandalone=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone;
+    if(!isStandalone&&!dismissed&&installPrompt){
+      setTimeout(()=>setShowInstallBanner(true),2000);
+    }
+  },[cu,installPrompt]);
   const[locFilter,setLocFilter]=useState(()=>{try{const s=localStorage.getItem('pf_session');const u=s?JSON.parse(s):null;return u?.loc||'Nationwide';}catch{return 'Nationwide';}});
 
   // FIX 2: doRefresh with correct destructuring
@@ -8458,6 +8478,46 @@ function App(){
         ),
       )
     ),
+    // ── PWA INSTALL BANNER ──────────────────────────────────────────────────────
+    showInstallBanner&&el('div',{style:{
+      position:'fixed',bottom:80,left:'50%',transform:'translateX(-50%)',
+      background:'#1e3a5f',color:'#ffffff',borderRadius:16,
+      padding:'16px 20px',zIndex:9999,
+      boxShadow:'0 8px 32px rgba(15,23,42,.35)',
+      display:'flex',alignItems:'center',gap:14,
+      maxWidth:380,width:'calc(100% - 32px)',
+      border:'1px solid rgba(255,255,255,.15)',
+    }},
+      el('img',{src:'/BFM/icon-192.png',width:48,height:48,style:{borderRadius:10,flexShrink:0},
+        onError:e=>{e.target.style.display='none';}}),
+      el('div',{style:{flex:1,minWidth:0}},
+        el('div',{style:{fontSize:14,fontWeight:700,marginBottom:3}},'Install BFM OMS'),
+        el('div',{style:{fontSize:12,opacity:.8,lineHeight:1.4}},'Add to your home screen for quick access — works like a native app'),
+      ),
+      el('div',{style:{display:'flex',flexDirection:'column',gap:6,flexShrink:0}},
+        el('button',{
+          onClick:async()=>{
+            if(installPrompt){
+              installPrompt.prompt();
+              const{outcome}=await installPrompt.userChoice;
+              if(outcome==='accepted'){setShowInstallBanner(false);setInstallPrompt(null);}
+            }else{
+              alert('To install: click the browser menu → Apps → Install this site as an app');
+              setShowInstallBanner(false);
+            }
+          },
+          style:{background:'#ffffff',color:'#1e3a5f',border:'none',borderRadius:8,padding:'7px 16px',fontSize:12,fontWeight:700,cursor:'pointer',whiteSpace:'nowrap'}
+        },'Install App'),
+        el('button',{
+          onClick:()=>{
+            setShowInstallBanner(false);
+            localStorage.setItem('bfm_install_dismissed','1');
+          },
+          style:{background:'transparent',color:'rgba(255,255,255,.6)',border:'none',borderRadius:8,padding:'4px 8px',fontSize:11,cursor:'pointer',whiteSpace:'nowrap'}
+        },"Don't show again"),
+      ),
+    ),
+
     el('div',{className:'mobile-nav'},
       el('button',{className:`mnav-btn${page==='board'?' on':''}`,onClick:()=>setPage('board')},el('span',{className:'mnav-ico'},'⬛'),'Board'),
       el('button',{className:`mnav-btn${page==='sales'?' on':''}`,onClick:()=>setPage('sales')},el('span',{className:'mnav-ico'},'🏪'),'Sales'),
