@@ -4030,38 +4030,51 @@ Write a formal, professional Corrective Action notice. Be factual, specific, and
 
           error&&el('div',{style:{background:'rgba(239,68,68,.1)',border:'1px solid rgba(239,68,68,.3)',borderRadius:8,padding:'10px 14px',fontSize:13,color:'var(--red)',marginBottom:8}},error),
 
-          el('div',{style:{background:'rgba(30,58,95,.05)',border:'1px solid rgba(30,58,95,.12)',borderRadius:10,padding:'12px 16px',marginBottom:12,fontSize:12,color:'var(--text2)'}},
-            '✅ Review the document above. Preview the PDF to confirm everything looks correct before sending to ',el('strong',null,employee.name),'.'
+          el('div',{style:{background:'rgba(30,58,95,.05)',border:'1px solid rgba(30,58,95,.12)',borderRadius:10,padding:'12px 16px',marginBottom:14,fontSize:12,color:'var(--text2)',lineHeight:1.6}},
+            el('div',{style:{fontWeight:700,marginBottom:4,fontSize:13}},'What would you like to do?'),
+            el('div',null,'• ',el('strong',null,'Save Draft'),' — saves the CA as a draft. No email sent. You can send later from the Corrective Actions list.'),
+            el('div',null,'• ',el('strong',null,'Send to Employee'),' — saves and emails ',el('strong',null,employee.name),'. Status becomes ',el('strong',null,'Pending Acknowledgement'),' until they sign.'),
           ),
           el('div',{className:'mf',style:{justifyContent:'space-between',flexWrap:'wrap',gap:8}},
             el('button',{className:'btn b-ghost',onClick:()=>setStep(1)},'← Back'),
-            el('div',{style:{display:'flex',gap:8,flexWrap:'wrap'}},
+            el('div',{style:{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}},
               el('button',{
                 className:'btn b-ghost',
                 onClick:()=>{
-                  // Build a draft CA record for preview
-                  const draftCa={
-                    ...editedCA,
-                    title:editedCA.title,
-                    ca_number:editedCA.ca_number,
-                    employee_name:employee.name,
-                    employee_email:employee.email,
-                    license_id:license.id,
-                    license_name:license.name,
-                    violation_type:violationType,
-                    severity,
-                    generated_content:JSON.stringify(editedCA),
-                    status:'pending',
-                    issued_by:cu.name,
-                    created_at:new Date().toISOString(),
-                  };
+                  const draftCa={...editedCA,title:editedCA.title,ca_number:editedCA.ca_number,employee_name:employee.name,employee_email:employee.email,license_id:license.id,license_name:license.name,violation_type:violationType,severity,generated_content:JSON.stringify(editedCA),status:'pending',issued_by:cu.name,created_at:new Date().toISOString()};
                   exportCorrectiveActionPdf(draftCa);
                 }
               },'👁️ Preview PDF'),
               el('button',{
+                className:'btn b-ghost',
+                disabled:saving,
+                onClick:async()=>{
+                  setSaving(true);
+                  const rec={
+                    id:'ca-'+Date.now(),
+                    employee_id:employee.id,employee_name:employee.name,employee_email:employee.email,
+                    license_id:license.id,license_name:license.name,violation_type:violationType,severity,
+                    generated_content:JSON.stringify(editedCA),title:editedCA.title,ca_number:editedCA.ca_number,
+                    status:'draft',
+                    acknowledged_at:null,
+                    attachments:(caAttachments||[]).map(a=>({id:a.id,name:a.name,type:a.type,size:a.size})),
+                    issued_by:cu.name,issued_by_id:cu.id,
+                    created_at:new Date().toISOString(),updated_at:new Date().toISOString(),updated_by:cu.name,
+                  };
+                  try{
+                    const r=await fetch(`${SUPA_URL}/rest/v1/pf_qms_corrective`,{method:'POST',headers:{...H.headers,'Prefer':'return=representation'},body:JSON.stringify(rec)});
+                    if(!r.ok){const e=await r.json();throw new Error(e.message||'Save failed');}
+                    onSave(rec);
+                    alert('✓ Saved as draft. Find it in Corrective Actions — status: Draft.');
+                  }catch(e){alert('Save failed: '+e.message);}
+                  setSaving(false);
+                },
+                style:{borderColor:'var(--accent)',color:'var(--accent)'}
+              },saving?'Saving...':'💾 Save Draft'),
+              el('button',{
                 onClick:sendToEmployee,disabled:saving,
-                style:{background:'var(--red)',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'10px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:saving?'not-allowed':'pointer'}
-              },saving?'Sending...':'📨 Send to '+employee.name.split(' ')[0]),
+                style:{background:'#dc2626',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'10px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:saving?'not-allowed':'pointer',display:'flex',alignItems:'center',gap:6}
+              },saving?'Sending...':el('span',null,'📨 Send to '+employee.name.split(' ')[0])),
             ),
           ),
         ),
@@ -4912,7 +4925,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
               el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},
               el('div',{style:{flex:1}},
                 el('div',{style:{display:'flex',gap:6,marginBottom:5,flexWrap:'wrap'}},
-                  el('span',{style:{background:c.status==='acknowledged'?'rgba(16,185,129,.1)':'rgba(239,68,68,.1)',color:c.status==='acknowledged'?'var(--green)':'var(--red)',border:'1px solid',borderColor:c.status==='acknowledged'?'rgba(16,185,129,.3)':'rgba(239,68,68,.3)',borderRadius:4,padding:'2px 7px',fontSize:11,fontWeight:700}},c.status==='acknowledged'?'✓ Acknowledged':'⏳ Pending'),
+                  el('span',{style:{background:c.status==='acknowledged'?'rgba(16,185,129,.1)':c.status==='draft'?'rgba(100,116,139,.1)':'rgba(245,158,11,.1)',color:c.status==='acknowledged'?'var(--green)':c.status==='draft'?'var(--text2)':'#d97706',border:'1px solid',borderColor:c.status==='acknowledged'?'rgba(16,185,129,.3)':c.status==='draft'?'rgba(100,116,139,.3)':'rgba(245,158,11,.3)',borderRadius:4,padding:'2px 7px',fontSize:11,fontWeight:700}},c.status==='acknowledged'?'✅ Completed':c.status==='draft'?'📝 Draft':'⏳ Pending Acknowledgement'),
                   el('span',{style:{background:'var(--surface2)',color:'var(--text2)',border:'1px solid var(--border)',borderRadius:4,padding:'2px 7px',fontSize:11}},c.ca_number),
                   el('span',{style:{background:'var(--surface2)',color:'var(--text2)',border:'1px solid var(--border)',borderRadius:4,padding:'2px 7px',fontSize:11}},c.violation_type),
                 ),
@@ -4963,7 +4976,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
                     el('span',{style:{fontSize:12,color:'var(--text2)'}},'Issued: '+sel.created_at?.slice(0,10)+' by '+sel.issued_by),
                   ),
                 ),
-                el('span',{style:{background:sel.status==='acknowledged'?'rgba(16,185,129,.1)':'rgba(239,68,68,.1)',color:sel.status==='acknowledged'?'var(--green)':'var(--red)',border:'1px solid',borderColor:sel.status==='acknowledged'?'rgba(16,185,129,.3)':'rgba(239,68,68,.3)',borderRadius:6,padding:'5px 12px',fontSize:12,fontWeight:700}},sel.status==='acknowledged'?'Acknowledged '+sel.acknowledged_at?.slice(0,10):'Pending Acknowledgement'),
+                el('span',{style:{background:sel.status==='acknowledged'?'rgba(16,185,129,.1)':sel.status==='draft'?'rgba(100,116,139,.1)':'rgba(245,158,11,.1)',color:sel.status==='acknowledged'?'var(--green)':sel.status==='draft'?'var(--text2)':'#d97706',border:'1px solid',borderColor:sel.status==='acknowledged'?'rgba(16,185,129,.3)':sel.status==='draft'?'rgba(100,116,139,.3)':'rgba(245,158,11,.3)',borderRadius:6,padding:'5px 12px',fontSize:12,fontWeight:700}},sel.status==='acknowledged'?'✅ Completed — '+sel.acknowledged_at?.slice(0,10):sel.status==='draft'?'📝 Draft':'⏳ Pending Acknowledgement'),
               ),
             ),
 
@@ -5008,8 +5021,24 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
               el('div',{style:{fontSize:12,color:'var(--text2)',lineHeight:1.6,fontStyle:'italic'}},gen.employee_acknowledgement_text),
             ),
 
-            el('div',{style:{display:'flex',gap:8,marginTop:16}},
+            el('div',{style:{display:'flex',gap:8,marginTop:16,flexWrap:'wrap',alignItems:'center'}},
               el('button',{className:'btn b-ghost',onClick:()=>exportCorrectiveActionPdf(sel)},'📄 Download PDF'),
+              sel.status==='draft'&&isElevated&&el('button',{
+                style:{background:'#dc2626',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'9px 18px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer'},
+                onClick:async()=>{
+                  if(!sel.employee_email){alert('No email on file for this employee.');return;}
+                  if(!window.confirm('Send to '+sel.employee_name+'? They will receive an email and must sign.')) return;
+                  try{
+                    await fetch(`${SUPA_URL}/rest/v1/pf_qms_corrective?id=eq.${sel.id}`,{method:'PATCH',headers:{...H.headers},body:JSON.stringify({status:'pending',updated_at:new Date().toISOString(),updated_by:cu.name})});
+                    setCorrective(p=>p.map(c=>c.id===sel.id?{...c,status:'pending'}:c));
+                    setSel(p=>({...p,status:'pending'}));
+                    await sendEmail({to:sel.employee_email,subject:`⚖️ Corrective Action Notice — ${sel.title}`,
+                      html:`<div style="font-family:sans-serif;background:#121212;color:#f0eee8;padding:28px;border-radius:12px;max-width:520px;border:1px solid #333"><div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">⚖️ BFM OMS</div><p style="font-size:14px">A corrective action has been issued to you. Please log in to review and sign.</p><a href="${APP_URL}" style="display:inline-block;background:#f5a623;color:#000;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700;margin-top:12px">Review & Sign →</a></div>`
+                    });
+                    alert('✓ Sent to '+sel.employee_name+'. Status: Pending Acknowledgement.');
+                  }catch(e){alert('Failed: '+e.message);}
+                }
+              },'📨 Send to Employee'),
               isAdmin&&el('button',{
                 onClick:async()=>{
                   if(!window.confirm('Delete this corrective action permanently? This cannot be undone.')) return;
@@ -6513,7 +6542,7 @@ function EmployeeProfileModal({employee,cu,users,publishedSOPs,corrective,showCo
             el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},
               el('div',null,
                 el('div',{style:{display:'flex',gap:6,marginBottom:4,flexWrap:'wrap'}},
-                  el('span',{style:{background:c.status==='acknowledged'?'rgba(16,185,129,.1)':'rgba(239,68,68,.1)',color:c.status==='acknowledged'?'var(--green)':'var(--red)',border:'1px solid',borderColor:c.status==='acknowledged'?'rgba(16,185,129,.3)':'rgba(239,68,68,.3)',borderRadius:4,padding:'2px 7px',fontSize:10,fontWeight:700}},c.status==='acknowledged'?'Acknowledged':'Pending'),
+                  el('span',{style:{background:c.status==='acknowledged'?'rgba(16,185,129,.1)':c.status==='draft'?'rgba(100,116,139,.1)':'rgba(245,158,11,.1)',color:c.status==='acknowledged'?'var(--green)':c.status==='draft'?'var(--text2)':'#d97706',border:'1px solid',borderColor:c.status==='acknowledged'?'rgba(16,185,129,.3)':c.status==='draft'?'rgba(100,116,139,.3)':'rgba(245,158,11,.3)',borderRadius:4,padding:'2px 7px',fontSize:10,fontWeight:700}},c.status==='acknowledged'?'✅ Completed':c.status==='draft'?'📝 Draft':'⏳ Pending'),
                   el('span',{style:{background:'var(--surface2)',color:'var(--text2)',border:'1px solid var(--border)',borderRadius:4,padding:'2px 7px',fontSize:10}},c.ca_number),
                   el('span',{style:{background:'var(--surface2)',color:'var(--text2)',border:'1px solid var(--border)',borderRadius:4,padding:'2px 7px',fontSize:10}},c.violation_type),
                 ),
@@ -6551,7 +6580,7 @@ function MyDocuments({cu,corrective,setCorrective}){
           el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},
             el('div',{style:{flex:1}},
               el('div',{style:{display:'flex',gap:6,marginBottom:5,flexWrap:'wrap'}},
-                el('span',{style:{background:c.status==='acknowledged'?'rgba(16,185,129,.1)':'rgba(239,68,68,.1)',color:c.status==='acknowledged'?'var(--green)':'var(--red)',border:'1px solid',borderColor:c.status==='acknowledged'?'rgba(16,185,129,.3)':'rgba(239,68,68,.3)',borderRadius:4,padding:'2px 7px',fontSize:11,fontWeight:700}},c.status==='acknowledged'?'Acknowledged':'Pending — Action Required'),
+                el('span',{style:{background:c.status==='acknowledged'?'rgba(16,185,129,.1)':c.status==='draft'?'rgba(100,116,139,.1)':'rgba(245,158,11,.1)',color:c.status==='acknowledged'?'var(--green)':c.status==='draft'?'var(--text2)':'#d97706',border:'1px solid',borderColor:c.status==='acknowledged'?'rgba(16,185,129,.3)':c.status==='draft'?'rgba(100,116,139,.3)':'rgba(245,158,11,.3)',borderRadius:4,padding:'2px 7px',fontSize:11,fontWeight:700}},c.status==='acknowledged'?'✅ Completed':c.status==='draft'?'📝 Draft':'⚠️ Action Required'),
                 el('span',{style:{background:'var(--surface2)',color:'var(--text2)',border:'1px solid var(--border)',borderRadius:4,padding:'2px 7px',fontSize:11}},c.ca_number),
               ),
               el('div',{style:{fontSize:14,fontWeight:700,marginBottom:3}},c.title),
@@ -6579,7 +6608,7 @@ function MyDocuments({cu,corrective,setCorrective}){
             el('span',{style:{fontSize:12,color:'var(--text2)'}},'Issued: '+sel.created_at?.slice(0,10)),
           ),
         ),
-        el('span',{style:{background:sel.status==='acknowledged'?'rgba(16,185,129,.1)':'rgba(239,68,68,.1)',color:sel.status==='acknowledged'?'var(--green)':'var(--red)',border:'1px solid',borderColor:sel.status==='acknowledged'?'rgba(16,185,129,.3)':'rgba(239,68,68,.3)',borderRadius:6,padding:'5px 12px',fontSize:12,fontWeight:700}},sel.status==='acknowledged'?'Acknowledged '+sel.acknowledged_at?.slice(0,10):'Pending Acknowledgement'),
+        el('span',{style:{background:sel.status==='acknowledged'?'rgba(16,185,129,.1)':sel.status==='draft'?'rgba(100,116,139,.1)':'rgba(245,158,11,.1)',color:sel.status==='acknowledged'?'var(--green)':sel.status==='draft'?'var(--text2)':'#d97706',border:'1px solid',borderColor:sel.status==='acknowledged'?'rgba(16,185,129,.3)':sel.status==='draft'?'rgba(100,116,139,.3)':'rgba(245,158,11,.3)',borderRadius:6,padding:'5px 12px',fontSize:12,fontWeight:700}},sel.status==='acknowledged'?'✅ Completed — '+sel.acknowledged_at?.slice(0,10):sel.status==='draft'?'📝 Draft':'⏳ Pending Acknowledgement'),
       ),
     ),
 
