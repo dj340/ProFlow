@@ -2132,6 +2132,8 @@ function Team({users,setUsers,cu}){
   const[showAdd,setAdd]=useState(false);
   const[search,setSearch]=useState('');
   const[saveMsg,setSaveMsg]=useState('');
+  const[newPw,setNewPw]=useState('');
+  const[pwMsg,setPwMsg]=useState('');
   const[af,setAf]=useState({firstName:'',lastName:'',email:'',pw:'',role:'employee',dept:'Production',loc:'Nationwide'});
   const pending=users.filter(u=>!u.approved);
   const approved=users.filter(u=>u.approved).filter(u=>
@@ -2163,6 +2165,8 @@ function Team({users,setUsers,cu}){
   async function saveEdit(){
     setSaveMsg('Saving...');
     const update={
+      name:editU.name,
+      email:editU.email,
       role:editU.role,
       dept:editU.dept,
       depts:editU.depts||[],
@@ -2359,9 +2363,57 @@ function Team({users,setUsers,cu}){
             el('div',{className:'avatar',style:{background:avatarColor(editU.name),width:36,height:36,fontSize:14}},editU.name.charAt(0).toUpperCase()),
             el('div',null,el('div',{className:'mt2'},editU.name),el('div',{style:{fontSize:12,color:'var(--text2)'}},editU.email)),
           ),
-          el('button',{className:'mc',onClick:()=>setEditU(null)},'×'),
+          el('button',{className:'mc',onClick:()=>{setEditU(null);setNewPw('');setPwMsg('');}},'×'),
         ),
         el('div',{className:'mbd'},
+
+          // Name + Email edit
+          el('div',{className:'g2'},
+            el('div',{className:'fg',style:{marginBottom:0}},
+              el('label',null,'Full Name'),
+              el('input',{value:editU.name||'',onChange:ev=>setEditU(p=>({...p,name:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,boxSizing:'border-box'}}),
+            ),
+            el('div',{className:'fg',style:{marginBottom:0}},
+              el('label',null,'Email / Username'),
+              el('input',{type:'email',value:editU.email||'',onChange:ev=>setEditU(p=>({...p,email:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,boxSizing:'border-box'}}),
+            ),
+          ),
+
+          // Password Reset
+          el('div',{style:{background:'rgba(30,58,95,.05)',border:'1px solid rgba(30,58,95,.15)',borderRadius:10,padding:'14px 16px',marginBottom:14}},
+            el('div',{style:{fontSize:12,fontWeight:700,color:'var(--accent)',marginBottom:10,textTransform:'uppercase',letterSpacing:'.5px'}},'🔒 Reset Password'),
+            el('div',{style:{display:'flex',gap:8,alignItems:'center'}},
+              el('input',{
+                type:'password',
+                value:newPw,
+                onChange:ev=>{setNewPw(ev.target.value);setPwMsg('');},
+                placeholder:'Enter new password...',
+                style:{flex:1,background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none'},
+              }),
+              el('button',{
+                className:'btn b-blue btn-sm',
+                disabled:newPw.length<6,
+                onClick:async()=>{
+                  if(newPw.length<6){setPwMsg('⚠️ Min 6 characters');return;}
+                  setPwMsg('Saving...');
+                  try{
+                    await fetch(`${SUPA_URL}/rest/v1/pf_users?id=eq.${editU.id}`,{
+                      method:'PATCH',
+                      headers:{...H.headers,'Prefer':'return=representation'},
+                      body:JSON.stringify({pw:newPw}),
+                    });
+                    setNewPw('');
+                    setPwMsg('✓ Password updated!');
+                    setTimeout(()=>setPwMsg(''),3000);
+                  }catch(e){setPwMsg('❌ Failed: '+e.message);}
+                }
+              },'Set Password'),
+            ),
+            newPw.length>0&&newPw.length<6&&el('div',{style:{fontSize:11,color:'var(--red)',marginTop:4}},'Password must be at least 6 characters'),
+            pwMsg&&el('div',{style:{fontSize:12,marginTop:6,color:pwMsg.includes('✓')?'var(--green)':pwMsg.includes('❌')?'var(--red)':'var(--text2)'}},pwMsg),
+          ),
+
+          el('div',{className:'divider'}),
 
           // Role dropdown (grouped)
           el('div',{className:'fg'},
@@ -2514,7 +2566,7 @@ function Team({users,setUsers,cu}){
         el('div',{className:'mf',style:{justifyContent:'space-between',alignItems:'center'}},
           el('div',{style:{fontSize:13,fontWeight:600,color:saveMsg.includes('❌')?'var(--red)':saveMsg.includes('✓')?'var(--green)':'var(--text2)'}},saveMsg),
           el('div',{style:{display:'flex',gap:8}},
-            el('button',{className:'btn b-ghost',onClick:()=>setEditU(null)},'Cancel'),
+            el('button',{className:'btn b-ghost',onClick:()=>{setEditU(null);setNewPw('');setPwMsg('');}},'Cancel'),
             el('button',{className:'btn b-blue',onClick:saveEdit},'Save Changes'),
           ),
         ),
@@ -8480,6 +8532,27 @@ function App(){
           },
           style:{marginTop:4,width:'100%',background:'rgba(59,130,246,.08)',border:'1px solid rgba(59,130,246,.2)',borderRadius:'var(--rs)',padding:'8px',color:'#93c5fd',fontFamily:'inherit',fontSize:12,fontWeight:600,cursor:'pointer',transition:'all .15s'}
         },'📧 Test Email & Push'),
+        el('button',{
+          onClick:async()=>{
+            const np=prompt('Enter new password (min 6 chars):');
+            if(!np)return;
+            if(np.length<6){alert('Password must be at least 6 characters.');return;}
+            const confirm=prompt('Confirm new password:');
+            if(np!==confirm){alert('Passwords do not match.');return;}
+            try{
+              await fetch(`${SUPA_URL}/rest/v1/pf_users?id=eq.${cu.id}`,{
+                method:'PATCH',
+                headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=representation'},
+                body:JSON.stringify({pw:np}),
+              });
+              // Update session
+              const updated={...cu,pw:np};
+              localStorage.setItem('pf_session',JSON.stringify(updated));
+              alert('✓ Password changed successfully!');
+            }catch(e){alert('❌ Failed: '+e.message);}
+          },
+          style:{marginTop:4,width:'100%',background:'rgba(30,58,95,.08)',border:'1px solid rgba(30,58,95,.2)',borderRadius:'var(--rs)',padding:'8px',color:'var(--accent)',fontFamily:'inherit',fontSize:12,fontWeight:600,cursor:'pointer',transition:'all .15s'}
+        },'🔒 Change My Password'),
         el('button',{
           onClick:()=>{localStorage.removeItem('pf_session');setCu(null);},
           style:{marginTop:6,width:'100%',background:'rgba(239,68,68,.08)',border:'1px solid rgba(239,68,68,.2)',borderRadius:'var(--rs)',padding:'8px',color:'var(--red)',fontFamily:'inherit',fontSize:12,fontWeight:600,cursor:'pointer',transition:'all .15s',letterSpacing:'.3px'}
