@@ -4115,7 +4115,12 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
   const[showNew,setNew]=useState(false);
   const[sel,setSel]=useState(null);
   const[editing,setEditing]=useState(null);
-  const[licFilter,setLicFilter]=useState('all');
+  const[licFilter,setLicFilter]=useState(()=>{
+    const ul=cu.licenses||[];
+    const elevated=cu.role==='admin'||['coo','director_production','director_operations','general_manager','compliance_manager','director_sales_marketing'].includes(cu.role);
+    if(elevated||ul.length===0) return 'all';
+    return ul.length===1?ul[0]:'all';
+  });
   const[showCAGenerator,setShowCAGenerator]=useState(false);
   const[showSignModal,setShowSignModal]=useState(false);
   const[signatureName,setSignatureName]=useState('');
@@ -4131,6 +4136,10 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
   const isSupervisor=qmsRoleGroup==='Supervisors';
   // Managers and above can report Deviations/CAPAs/Audits; Supervisors are read-only in those tabs.
   const canReport=isElevated||isManager;
+  // License scope for QMS
+  const qmsUserLicenses=cu.licenses||[];
+  const qmsAllowedLicenses=isElevated?LICENSES:LICENSES.filter(l=>qmsUserLicenses.includes(l.id));
+  const qmsCanSeeAll=isElevated;
   // Direct reports: users whose `managers` array includes this person's id (up to 5 managers per user).
   const directReports=users.filter(u=>(u.managers||[]).some(m=>(m.id||m)===cu.id));
   // Training Matrix scope — uses full role-based visibility hierarchy.
@@ -4246,8 +4255,8 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
     // License filter
     el('div',{style:{display:'flex',gap:6,marginBottom:12,flexWrap:'wrap',alignItems:'center'}},
       el('span',{style:{fontSize:11,fontWeight:700,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'.5px'}},'License:'),
-      el('button',{onClick:()=>setLicFilter('all'),style:{padding:'4px 12px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:500,cursor:'pointer',background:licFilter==='all'?'var(--accent)':'transparent',color:licFilter==='all'?'#000000':'var(--text2)',borderColor:licFilter==='all'?'var(--accent)':'var(--border)',transition:'all .15s'}},'All Licenses'),
-      ...LICENSES.map(lic=>el('button',{key:lic.id,onClick:()=>setLicFilter(lic.id),style:{padding:'4px 12px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:500,cursor:'pointer',background:licFilter===lic.id?'var(--accent)':'transparent',color:licFilter===lic.id?'#000000':'var(--text2)',borderColor:licFilter===lic.id?'var(--accent)':'var(--border)',transition:'all .15s'}},lic.name)),
+      qmsCanSeeAll&&el('button',{onClick:()=>setLicFilter('all'),style:{padding:'4px 12px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:500,cursor:'pointer',background:licFilter==='all'?'var(--accent)':'transparent',color:licFilter==='all'?'#ffffff':'var(--text2)',borderColor:licFilter==='all'?'var(--accent)':'var(--border)',transition:'all .15s'}},'All Licenses'),
+      ...qmsAllowedLicenses.map(lic=>el('button',{key:lic.id,onClick:()=>setLicFilter(lic.id),style:{padding:'4px 12px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:500,cursor:'pointer',background:licFilter===lic.id?'var(--accent)':'transparent',color:licFilter===lic.id?'#ffffff':'var(--text2)',borderColor:licFilter===lic.id?'var(--accent)':'var(--border)',transition:'all .15s'}},lic.name)),
     ),
 
     // Tabs — Supervisors only get Dashboard + Training Matrix (read-only everywhere else)
@@ -7261,7 +7270,12 @@ function SOPs({sops,setSops,cu,users}){
   const[editSopData,setEditSopData]=useState(null);
   const[search,setSearch]=useState('');
   const[deptFilter,setDeptFilter]=useState('All');
-  const[licFilter,setLicFilter]=useState('all');
+  const[licFilter,setLicFilter]=useState(()=>{
+    const ul=cu.licenses||[];
+    const elevated=cu.role==='admin'||['coo','director_production','director_operations','director_sales_marketing','general_manager','assistant_general_manager','facility_manager','production_manager','compliance_manager','warehouse_manager','distribution_manager','extraction_manager','maintenance_manager','sales_marketing_manager'].includes(cu.role);
+    if(elevated||ul.length===0) return 'all';
+    return ul.length===1?ul[0]:'all';
+  });
   const[saving,setSaving]=useState(false);
   const[ackMsg,setAckMsg]=useState('');
   const[f,setF]=useState({
@@ -7278,12 +7292,21 @@ function SOPs({sops,setSops,cu,users}){
   const isElevated=isAdmin||['coo','director_production','director_operations','director_sales_marketing','general_manager'].includes(cu.role);
   const canCreate=isElevated||['facility_manager','production_manager','compliance_manager','warehouse_manager','distribution_manager','extraction_manager','maintenance_manager','sales_marketing_manager'].includes(cu.role);
   const canAiSop=isAdmin||['coo','director_production','director_operations','director_sales_marketing','general_manager','assistant_general_manager'].includes(cu.role);
+  // Non-elevated users are locked to their assigned licenses only
+  const userLicenses=cu.licenses||[];
+  const allowedLicenses=isElevated?LICENSES:LICENSES.filter(l=>userLicenses.includes(l.id));
+  const canSeeAllLicenses=isElevated;
 
   // Filter SOPs visible to this user
   const isElevatedForSops=isElevated||cu.role==='assistant_general_manager';
   const canSeeArchivedSops=cu.role==='admin'||cu.role==='general_manager'||cu.role==='assistant_general_manager';
   const visibleSops=sops.filter(s=>{
     if(s.status==='archived'&&!canSeeArchivedSops) return false;
+    // Non-elevated users can ONLY see SOPs for their assigned licenses
+    if(!isElevatedForSops&&userLicenses.length>0){
+      const sopLicIds2=s.license_ids&&s.license_ids.length>0?s.license_ids:(s.license_id?[s.license_id]:[]);
+      if(sopLicIds2.length>0&&!sopLicIds2.some(id=>userLicenses.includes(id))) return false;
+    }
     if(isElevatedForSops) return true;
     if(s.status==='draft'&&s.created_by_id!==cu.id) return false;
     // License check: if SOP is tied to a license AND the current user already has at
@@ -7496,11 +7519,11 @@ function SOPs({sops,setSops,cu,users}){
       ))
     ),
 
-    // License filter tabs
+    // License filter tabs — non-elevated users restricted to their assigned licenses
     el('div',{style:{display:'flex',gap:6,flexWrap:'wrap',marginBottom:10,alignItems:'center'}},
       el('span',{style:{fontSize:11,fontWeight:700,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'.5px'}},'License:'),
-      el('button',{onClick:()=>setLicFilter('all'),style:{padding:'5px 14px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:500,cursor:'pointer',background:licFilter==='all'?'var(--accent)':'transparent',color:licFilter==='all'?'#000000':'var(--text2)',borderColor:licFilter==='all'?'var(--accent)':'var(--border)',transition:'all .15s'}},'All Licenses'),
-      ...LICENSES.map(lic=>el('button',{key:lic.id,onClick:()=>setLicFilter(lic.id),style:{padding:'5px 14px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:500,cursor:'pointer',background:licFilter===lic.id?'var(--accent)':'transparent',color:licFilter===lic.id?'#000000':'var(--text2)',borderColor:licFilter===lic.id?'var(--accent)':'var(--border)',transition:'all .15s'}},lic.name)),
+      canSeeAllLicenses&&el('button',{onClick:()=>setLicFilter('all'),style:{padding:'5px 14px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:500,cursor:'pointer',background:licFilter==='all'?'var(--accent)':'transparent',color:licFilter==='all'?'#ffffff':'var(--text2)',borderColor:licFilter==='all'?'var(--accent)':'var(--border)',transition:'all .15s'}},'All Licenses'),
+      ...allowedLicenses.map(lic=>el('button',{key:lic.id,onClick:()=>setLicFilter(lic.id),style:{padding:'5px 14px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:500,cursor:'pointer',background:licFilter===lic.id?'var(--accent)':'transparent',color:licFilter===lic.id?'#ffffff':'var(--text2)',borderColor:licFilter===lic.id?'var(--accent)':'var(--border)',transition:'all .15s'}},lic.name)),
     ),
 
     // Dept filter tabs
@@ -8518,7 +8541,7 @@ function App(){
       el(BFMlogo,{size:28,labelSize:18,className:'sb-logo',textColor:'#ffffff'}),
       el('div',{style:{marginBottom:16}},
         el('div',{className:'sb-label',style:{marginBottom:8}},'Location'),
-        LOCS.filter(l=>isAdmin||l===cu.loc||cu.loc==='Nationwide').map(l=>
+        LOCS.filter(l=>isAdmin||isElevated||l===cu.loc||cu.loc==='Nationwide').map(l=>
           el('button',{key:l,className:`nav${locFilter===l?' on':''}`,onClick:()=>setLocFilter(l)},
             el('span',null,l==='Nationwide'?'🌐':l==='Michigan'?'🏭':'🏗'),l
           )
