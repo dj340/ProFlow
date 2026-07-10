@@ -8,11 +8,11 @@
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
 <meta name="apple-mobile-web-app-title" content="BFM OMS"/>
-<link rel="manifest" href="manifest.json"/>
-<link rel="apple-touch-icon" sizes="180x180" href="/ProFlow/icon-192.png"/>
-<link rel="apple-touch-icon" sizes="152x152" href="/ProFlow/icon-192.png"/>
-<link rel="apple-touch-icon" sizes="120x120" href="/ProFlow/icon-192.png"/>
-<link rel="icon" type="image/png" sizes="192x192" href="/ProFlow/icon-192.png"/>
+<link rel="manifest" href="/BFM/manifest.json"/>
+<link rel="apple-touch-icon" sizes="180x180" href="/BFM/icon-192.png"/>
+<link rel="apple-touch-icon" sizes="152x152" href="/BFM/icon-192.png"/>
+<link rel="apple-touch-icon" sizes="120x120" href="/BFM/icon-192.png"/>
+<link rel="icon" type="image/png" sizes="192x192" href="/BFM/icon-192.png"/>
 <title>BFM Operation Management System</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <style>
@@ -190,7 +190,7 @@ const el=React.createElement;
 const SUPA_URL='https://exaluooarsrlvhptvnhu.supabase.co';
 const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV4YWx1b29hcnNybHZocHR2bmh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4MDcxOTksImV4cCI6MjA5NTM4MzE5OX0.mPOc6d1e8pjLNv2enJvFm_ABl96U53PEw64NJ96diIE';
 const RESEND_KEY='re_Nmj7QRRH_7LJh3wXf5rnNfkjJGzYxzhQV';
-const APP_URL='https://blfoxman.github.io/ProFlow';
+const APP_URL='https://blfoxman.github.io/BFM';
 const H={headers:{'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}};
 
 const db={
@@ -776,8 +776,8 @@ async function sendLocalNotification(title,body){
   if(Notification.permission==='granted'){
     try{
       const reg=await navigator.serviceWorker.getRegistration();
-      if(reg){await reg.showNotification(title,{body,icon:'/ProFlow/icon-192.png',badge:'/ProFlow/icon-192.png'});}
-      else{new Notification(title,{body,icon:'/ProFlow/icon-192.png'});}
+      if(reg){await reg.showNotification(title,{body,icon:'/BFM/icon-192.png',badge:'/BFM/icon-192.png'});}
+      else{new Notification(title,{body,icon:'/BFM/icon-192.png'});}
     }catch(e){new Notification(title,{body});}
   }
 }
@@ -8272,7 +8272,7 @@ function App(){
     if('Notification' in window&&Notification.permission==='default'){
       Notification.requestPermission().then(p=>{
         if(p==='granted'){
-          new Notification('🔔 BFM OMS',{body:'Notifications enabled! You will be notified of all task updates.',icon:'/ProFlow/icon-192.png'});
+          new Notification('🔔 BFM OMS',{body:'Notifications enabled! You will be notified of all task updates.',icon:'/BFM/icon-192.png'});
         }
       });
     }
@@ -8367,11 +8367,11 @@ function App(){
           onClick:async()=>{
             if(!('Notification' in window)){alert('Notifications not supported on this browser.');return;}
             if(Notification.permission==='granted'){
-              new Notification('🔔 Test Notification',{body:'Notifications are working!',icon:'/ProFlow/icon-192.png'});
+              new Notification('🔔 Test Notification',{body:'Notifications are working!',icon:'/BFM/icon-192.png'});
               return;
             }
             const perm=await Notification.requestPermission();
-            if(perm==='granted'){requestPushPermission(cu.id);new Notification('BFM OMS',{body:'Notifications enabled!',icon:'/ProFlow/icon-192.png'});}
+            if(perm==='granted'){requestPushPermission(cu.id);new Notification('BFM OMS',{body:'Notifications enabled!',icon:'/BFM/icon-192.png'});}
             else if(perm==='denied'){alert('Notifications blocked.\n\nTo fix:\n1. Click the 🔒 lock icon in your browser address bar\n2. Find Notifications\n3. Set to Allow\n4. Refresh the page');}
           },
           style:{marginTop:8,width:'100%',background:typeof Notification!=='undefined'&&Notification.permission==='granted'?'rgba(16,185,129,.08)':'rgba(30,58,95,.05)',border:'1px solid',borderColor:typeof Notification!=='undefined'&&Notification.permission==='granted'?'rgba(16,185,129,.2)':'rgba(30,58,95,.15)',borderRadius:'var(--rs)',padding:'8px',color:typeof Notification!=='undefined'&&Notification.permission==='granted'?'var(--green)':'var(--accent)',fontFamily:'inherit',fontSize:12,fontWeight:600,cursor:'pointer',transition:'all .15s',letterSpacing:'.3px'}
@@ -8469,7 +8469,7 @@ function App(){
           if(!('Notification' in window)){alert('Not supported');return;}
           if(Notification.permission==='granted'){alert('Notifications already enabled ✓');return;}
           const p=await Notification.requestPermission();
-          if(p==='granted'){requestPushPermission(cu.id);new Notification('BFM OMS',{body:'Notifications enabled!',icon:'/ProFlow/icon-192.png'});}
+          if(p==='granted'){requestPushPermission(cu.id);new Notification('BFM OMS',{body:'Notifications enabled!',icon:'/BFM/icon-192.png'});}
           else alert('Blocked — go to browser settings to allow notifications');
         }},
         el('span',{className:'mnav-ico'},typeof Notification!=='undefined'&&Notification.permission==='granted'?'🔔':'🔕'),'Alerts'
@@ -8505,7 +8505,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(el(App));
 <script>
 if('serviceWorker' in navigator && window.location.hostname !== 'www.claudeusercontent.com'){
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/ProFlow/sw.js')
+    navigator.serviceWorker.register('/BFM/sw.js')
       .then(reg => {
         console.log('SW registered');
         setInterval(() => reg.update(), 30 * 60 * 1000);
