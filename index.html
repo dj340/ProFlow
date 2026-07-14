@@ -7,13 +7,13 @@
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
-<meta name="apple-mobile-web-app-title" content="BFM OMS"/>
+<meta name="apple-mobile-web-app-title" content="Black Fox QMS"/>
 <link rel="manifest" href="/BFM/manifest.json"/>
 <link rel="apple-touch-icon" sizes="180x180" href="/BFM/icon-192.png"/>
 <link rel="apple-touch-icon" sizes="152x152" href="/BFM/icon-192.png"/>
 <link rel="apple-touch-icon" sizes="120x120" href="/BFM/icon-192.png"/>
 <link rel="icon" type="image/png" sizes="192x192" href="/BFM/icon-192.png"/>
-<title>BFM Operation Management System</title>
+<title>Black Fox QMS</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
@@ -266,7 +266,7 @@ async function sendEmail({to,subject,html}){
       await fetch(`${SUPA_URL}/functions/v1/send-email`,{
         method:'POST',
         headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPA_KEY},
-        body:JSON.stringify({to:recipient,subject,html,from_name:'BFM OMS',from_email:'noreply@bfmops.com'}),
+        body:JSON.stringify({to:recipient,subject,html,from_name:'Black Fox QMS',from_email:'noreply@bfmops.com'}),
       });
     }
   }catch(e){console.error('Email error:',e);}
@@ -290,7 +290,7 @@ function notifyTask({task, actor, subject, body, skipId=null}){
     if(r.email){
       sendEmail({to:r.email,subject,
         html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:24px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
-          <div style="color:#f5a623;font-size:18px;font-weight:800;margin-bottom:12px">📋 BFM OMS</div>
+          <div style="color:#f5a623;font-size:18px;font-weight:800;margin-bottom:12px">📋 Black Fox QMS</div>
           <div style="font-size:15px;font-weight:700;margin-bottom:8px">${task.title}</div>
           <div style="background:rgba(30,58,95,.06);border:1px solid rgba(30,58,95,.15);border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;line-height:1.6">${bodyText}</div>
           ${actor?`<div style="font-size:12px;color:#7b8db8">By ${actor}</div>`:''}
@@ -713,7 +713,7 @@ function getWorkflowStepObj(task){
 
 function avatarColor(name){return`hsl(${(name.charCodeAt(0)*47)%360},50%,35%)`;}
 
-// ── BFM OMS LOGO MARK ──────────────────────────────────────────────────────
+// ── Black Fox QMS LOGO MARK ──────────────────────────────────────────────────────
 // Hexagonal badge with double-ring border and a bold geometric H monogram —
 // black field, gold ink. Used on login, sidebar, and PWA install prompts.
 function LogoMark({size=32}){
@@ -798,7 +798,7 @@ function BFMlogo({size=32,labelSize=20,className='',textColor}){
   return el('div',{className,style:{display:'flex',alignItems:'center',gap:size*0.32}},
     el(LogoMark,{size}),
     el('div',{style:{fontSize:labelSize,fontWeight:800,letterSpacing:'-0.5px',color:textColor||'var(--accent)',whiteSpace:'nowrap'}},
-      'BFM',el('span',{style:{color:'var(--text2)',fontWeight:400}},' OMS')
+      'BLACK FOX',el('span',{style:{color:'var(--text2)',fontWeight:300,letterSpacing:'1px'}},' QMS')
     ),
   );
 }
@@ -985,7 +985,7 @@ function SetupScreen({onDone}){
   return el('div',{className:'auth-wrap'},
     el('div',{className:'auth-box',style:{width:540}},
       el(BFMlogo,{size:36,labelSize:24,className:'logo'}),
-      el('div',{className:'auth-sub'},'One-time setup required'),
+      el('div',{className:'auth-sub'},'Black Fox QMS — One-time setup'),
       el('div',{style:{background:'var(--bg)',border:'1px solid var(--border)',borderRadius:8,padding:12,marginBottom:14,maxHeight:180,overflowY:'auto'}},
         el('pre',{style:{fontSize:11,color:'var(--text2)',whiteSpace:'pre-wrap',fontFamily:'DM Mono, monospace',lineHeight:1.5}},SETUP_SQL.trim())
       ),
@@ -1093,7 +1093,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
         sendEmail({to:creator.email,
           subject:`👁 Task completed & awaiting your review: "${task.title}"`,
           html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
-            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 BFM OMS</div>
+            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Black Fox QMS</div>
             <div style="background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.25);border-radius:10px;padding:20px;margin-bottom:20px;text-align:center">
               <div style="font-size:36px;margin-bottom:10px">👁</div>
               <div style="font-size:17px;font-weight:700;margin-bottom:6px">Task Completed — Awaiting Your Review</div>
@@ -1114,7 +1114,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
         if(u?.email) sendEmail({to:u.email,
           subject:`✅ Task approved & done: "${task.title}"`,
           html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
-            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 BFM OMS</div>
+            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Black Fox QMS</div>
             <div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:10px;padding:20px;margin-bottom:20px;text-align:center">
               <div style="font-size:40px;margin-bottom:10px">🎉</div>
               <div style="font-size:17px;font-weight:700;margin-bottom:6px">Task Approved & Done!</div>
@@ -1135,7 +1135,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
         if(u?.email) sendEmail({to:u.email,
           subject:`❌ Task rejected: "${task.title}"`,
           html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #7f1d1d">
-            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 BFM OMS</div>
+            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Black Fox QMS</div>
             <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:20px;margin-bottom:20px;text-align:center">
               <div style="font-size:40px;margin-bottom:10px">❌</div>
               <div style="font-size:17px;font-weight:700;margin-bottom:6px">Task Rejected</div>
@@ -1200,7 +1200,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
       const creator=users.find(u=>u.id===task.created_by_id);
       if(creator?.email) sendEmail({to:creator.email,
         subject:`🎉 Cart task fully completed: "${task.title}"`,
-        html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f"><div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 BFM OMS</div><div style="text-align:center;padding:20px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:10px;margin-bottom:20px"><div style="font-size:40px">🎉</div><div style="font-size:17px;font-weight:700;margin-top:8px">All Steps Complete!</div><div style="font-size:13px;color:#6ee7b7;margin-top:4px">"${task.title}"</div></div><p style="font-size:13px;color:#7b8db8">All ${CART_WORKFLOW.length} production steps completed successfully. Task is now Done.</p><a href="${APP_URL}" style="display:inline-block;margin-top:16px;background:#10b981;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">View Task →</a></div>`
+        html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f"><div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Black Fox QMS</div><div style="text-align:center;padding:20px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:10px;margin-bottom:20px"><div style="font-size:40px">🎉</div><div style="font-size:17px;font-weight:700;margin-top:8px">All Steps Complete!</div><div style="font-size:13px;color:#6ee7b7;margin-top:4px">"${task.title}"</div></div><p style="font-size:13px;color:#7b8db8">All ${CART_WORKFLOW.length} production steps completed successfully. Task is now Done.</p><a href="${APP_URL}" style="display:inline-block;margin-top:16px;background:#10b981;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">View Task →</a></div>`
       });
       return;
     }
@@ -1228,7 +1228,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
       sendEmail({to:u.email,
         subject:`📋 Production step advanced: "${task.title}" → ${nextStep.label}`,
         html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
-          <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 BFM OMS — Production Workflow</div>
+          <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Black Fox QMS — Production Workflow</div>
           <div style="display:flex;align-items:center;gap:12px;background:rgba(30,58,95,.06);border:1px solid rgba(30,58,95,.15);border-radius:10px;padding:16px;margin-bottom:20px">
             <div style="font-size:28px">✅</div>
             <div>
@@ -1277,7 +1277,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
         sendEmail({to:u.email,
           subject:`🚨 Testing FAILED & task on hold: "${task.title}"`,
           html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #7f1d1d">
-            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 BFM OMS</div>
+            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Black Fox QMS</div>
             <div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.4);border-radius:10px;padding:20px;margin-bottom:20px;text-align:center">
               <div style="font-size:40px;margin-bottom:8px">🚨</div>
               <div style="font-size:18px;font-weight:800;color:#ef4444">TESTING FAILED</div>
@@ -2266,8 +2266,8 @@ function Team({users,setUsers,cu}){
       await db.update('pf_users',id,{approved:true});
       setUsers(p=>p.map(u=>u.id===id?{...u,approved:true}:u));
       const user=users.find(u=>u.id===id);
-      sendLocalNotification('✅ Account Approved','Welcome to BFM OMS!').catch(()=>{});
-      if(user?.email) sendEmail({to:user.email,subject:'Your BFM OMS account is approved',html:`<div style="font-family:sans-serif;background:#0f1117;color:#e8eaf0;padding:24px;border-radius:12px;max-width:500px"><div style="color:#f5a623;font-size:20px;font-weight:700;margin-bottom:12px">BFM OMS</div><p>Hi ${user.name}, your account has been approved.</p><a href="${APP_URL}" style="display:inline-block;background:#f5a623;color:#000000;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:600;margin-top:12px">Sign In →</a></div>`});
+      sendLocalNotification('✅ Account Approved','Welcome to Black Fox QMS!').catch(()=>{});
+      if(user?.email) sendEmail({to:user.email,subject:'Your Black Fox QMS account is approved',html:`<div style="font-family:sans-serif;background:#0f1117;color:#e8eaf0;padding:24px;border-radius:12px;max-width:500px"><div style="color:#f5a623;font-size:20px;font-weight:700;margin-bottom:12px">Black Fox QMS</div><p>Hi ${user.name}, your account has been approved.</p><a href="${APP_URL}" style="display:inline-block;background:#f5a623;color:#000000;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:600;margin-top:12px">Sign In →</a></div>`});
     }catch(e){console.error('approve error:',e);}
   }
 
@@ -3235,7 +3235,7 @@ Create comprehensive meeting notes in this EXACT JSON format (no markdown, just 
       recipients.forEach(a=>{
         sendEmail({to:a.email,subject:`📋 Meeting Notes: ${event.title} — ${event.date}`,
           html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:32px;border-radius:12px;max-width:620px;border:1px solid #1a2d4f">
-            <div style="color:#f5a623;font-size:22px;font-weight:800;margin-bottom:4px">📋 BFM OMS</div>
+            <div style="color:#f5a623;font-size:22px;font-weight:800;margin-bottom:4px">📋 Black Fox QMS</div>
             <div style="font-size:13px;color:#7b8db8;margin-bottom:24px">AI-Generated Meeting Notes</div>
             <div style="font-size:20px;font-weight:700;margin-bottom:6px">${event.title}</div>
             <div style="font-size:13px;color:#7b8db8;margin-bottom:24px">📅 ${event.date}${event.start_time?' at '+event.start_time:''} · Notes by ${cu.name}</div>
@@ -3370,20 +3370,225 @@ const QMS_PRIORITIES={critical:{label:'Critical',color:'#ef4444'},major:{label:'
 const QMS_STATUSES={open:{label:'Open',color:'#ef4444'},in_progress:{label:'In Progress',color:'#f5a623'},closed:{label:'Closed',color:'#10b981'},cancelled:{label:'Cancelled',color:'#6b7280'}};
 
 // ── COMPLIANCE MODULE (ISO 9001 + GMP + 21 CFR 117 + Missouri DCR) ──────────
+// ── RISK REGISTER (ISO 9001:2015 Clause 6.1) ────────────────────────────────
+const RISK_CATEGORIES=['Regulatory','Food Safety / GMP','Supplier','Equipment','Personnel','Cybersecurity','Environmental','Financial','Operational','Quality'];
+const RISK_LIKELIHOOD=['1 - Rare','2 - Unlikely','3 - Possible','4 - Likely','5 - Almost Certain'];
+const RISK_IMPACT=['1 - Negligible','2 - Minor','3 - Moderate','4 - Major','5 - Catastrophic'];
+
+function riskScore(l,i){return(parseInt(l)||1)*(parseInt(i)||1);}
+function riskLevel(score){
+  if(score>=15) return{label:'Critical',color:'#dc2626',bg:'rgba(220,38,38,.1)'};
+  if(score>=8)  return{label:'High',color:'#d97706',bg:'rgba(217,119,6,.1)'};
+  if(score>=4)  return{label:'Medium',color:'#ca8a04',bg:'rgba(202,138,4,.08)'};
+  return{label:'Low',color:'#16a34a',bg:'rgba(22,163,74,.1)'};
+}
+
+function RiskRegister({cu,isElevated,isAdmin,SUPA_URL,SUPA_KEY,H}){
+  const[risks,setRisks]=React.useState([]);
+  const[loading,setLoading]=React.useState(true);
+  const[showForm,setShowForm]=React.useState(false);
+  const[editRisk,setEditRisk]=React.useState(null);
+  const[filter,setFilter]=React.useState('all');
+  const[saving,setSaving]=React.useState(false);
+  const TABLE='pf_risk_register';
+
+  const EMPTY={title:'',category:'Regulatory',description:'',likelihood:'3 - Possible',impact:'3 - Moderate',current_controls:'',treatment_action:'',owner:'',target_date:'',residual_likelihood:'2 - Unlikely',residual_impact:'2 - Minor',status:'open'};
+  const[form,setForm]=React.useState(EMPTY);
+
+  React.useEffect(()=>{
+    fetch(`${SUPA_URL}/rest/v1/${TABLE}?select=*&order=created_at.desc`,{headers:H.headers})
+      .then(r=>r.ok?r.json():[]).then(rows=>{setRisks(Array.isArray(rows)?rows:[]);setLoading(false);})
+      .catch(()=>setLoading(false));
+  },[]);
+
+  function openNew(){setForm(EMPTY);setEditRisk(null);setShowForm(true);}
+  function openEdit(r){setForm({...r});setEditRisk(r);setShowForm(true);}
+
+  async function save(){
+    if(!form.title.trim()){alert('Risk title is required.');return;}
+    setSaving(true);
+    const rec={...form,updated_by:cu.name,updated_at:new Date().toISOString()};
+    try{
+      if(editRisk){
+        await fetch(`${SUPA_URL}/rest/v1/${TABLE}?id=eq.${editRisk.id}`,{method:'PATCH',headers:H.headers,body:JSON.stringify(rec)});
+        setRisks(p=>p.map(r=>r.id===editRisk.id?{...r,...rec}:r));
+      } else {
+        rec.id='risk-'+Date.now();rec.created_by=cu.name;rec.created_at=new Date().toISOString();
+        const res=await fetch(`${SUPA_URL}/rest/v1/${TABLE}`,{method:'POST',headers:{...H.headers,'Prefer':'return=representation'},body:JSON.stringify(rec)});
+        if(!res.ok)throw new Error(await res.text());
+        setRisks(p=>[rec,...p]);
+      }
+      setShowForm(false);
+    }catch(e){alert('Save failed: '+e.message);}
+    setSaving(false);
+  }
+
+  async function deleteRisk(id){
+    if(!confirm('Delete this risk?'))return;
+    await fetch(`${SUPA_URL}/rest/v1/${TABLE}?id=eq.${id}`,{method:'DELETE',headers:H.headers});
+    setRisks(p=>p.filter(r=>r.id!==id));
+  }
+
+  const FLD=(label,key,type='text',opts={})=>el('div',{className:'fg',style:{marginBottom:0}},
+    el('label',null,label),
+    type==='select'
+      ? el('select',{value:form[key],onChange:ev=>setF(key,ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+          (opts.options||[]).map(o=>el('option',{key:o,value:o},o))
+        )
+      : type==='textarea'
+        ? el('textarea',{value:form[key],onChange:ev=>setF(key,ev.target.value),rows:2,style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,resize:'vertical',boxSizing:'border-box'}})
+        : el('input',{type,value:form[key],onChange:ev=>setF(key,ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,boxSizing:'border-box'}}),
+  );
+  const setF=(k,v)=>setForm(p=>({...p,[k]:v}));
+
+  const filtered=filter==='all'?risks:risks.filter(r=>riskLevel(riskScore(r.likelihood,r.impact)).label.toLowerCase()===filter);
+  const counts={Critical:0,High:0,Medium:0,Low:0};
+  risks.forEach(r=>{const l=riskLevel(riskScore(r.likelihood,r.impact)).label;counts[l]=(counts[l]||0)+1;});
+
+  if(loading) return el('div',{style:{padding:24,color:'var(--text2)'}},'Loading risk register...');
+
+  return el('div',{style:{padding:'0 0 48px'}},
+    // Header
+    el('div',{style:{background:'linear-gradient(135deg,#7c2d12,#991b1b)',borderRadius:14,padding:'22px 28px',marginBottom:24,color:'#fff'}},
+      el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:12}},
+        el('div',null,
+          el('div',{style:{fontSize:22,fontWeight:800,marginBottom:3}},'⚠️ Risk Register'),
+          el('div',{style:{fontSize:13,opacity:.85}},'ISO 9001:2015 Clause 6.1 — Risk & Opportunity Management'),
+        ),
+        isElevated&&el('button',{onClick:openNew,style:{background:'#fff',color:'#7c2d12',border:'none',borderRadius:8,padding:'9px 20px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer'}},'+ Add Risk'),
+      ),
+      // Summary stats
+      el('div',{style:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10,marginTop:18}},
+        Object.entries(counts).map(([level,count])=>{
+          const rl=riskLevel(level==='Critical'?20:level==='High'?12:level==='Medium'?6:2);
+          return el('div',{key:level,style:{background:'rgba(255,255,255,.12)',borderRadius:10,padding:'12px 14px',textAlign:'center'}},
+            el('div',{style:{fontSize:28,fontWeight:800,color:'#fff'}},count),
+            el('div',{style:{fontSize:11,color:'rgba(255,255,255,.75)',marginTop:2}},level+' Risk'),
+          );
+        }),
+      ),
+    ),
+
+    // Filter tabs
+    el('div',{style:{display:'flex',gap:6,marginBottom:16,flexWrap:'wrap'}},
+      ['all','critical','high','medium','low'].map(f=>
+        el('button',{key:f,onClick:()=>setFilter(f),style:{
+          padding:'6px 16px',borderRadius:8,border:'1px solid',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'inherit',transition:'all .15s',
+          borderColor:filter===f?'var(--accent)':'var(--border)',
+          background:filter===f?'var(--accent)':'transparent',
+          color:filter===f?'#fff':'var(--text2)',
+        }},f.charAt(0).toUpperCase()+f.slice(1)+(f!=='all'?' ('+counts[f.charAt(0).toUpperCase()+f.slice(1)]+')':''))
+      ),
+    ),
+
+    // Risk list
+    filtered.length===0
+      ?el('div',{style:{textAlign:'center',padding:'48px 24px',color:'var(--text3)'}},
+          el('div',{style:{fontSize:40,marginBottom:12}},'✅'),
+          el('div',{style:{fontSize:15,fontWeight:700,color:'var(--text2)',marginBottom:6}},'No risks in this category'),
+          el('div',{style:{fontSize:13}},'Add risks to maintain your ISO 9001 Clause 6.1 compliance'),
+        )
+      :el('div',{style:{display:'flex',flexDirection:'column',gap:10}},
+        filtered.map(risk=>{
+          const inherentScore=riskScore(risk.likelihood,risk.impact);
+          const residualScore=riskScore(risk.residual_likelihood||risk.likelihood,risk.residual_impact||risk.impact);
+          const inherentLevel=riskLevel(inherentScore);
+          const residualLevel=riskLevel(residualScore);
+          return el('div',{key:risk.id,style:{background:'#fff',border:'1px solid var(--border)',borderRadius:12,padding:'16px 18px',boxShadow:'0 1px 4px rgba(15,23,42,.05)'}},
+            el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12,flexWrap:'wrap'}},
+              el('div',{style:{flex:1,minWidth:0}},
+                el('div',{style:{display:'flex',gap:8,marginBottom:8,flexWrap:'wrap',alignItems:'center'}},
+                  el('span',{style:{background:'rgba(30,58,95,.08)',color:'var(--accent)',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:700}},risk.category),
+                  el('span',{style:{background:inherentLevel.bg,color:inherentLevel.color,borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:700,border:'1px solid',borderColor:inherentLevel.color+'44'}},'Inherent: '+inherentLevel.label+' ('+inherentScore+')'),
+                  residualScore!==inherentScore&&el('span',{style:{background:residualLevel.bg,color:residualLevel.color,borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:700,border:'1px solid',borderColor:residualLevel.color+'44'}},'Residual: '+residualLevel.label+' ('+residualScore+')'),
+                  el('span',{style:{background:risk.status==='closed'?'rgba(22,163,74,.1)':'rgba(100,116,139,.1)',color:risk.status==='closed'?'#16a34a':'#64748b',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:700}},risk.status==='closed'?'✓ Closed':'Open'),
+                ),
+                el('div',{style:{fontSize:15,fontWeight:700,color:'var(--text)',marginBottom:4}},risk.title),
+                risk.description&&el('div',{style:{fontSize:13,color:'var(--text2)',lineHeight:1.5,marginBottom:8}},risk.description),
+                el('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:8}},
+                  risk.current_controls&&el('div',{style:{fontSize:12,color:'var(--text2)'}},el('span',{style:{fontWeight:700,color:'var(--text)'}},'Controls: '),risk.current_controls),
+                  risk.treatment_action&&el('div',{style:{fontSize:12,color:'var(--text2)'}},el('span',{style:{fontWeight:700,color:'var(--text)'}},'Action: '),risk.treatment_action),
+                  risk.owner&&el('div',{style:{fontSize:12,color:'var(--text2)'}},el('span',{style:{fontWeight:700,color:'var(--text)'}},'Owner: '),risk.owner),
+                  risk.target_date&&el('div',{style:{fontSize:12,color:'var(--text2)'}},el('span',{style:{fontWeight:700,color:'var(--text)'}},'Target: '),risk.target_date),
+                ),
+              ),
+              el('div',{style:{display:'flex',gap:6,flexShrink:0}},
+                isElevated&&el('button',{onClick:()=>openEdit(risk),className:'btn b-ghost btn-sm'},'✏️ Edit'),
+                isAdmin&&el('button',{onClick:()=>deleteRisk(risk.id),className:'btn b-red btn-sm'},'Delete'),
+              ),
+            ),
+          );
+        })
+      ),
+
+    // Add/Edit Modal
+    showForm&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setShowForm(false)},
+      el('div',{className:'md',style:{width:680,maxHeight:'92vh',overflowY:'auto'}},
+        el('div',{className:'mh'},
+          el('div',{className:'mt2'},editRisk?'Edit Risk':'Add New Risk'),
+          el('button',{className:'mc',onClick:()=>setShowForm(false)},'×'),
+        ),
+        el('div',{className:'mbd'},
+          el('div',{className:'fg'},el('label',null,'Risk Title *'),el('input',{value:form.title,autoFocus:true,onChange:ev=>setF('title',ev.target.value),placeholder:'e.g. Supplier COA not received before production',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,boxSizing:'border-box'}})),
+          el('div',{className:'g2'},
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Category'),el('select',{value:form.category,onChange:ev=>setF('category',ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},RISK_CATEGORIES.map(c=>el('option',{key:c,value:c},c)))),
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Status'),el('select',{value:form.status,onChange:ev=>setF('status',ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},el('option',{value:'open'},'Open'),el('option',{value:'closed'},'Closed'))),
+          ),
+          el('div',{className:'fg'},el('label',null,'Description'),el('textarea',{value:form.description,onChange:ev=>setF('description',ev.target.value),rows:2,placeholder:'Describe the risk scenario...',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,resize:'vertical',boxSizing:'border-box'}})),
+
+          el('div',{style:{background:'rgba(220,38,38,.04)',border:'1px solid rgba(220,38,38,.15)',borderRadius:10,padding:'14px',marginBottom:14}},
+            el('div',{style:{fontSize:11,fontWeight:800,color:'#dc2626',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:10}},'Inherent Risk (before controls)'),
+            el('div',{className:'g2'},
+              el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Likelihood'),el('select',{value:form.likelihood,onChange:ev=>setF('likelihood',ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},RISK_LIKELIHOOD.map(l=>el('option',{key:l,value:l},l)))),
+              el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Impact'),el('select',{value:form.impact,onChange:ev=>setF('impact',ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},RISK_IMPACT.map(i=>el('option',{key:i,value:i},i)))),
+            ),
+            el('div',{style:{marginTop:8,padding:'8px 12px',background:'rgba(220,38,38,.08)',borderRadius:8,fontSize:13,fontWeight:700,color:'#dc2626'}},
+              (()=>{const s=riskScore(form.likelihood,form.impact);const rl=riskLevel(s);return `Inherent Risk Score: ${s} — ${rl.label}`;})()
+            ),
+          ),
+
+          el('div',{className:'fg'},el('label',null,'Current Controls'),el('textarea',{value:form.current_controls,onChange:ev=>setF('current_controls',ev.target.value),rows:2,placeholder:'What controls are already in place?',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,resize:'vertical',boxSizing:'border-box'}})),
+          el('div',{className:'fg'},el('label',null,'Treatment Action (to further reduce risk)'),el('textarea',{value:form.treatment_action,onChange:ev=>setF('treatment_action',ev.target.value),rows:2,placeholder:'What additional action will be taken?',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,resize:'vertical',boxSizing:'border-box'}})),
+          el('div',{className:'g2'},
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Risk Owner'),el('input',{value:form.owner,onChange:ev=>setF('owner',ev.target.value),placeholder:'Person responsible',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,boxSizing:'border-box'}})),
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Target Closure Date'),el('input',{type:'date',value:form.target_date,onChange:ev=>setF('target_date',ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}})),
+          ),
+
+          el('div',{style:{background:'rgba(22,163,74,.04)',border:'1px solid rgba(22,163,74,.15)',borderRadius:10,padding:'14px',marginBottom:14,marginTop:4}},
+            el('div',{style:{fontSize:11,fontWeight:800,color:'#16a34a',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:10}},'Residual Risk (after controls & actions)'),
+            el('div',{className:'g2'},
+              el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Residual Likelihood'),el('select',{value:form.residual_likelihood,onChange:ev=>setF('residual_likelihood',ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},RISK_LIKELIHOOD.map(l=>el('option',{key:l,value:l},l)))),
+              el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Residual Impact'),el('select',{value:form.residual_impact,onChange:ev=>setF('residual_impact',ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},RISK_IMPACT.map(i=>el('option',{key:i,value:i},i)))),
+            ),
+            el('div',{style:{marginTop:8,padding:'8px 12px',background:'rgba(22,163,74,.08)',borderRadius:8,fontSize:13,fontWeight:700,color:'#16a34a'}},
+              (()=>{const s=riskScore(form.residual_likelihood,form.residual_impact);const rl=riskLevel(s);return `Residual Risk Score: ${s} — ${rl.label}`;})()
+            ),
+          ),
+
+          el('div',{className:'mf'},
+            el('button',{className:'btn b-ghost',onClick:()=>setShowForm(false)},'Cancel'),
+            el('button',{className:'btn b-blue',disabled:saving,onClick:save},saving?'Saving...':editRisk?'Save Changes':'Add Risk'),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
 const COMPLIANCE_FRAMEWORKS={
   iso9001:{label:'ISO 9001:2015',color:'#1e3a5f',icon:'🏆',clauses:[
     {id:'4.1',title:'Context of the Organization',req:'Understand internal/external issues affecting the QMS.',actions:['Conduct SWOT analysis annually','Document interested parties and their requirements','Review context at management review meetings']},
     {id:'5.1',title:'Leadership & Commitment',req:'Top management must demonstrate QMS leadership and commitment.',actions:['Hold quarterly management review meetings','Document and communicate quality policy','Assign QMS roles and responsibilities to leadership']},
-    {id:'5.3',title:'Roles & Responsibilities',req:'Define, assign and communicate QMS roles throughout the organization.',actions:['Maintain current org chart','Document role responsibilities in BFM OMS','Ensure all staff acknowledge their QMS role in writing']},
+    {id:'5.3',title:'Roles & Responsibilities',req:'Define, assign and communicate QMS roles throughout the organization.',actions:['Maintain current org chart','Document role responsibilities in Black Fox QMS','Ensure all staff acknowledge their QMS role in writing']},
     {id:'6.1',title:'Risk & Opportunity Management',req:'Plan actions to address risks and opportunities.',actions:['Complete risk register annually','Review and update CAPA log monthly','Document risk treatment actions and verify effectiveness']},
-    {id:'7.2',title:'Competence & Training',req:'Ensure all personnel are competent based on education, training and experience.',actions:['Maintain training matrix for all employees in BFM OMS','Document competency assessments per role','Record all SOP acknowledgements and training completions']},
+    {id:'7.2',title:'Competence & Training',req:'Ensure all personnel are competent based on education, training and experience.',actions:['Maintain training matrix for all employees in Black Fox QMS','Document competency assessments per role','Record all SOP acknowledgements and training completions']},
     {id:'7.5',title:'Documented Information',req:'Create, maintain and control all required QMS documents.',actions:['All SOPs must have version number and review date','Ensure SOPs are reviewed at minimum annually','Maintain document control log for external regulations']},
     {id:'8.1',title:'Operational Planning & Control',req:'Plan, implement and control processes needed to meet requirements.',actions:['Document production processes and batch records','Set measurable quality objectives per product line','Review operational KPIs at management meetings']},
-    {id:'8.4',title:'Control of External Providers',req:'Qualify and monitor suppliers and external service providers.',actions:['Maintain approved supplier list in BFM OMS','Conduct annual supplier audits and document findings','Obtain COAs for all incoming raw materials and packaging']},
+    {id:'8.4',title:'Control of External Providers',req:'Qualify and monitor suppliers and external service providers.',actions:['Maintain approved supplier list in Black Fox QMS','Conduct annual supplier audits and document findings','Obtain COAs for all incoming raw materials and packaging']},
     {id:'8.7',title:'Nonconforming Outputs',req:'Control outputs that do not conform to requirements.',actions:['Document all deviations in QMS Deviations module','Quarantine non-conforming materials immediately','Conduct root cause analysis and issue CAPA within 48 hours']},
     {id:'9.2',title:'Internal Audit',req:'Conduct internal audits at planned intervals to ensure QMS conformity.',actions:['Complete annual internal audit schedule for all departments','Audit each department at least once per year','Document findings in QMS Audits module and assign CAPAs']},
     {id:'9.3',title:'Management Review',req:'Top management must review the QMS at planned intervals.',actions:['Hold quarterly management review meetings','Document review minutes including quality objectives progress','Review customer feedback, audit results, and CAPA status']},
-    {id:'10.2',title:'Nonconformity & Corrective Action',req:'React to nonconformities, take corrective action and verify effectiveness.',actions:['Issue corrective actions in BFM OMS within 5 business days','Track and report CAPA closure rate at management review','Verify effectiveness of all corrective actions before closing']},
+    {id:'10.2',title:'Nonconformity & Corrective Action',req:'React to nonconformities, take corrective action and verify effectiveness.',actions:['Issue corrective actions in Black Fox QMS within 5 business days','Track and report CAPA closure rate at management review','Verify effectiveness of all corrective actions before closing']},
   ]},
   gmp:{label:'cGMP (21 CFR)',color:'#065f46',icon:'🧪',clauses:[
     {id:'GMP-1',title:'Personnel Hygiene & Training',req:'All personnel must meet hygiene, health and training requirements.',actions:['Enforce glove change protocol per SOP','Document PPE training for all production staff','Conduct monthly hygiene compliance inspections']},
@@ -4249,7 +4454,7 @@ Write a formal, professional Corrective Action notice. Be factual, specific, and
         await sendEmail({to:employee.email,
           subject:`⚖️ Corrective Action Notice — ${editedCA.title}`,
           html:`<div style="font-family:sans-serif;background:#121212;color:#f0eee8;padding:28px;border-radius:12px;max-width:520px;border:1px solid #333">
-            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">⚖️ BFM OMS</div>
+            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">⚖️ Black Fox QMS</div>
             <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:20px;margin-bottom:20px;text-align:center">
               <div style="font-size:36px;margin-bottom:10px">⚖️</div>
               <div style="font-size:17px;font-weight:700;margin-bottom:6px">Corrective Action Notice</div>
@@ -5469,7 +5674,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
                     setCorrective(p=>p.map(c=>c.id===sel.id?{...c,status:'pending'}:c));
                     setSel(p=>({...p,status:'pending'}));
                     await sendEmail({to:sel.employee_email,subject:`⚖️ Corrective Action Notice — ${sel.title}`,
-                      html:`<div style="font-family:sans-serif;background:#121212;color:#f0eee8;padding:28px;border-radius:12px;max-width:520px;border:1px solid #333"><div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">⚖️ BFM OMS</div><p style="font-size:14px">A corrective action has been issued to you. Please log in to review and sign.</p><a href="${APP_URL}" style="display:inline-block;background:#f5a623;color:#000;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700;margin-top:12px">Review & Sign →</a></div>`
+                      html:`<div style="font-family:sans-serif;background:#121212;color:#f0eee8;padding:28px;border-radius:12px;max-width:520px;border:1px solid #333"><div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">⚖️ Black Fox QMS</div><p style="font-size:14px">A corrective action has been issued to you. Please log in to review and sign.</p><a href="${APP_URL}" style="display:inline-block;background:#f5a623;color:#000;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700;margin-top:12px">Review & Sign →</a></div>`
                     });
                     alert('✓ Sent to '+sel.employee_name+'. Status: Pending Acknowledgement.');
                   }catch(e){alert('Failed: '+e.message);}
@@ -5525,7 +5730,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
                             if(issuer?.email) sendEmail({to:issuer.email,
                               subject:`Corrective Action Acknowledged — ${sel.employee_name}`,
                               html:`<div style="font-family:sans-serif;background:#121212;color:#f0eee8;padding:24px;border-radius:12px;max-width:480px;border:1px solid #333">
-                                <div style="color:#f5a623;font-size:18px;font-weight:800;margin-bottom:12px">⚖️ BFM OMS</div>
+                                <div style="color:#f5a623;font-size:18px;font-weight:800;margin-bottom:12px">⚖️ Black Fox QMS</div>
                                 <p style="font-size:14px">${sel.employee_name} has signed and acknowledged corrective action ${sel.ca_number} ("${sel.title}") on ${update.acknowledged_at.slice(0,10)}.</p>
                               </div>`
                             });
@@ -5967,7 +6172,7 @@ function exportSopPdf(sop){
     doc.setTextColor(255,255,255);
     doc.setFont('helvetica','bold');
     doc.setFontSize(18);
-    doc.text('BFM',margin,32);
+    doc.text('BLACK FOX QMS',margin,26);
     doc.setFont('helvetica','normal');
     doc.setFontSize(10);
     doc.setTextColor(180,200,230);
@@ -6227,7 +6432,7 @@ function exportSopPdf(sop){
     doc.setFont('helvetica','bold');
     doc.setFontSize(9);
     doc.setTextColor(22,163,74);
-    doc.text('Electronically signed via BFM OMS — Records are tamper-evident.',margin,y);
+    doc.text('Electronically signed via Black Fox QMS — Records are tamper-evident.',margin,y);
     y+=10;
   } else {
     checkPageBreak(70);
@@ -6452,7 +6657,7 @@ function exportCorrectiveActionPdf(ca){
     doc.setTextColor(255,255,255);
     doc.setFont('helvetica','bold');
     doc.setFontSize(15);
-    doc.text(companyName,margin,30);
+    doc.text(companyName,margin,26);
     // Subtitle
     doc.setFont('helvetica','normal');
     doc.setFontSize(10);
@@ -6634,7 +6839,7 @@ function exportCorrectiveActionPdf(ca){
     doc.setFont('helvetica','bold');
     doc.setTextColor(40,140,80);
     doc.setFontSize(9);
-    doc.text('Electronically signed & acknowledged via BFM OMS on '+(ca.acknowledged_at?.slice(0,10)||''),margin,y);
+    doc.text('Electronically signed via Black Fox QMS on '+(ca.acknowledged_at?.slice(0,10)||''),margin,y);
     y+=8;
     doc.setFont('helvetica','normal');
     doc.setTextColor(...TEXT2);
@@ -6669,7 +6874,7 @@ function exportEmployeeTrainingPdf(employee,applicableSOPs){
     doc.setTextColor(...GOLD);
     doc.setFont('helvetica','bold');
     doc.setFontSize(16);
-    doc.text('BFM OMS',margin,32);
+    doc.text('Black Fox QMS',margin,32);
     doc.setTextColor(230,230,230);
     doc.setFont('helvetica','normal');
     doc.setFontSize(9);
@@ -7159,7 +7364,7 @@ function exportComplianceSnapshotPdf(license,publishedSOPs,scopeUsers,targetUser
     doc.setTextColor(...GOLD);
     doc.setFont('helvetica','bold');
     doc.setFontSize(16);
-    doc.text('BFM OMS',margin,32);
+    doc.text('Black Fox QMS',margin,32);
     doc.setTextColor(230,230,230);
     doc.setFont('helvetica','normal');
     doc.setFontSize(9);
@@ -8138,14 +8343,14 @@ function SOPs({sops,setSops,cu,users}){
       users.filter(u=>u.approved&&u.email).forEach(u=>{
         sendEmail({to:u.email,subject:`📋 New SOP Published: "${sop.title}"`,
           html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
-            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:4px">📋 BFM OMS</div>
+            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:4px">📋 Black Fox QMS</div>
             <div style="font-size:18px;font-weight:700;margin-bottom:12px">${sop.title}</div>
             <div style="background:rgba(30,58,95,.06);border:1px solid rgba(30,58,95,.15);border-radius:10px;padding:14px;margin-bottom:20px">
               <div style="margin-bottom:6px">📂 Department: <strong>${sop.dept}</strong></div>
               <div style="margin-bottom:6px">📝 Version: <strong>${sop.version}</strong></div>
               <div>👤 Published by: <strong>${cu.name}</strong></div>
             </div>
-            <p style="color:#7b8db8;margin-bottom:20px">Please review and acknowledge this SOP in the BFM OMS app.</p>
+            <p style="color:#7b8db8;margin-bottom:20px">Please review and acknowledge this SOP in the Black Fox QMS app.</p>
             <a href="${APP_URL}" style="background:#f5a623;color:#000000;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">Review SOP →</a>
           </div>`
         });
@@ -8473,7 +8678,7 @@ function SOPs({sops,setSops,cu,users}){
           if(u.email) sendEmail({to:u.email,
             subject:`📋 SOP Updated — Re-acknowledgement Required: "${updated.title}"`,
             html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
-              <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 BFM OMS</div>
+              <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Black Fox QMS</div>
               <div style="background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.25);border-radius:10px;padding:20px;margin-bottom:20px;text-align:center">
                 <div style="font-size:36px;margin-bottom:10px">🔄</div>
                 <div style="font-size:17px;font-weight:700;margin-bottom:6px">SOP Revised — v${updated.version}</div>
@@ -8827,14 +9032,14 @@ function Calendar({events,setEvents,tasks,cu,users,locFilter,meetingNotes,setMee
       f.attendees.filter(a=>a.email&&a.id!==cu.id).forEach(a=>{
         sendEmail({to:a.email,subject:`📅 Invite: "${f.title}"`,
           html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
-            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:4px">📅 BFM OMS</div>
+            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:4px">📅 Black Fox QMS</div>
             <div style="font-size:18px;font-weight:700;margin-bottom:16px">${f.title}</div>
             <div style="background:rgba(30,58,95,.06);border:1px solid rgba(30,58,95,.15);border-radius:10px;padding:16px;margin-bottom:20px">
               <div style="margin-bottom:8px">📅 ${f.date}${f.start_time?' at '+f.start_time:''}</div>
               ${f.location?`<div style="margin-bottom:8px">📍 ${f.location}</div>`:''}
               ${meetLink?`<div>🎥 <a href="${meetLink}" style="color:#f5a623">${meetLink}</a></div>`:''}
             </div>
-            <p style="font-size:13px;color:#7b8db8">${cu.name} invited you. Log in to BFM OMS to accept or decline.</p>
+            <p style="font-size:13px;color:#7b8db8">${cu.name} invited you. Log in to Black Fox QMS to accept or decline.</p>
             <a href="${APP_URL}" style="display:inline-block;background:#f5a623;color:#000000;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:700;margin-top:8px">Review Invite →</a>
           </div>`
         });
@@ -9234,7 +9439,7 @@ function App(){
     if('Notification' in window&&Notification.permission==='default'){
       Notification.requestPermission().then(p=>{
         if(p==='granted'){
-          new Notification('🔔 BFM OMS',{body:'Notifications enabled! You will be notified of all task updates.',icon:'/BFM/icon-192.png'});
+          new Notification('🔔 Black Fox QMS',{body:'Black Fox QMS notifications enabled!',icon:'/BFM/icon-192.png'});
         }
       });
     }
@@ -9282,7 +9487,7 @@ function App(){
   const isAdmin=cu.role==='admin';
   const isElevated=isAdmin||['coo','director_production','director_operations','director_sales_marketing','general_manager','compliance_manager'].includes(cu.role);
   // QMS access: Admin, Managers, and Supervisors. Employees, Leads, and Staff
-  // get SOPs only (per BFM OMS QMS RBAC policy).
+  // get SOPs only (per Black Fox QMS QMS RBAC policy).
   const qmsRoleGroup=ROLE_GROUPS.find(g=>g.roles.includes(cu.role))?.label;
   const canAccessQms=isAdmin||['Executive','Directors','Managers'].includes(qmsRoleGroup);
   const today=new Date().toISOString().slice(0,10);
@@ -9296,6 +9501,7 @@ function App(){
     {id:'sops',ico:'📋',label:'SOPs'},
     canAccessQms&&{id:'qms',ico:'🛡️',label:'QMS'},
     canAccessQms&&{id:'compliance',ico:'✅',label:'Compliance'},
+    canAccessQms&&{id:'risks',ico:'⚠️',label:'Risk Register'},
     {id:'mydocs',ico:'📁',label:'My Documents'},
     {id:'scores',ico:'🏆',label:'Scoreboard'},
     isAdmin&&{id:'team',ico:'👥',label:'Team & Access',badge:pending||null},
@@ -9337,7 +9543,7 @@ function App(){
               return;
             }
             const perm=await Notification.requestPermission();
-            if(perm==='granted'){requestPushPermission(cu.id);new Notification('BFM OMS',{body:'Notifications enabled!',icon:'/BFM/icon-192.png'});}
+            if(perm==='granted'){requestPushPermission(cu.id);new Notification('Black Fox QMS',{body:'Notifications enabled!',icon:'/BFM/icon-192.png'});}
             else if(perm==='denied'){alert('Notifications blocked.\n\nTo fix:\n1. Click the 🔒 lock icon in your browser address bar\n2. Find Notifications\n3. Set to Allow\n4. Refresh the page');}
           },
           style:{marginTop:8,width:'100%',background:typeof Notification!=='undefined'&&Notification.permission==='granted'?'rgba(16,185,129,.08)':'rgba(30,58,95,.05)',border:'1px solid',borderColor:typeof Notification!=='undefined'&&Notification.permission==='granted'?'rgba(16,185,129,.2)':'rgba(30,58,95,.15)',borderRadius:'var(--rs)',padding:'8px',color:typeof Notification!=='undefined'&&Notification.permission==='granted'?'var(--green)':'var(--accent)',fontFamily:'inherit',fontSize:12,fontWeight:600,cursor:'pointer',transition:'all .15s',letterSpacing:'.3px'}
@@ -9349,11 +9555,11 @@ function App(){
             try{
               await sendEmail({
                 to:cu.email,
-                subject:'✅ BFM OMS — Email Test',
+                subject:'✅ Black Fox QMS — Email Test',
                 html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
                   <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">✅ Email Working!</div>
                   <p>Hi ${cu.name},</p>
-                  <p style="margin:12px 0;color:#7b8db8">This is a test email from BFM OMS. If you received this, email notifications are working correctly.</p>
+                  <p style="margin:12px 0;color:#7b8db8">This is a test email from Black Fox QMS. If you received this, email notifications are working correctly.</p>
                   <div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:8px;padding:12px;margin-top:16px;font-size:13px;color:#10b981">
                     ✅ Resend API connected<br>✅ Email delivery confirmed
                   </div>
@@ -9438,8 +9644,8 @@ function App(){
       el('img',{src:'/BFM/icon-192.png',width:48,height:48,style:{borderRadius:10,flexShrink:0},
         onError:e=>{e.target.style.display='none';}}),
       el('div',{style:{flex:1,minWidth:0}},
-        el('div',{style:{fontSize:14,fontWeight:700,marginBottom:3}},'Install BFM OMS'),
-        el('div',{style:{fontSize:12,opacity:.8,lineHeight:1.4}},'Add to your home screen for quick access — works like a native app'),
+        el('div',{style:{fontSize:14,fontWeight:700,marginBottom:3}},'Install Black Fox QMS'),
+        el('div',{style:{fontSize:12,opacity:.8,lineHeight:1.4}},'Black Fox QMS — works like a native app on any device'),
       ),
       el('div',{style:{display:'flex',flexDirection:'column',gap:6,flexShrink:0}},
         el('button',{
@@ -9476,7 +9682,7 @@ function App(){
           if(!('Notification' in window)){alert('Not supported');return;}
           if(Notification.permission==='granted'){alert('Notifications already enabled ✓');return;}
           const p=await Notification.requestPermission();
-          if(p==='granted'){requestPushPermission(cu.id);new Notification('BFM OMS',{body:'Notifications enabled!',icon:'/BFM/icon-192.png'});}
+          if(p==='granted'){requestPushPermission(cu.id);new Notification('Black Fox QMS',{body:'Notifications enabled!',icon:'/BFM/icon-192.png'});}
           else alert('Blocked — go to browser settings to allow notifications');
         }},
         el('span',{className:'mnav-ico'},typeof Notification!=='undefined'&&Notification.permission==='granted'?'🔔':'🔕'),'Alerts'
@@ -9492,6 +9698,7 @@ function App(){
       page==='sales'&&el(SalesMarketing,{salesTasks,setSalesTasks,cu,users,locFilter}),
       page==='sops'&&el(SOPs,{sops,setSops,cu,users}),
       page==='compliance'&&canAccessQms&&el(ComplianceModule,{cu,isElevated,isAdmin,LICENSES,SUPA_URL,SUPA_KEY,H,db}),
+      page==='risks'&&canAccessQms&&el(RiskRegister,{cu,isElevated,isAdmin,SUPA_URL,SUPA_KEY,H}),
       page==='qms'&&canAccessQms&&el(QMS,{cu,users,tasks,sops,
         deviations:qmsDeviations,setDeviations:setQmsDeviations,
         capas:qmsCAPAs,setCapas:setQmsCAPAs,
@@ -9545,7 +9752,7 @@ window.addEventListener('beforeinstallprompt', e => {
       const banner = document.createElement('div');
       banner.id = 'install-banner';
       banner.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1e3a5f;color:#ffffff;padding:12px 20px;border-radius:12px;font-family:Inter,sans-serif;font-size:13px;font-weight:700;cursor:pointer;z-index:9999;box-shadow:0 8px 24px rgba(30,58,95,.3);display:flex;align-items:center;gap:10px;';
-      banner.innerHTML = '<span>📱</span><span>Add BFM OMS to Home Screen</span><span style="margin-left:8px;opacity:.6">×</span>';
+      banner.innerHTML = '<span>📱</span><span>Add Black Fox QMS to Home Screen</span><span style="margin-left:8px;opacity:.6">×</span>';
       banner.onclick = (e) => {
         if(e.target.textContent === '×') { banner.remove(); return; }
         deferredPrompt.prompt();
