@@ -1,64 +1,10323 @@
-// Supabase Edge Function: send-email
-// Deploy to: supabase functions deploy send-email
-// Set secret: supabase secrets set RESEND_API_KEY=re_3xAVVKE1_BhhCtTpcgARTpCr5equsLqzt
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
+<meta name="theme-color" content="#1e3a5f"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+<meta name="apple-mobile-web-app-title" content="Black Fox QMS"/>
+<link rel="manifest" href="/BFM/manifest.json"/>
+<link rel="apple-touch-icon" sizes="180x180" href="/BFM/icon-192.png"/>
+<link rel="apple-touch-icon" sizes="152x152" href="/BFM/icon-192.png"/>
+<link rel="apple-touch-icon" sizes="120x120" href="/BFM/icon-192.png"/>
+<link rel="icon" type="image/png" sizes="192x192" href="/BFM/icon-192.png"/>
+<title>Black Fox QMS</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+:root{
+  --bg:#f0f6ff;
+  --surface:#f0f4f8;
+  --surface2:#e2e8f0;
+  --surface3:#cbd5e1;
+  --border:#cbd5e1;
+  --border2:#94a3b8;
+  --accent:#1e3a5f;
+  --accent2:#2d5282;
+  --accent-dim:rgba(30,58,95,.1);
+  --green:#10b981;
+  --red:#ef4444;
+  --blue:#3b82f6;
+  --purple:#8b5cf6;
+  --text:#0f172a;
+  --text2:#475569;
+  --text3:#94a3b8;
+  --r:14px;--rs:10px;
+  --glow:0 0 40px rgba(30,58,95,.1);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(30,58,95,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(30,58,95,.04) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+.auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;z-index:1;}
+.auth-box{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:44px 40px;width:440px;max-width:95vw;box-shadow:var(--glow),0 1px 3px rgba(15,23,42,.08);}
+.logo{display:flex;align-items:center;}
+.logo span{color:var(--text2);font-weight:400;}
+.auth-sub{color:var(--text2);font-size:13px;margin-top:3px;margin-bottom:28px;letter-spacing:.3px;}
+.auth-tabs{display:flex;gap:3px;background:var(--bg);border-radius:var(--rs);padding:3px;margin-bottom:24px;border:1px solid var(--border);}
+.atab{flex:1;padding:8px;text-align:center;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text2);border:none;background:none;font-family:inherit;transition:all .15s;}
+.atab.on{background:var(--surface2);color:var(--text);box-shadow:0 1px 3px rgba(15,23,42,.12);}
+.fg{margin-bottom:14px;}
+.fg label{display:block;font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;}
+.fg input,.fg select,.fg textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);padding:11px 14px;color:var(--text);font-family:inherit;font-size:13px;outline:none;transition:border-color .2s,box-shadow .2s;}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(30,58,95,.12);}
+.fg select option{background:var(--surface);}
+.fg textarea{resize:vertical;min-height:80px;}
+.btn-primary{width:100%;background:var(--accent);color:#ffffff;border:none;border-radius:var(--rs);padding:12px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px;transition:all .15s;letter-spacing:.3px;}
+.btn-primary:hover{background:var(--accent2);transform:translateY(-1px);}
+.btn-primary:active{transform:translateY(0);}
+.auth-note{font-size:11px;color:var(--text3);text-align:center;margin-top:12px;}
+.pending-box{background:rgba(30,58,95,.05);border:1px solid rgba(30,58,95,.2);border-radius:var(--rs);padding:28px;text-align:center;}
+.app{display:flex;min-height:100vh;position:relative;z-index:1;}
+.sb{width:248px;background:#1e3a5f;border-right:1px solid #2d5282;display:flex;flex-direction:column;padding:20px 14px;position:fixed;top:0;left:0;bottom:0;z-index:100;overflow-y:auto;}
+.sb::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent);}
+.sb-logo{display:flex;align-items:center;padding:4px 8px;margin-bottom:28px;}
+.sb-logo span{color:rgba(255,255,255,.6);font-weight:300;font-size:16px;}
+.sb-label{font-size:10px;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:1.5px;padding:0 8px;margin-bottom:6px;}
+.nav{display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:var(--rs);cursor:pointer;font-size:13px;font-weight:500;color:rgba(255,255,255,.75);border:none;background:none;width:100%;text-align:left;position:relative;transition:all .15s;}
+.nav:hover{background:rgba(255,255,255,.1);color:#ffffff;}
+.nav.on{background:rgba(255,255,255,.18);color:#ffffff;border:1px solid rgba(255,255,255,.25);}
+.nav .dot{position:absolute;right:10px;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;}
+.sb-user{margin-top:auto;padding:13px;background:rgba(255,255,255,.08);border-radius:var(--r);border:1px solid rgba(255,255,255,.15);}
+.sb-name{font-size:13px;font-weight:700;color:#ffffff;}
+.sb-role{font-size:11px;color:rgba(255,255,255,.6);margin-top:3px;}
+.sb-out{margin-top:8px;font-size:12px;color:rgba(255,255,255,.5);cursor:pointer;background:none;border:none;font-family:inherit;padding:0;transition:color .15s;}
+.sb-out:hover{color:#fca5a5;}
+.main{margin-left:248px;flex:1;padding:28px 32px;max-width:1400px;}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:var(--rs);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .15s;}
+.b-blue{background:var(--accent);color:#ffffff;}.b-blue:hover{background:var(--accent2);transform:translateY(-1px);}
+.b-ghost{background:transparent;color:var(--text2);border:1px solid var(--border);}.b-ghost:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim);}
+.b-red{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.2);}.b-red:hover{background:rgba(239,68,68,.15);}
+.b-green{background:rgba(16,185,129,.1);color:var(--green);border:1px solid rgba(16,185,129,.2);}
+.btn-sm{padding:5px 11px;font-size:12px;}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important;}
+.mo{position:fixed;inset:0;background:rgba(15,23,42,.6);backdrop-filter:blur(4px);z-index:999;display:flex;align-items:center;justify-content:center;padding:20px;}
+.md{background:#f8fbff;border:1px solid var(--border);border-radius:20px;width:600px;max-width:100%;max-height:92vh;overflow-y:auto;box-shadow:0 24px 60px rgba(15,23,42,.18),var(--glow);}
+.mh{padding:22px 26px 15px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
+.mt2{font-size:16px;font-weight:700;color:var(--text);}
+.mc{background:none;border:none;color:var(--text3);cursor:pointer;font-size:22px;line-height:1;transition:color .15s;}
+.mc:hover{color:var(--text);}
+.mbd{padding:22px 26px;}
+.mf{padding:14px 26px 22px;display:flex;gap:9px;justify-content:flex-end;border-top:1px solid var(--border);}
+.board{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;align-items:start;}
+.col{background:#f8fbff;border:1px solid var(--border);border-radius:var(--r);padding:16px;transition:border-color .2s;box-shadow:0 1px 3px rgba(15,23,42,.05);}
+.col-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border);}
+.col-title{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;}
+.col-dot{width:8px;height:8px;border-radius:50%;}
+.col-count{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:2px 8px;font-size:11px;color:var(--text2);font-weight:700;}
+.task-card{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:8px;cursor:pointer;transition:all .15s;}
+.task-card:hover{border-color:var(--accent);background:var(--surface3);transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,0,0,.3);}
+.task-card.overdue{border-color:rgba(239,68,68,.3);}
+.pri-bar{width:3px;border-radius:4px;flex-shrink:0;align-self:stretch;min-height:40px;}
+.tag{background:rgba(30,58,95,.08);color:var(--accent);border:1px solid rgba(30,58,95,.15);border-radius:5px;padding:2px 8px;font-size:10px;font-weight:700;letter-spacing:.3px;}
+.section-tag{background:var(--surface3);color:var(--text2);border:1px solid var(--border);border-radius:5px;padding:2px 8px;font-size:10px;font-weight:600;}
+.avatar{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;border:2px solid var(--surface2);flex-shrink:0;}
+.pipeline{display:flex;gap:4px;margin-bottom:18px;}
+.pipe-btn{flex:1;padding:8px 4px;border-radius:9px;border:1px solid var(--border);background:transparent;color:var(--text3);cursor:pointer;font-size:11px;font-weight:700;transition:all .15s;font-family:inherit;text-transform:uppercase;letter-spacing:.5px;}
+.pipe-btn.active{color:#000000;font-weight:800;}
+.pipe-btn:hover:not(:disabled){border-color:rgba(30,58,95,.4);color:var(--text);}
+.pipe-btn:disabled{opacity:.3;cursor:not-allowed;}
+.ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;gap:12px;flex-wrap:wrap;}
+.pt{font-size:22px;font-weight:800;letter-spacing:-.5px;color:var(--text);}
+.ps{font-size:13px;color:var(--text2);margin-top:4px;}
+.divider{height:1px;background:var(--border);margin:16px 0;}
+.empty{text-align:center;padding:50px 20px;color:var(--text3);}
+.eico{font-size:36px;margin-bottom:12px;}
+.etxt{font-size:14px;color:var(--text2);}
+.g2{display:grid;grid-template-columns:repeat(2,1fr);gap:13px;}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin-bottom:22px;}
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+.bb-blue{background:rgba(30,58,95,.08);color:var(--accent);border:1px solid rgba(30,58,95,.18);}
+.bb-green{background:rgba(16,185,129,.1);color:var(--green);}
+.bb-yellow{background:rgba(30,58,95,.08);color:var(--accent);}
+.bb-red{background:rgba(239,68,68,.1);color:var(--red);}
+.bb-gray{background:var(--surface2);color:var(--text2);border:1px solid var(--border);}
+.bb-purple{background:rgba(139,92,246,.1);color:var(--purple);}
+.alert{display:flex;align-items:flex-start;gap:9px;padding:12px 14px;border-radius:var(--rs);margin-bottom:10px;font-size:13px;}
+.al-yellow{background:rgba(30,58,95,.05);border:1px solid rgba(30,58,95,.15);color:var(--accent2);}
+.al-blue{background:rgba(30,58,95,.05);border:1px solid rgba(30,58,95,.12);color:var(--accent);}
+.loading{display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:14px;color:var(--text2);font-size:14px;position:relative;z-index:1;}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+@keyframes shake{0%,100%{transform:translateX(0)}10%,30%,50%,70%,90%{transform:translateX(-8px)}20%,40%,60%,80%{transform:translateX(8px)}}
+@keyframes pulse-red{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.4)}50%{box-shadow:0 0 0 20px rgba(239,68,68,0)}}
+.on-hold-alert{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(239,68,68,.15);backdrop-filter:blur(2px);animation:shake .5s ease 0s 3;}
+.on-hold-banner{background:#ef4444;color:#fff;padding:32px 40px;border-radius:16px;text-align:center;max-width:420px;box-shadow:0 0 60px rgba(239,68,68,.6);animation:pulse-red 1s infinite;}
+.cancelled-alert{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(239,68,68,.15);backdrop-filter:blur(2px);animation:shake .5s ease 0s 3;}
+.cancelled-banner{background:linear-gradient(135deg,#b91c1c,#ef4444);color:#fff;padding:32px 40px;border-radius:16px;text-align:center;max-width:440px;box-shadow:0 0 60px rgba(239,68,68,.6);animation:pulse-red 1s infinite;}
+.tabs{display:flex;gap:3px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:3px;margin-bottom:18px;width:fit-content;}
+.tab{padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;color:var(--text2);border:none;background:none;font-family:inherit;transition:all .15s;}
+.tab.on{background:var(--surface3);color:var(--text);border:1px solid var(--border2);}
+.view-toggle{display:flex;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:3px;gap:2px;}
+.vbtn{padding:6px 13px;border-radius:8px;border:none;background:transparent;color:var(--text2);cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;transition:all .15s;}
+.vbtn.on{background:var(--surface3);color:var(--text);border:1px solid var(--border2);}
+.tw{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;}
+th{text-align:left;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;padding:10px 14px;border-bottom:1px solid var(--border);}
+td{padding:12px 14px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(30,58,95,.03);}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px 22px;transition:border-color .2s,transform .15s;}
+.stat:hover{border-color:rgba(30,58,95,.25);transform:translateY(-1px);}
+.sl{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:9px;}
+.sv{font-size:28px;font-weight:800;letter-spacing:-.5px;}
+.card{background:#f8fbff;border:1px solid var(--border);border-radius:var(--r);padding:20px;box-shadow:0 1px 4px rgba(15,23,42,.06);}
+.perm-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:5px;}
+.perm-item{display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border-radius:8px;padding:9px 12px;}
+.perm-label{font-size:12px;font-weight:500;}
+.toggle{position:relative;width:36px;height:20px;flex-shrink:0;}
+.toggle input{opacity:0;width:0;height:0;position:absolute;}
+.tslider{position:absolute;inset:0;background:var(--border2);border-radius:20px;cursor:pointer;transition:.2s;}
+.tslider:before{content:'';position:absolute;width:14px;height:14px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s;}
+.toggle input:checked+.tslider{background:var(--accent);}
+.toggle input:checked+.tslider:before{transform:translateX(16px);}
+@media(max-width:1100px){.board{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:900px){.sb{display:none;}.main{margin-left:0;padding:16px;}.board{grid-template-columns:1fr;}.g4{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:600px){.g4,.g2{grid-template-columns:1fr;}}
+.mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:8px 0 calc(8px + env(safe-area-inset-bottom));z-index:200;grid-template-columns:repeat(4,1fr);}
+.mnav-btn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px;background:none;border:none;color:var(--text2);font-family:inherit;font-size:10px;font-weight:600;cursor:pointer;transition:color .15s;}
+.mnav-btn.on{color:var(--accent);}
+.mnav-ico{font-size:20px;line-height:1;}
+.mnav-dot{position:absolute;top:-2px;right:-2px;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 4px;border-radius:8px;}
+@media(max-width:900px){
+  .mobile-nav{display:grid;}
+  .main{margin-left:0;padding:16px 14px 90px;}
+  .update-banner{position:fixed;top:0;left:0;right:0;background:var(--accent);color:#000000;padding:12px 16px;text-align:center;font-size:13px;font-weight:700;z-index:9999;display:flex;justify-content:space-between;align-items:center;}
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+const {useState,useEffect,useMemo,useCallback}=React;
+const el=React.createElement;
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+const SUPA_URL='https://exaluooarsrlvhptvnhu.supabase.co';
+const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV4YWx1b29hcnNybHZocHR2bmh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4MDcxOTksImV4cCI6MjA5NTM4MzE5OX0.mPOc6d1e8pjLNv2enJvFm_ABl96U53PEw64NJ96diIE';
+// Email handled via Supabase Edge Function (key stored server-side only)
+const APP_URL='https://blfoxman.github.io/BFM';
+const H={headers:{'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}};
 
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+const db={
+  get:(t,q='')=>fetch(`${SUPA_URL}/rest/v1/${t}${q?'?'+q:''}`,{headers:{...H.headers,'Accept':'application/json'}}).then(r=>r.ok?r.json():r.text().then(e=>{throw new Error(e);})),
+  insert:(t,d)=>fetch(`${SUPA_URL}/rest/v1/${t}`,{method:'POST',headers:{...H.headers,'Prefer':'return=representation'},body:JSON.stringify(d)}).then(r=>r.ok?r.json():r.text().then(e=>{throw new Error(e);})),
+  update:(t,id,d)=>fetch(`${SUPA_URL}/rest/v1/${t}?id=eq.${id}`,{method:'PATCH',headers:{...H.headers,'Prefer':'return=representation'},body:JSON.stringify(d)}).then(r=>r.ok?r.json():r.text().then(e=>{throw new Error(e);})),
+  remove:(t,id)=>fetch(`${SUPA_URL}/rest/v1/${t}?id=eq.${id}`,{method:'DELETE',headers:H.headers}).then(r=>{if(!r.ok)throw new Error(r.status);}),
 };
 
-serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
-
-  try {
-    const { to, subject, html, from_name, from_email } = await req.json();
-
-    if (!to || !subject || !html) {
-      return new Response(JSON.stringify({ error: "Missing required fields: to, subject, html" }), {
-        status: 400, headers: { ...CORS, "Content-Type": "application/json" },
-      });
+// ── AUTO MIGRATION ───────────────────────────────────────────────────────────
+async function runMigrations(){
+  // Add oversees_depts column if missing
+  try{
+    // Test if column exists by fetching one user
+    const test=await fetch(`${SUPA_URL}/rest/v1/pf_users?select=oversees_depts&limit=1`,{headers:{...H.headers,'Accept':'application/json'}});
+    if(!test.ok){
+      // Column missing — add it via RPC or just note it
+      console.warn('oversees_depts column missing — please run migration SQL');
     }
+  }catch(e){console.warn('Migration check failed:',e);}
+}
 
-    const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-    if (!RESEND_API_KEY) {
-      return new Response(JSON.stringify({ error: "RESEND_API_KEY not configured" }), {
-        status: 500, headers: { ...CORS, "Content-Type": "application/json" },
-      });
-    }
+// ── EMAIL via EmailJS ─────────────────────────────────────────────────────────
+// Free: 200 emails/month, works directly from browser, no CORS
 
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${RESEND_API_KEY}`,
-        "Content-Type": "application/json",
+// ── SUPABASE STORAGE UPLOAD ──────────────────────────────────────────────────
+async function uploadFile(file, folder='tasks'){
+  try{
+    const ext=file.name.split('.').pop();
+    const path=`${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const res=await fetch(`${SUPA_URL}/storage/v1/object/proflow-files/${path}`,{
+      method:'POST',
+      headers:{
+        'Authorization':'Bearer '+SUPA_KEY,
+        'apikey':SUPA_KEY,
+        'Content-Type':file.type||'application/octet-stream',
+        'x-upsert':'true',
       },
-      body: JSON.stringify({
-        from: `${from_name || "BFM OMS"} <${from_email || "noreply@bfmops.com"}>`,
-        to: Array.isArray(to) ? to : [to],
-        subject,
-        html,
-      }),
+      body:file,
     });
+    if(!res.ok){
+      const err=await res.text();
+      console.error('Storage upload error:',err);
+      // Fallback to base64 if storage fails
+      return await readFileAsBase64(file);
+    }
+    const publicUrl=`${SUPA_URL}/storage/v1/object/public/proflow-files/${path}`;
+    return {id:'att-'+Date.now(),name:file.name,url:publicUrl,path,size:file.size,type:file.type,uploaded:true};
+  }catch(e){
+    console.error('Upload failed, using base64 fallback:',e);
+    return await readFileAsBase64(file);
+  }
+}
 
-    const data = await res.json();
+function readFileAsBase64(file){
+  return new Promise(resolve=>{
+    const reader=new FileReader();
+    reader.onload=re=>resolve({id:'att-'+Date.now(),name:file.name,data:re.target.result,size:file.size,type:file.type});
+    reader.readAsDataURL(file);
+  });
+}
 
-    if (!res.ok) {
-      console.error("Resend error:", data);
-      return new Response(JSON.stringify({ error: data.message || "Email send failed" }), {
-        status: res.status, headers: { ...CORS, "Content-Type": "application/json" },
+// Render a file attachment (handles both URL and base64)
+function renderFileUrl(att){
+  return att.url||att.data||'';
+}
+
+async function sendEmail({to,subject,html}){
+  try{
+    // Email sent via Supabase Edge Function — API key never exposed in client code
+    const recipients=Array.isArray(to)?to:[to];
+    for(const recipient of recipients){
+      await fetch(`${SUPA_URL}/functions/v1/send-email`,{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPA_KEY},
+        body:JSON.stringify({to:recipient,subject,html,from_name:'Black Fox QMS',from_email:'noreply@bfmops.com'}),
+      });
+    }
+  }catch(e){console.error('Email error:',e);}
+}
+
+// ── NOTIFY TASK ───────────────────────────────────────────────────────────────
+// Sends push + email to all relevant people for a task event
+function notifyTask({task, actor, subject, body, skipId=null}){
+  const recipients=new Map();
+  // Assignees
+  (task.assignees||[]).forEach(a=>{if(a.id!==skipId) recipients.set(a.id,a);});
+  // CC
+  (task.cc||[]).forEach(c=>{if(c.id!==skipId) recipients.set(c.id,c);});
+  // Creator (if different from actor)
+  if(task.created_by_id&&task.created_by_id!==skipId&&!recipients.has(task.created_by_id)){
+    recipients.set(task.created_by_id,{id:task.created_by_id,name:task.created_by,email:task._creatorEmail});
+  }
+  const bodyText=body||subject;
+  sendLocalNotification(subject,bodyText).catch(()=>{});
+  recipients.forEach(r=>{
+    if(r.email){
+      sendEmail({to:r.email,subject,
+        html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:24px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
+          <div style="color:#f5a623;font-size:18px;font-weight:800;margin-bottom:12px">📋 Black Fox QMS</div>
+          <div style="font-size:15px;font-weight:700;margin-bottom:8px">${task.title}</div>
+          <div style="background:rgba(30,58,95,.06);border:1px solid rgba(30,58,95,.15);border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;line-height:1.6">${bodyText}</div>
+          ${actor?`<div style="font-size:12px;color:#7b8db8">By ${actor}</div>`:''}
+          <a href="${APP_URL}" style="display:inline-block;margin-top:14px;background:#f5a623;color:#000000;padding:9px 20px;border-radius:8px;text-decoration:none;font-weight:700">Open Task →</a>
+        </div>`
+      });
+    }
+  });
+}
+
+// ── CONSTANTS ─────────────────────────────────────────────────────────────────
+const LOCS=['Nationwide','Michigan','Missouri'];
+// ── DEPARTMENT HIERARCHY (Grandmother → Mother → Child) ─────────────────────
+const DEPT_TREE={
+  'Production':{
+    'Cart Department':['Cart Priming','Cart Filling','Cart Cleaning','Cart Packaging'],
+    'Pre-Roll Department':['Pre-Roll Priming','Pre-Roll Filling','Pre-Roll Kiefing'],
+    'Gummy Department':['Gummy Production','Gummy Packaging'],
+    'Biomass':[],
+    'Extraction':[],
+    'QC':[],
+  },
+  'Distribution':{
+    'Inventory':[],
+    'Orders':[],
+  },
+  'Facility':{
+    'HR':[],
+    'A/R & A/P':[],
+    'Sanitation':[],
+    'Maintenance':[],
+  },
+  'Compliance':{
+    'METRC Compliance':[],
+    'Label':[],
+    'Waste':[],
+    'Testing':[],
+  },
+  'Warehouse':{},
+  'Sales & Marketing':{
+    'Sales':[],
+    'Marketing':[],
+  },
+};
+// Expand access: selecting a grandmother auto-includes all its mothers+children
+// Selecting a mother auto-includes all its children
+function expandDepts(selected){
+  const result=new Set(selected);
+  selected.forEach(d=>{
+    // Is it a grandmother?
+    if(DEPT_TREE[d]){
+      Object.entries(DEPT_TREE[d]).forEach(([mother,children])=>{
+        result.add(mother);
+        children.forEach(c=>result.add(c));
+      });
+    }
+    // Is it a mother?
+    Object.values(DEPT_TREE).forEach(mothers=>{
+      if(mothers[d]){
+        (mothers[d]||[]).forEach(c=>result.add(c));
+      }
+    });
+  });
+  return [...result];
+}
+function getParents(dept){
+  const parents=[];
+  Object.entries(DEPT_TREE).forEach(([gm,mothers])=>{
+    if(dept===gm) return;
+    Object.entries(mothers).forEach(([m,children])=>{
+      if(dept===m){parents.push(gm);}
+      if(children.includes(dept)){parents.push(gm);parents.push(m);}
+    });
+  });
+  return [...new Set(parents)];
+}
+const DEPTS=['Production','Distribution','Facility','Compliance','Warehouse','Sales & Marketing',
+  'Cart Department','Pre-Roll Department','Gummy Department','Biomass','Extraction','QC',
+  'Inventory','Orders','HR','A/R & A/P','Sanitation','Maintenance',
+  'METRC Compliance','Label','Waste','Testing','Sales','Marketing',
+  'Cart Priming','Cart Filling','Cart Cleaning','Cart Packaging',
+  'Pre-Roll Priming','Pre-Roll Filling','Pre-Roll Kiefing',
+  'Gummy Production','Gummy Packaging'];
+const ROLES=[
+  'employee',
+  'brand_ambassador',
+  'marketing_lead',
+  'biomass_lead','concentrate_lead','cart_priming_lead','cart_filling_lead','cart_cleaning_lead','cart_packaging_lead','pre_roll_lead','edible_lead','qc_lead',
+  'cart_filling_supervisor','cart_cleaning_supervisor','cart_packaging_supervisor','pre_roll_supervisor','edible_supervisor','qc_supervisor','facility_supervisor',
+  'compliance_manager','distribution_manager','warehouse_manager','extraction_manager','production_manager','maintenance_manager','facility_manager',
+  'sales_marketing_manager','general_manager',
+  'director_sales_marketing','director_production','director_operations',
+  'coo','admin'
+];
+const RLABEL={
+  employee:'Employee',
+  brand_ambassador:'Brand Ambassador',
+  marketing_lead:'Marketing Lead',
+  biomass_lead:'Biomass Lead',concentrate_lead:'Concentrate Lead',cart_priming_lead:'Cart Priming Lead',cart_filling_lead:'Cart Filling Lead',cart_cleaning_lead:'Cart Cleaning Lead',cart_packaging_lead:'Cart Packaging Lead',pre_roll_lead:'Pre Roll Lead',edible_lead:'Edible Lead',qc_lead:'QC Lead',
+  cart_filling_supervisor:'Cart Filling Supervisor',cart_cleaning_supervisor:'Cart Cleaning Supervisor',cart_packaging_supervisor:'Cart Packaging Supervisor',pre_roll_supervisor:'Pre Roll Supervisor',edible_supervisor:'Edible Supervisor',qc_supervisor:'QC Supervisor',facility_supervisor:'Facility Supervisor',
+  compliance_manager:'Compliance Manager',distribution_manager:'Distribution Manager',warehouse_manager:'Warehouse Manager',extraction_manager:'Extraction Manager',production_manager:'Production Manager',maintenance_manager:'Maintenance Manager',facility_manager:'Facility Manager',
+  sales_marketing_manager:'Sales & Marketing Manager',general_manager:'General Manager',assistant_general_manager:'Assistant General Manager',
+  director_sales_marketing:'Director of Sales & Marketing',director_production:'Director of Production',director_operations:'Director of Operations',
+  coo:'COO',admin:'Admin'
+};
+const RCOLOR={
+  employee:'bb-gray',
+  brand_ambassador:'bb-gray',marketing_lead:'bb-blue',
+  biomass_lead:'bb-blue',concentrate_lead:'bb-blue',cart_priming_lead:'bb-blue',cart_filling_lead:'bb-blue',cart_cleaning_lead:'bb-blue',cart_packaging_lead:'bb-blue',pre_roll_lead:'bb-blue',edible_lead:'bb-blue',qc_lead:'bb-blue',
+  cart_filling_supervisor:'bb-purple',cart_cleaning_supervisor:'bb-purple',cart_packaging_supervisor:'bb-purple',pre_roll_supervisor:'bb-purple',edible_supervisor:'bb-purple',qc_supervisor:'bb-purple',facility_supervisor:'bb-purple',
+  compliance_manager:'bb-yellow',distribution_manager:'bb-yellow',warehouse_manager:'bb-yellow',extraction_manager:'bb-yellow',production_manager:'bb-yellow',maintenance_manager:'bb-yellow',facility_manager:'bb-yellow',
+  sales_marketing_manager:'bb-yellow',general_manager:'bb-yellow',
+  director_sales_marketing:'bb-red',director_production:'bb-red',director_operations:'bb-red',
+  coo:'bb-red',admin:'bb-red'
+};
+const ROLE_GROUPS=[
+  {label:'Executive',roles:['coo','admin']},
+  {label:'Directors',roles:['director_sales_marketing','director_production','director_operations']},
+  {label:'Managers',roles:['general_manager','assistant_general_manager','sales_marketing_manager','facility_manager','production_manager','compliance_manager','distribution_manager','warehouse_manager','extraction_manager','maintenance_manager']},
+  {label:'Supervisors',roles:['facility_supervisor','cart_filling_supervisor','cart_cleaning_supervisor','cart_packaging_supervisor','pre_roll_supervisor','edible_supervisor','qc_supervisor']},
+  {label:'Leads',roles:['marketing_lead','cart_priming_lead','cart_filling_lead','cart_cleaning_lead','cart_packaging_lead','pre_roll_lead','edible_lead','qc_lead','biomass_lead','concentrate_lead']},
+  {label:'Staff',roles:['brand_ambassador','employee']},
+];
+// ── SECTIONS (mirrors DEPT_TREE hierarchy) ───────────────────────────────────
+const SECTION_TREE={
+  'Michigan Production':{
+    'Cart Department':['Cart Priming','Cart Filling','Cart Cleaning','Cart Packaging'],
+    'Pre-Roll Department':['Pre-Roll Priming','Pre-Roll Filling','Pre-Roll Kiefing'],
+    'Gummy Department':['Gummy Production','Gummy Packaging'],
+    'Biomass':[],
+    'Extraction':[],
+    'QC':[],
+  },
+  'Missouri Production':{
+    'Cart Department':['Cart Priming','Cart Filling','Cart Cleaning','Cart Packaging'],
+    'Pre-Roll Department':['Pre-Roll Priming','Pre-Roll Filling','Pre-Roll Kiefing'],
+    'Gummy Department':['Gummy Production','Gummy Packaging'],
+    'Biomass':[],
+    'Extraction':[],
+    'QC':[],
+  },
+  'Distribution':{
+    'Inventory':[],
+    'Orders':[],
+  },
+  'Facility':{
+    'HR':[],
+    'A/R & A/P':[],
+    'Sanitation':[],
+    'Maintenance':[],
+  },
+  'Compliance':{
+    'METRC Compliance':[],
+    'Label':[],
+    'Waste':[],
+    'Testing':[],
+  },
+  'Warehouse':{},
+  'Sales & Marketing':{
+    'Sales':[],
+    'Marketing':[],
+  },
+  'General':{
+    'R&D':[],
+    'Special Projects':[],
+    'Production Investigation':[],
+    'HR':[],
+  },
+};
+// Flat list for backwards compat
+const SECTIONS=[
+  // Grandmothers
+  'Michigan Production','Missouri Production','Distribution','Facility','Compliance','Warehouse','Sales & Marketing','General',
+  // Michigan Production children
+  'Cart Department','Pre-Roll Department','Gummy Department','Biomass','Extraction','QC',
+  // Cart children
+  'Cart Priming','Cart Filling','Cart Cleaning','Cart Packaging',
+  // Pre-Roll children
+  'Pre-Roll Priming','Pre-Roll Filling','Pre-Roll Kiefing',
+  // Gummy children
+  'Gummy Production','Gummy Packaging',
+  // Distribution
+  'Inventory','Orders',
+  // Facility
+  'HR','A/R & A/P','Sanitation','Maintenance',
+  // Compliance
+  'METRC Compliance','Label','Waste','Testing',
+  // Sales
+  'Sales','Marketing',
+  // General
+  'R&D','Special Projects','Production Investigation',
+];
+
+// ── RETAIL BRANDS & LOCATIONS ─────────────────────────────────────────────────
+const RETAIL_BRANDS={
+  '20 Past 4':['20 Past 4 Jackson','20 Past 4 Stockbridge'],
+  '420 Dank':['420 Dank','420 Dank Detroit'],
+  '420 Factory':['420 Factory'],
+  'Smilez':['Allegan-Smilez','Burton-Smilez','Quincy-Smilez','Reading-Smilez','Sturgis-Smilez','Three Rivers-Smilez','Wayne-Smilez'],
+  'Altered State':['Altered State'],
+  'Altitude Cannabis Co':['Altitude Cannabis Co'],
+  'American Grown':['American Grown - Tawas'],
+  'Ascend Cannabis':['Ascend Cannabis - Battle Creek','Ascend Cannabis - Detroit','Ascend Cannabis - East Lansing','Ascend Cannabis - Grand Rapids 28th Street','Ascend Cannabis - Grand Rapids Century','Ascend Cannabis - Grand Rapids Scribner','Ascend Cannabis - Morenci'],
+  'Backpack Boyz':['Backpack Boyz - Detroit','Backpack Boyz - Monroe REC'],
+  'Bank of Buds':['Bank of Buds'],
+  'Best Budz Outlet':['Best Budz Outlet'],
+  'Blow Cannabis':['Blow Cannabis'],
+  'Blue Sky Cannabis Co.':['Blue Sky Cannabis Co.'],
+  'Border Buds - New Buffalo':['Border Buds - New Buffalo'],
+  'BOWDEGA':['BOWDEGA - NEW BUFFALO','Bowdega Cannabis Store - Utica'],
+  'Bowz Cannabis':['Bowz Cannabis'],
+  'Burn Cannabis Roseville':['Burn Cannabis Roseville'],
+  'California Michigan Cannabis Company':['California Michigan Cannabis Company - Montgomery'],
+  'Canna Plug':['Canna Plug','Canna Plug MI'],
+  'Canna Vibes Emporium':['Canna Vibes Emporium'],
+  'Cannabis King':['Cannabis King'],
+  'Cannavista Wellness':['Cannavista Wellness'],
+  'CHO':['CHO - Saranac','CHO - Stanton'],
+  'Clarity':['Clarity'],
+  'Cloud Cannabis':['Cloud Cannabis - Detroit - REC 21+'],
+  'Cookies':['Cookies - Ann St'],
+  'Craft Leaf':['Craft Leaf'],
+  'Crave Cannabis (Monroe)':['Crave Cannabis (Monroe)'],
+  'Da Plugg Cannabis Co':['Da Plugg Cannabis Co'],
+  'DACUT':['DACUT - Detroit','DACUT - Flint','DACUT - Monroe'],
+  'Dank Garden':['Dank Garden'],
+  'Depot Dispo':['Depot Dispo'],
+  'Dispo':['Dispo Bay City North','Dispo Hazel Park','Dispo Romeo','Dispo Whitmore Lake'],
+  'Dort Hwy Dispo':['Dort Hwy Dispo'],
+  'Elevated Exotics':['Elevated Exotics','Elevated Exotics - Escanaba (Rec)','Elevated Exotics - Menominee (Rec)','Elevated Exotics - Republic (Rec)'],
+  'Eleven Cannabis Company':['Eleven Cannabis Company'],
+  'Elite Cannabis':['Elite Cannabis - Bay City','Elite Cannabis - Mt. Morris'],
+  'Endo':['Endo - Adrian','Endo Houghton Lake','EndoVibe - Ypsi'],
+  'Essence':['Essence HW - Retail','Essence Provisioning Center'],
+  'Exclusive':['Exclusive Ann Arbor','Exclusive Cold Water','Exclusive Grand Rapids','Exclusive Kalamazoo','Exclusive Lowell','Exclusive Monroe','Exclusive Muskegon'],
+  'Exhibit':['Exhibit - Lansing','Exhibit Dispensary - Port Huron'],
+  'Exotics':['Exotics Adrian','Exotics Cannabis','Exotics Cannabis - Saginaw','Exotics of Pontiac'],
+  'Fire Creek':['Fire Creek Battle Creek'],
+  'Fire Island':['Fire Island'],
+  'First Class':['First Class - Camden','First Class - Lansing'],
+  'Flavors':['Flavors Detroit - Detroit - 5730 E 8 Mile RD'],
+  'Flora Cannabis':['Flora Cannabis - East Lansing'],
+  'HOUSE OF DANK':['Fly Shifter Recreational Cannabis - Detroit'],
+  'Gardens Dispensary':['Gardens Dispensary Bay City - Rec','Gardens Dispensary Saginaw Courtside - Rec','Gardens Dispensary Urban Kalamazoo'],
+  'Gas Station':['Gas Station - Wayland'],
+  'Gatsby Cannabis':['Gatsby Cannabis - Battle Creek','Gatsby Cannabis - Royal Oak'],
+  'Gazzz Cannabis Co.':['Gazzz Cannabis Co.'],
+  'Good Vibes':['Good Vibes Cannabis Co.','Good Vibes Port Huron'],
+  'Gramz':['Gramz - Hazel Park','Gramz - Lapeer','Gramz Cannabis - Detroit','Gramz Cannabis - Mount Morris','Gramz Cannabis - Romeo','Gramz Cannabis - Three Rivers'],
+  'Great Lakes Holistics':['Great Lakes Holistics - Battle Creek - RRH','Great Lakes Holistics - Muskegon - RRH'],
+  'Green Acres':['Green Acres - Ann Arbor','Green Acres - Detroit','Green Acres - Ecorse REC','Green Acres - Inkster','Green Acres - Michigan Ave','Green Acres - Riverview','Green Acres - Washtenaw Ave','Green Acres - Westland'],
+  'Green Buddha':['Green Buddha - Ferndale (REC)'],
+  'Green Eden':['Green Eden - Portage'],
+  'Green Genie':['Green Genie Dearborn Heights','Green Genie Redford'],
+  'Green Pharm':['Green Pharm - Camden','Green Pharm - Detroit','Green Pharm - Hazel Park REC','Green Pharm - Iron River REC','Green Pharm - Kalkaska REC','Green Pharm - Mancelona REC','Green Pharm - Menominee REC','Green Pharm - Traverse City REC','Green Pharm Bay City REC'],
+  'Green Tree Relief':['Green Tree Relief - Coldwater','Green Tree Relief Reading','GreenGold Dispensary'],
+  'Happy Daze':['Happy Daze','Happy Daze - Monroe'],
+  'Harbor Farmz':['Harbor Farmz','Harbor Farmz Provisioning'],
+  'Hasheesh':['Hasheesh'],
+  'Herbana':['Herbana (Ann Arbor)','Herbana (Haslett)','Herbana (Kalamazoo)','Herbana (Lansing)'],
+  'Herbology Cannabis Co':['Herbology Cannabis Co. - Coldwater','Herbology Cannabis Co. - River Rouge'],
+  'High Club':['High Club - Port Huron','High Club Cannabis Detroit'],
+  'High In The Pines':['High In The Pines'],
+  'High Profile':['High Profile - Buchanan','High Profile - Constantine','High Profile - Grand Rapids - 44th St','High Profile - Grand Rapids - Leonard St','High Profile - Grant','High Profile - Ironwood','High Profile - Kalamazoo','High Profile - Luna Pier','High Profile - Muskegon','High Profile - Webberville'],
+  'High Q Cannabis':['High Q Cannabis'],
+  'High Society':['High Society - Charlotte','High Society - New Buffalo','High Society (Big Rapids)','High Society (Birch Run)','High Society (East Lansing)','High Society (Lenox)','High Society (Mount Pleasant)','High Society (Saline)'],
+  'High Society Wellness':['High Society Wellness'],
+  'High Standard':['High Standard - Greenville','High Standard Cannabis - Sparta'],
+  'Hikers':['Hikers'],
+  'Hollywood Jacks (Rec)':['Hollywood Jacks (Rec)'],
+  'Homegrown':['Homegrown - Lansing'],
+  'House of Dank':['House of Dank Recreational Cannabis - 8 Mile','House of Dank Recreational Cannabis - Ann Arbor','House of Dank Recreational Cannabis - Center Line','House of Dank Recreational Cannabis - Fort St','House of Dank Recreational Cannabis - Garden City','House of Dank Recreational Cannabis - Grand Rapids','House of Dank Recreational Cannabis - Gratiot','House of Dank Recreational Cannabis - Kalamazoo','House of Dank Recreational Cannabis - Lansing','House of Dank Recreational Cannabis - Lapeer','House of Dank Recreational Cannabis - Monroe','House of Dank Recreational Cannabis - New Buffalo','House of Dank Recreational Cannabis - Saginaw','House of Dank Recreational Cannabis - Traverse City','House of Dank Recreational Cannabis - Ypsilanti'],
+  'House Of Zen':['House Of Zen'],
+  'Hyde Cannabis Co.':['Hyde Cannabis Co.'],
+  'HydroBudz':['HydroBudz'],
+  'Jailhouse Cannabis':['Jailhouse Cannabis - Kalkaska','Jailhouse Cannabis - Mancelona'],
+  'JARS Cannabis':['JARS Cannabis - Chesterfield/New Baltimore','JARS Cannabis - Flint','JARS Cannabis - Grand Rapids 40th St','JARS Cannabis - Hazel Park','JARS Cannabis - Iron River','JARS Cannabis - Jackson','JARS Cannabis - Madison Heights','JARS Cannabis - Milan','JARS Cannabis - New Buffalo Exit 1','JARS Cannabis - New Buffalo US-12','JARS Cannabis - Okemos','JARS Cannabis - Port Huron','JARS Cannabis - Riverview','JARS Cannabis - Saginaw','JARS Cannabis - Wayland','JARS Cannabis – Ann Arbor','JARS Cannabis – Battle Creek','JARS Cannabis – Center Line','JARS Cannabis – East Detroit','JARS Cannabis – Grand Rapids Alpine','JARS Cannabis – Lansing','JARS Cannabis – Monroe','JARS Cannabis – Mt Clemens','JARS Cannabis – Mt Morris','JARS Cannabis – Mt Pleasant','JARS Cannabis – Muskegon','JARS Cannabis – Owosso','JARS Cannabis – Oxford','JARS Cannabis – River Rouge','JARS Cannabis – Saugatuck','JARS Cannabis – West Detroit'],
+  'Joyology':['Joyology - Centerline','Joyology Monroe','Joyology Orion'],
+  'King of Budz':['King of Budz - Detroit','King of Budz - Ferndale','King of Budz - Inkster','King of Budz - Monroe','King of Budz - New Buffalo','King of Budz - Roseville','King of Budz - Taylor'],
+  'Krewe Cannabis Co.':['Krewe Cannabis Co.'],
+  'Kush E Mart':['Kush E Mart - New Buffalo'],
+  'Lettuce':['Lettuce'],
+  'Levels':['Levels - New Buffalo I','Levels – Adrian','Levels – Grand Haven','Levels – Kalamazoo','Levels – Niles','Levels – Waterford','Levels Cannabis - Ironwood'],
+  'Light Em Up - Detroit':['Light Em Up - Detroit'],
+  'Lighthouse Traverse City':['Lighthouse Traverse City'],
+  'LIV Cannabis':['LIV Cannabis (Ferndale)','LIV Cannabis (Lake Orion)','LIV Cannabis (Lansing)','LIV Cannabis (Westland)'],
+  'Local Roots Cannabis':['Local Roots Cannabis - Laingsburg','Local Roots Cannabis - Perry'],
+  'Love Cannabis Co.':['Love Cannabis Co.'],
+  'Lumberjacks':['Lumberjacks - Dowling'],
+  'Lume Cannabis Co':['Lume Cannabis Co (Morenci)','Lume Cannabis Co. (Adrian)','Lume Cannabis Co. (Ann Arbor)','Lume Cannabis Co. (Bear Creek)','Lume Cannabis Co. (Berkley)','Lume Cannabis Co. (Big Rapids)','Lume Cannabis Co. (Birch Run)','Lume Cannabis Co. (Cadillac)','Lume Cannabis Co. (Cedar Springs)','Lume Cannabis Co. (Coldwater)','Lume Cannabis Co. (Escanaba)','Lume Cannabis Co. (Evart)','Lume Cannabis Co. (Gaylord)','Lume Cannabis Co. (Grand Rapids Beltline)','Lume Cannabis Co. (Grand Rapids)','Lume Cannabis Co. (Holly)','Lume Cannabis Co. (Honor)','Lume Cannabis Co. (Houghton)','Lume Cannabis Co. (Iron Mountain)','Lume Cannabis Co. (Jackson)','Lume Cannabis Co. (Kalamazoo)','Lume Cannabis Co. (Lowell)','Lume Cannabis Co. (Mackinaw City)','Lume Cannabis Co. (Manistique)','Lume Cannabis Co. (Menominee)','Lume Cannabis Co. (Monroe)','Lume Cannabis Co. (Mount Pleasant Broomfield)','Lume Cannabis Co. (Negaunee)','Lume Cannabis Co. (New Buffalo)','Lume Cannabis Co. (Owosso)','Lume Cannabis Co. (Oxford)','Lume Cannabis Co. (Petersburg)','Lume Cannabis Co. (Petoskey)','Lume Cannabis Co. (Portage)','Lume Cannabis Co. (Saginaw)','Lume Cannabis Co. (Sault Ste. Marie)','Lume Cannabis Co. (Southfield)','Lume Cannabis Co. (Traverse City Munson)','Lume Cannabis Co. (Traverse City)','Lume Cannabis Co. (Walled Lake)'],
+  'Mango Cannabis':['Mango Cannabis Lansing','Mango Cannabis New Buffalo'],
+  'Michigan\'s Finest':['Michigan\'s Finest'],
+  'Mindright':['Mindright'],
+  'Mint Cannabis':['Mint Cannabis – Buchanan'],
+  'Mood':['Mood (Center Line)','Mood (Jackson)'],
+  'Moses Roses':['Moses Roses - Chesaning REC','Moses Roses - Lincoln Park','Moses Roses - Port Huron REC','Moses Roses - Waterford'],
+  'Mt. Clemens':['Mt. Clemens (Malow Street)'],
+  'Muha Meds':['Muha Meds - Harper Ave','Muha Meds - Michigan Ave','Muha Meds - Ypsilanti'],
+  'Mystic Cannabis':['Mystic Cannabis - Memphis'],
+  'NAR':['NAR Inkster','NAR Monroe','NAR New Buffalo'],
+  'Cannabis Club':['New Buffalo - Cannabis Club'],
+  'Nirvana Cannabis':['Nirvana Cannabis - Center Line','Nirvana Cannabis - Coldwater','Nirvana Cannabis - Escanaba','Nirvana Cannabis - Lowell','Nirvana Cannabis - Menominee','Nirvana Cannabis - Sault Ste. Marie','Nirvana Cannabis Houghton - Rec'],
+  'Nobody\'s Home':['Nobody\'s Home'],
+  'Noggin Shop - Rec':['Noggin Shop - Rec'],
+  'NOXX':['NOXX - 28th St.','NOXX - Plainfield Ave.','NOXX - Woodward'],
+  'Olswell Cannabis Co.':['Olswell Cannabis Co. (Adrian)','Olswell Cannabis Co. (Grand Rapids)','Olswell Cannabis Co. (Kalkaska)','Olswell Cannabis Co. (Traverse City)'],
+  'OUI-D Shop Menominee':['OUI-D Shop Menominee'],
+  'Outpost':['Outpost (Crystal Falls)','Outpost (Marquette)'],
+  'Parc Cannabis - Alpena REC':['Parc Cannabis - Alpena REC'],
+  'Planet Purple':['Planet Purple'],
+  'Planted Provisioning':['Planted Provisioning','Planted Provisioning - Bay City (REC)'],
+  'Premier Cannabis':['Premier Cannabis - Caro (REC)','Premier Cannabis - Saginaw (REC)','Premier Cannabis - Saginaw West (REC)','Premier Cannabis - Vassar (REC)'],
+  'Premiere Provisions - Big Rapids':['Premiere Provisions - Big Rapids'],
+  'Proper Leaf Cannabis Co':['Proper Leaf Cannabis Co'],
+  'Prosper Cannabis Company - REC':['Prosper Cannabis Company - REC'],
+  'Puff Cannabis':['Puff Cannabis: Hamtramck - RRH'],
+  'Pure':['Pure - Chesterfield/New Baltimore','Pure - Monroe','Pure - Oxford REC','Pure Lapeer','Pure New Buffalo'],
+  'Pure Options':['Pure Options - Detroit | 106','Pure Options - East Lansing | 100','Pure Options - Lansing Midtown | 103','Pure Options - Lansing South | 101','Pure Options - Mt. Pleasant | 104','Pure Options - Muskegon Township | 201','Quest Cannabis (REC)'],
+  'Rave Cannabis':['Rave Cannabis'],
+  'ReLeaf Center':['ReLeaf Center - Niles REC'],
+  'Riverside Provisioning':['Riverside Provisioning'],
+  'Royal Treatment':['Royal Treatment'],
+  'Royal Weed Cannabis Co.':['Royal Weed Cannabis Co.'],
+  'Rush Cannabis':['Rush Cannabis - Hazel Park','Rush Cannabis - Oxford','Rush Cannabis - Saline'],
+  'Sam\'s Exotics':['Sam\'s Exotics'],
+  'Sapura - Coldwater - Adult Use':['Sapura - Coldwater - Adult Use'],
+  'SFP Cannabis - Flint REC':['SFP Cannabis - Flint REC'],
+  'Simply Loud':['Simply Loud'],
+  'SKUNKZ Cannabis':['SKUNKZ Cannabis'],
+  'Smok':['Smok'],
+  'Smooch Cannabis':['Smooch Cannabis'],
+  'Space Station Cannabis Center':['Space Station Cannabis Center'],
+  'Spark Cannabis Co.':['Spark Cannabis Co.'],
+  'Star Budz - Flint':['Star Budz - Flint','Star Budz - Mt Morris'],
+  'Stash House':['Stash House - Traverse City'],
+  'Stoney Leaf - Detroit':['Stoney Leaf - Detroit'],
+  'Strange Rootz Cedar Springs':['Strange Rootz Cedar Springs'],
+  'Sunset Coast':['Sunset Coast'],
+  'Supergood':['Supergood (Pentwater MI)','Supergood Grand Haven','Supergood New Buffalo - New Buffalo - 13992 Grand AVE'],
+  'The Bloomery':['The Bloomery – Mt.Clemens','The Bloomery – New Buffalo','The Botanical Co. - Middleville'],
+  'The Cake House':['The Cake House - Ann Arbor','The Cake House - Battlecreek','The Cake House - Detroit','The Cake House - Lansing','The Cake House - Pleasant Ridge'],
+  'he Clinic':['The Clinic Detroit','The Clinic Riverview','The Clinic Ypsilanti'],
+  'The Dude Abides':['The Dude Abides - Coldwater','The Dude Abides - Constantine','The Dude Abides - Mottville','The Dude Abides - Sturgis'],
+  'The Flower Bowl':['The Flower Bowl','The Flower Bowl - Cherry Hill','The Flower Bowl - Corktown','The Flower Bowl - Ecorse','The Flower Bowl - New Buffalo','The Flower Bowl - River Rouge','The Flower Bowl - West Warren'],
+  'The Green Door':['The Green Door Bangor - REC','The Green Door South Haven - REC','The Green Door Watervliet - REC'],
+  'The Grove':['The Grove (Center Line)'],
+  'The House of Mary Jane':['The House of Mary Jane'],
+  'The Hub':['The Hub - Saginaw'],
+  'The Jungle House':['The Jungle House (Rec)'],
+  'The Mint':['The Mint - Coldwater','The Mint - Kalamazoo','The Mint - Monroe','The Mint - New Buffalo','The Mint - Portage','The Mint - Roseville'],
+  'The Plug New Buffalo':['The Plug New Buffalo'],
+  'The Refinery':['The Refinery - New Buffalo','The Refinery (Kalamazoo)','The Refinery Detroit'],
+  'The Trap Cannabis Co.':['The Trap Cannabis Co.'],
+  'The WellFlower (Manistee)':['The WellFlower (Manistee)'],
+  'Timber Cannabis Co.':['Timber Cannabis Co. - New Buffalo'],
+  'Top Cannabis Outlet':['Top Cannabis Outlet - Bay City','Top Cannabis Outlet - NOW OPEN!','Top Cannabis Outlet - Saginaw'],
+  'Trap Kingz Cannabis':['Trap Kingz Cannabis','Trap Kingz Cannabis'],
+  'First Class Ann Arbor':['Treez Management LLC DBA: First Class Ann Arbor','Trikhoma LLC Allegan Rec'],
+  'True Leaf':['True Leaf - Lawrence','True Leaf - Sturgis'],
+  'Twisted Bee - REC':['Twisted Bee - REC'],
+  'Ultra Cannabis - Eight Mile (Rec)':['Ultra Cannabis - Eight Mile (Rec)'],
+  'Uniq Cannabis':['Uniq Cannabis','Uniq Cannabis New Buffalo'],
+  'URB Cannabis':['URB Cannabis - Detroit','URB Cannabis - Mt Pleasant','URB Cannabis - New Buffalo','URB Cannabis - Sturgis','URB Cannabis - Vassar','URB Cannabis Flint - Mt Morris','URB Cannabis Monroe'],
+  'Vibe':['Vibe - Inkster','Vibe - Quincy','Vibe New Buffalo'],
+  'Vive Cannabis Co. REC':['Vive Cannabis Co. REC'],
+  'Wacky Jackz':['Wacky Jackz - Gladstone','Wacky Jackz Cannabis - Rapid River'],
+  'Weed Mart':['Weed Mart - Hamtramck','Weed Mart- New Buffalo'],
+  'Weedy\'s':['Weedy\'s'],
+  'Xplore Cannabis':['Xplore Cannabis'],
+  'Zaza Recreational':['Zaza Recreational'],
+  'Zazen Dispensary - Redford':['Zazen Dispensary - Redford'],
+  'Zoo Zoo Farms':['Zoo Zoo Farms'],
+};
+
+const SALES_TASK_TYPES=['Retail Visit','Budtender Training','Product Demo','Pop-up Event','Marketing Drop','Account Check-in','New Account Setup','Promotional Event','Other'];
+const SALES_ROLES=['Director of Sales & Marketing','Sales & Marketing Manager','Sales Rep','Marketing Rep'];
+const COLS=[
+  {id:'not_started',label:'Not Started',color:'#4a5068'},
+  {id:'in_progress',label:'In Progress',color:'#f5a623'},
+  {id:'completed',label:'Completed',color:'#10b981'},
+  {id:'under_review',label:'Under Review',color:'#3b82f6'},
+  {id:'done',label:'Done',color:'#22c55e'},
+];
+// Extra statuses used internally (on_hold, rejected) but not shown as board cols
+
+const PRI={
+  low:{label:'Low',color:'#6b7280'},
+  medium:{label:'Medium',color:'#f5a623'},
+  high:{label:'High',color:'#f59e0b'},
+  urgent:{label:'Urgent',color:'#ef4444'},
+};
+// ── CART DEPARTMENT PRODUCTION WORKFLOW (Michigan only) ──────────────────────
+const CART_WORKFLOW=[
+  {id:'cart_priming',   label:'Cart Priming',   dept:'Cart Priming'},
+  {id:'cart_filling',   label:'Cart Filling',   dept:'Cart Filling'},
+  {id:'cart_cleaning',  label:'Cart Cleaning',  dept:'Cart Cleaning'},
+  {id:'testing',        label:'Testing',        dept:'QC', isTesting:true},
+  {id:'cart_packaging', label:'Cart Packaging', dept:'Cart Packaging'},
+  {id:'qc',             label:'QC',             dept:'QC'},
+];
+
+// Is this task on the cart production workflow?
+function isCartWorkflow(task){
+  // Triggers for Michigan location + Cart Department or any cart child section
+  const cartSections=['Cart Department','Cart Priming','Cart Filling','Cart Cleaning','Cart Packaging'];
+  return task.loc==='Michigan'&&cartSections.includes(task.section);
+}
+
+// Get current workflow step index
+function getWorkflowStep(task){
+  if(!task.workflow_step) return 0;
+  return CART_WORKFLOW.findIndex(s=>s.id===task.workflow_step);
+}
+
+// Get step object for task
+function getWorkflowStepObj(task){
+  const idx=getWorkflowStep(task);
+  return idx>=0?CART_WORKFLOW[idx]:CART_WORKFLOW[0];
+}
+
+function avatarColor(name){return`hsl(${(name.charCodeAt(0)*47)%360},50%,35%)`;}
+
+// ── Black Fox QMS LOGO MARK ──────────────────────────────────────────────────────
+// Hexagonal badge with double-ring border and a bold geometric H monogram —
+// black field, gold ink. Used on login, sidebar, and PWA install prompts.
+function LogoMark({size=32}){
+  // Geometric side-profile fox in circle (Black Fox Manufacturing style)
+  const c='var(--accent)';
+  return el('svg',{width:size,height:size,viewBox:'0 0 100 100',xmlns:'http://www.w3.org/2000/svg',style:{flexShrink:0}},
+    // Outer circle
+    el('circle',{cx:'50',cy:'50',r:'47',fill:'none',stroke:c,strokeWidth:'4'}),
+    // Fox body / chest (bottom-left mass)
+    el('polygon',{points:'15,80 30,55 45,65 40,80',fill:c}),
+    // Neck
+    el('polygon',{points:'30,55 45,65 50,45 38,40',fill:c}),
+    // Head main shape
+    el('polygon',{points:'38,40 50,45 62,30 55,18 40,20 32,32',fill:c}),
+    // Ear tip (pointed, upper right)
+    el('polygon',{points:'55,18 62,30 70,10',fill:c}),
+    // Inner ear shadow
+    el('polygon',{points:'57,20 62,28 67,14',fill:'#ffffff',opacity:'0.25'}),
+    // Second ear behind
+    el('polygon',{points:'40,20 48,12 55,18 44,22',fill:c,opacity:'0.7'}),
+    // Snout / muzzle wedge
+    el('polygon',{points:'32,32 38,40 28,44 22,38',fill:c}),
+    // Muzzle light patch
+    el('polygon',{points:'28,44 38,40 35,50 24,48',fill:'#ffffff',opacity:'0.18'}),
+    // Eye (angular, geometric)
+    el('polygon',{points:'44,30 50,27 51,33 45,35',fill:'#ffffff'}),
+    // Pupil
+    el('polygon',{points:'46,30 49,28 50,33 47,34',fill:c,opacity:'0.5'}),
+    // Cheek shadow facet
+    el('polygon',{points:'38,40 44,35 46,42 40,46',fill:'#ffffff',opacity:'0.12'}),
+    // Fur texture line on chest
+    el('line',{x1:'32',y1:'58',x2:'38',y2:'70',stroke:'#ffffff',strokeWidth:'1',opacity:'0.2'}),
+  );
+}
+// ── SIDEBAR CHANGE PASSWORD (works on mobile/PWA, no prompt()) ───────────────
+function SidebarChangePw({cu,SUPA_URL,SUPA_KEY}){
+  const[open,setOpen]=React.useState(false);
+  const[np,setNp]=React.useState('');
+  const[cp,setCp]=React.useState('');
+  const[msg,setMsg]=React.useState('');
+  const[saving,setSaving]=React.useState(false);
+
+  async function save(){
+    if(np.length<6){setMsg('⚠️ Min 6 characters');return;}
+    if(np!==cp){setMsg('⚠️ Passwords do not match');return;}
+    setSaving(true);setMsg('Saving...');
+    try{
+      const r=await fetch(`${SUPA_URL}/rest/v1/pf_users?id=eq.${cu.id}`,{
+        method:'PATCH',
+        headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=representation'},
+        body:JSON.stringify({pw:np}),
+      });
+      if(!r.ok)throw new Error(await r.text());
+      const updated={...cu,pw:np};
+      localStorage.setItem('pf_session',JSON.stringify(updated));
+      setMsg('✓ Password updated!');
+      setNp('');setCp('');
+      setTimeout(()=>{setMsg('');setOpen(false);},2000);
+    }catch(e){setMsg('❌ '+e.message.slice(0,60));}
+    setSaving(false);
+  }
+
+  return el('div',{style:{marginTop:4}},
+    el('button',{
+      onClick:()=>{setOpen(o=>!o);setMsg('');setNp('');setCp('');},
+      style:{width:'100%',background:'rgba(30,58,95,.08)',border:'1px solid rgba(30,58,95,.2)',borderRadius:'var(--rs)',padding:'8px',color:'var(--accent)',fontFamily:'inherit',fontSize:12,fontWeight:600,cursor:'pointer',transition:'all .15s',textAlign:'center'}
+    },'🔒 '+(open?'Cancel':'Change My Password')),
+    open&&el('div',{style:{marginTop:8,display:'flex',flexDirection:'column',gap:6}},
+      el('input',{type:'password',value:np,onChange:e=>setNp(e.target.value),placeholder:'New password (min 6)...',
+        style:{width:'100%',background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.2)',borderRadius:'var(--rs)',padding:'8px 10px',color:'#fff',fontFamily:'inherit',fontSize:12,outline:'none',boxSizing:'border-box'}}),
+      el('input',{type:'password',value:cp,onChange:e=>setCp(e.target.value),placeholder:'Confirm new password...',
+        style:{width:'100%',background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.2)',borderRadius:'var(--rs)',padding:'8px 10px',color:'#fff',fontFamily:'inherit',fontSize:12,outline:'none',boxSizing:'border-box'}}),
+      msg&&el('div',{style:{fontSize:11,color:msg.includes('✓')?'#6ee7b7':msg.includes('❌')||msg.includes('⚠️')?'#fca5a5':'rgba(255,255,255,.7)',padding:'2px 0'}},msg),
+      el('button',{onClick:save,disabled:saving||np.length<6||np!==cp,
+        style:{width:'100%',background:np.length>=6&&np===cp?'rgba(255,255,255,.9)':'rgba(255,255,255,.2)',color:np.length>=6&&np===cp?'#1e3a5f':'rgba(255,255,255,.5)',border:'none',borderRadius:'var(--rs)',padding:'8px',fontFamily:'inherit',fontSize:12,fontWeight:700,cursor:saving?'not-allowed':'pointer',transition:'all .15s'}}
+      ,saving?'Saving...':'Set New Password'),
+    ),
+  );
+}
+
+function BFMlogo({size=32,labelSize=20,className='',textColor}){
+  return el('div',{className,style:{display:'flex',alignItems:'center',gap:size*0.32}},
+    el(LogoMark,{size}),
+    el('div',{style:{fontSize:labelSize,fontWeight:800,letterSpacing:'-0.5px',color:textColor||'var(--accent)',whiteSpace:'nowrap'}},
+      'BLACK FOX',el('span',{style:{color:'var(--text2)',fontWeight:300,letterSpacing:'1px'}},' QMS')
+    ),
+  );
+}
+
+// Push notifications
+async function sendLocalNotification(title,body){
+  if(!('Notification' in window))return;
+  if(Notification.permission==='granted'){
+    try{
+      const reg=await navigator.serviceWorker.getRegistration();
+      if(reg){await reg.showNotification(title,{body,icon:'/BFM/icon-192.png',badge:'/BFM/icon-192.png'});}
+      else{new Notification(title,{body,icon:'/BFM/icon-192.png'});}
+    }catch(e){new Notification(title,{body});}
+  }
+}
+
+async function requestPushPermission(userId){
+  if(!('Notification' in window))return;
+  if(Notification.permission==='default'){
+    await Notification.requestPermission();
+  }
+}
+
+// ── AUTH ──────────────────────────────────────────────────────────────────────
+function Auth({onLogin}){
+  const[tab,setTab]=useState('login');
+  const[f,setF]=useState({firstName:'',lastName:'',email:'',pw:'',dept:'Production',loc:'Nationwide',depts:[],licenses:[]});
+  const[msg,setMsg]=useState('');
+  const[pend,setPend]=useState(false);
+  const[loading,setLoading]=useState(false);
+
+  async function login(){
+    setLoading(true);setMsg('');
+    try{
+      const users=await db.get('pf_users',`email=eq.${encodeURIComponent(f.email)}`);
+      if(!users.length||users[0].pw!==f.pw){setMsg('Invalid email or password.');setLoading(false);return;}
+      const u=users[0];
+      if(!u.approved){setPend(true);setLoading(false);return;}
+      localStorage.setItem('pf_session',JSON.stringify(u));
+      onLogin(u);
+    }catch(e){setMsg('Connection error.');console.error(e);}
+    setLoading(false);
+  }
+
+  async function register(){
+    if(!f.firstName||!f.lastName||!f.email||!f.pw){setMsg('Please fill all fields.');return;}
+    setLoading(true);setMsg('');
+    try{
+      const exists=await db.get('pf_users',`email=eq.${encodeURIComponent(f.email)}`);
+      if(exists.length){setMsg('Email already registered.');setLoading(false);return;}
+      const fullName=f.firstName.trim()+' '+f.lastName.trim();
+      await db.insert('pf_users',{id:'u'+Date.now(),name:fullName,first_name:f.firstName,last_name:f.lastName,email:f.email,pw:f.pw,role:'employee',dept:(f.depts||[])[0]||'Production',depts:f.depts||[],licenses:f.licenses||[],loc:f.loc,approved:false,perms:[],managers:[],oversees_depts:[]});
+      setPend(true);
+    }catch(e){setMsg('Error. Please try again.');console.error(e);}
+    setLoading(false);
+  }
+
+  if(pend)return el('div',{className:'auth-wrap'},el('div',{className:'auth-box'},
+    el(BFMlogo,{size:36,labelSize:24,className:'logo'}),
+    el('div',{className:'pending-box',style:{marginTop:16}},
+      el('div',{style:{fontSize:32,marginBottom:10}},'⏳'),
+      el('div',{style:{fontWeight:700,fontSize:15,marginBottom:8}},'Account Pending Approval'),
+      el('div',{style:{fontSize:13,color:'#fcd34d',lineHeight:1.5}},'An administrator will review and approve your account.'),
+    ),
+    el('button',{className:'btn-primary',style:{marginTop:16},onClick:()=>{setPend(false);setTab('login');}},'Back to Sign In'),
+  ));
+
+  return el('div',{className:'auth-wrap'},el('div',{className:'auth-box'},
+    el(BFMlogo,{size:36,labelSize:24,className:'logo'}),
+    el('div',{className:'auth-sub'},'Task Management System'),
+    el('div',{className:'auth-tabs'},
+      el('button',{className:`atab ${tab==='login'?'on':''}`,onClick:()=>{setTab('login');setMsg('');}}, 'Sign In'),
+      el('button',{className:`atab ${tab==='reg'?'on':''}`,onClick:()=>{setTab('reg');setMsg('');}}, 'Register'),
+    ),
+    msg&&el('div',{style:{background:'rgba(239,68,68,.1)',border:'1px solid rgba(239,68,68,.3)',borderRadius:8,padding:'10px 13px',marginBottom:12,fontSize:13,color:'#fca5a5'}},msg),
+    tab==='login'?el('div',null,
+      el('div',{className:'fg'},el('label',null,'Email'),el('input',{type:'email',placeholder:'you@company.com',value:f.email,onChange:ev=>setF(p=>({...p,email:ev.target.value}))})),
+      el('div',{className:'fg'},el('label',null,'Password'),el('input',{type:'password',placeholder:'••••••••',value:f.pw,onChange:ev=>setF(p=>({...p,pw:ev.target.value})),onKeyDown:ev=>ev.key==='Enter'&&login()})),
+      el('button',{className:'btn-primary',onClick:login,disabled:loading},loading?'Signing in...':'Sign In'),
+    ):el('div',null,
+      el('div',{className:'g2'},
+        el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'First Name'),el('input',{placeholder:'Sam',value:f.firstName,onChange:ev=>setF(p=>({...p,firstName:ev.target.value}))})),
+        el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Last Name'),el('input',{placeholder:'Salari',value:f.lastName,onChange:ev=>setF(p=>({...p,lastName:ev.target.value}))})),
+      ),
+      el('div',{className:'fg'},el('label',null,'Email'),el('input',{type:'email',value:f.email,onChange:ev=>setF(p=>({...p,email:ev.target.value}))})),
+      el('div',{className:'fg'},el('label',null,'Password'),el('input',{type:'password',value:f.pw,onChange:ev=>setF(p=>({...p,pw:ev.target.value}))})),
+      el('div',{className:'fg'},
+        el('label',null,'Location'),
+        el('select',{value:f.loc,onChange:ev=>setF(p=>({...p,loc:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+          LOCS.map(l=>el('option',{key:l,value:l},l))
+        ),
+      ),
+      el('div',{className:'fg'},
+        el('label',null,'License(s) — select all that apply'),
+        el('div',{style:{display:'flex',flexDirection:'column',gap:5}},
+          LICENSES.map(lic=>el('label',{key:lic.id,style:{display:'flex',alignItems:'center',gap:8,padding:'7px 10px',background:'var(--surface2)',border:'1px solid',borderColor:(f.licenses||[]).includes(lic.id)?'var(--accent)':'var(--border)',borderRadius:8,cursor:'pointer',transition:'all .15s'}},
+            el('input',{type:'checkbox',checked:(f.licenses||[]).includes(lic.id),onChange:ev=>{const cur=f.licenses||[];setF(p=>({...p,licenses:ev.target.checked?[...cur,lic.id]:cur.filter(x=>x!==lic.id)}));},style:{accentColor:'var(--accent)'}}),
+            el('div',null,
+              el('div',{style:{fontSize:12,fontWeight:600,color:(f.licenses||[]).includes(lic.id)?'var(--accent)':'var(--text)'}},lic.name),
+              el('div',{style:{fontSize:11,color:'var(--text3)'}},lic.state+' · '+lic.license_type),
+            )
+          ))
+        ),
+      ),
+      el('div',{className:'fg'},
+        el('label',null,'Department(s) — select all that apply'),
+        el('div',{style:{display:'flex',flexWrap:'wrap',gap:5}},
+          Object.keys(DEPT_TREE).map(gm=>el('div',{key:gm,
+            onClick:()=>setF(p=>{const cur=new Set(p.depts||[]);cur.has(gm)?cur.delete(gm):cur.add(gm);return{...p,depts:[...cur],dept:cur.size>0?[...cur][0]:'Production'};}),
+            style:{padding:'5px 12px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:600,cursor:'pointer',userSelect:'none',transition:'all .15s',
+              background:(f.depts||[]).includes(gm)?'var(--accent)':'var(--surface2)',
+              color:(f.depts||[]).includes(gm)?'#000000':'var(--text2)',
+              borderColor:(f.depts||[]).includes(gm)?'var(--accent)':'var(--border)',
+            }
+          },gm))
+        ),
+        (f.depts||[]).length===0&&el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:4}},'Select at least one department'),
+      ),
+      el('button',{className:'btn-primary',onClick:register,disabled:loading},loading?'Submitting...':'Request Access'),
+      el('div',{className:'auth-note'},'Admin will approve your account before you can log in.'),
+    )
+  ));
+}
+
+// ── SETUP SQL ─────────────────────────────────────────────────────────────────
+const SETUP_SQL=`
+CREATE TABLE IF NOT EXISTS pf_users (
+  id text primary key, name text, first_name text, last_name text,
+  email text unique, pw text, role text default 'employee',
+  dept text default 'General', loc text default 'Nationwide',
+  approved boolean default false, perms jsonb default '[]', managers jsonb default '[]', oversees_depts jsonb default '[]', licenses jsonb default '[]', depts jsonb default '[]'
+);
+ALTER TABLE pf_users DISABLE ROW LEVEL SECURITY;
+ALTER TABLE pf_users ADD COLUMN IF NOT EXISTS oversees_depts jsonb default '[]';
+ALTER TABLE pf_users ADD COLUMN IF NOT EXISTS licenses jsonb default '[]';
+ALTER TABLE pf_users ADD COLUMN IF NOT EXISTS depts jsonb default '[]';
+CREATE TABLE IF NOT EXISTS pf_tasks (
+  id text primary key, title text, section text,
+  description text default '', assignees jsonb default '[]',
+  due_date text, priority text default 'medium',
+  status text default 'not_started', loc text default 'Nationwide',
+  tags jsonb default '[]', notes jsonb default '[]',
+  attachments jsonb default '[]', created_by text,
+  created_by_id text, created_at text, updated_at text,
+  updated_by text, completed_at text, approved_by text,
+  archived_at text, hold_reason text, hold_by text, hold_at text, cc jsonb default '[]'
+);
+ALTER TABLE pf_tasks DISABLE ROW LEVEL SECURITY;
+ALTER TABLE pf_tasks ADD COLUMN IF NOT EXISTS micro_tasks jsonb default '[]';
+ALTER TABLE pf_tasks ADD COLUMN IF NOT EXISTS workflow_step text;
+ALTER TABLE pf_tasks ADD COLUMN IF NOT EXISTS workflow_history jsonb default '[]';
+ALTER TABLE pf_tasks ADD COLUMN IF NOT EXISTS testing_result text;
+CREATE TABLE IF NOT EXISTS pf_events (
+  id text primary key, title text, description text,
+  type text default 'event', date text, start_time text, end_time text,
+  all_day boolean default false, attendees jsonb default '[]',
+  location text, meet_link text, color text default '#f5a623',
+  created_by text, created_by_id text, created_at text, updated_at text,
+  loc text default 'Nationwide', personal boolean default false
+);
+ALTER TABLE pf_events DISABLE ROW LEVEL SECURITY;
+CREATE TABLE IF NOT EXISTS pf_meeting_notes (
+  id text primary key, event_id text, title text,
+  transcript text default '', summary text default '',
+  action_items jsonb default '[]', decisions jsonb default '[]',
+  attendees jsonb default '[]', created_by text, created_by_id text,
+  created_at text, updated_at text
+);
+ALTER TABLE pf_meeting_notes DISABLE ROW LEVEL SECURITY;
+CREATE TABLE IF NOT EXISTS pf_sales_tasks (
+  id text primary key, type text, title text, description text,
+  assigned_to text, assigned_id text, date text, time text,
+  state text, brand text, location text, status text default 'pending',
+  priority text default 'medium', notes jsonb default '[]',
+  attachments jsonb default '[]', report text default '',
+  created_by text, created_by_id text, created_at text, updated_at text
+);
+ALTER TABLE pf_sales_tasks DISABLE ROW LEVEL SECURITY;
+`;
+
+function SetupScreen({onDone}){
+  const[copied,setCopied]=useState(false);
+  function copy(){navigator.clipboard.writeText(SETUP_SQL.trim()).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);});}
+  return el('div',{className:'auth-wrap'},
+    el('div',{className:'auth-box',style:{width:540}},
+      el(BFMlogo,{size:36,labelSize:24,className:'logo'}),
+      el('div',{className:'auth-sub'},'Black Fox QMS — One-time setup'),
+      el('div',{style:{background:'var(--bg)',border:'1px solid var(--border)',borderRadius:8,padding:12,marginBottom:14,maxHeight:180,overflowY:'auto'}},
+        el('pre',{style:{fontSize:11,color:'var(--text2)',whiteSpace:'pre-wrap',fontFamily:'DM Mono, monospace',lineHeight:1.5}},SETUP_SQL.trim())
+      ),
+      el('button',{className:'btn b-blue',style:{width:'100%',display:'block',marginBottom:10,border:'none'},onClick:copy},copied?'✓ Copied!':'Copy SQL'),
+      el('button',{className:'btn-primary',onClick:onDone},'Done — Tables Created'),
+    )
+  );
+}
+
+// ── TASK CARD ─────────────────────────────────────────────────────────────────
+function TaskCard({task,onClick}){
+  const today=new Date().toISOString().slice(0,10);
+  const overdue=task.due_date&&task.due_date<today&&task.status!=='done'&&task.status!=='archived';
+  const pri=PRI[task.priority]||PRI.medium;
+  return el('div',{className:`task-card${overdue?' overdue':''}`,onClick},
+    el('div',{style:{display:'flex',gap:10}},
+      el('div',{className:'pri-bar',style:{background:pri.color,minHeight:40}}),
+      el('div',{style:{flex:1,minWidth:0}},
+        el('div',{style:{display:'flex',gap:5,marginBottom:6,flexWrap:'wrap'}},
+          el('span',{className:'section-tag'},task.section),
+          isCartWorkflow(task)&&task.workflow_step&&task.workflow_step!=='done'&&el('span',{style:{background:'rgba(59,130,246,.1)',color:'#93c5fd',border:'1px solid rgba(59,130,246,.2)',borderRadius:5,padding:'2px 7px',fontSize:10,fontWeight:700}},
+            '🏭 '+(CART_WORKFLOW.find(s=>s.id===task.workflow_step)?.label||task.workflow_step)
+          ),
+          (task.tags||[]).map(tag=>el('span',{key:tag,className:'tag'},tag)),
+        ),
+        el('div',{style:{fontSize:13,fontWeight:600,marginBottom:task.status==='on_hold'?4:8,lineHeight:1.4,color:task.status==='done'?'var(--text2)':'var(--text)'}},task.title),
+        task.status==='on_hold'&&el('div',{style:{fontSize:11,color:'var(--red)',fontWeight:600,marginBottom:4,display:'flex',alignItems:'center',gap:4}},'🚨 ON HOLD'+(task.hold_reason?' — '+task.hold_reason.slice(0,40)+(task.hold_reason.length>40?'...':''):'')),
+        el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center'}},
+          el('div',{style:{display:'flex'}},
+            (task.assignees||[]).slice(0,4).map((a,i)=>
+              el('div',{key:a.id,className:'avatar',title:a.name,style:{background:avatarColor(a.name),marginLeft:i>0?-6:0}},a.name.charAt(0).toUpperCase())
+            ),
+            (task.assignees||[]).length>4&&el('div',{className:'avatar',style:{background:'var(--surface2)',color:'var(--text2)',marginLeft:-6}},'+'+((task.assignees||[]).length-4)),
+          ),
+          el('div',{style:{display:'flex',gap:6,alignItems:'center'}},
+            (task.notes||[]).length>0&&el('span',{style:{fontSize:11,color:'var(--text3)'}},`💬${(task.notes||[]).length}`),
+            (task.attachments||[]).length>0&&el('span',{style:{fontSize:11,color:'var(--text3)'}},`📎${(task.attachments||[]).length}`),
+            task.due_date&&el('span',{style:{fontSize:11,fontWeight:600,color:overdue?'var(--red)':task.due_date===today?'var(--yellow)':'var(--text3)'}},overdue?'⚠ '+task.due_date:task.due_date),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+// ── TASK DETAIL MODAL ─────────────────────────────────────────────────────────
+function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
+  const[newNote,setNewNote]=useState('');
+  const[noteFiles,setNoteFiles]=useState([]);
+  const[saving,setSaving]=useState(false);
+  const[showNewMicro,setShowNewMicro]=useState(false);
+
+  const[newMicro,setNewMicro]=useState({title:'',assignee_id:'',assignee_name:'',status:'not_started',priority:'medium'});
+  const[microNote,setMicroNote]=useState({});
+  const[microNoteFiles,setMicroNoteFiles]=useState({});
+  const[expandedMicro,setExpandedMicro]=useState({});
+  const today=new Date().toISOString().slice(0,10);
+  const isAdmin=cu.role==='admin';
+  const isAssigned=(task.assignees||[]).some(a=>a.id===cu.id);
+  const isCreator=task.created_by_id===cu.id;
+  const isCC=(task.cc||[]).some(c=>c.id===cu.id);
+  const canEdit=isAdmin||isCreator;
+  const canMove=isAssigned||canEdit;
+  const canApprove=isAdmin||isCreator;
+  // ── CART WORKFLOW STATE (after role vars are defined) ──────────────────────
+  const isCartWF=isCartWorkflow(task);
+  const cwfStep=isCartWF?getWorkflowStepObj(task):null;
+  const cwfIdx=isCartWF?getWorkflowStep(task):0;
+  const isTesting=isCartWF&&cwfStep?.isTesting;
+  const isCCManager=(task.cc||[]).some(c=>c.id===cu.id);
+  const userRole=cu.role||'';
+  const isManagerRole=['admin','coo','director_production','director_operations','general_manager','production_manager','qc_supervisor','qc_lead','facility_manager','compliance_manager','manager','supervisor'].includes(userRole);
+  const canTestingChange=isTesting&&(isCCManager||isAdmin||isManagerRole||isCreator);
+
+  async function changeStatus(s){
+    // ── WORKFLOW ──────────────────────────────────────────────────────────────
+    // Assignee clicks "Completed" → auto moves to "Under Review" + notifies creator
+    // Creator/admin clicks "Done" → approved + notifies assignees
+    // Creator/admin clicks "Rejected" → rejected + notifies assignees
+    const actualStatus=(s==='completed'&&!canApprove)?'under_review':s;
+
+    const update={status:actualStatus,updated_at:new Date().toISOString(),updated_by:cu.name};
+    if(actualStatus==='done') update.completed_at=new Date().toISOString();
+    if(actualStatus==='rejected') update.rejected_at=new Date().toISOString();
+    if(actualStatus==='under_review') update.submitted_at=new Date().toISOString();
+
+    try{await db.update('pf_tasks',task.id,update);}catch(e){console.error(e);}
+    onUpdate({...task,...update});
+
+    const statusLabels={
+      not_started:'Not Started',
+      in_progress:'In Progress',
+      completed:'Completed',
+      under_review:'Under Review',
+      done:'Done',
+      on_hold:'On Hold',
+      rejected:'Rejected',
+    };
+
+    // Assignee marked completed → auto goes to Under Review → notify creator
+    if(actualStatus==='under_review'){
+      const creator=users.find(u=>u.id===task.created_by_id);
+      sendLocalNotification('👁 Task ready for review',`"${task.title}" submitted by ${cu.name}`).catch(()=>{});
+      if(creator?.email&&creator.id!==cu.id){
+        sendEmail({to:creator.email,
+          subject:`👁 Task completed & awaiting your review: "${task.title}"`,
+          html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
+            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Black Fox QMS</div>
+            <div style="background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.25);border-radius:10px;padding:20px;margin-bottom:20px;text-align:center">
+              <div style="font-size:36px;margin-bottom:10px">👁</div>
+              <div style="font-size:17px;font-weight:700;margin-bottom:6px">Task Completed — Awaiting Your Review</div>
+              <div style="font-size:14px;color:#93c5fd">"${task.title}"</div>
+            </div>
+            <p style="font-size:13px;color:#7b8db8;margin-bottom:20px"><strong style="color:#e8edf8">${cu.name}</strong> has completed this task and submitted it for your review. Please mark it as <strong>Done</strong> or <strong>Rejected</strong>.</p>
+            <a href="${APP_URL}" style="display:inline-block;background:#3b82f6;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">Review Now →</a>
+          </div>`
+        });
+      }
+    }
+
+    // Creator marked Done → notify assignees
+    if(actualStatus==='done'){
+      sendLocalNotification('✅ Task Approved!',`"${task.title}" approved by ${cu.name}`).catch(()=>{});
+      (task.assignees||[]).filter(a=>a.id!==cu.id).forEach(a=>{
+        const u=users.find(x=>x.id===a.id);
+        if(u?.email) sendEmail({to:u.email,
+          subject:`✅ Task approved & done: "${task.title}"`,
+          html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
+            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Black Fox QMS</div>
+            <div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:10px;padding:20px;margin-bottom:20px;text-align:center">
+              <div style="font-size:40px;margin-bottom:10px">🎉</div>
+              <div style="font-size:17px;font-weight:700;margin-bottom:6px">Task Approved & Done!</div>
+              <div style="font-size:14px;color:#6ee7b7">"${task.title}"</div>
+            </div>
+            <p style="font-size:13px;color:#7b8db8">Approved by <strong style="color:#e8edf8">${cu.name}</strong>. Great work!</p>
+            <a href="${APP_URL}" style="display:inline-block;margin-top:16px;background:#10b981;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">View Task →</a>
+          </div>`
+        });
       });
     }
 
-    return new Response(JSON.stringify({ success: true, id: data.id }), {
-      headers: { ...CORS, "Content-Type": "application/json" },
-    });
+    // Creator rejected → notify assignees
+    if(actualStatus==='rejected'){
+      sendLocalNotification('❌ Task Rejected',`"${task.title}" — check comments for feedback`).catch(()=>{});
+      (task.assignees||[]).filter(a=>a.id!==cu.id).forEach(a=>{
+        const u=users.find(x=>x.id===a.id);
+        if(u?.email) sendEmail({to:u.email,
+          subject:`❌ Task rejected: "${task.title}"`,
+          html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #7f1d1d">
+            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Black Fox QMS</div>
+            <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:20px;margin-bottom:20px;text-align:center">
+              <div style="font-size:40px;margin-bottom:10px">❌</div>
+              <div style="font-size:17px;font-weight:700;margin-bottom:6px">Task Rejected</div>
+              <div style="font-size:14px;color:#fca5a5">"${task.title}"</div>
+            </div>
+            <p style="font-size:13px;color:#7b8db8">Reviewed by <strong style="color:#e8edf8">${cu.name}</strong>. Please check the task comments for feedback and resubmit.</p>
+            <a href="${APP_URL}" style="display:inline-block;margin-top:16px;background:#ef4444;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">View Feedback →</a>
+          </div>`
+        });
+      });
+    }
 
-  } catch (err) {
-    console.error("send-email error:", err);
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500, headers: { ...CORS, "Content-Type": "application/json" },
+    // All other status changes
+    if(!['under_review','done','rejected'].includes(actualStatus)){
+      const taskWithEmail={...task,...update,_creatorEmail:users.find(u=>u.id===task.created_by_id)?.email};
+      notifyTask({
+        task:taskWithEmail,
+        actor:cu.name,
+        subject:`${actualStatus==='on_hold'?'🚨':'📋'} Task ${statusLabels[actualStatus]||actualStatus}: "${task.title}"`,
+        body:`${cu.name} moved this task to <strong>${statusLabels[actualStatus]||actualStatus}</strong>.${actualStatus==='on_hold'&&task.hold_reason?`<br><br><strong>Reason:</strong> ${task.hold_reason}`:''}`,
+        skipId:cu.id,
+      });
+    }
+  }
+  async function updateField(field,value){
+    const update={[field]:value,updated_at:new Date().toISOString(),updated_by:cu.name};
+    try{await db.update('pf_tasks',task.id,update);}catch(e){console.error(e);}
+    onUpdate({...task,...update});
+  }
+
+  // ── CART WORKFLOW ADVANCE ────────────────────────────────────────────────────
+  async function advanceWorkflow(){
+    const nextIdx=cwfIdx+1;
+    const currentStep=CART_WORKFLOW[cwfIdx];
+
+    // Archive current step: save history snapshot
+    const historyEntry={
+      step_id:currentStep.id,
+      step_label:currentStep.label,
+      completed_by:cu.name,
+      completed_at:new Date().toISOString(),
+      notes:task.notes||[],
+      assignees:task.assignees||[],
+      status:'completed',
+    };
+    const workflow_history=[...(task.workflow_history||[]),historyEntry];
+
+    if(nextIdx>=CART_WORKFLOW.length){
+      // All steps done → mark task Done
+      const update={
+        status:'done',
+        completed_at:new Date().toISOString(),
+        updated_at:new Date().toISOString(),
+        updated_by:cu.name,
+        workflow_history,
+        workflow_step:'done',
+      };
+      try{await db.update('pf_tasks',task.id,update);}catch(e){console.error(e);}
+      onUpdate({...task,...update});
+      sendLocalNotification('🎉 Cart Task Complete!',task.title+' — all steps finished').catch(()=>{});
+      // Notify creator
+      const creator=users.find(u=>u.id===task.created_by_id);
+      if(creator?.email) sendEmail({to:creator.email,
+        subject:`🎉 Cart task fully completed: "${task.title}"`,
+        html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f"><div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Black Fox QMS</div><div style="text-align:center;padding:20px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:10px;margin-bottom:20px"><div style="font-size:40px">🎉</div><div style="font-size:17px;font-weight:700;margin-top:8px">All Steps Complete!</div><div style="font-size:13px;color:#6ee7b7;margin-top:4px">"${task.title}"</div></div><p style="font-size:13px;color:#7b8db8">All ${CART_WORKFLOW.length} production steps completed successfully. Task is now Done.</p><a href="${APP_URL}" style="display:inline-block;margin-top:16px;background:#10b981;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">View Task →</a></div>`
+      });
+      return;
+    }
+
+    const nextStep=CART_WORKFLOW[nextIdx];
+    // Reset notes for new step (keep history), reset status, update workflow_step
+    const update={
+      status:'not_started',
+      workflow_step:nextStep.id,
+      workflow_history,
+      notes:[], // fresh notes for new step
+      updated_at:new Date().toISOString(),
+      updated_by:cu.name,
+    };
+    try{await db.update('pf_tasks',task.id,update);}catch(e){console.error(e);}
+    onUpdate({...task,...update});
+
+    sendLocalNotification(`📋 → ${nextStep.label}`,task.title+' advanced to '+nextStep.label).catch(()=>{});
+
+    // Notify assignees on task + all CC'd people
+    const allNotify=new Map();
+    (task.assignees||[]).forEach(a=>{const u=users.find(x=>x.id===a.id);if(u?.email)allNotify.set(u.id,u);});
+    (task.cc||[]).forEach(c=>{const u=users.find(x=>x.id===c.id);if(u?.email)allNotify.set(u.id,u);});
+    allNotify.forEach(u=>{
+      sendEmail({to:u.email,
+        subject:`📋 Production step advanced: "${task.title}" → ${nextStep.label}`,
+        html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
+          <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Black Fox QMS — Production Workflow</div>
+          <div style="display:flex;align-items:center;gap:12px;background:rgba(30,58,95,.06);border:1px solid rgba(30,58,95,.15);border-radius:10px;padding:16px;margin-bottom:20px">
+            <div style="font-size:28px">✅</div>
+            <div>
+              <div style="font-size:12px;color:#f5a623;font-weight:700;text-transform:uppercase;letter-spacing:1px">Step ${cwfIdx+1} Complete</div>
+              <div style="font-size:15px;font-weight:700;text-decoration:line-through;color:#7b8db8">${currentStep.label}</div>
+            </div>
+            <div style="font-size:20px;color:#7b8db8">→</div>
+            <div>
+              <div style="font-size:12px;color:#3b82f6;font-weight:700;text-transform:uppercase;letter-spacing:1px">Step ${nextIdx+1} Starting</div>
+              <div style="font-size:15px;font-weight:700;color:#93c5fd">${nextStep.label}</div>
+            </div>
+          </div>
+          <div style="font-size:13px;color:#7b8db8;margin-bottom:8px">Task: <strong style="color:#e8edf8">"${task.title}"</strong></div>
+          <div style="font-size:13px;color:#7b8db8;margin-bottom:20px">Completed by: <strong style="color:#e8edf8">${cu.name}</strong></div>
+          <div style="background:var(--surface2);border-radius:8px;padding:12px;margin-bottom:20px">
+            <div style="font-size:11px;color:#7b8db8;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Progress</div>
+            <div style="display:flex;gap:4px">'+CART_WORKFLOW.map((s,i)=>'<div style="flex:1;height:4px;border-radius:2px;background:'+(i<=cwfIdx?'#10b981':'#1a2d4f')+'"></div>').join('')+'</div>
+            <div style="font-size:11px;color:#7b8db8;margin-top:6px">Step ${nextIdx+1} of ${CART_WORKFLOW.length}: ${nextStep.label}</div>
+          </div>
+          <a href="${APP_URL}" style="display:inline-block;background:#f5a623;color:#000000;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">View Task →</a>
+        </div>`
+      });
     });
   }
+
+  async function handleTestingStatus(result){
+    // result: 'passed_testing' or 'failed_testing'
+    if(result==='failed_testing'){
+      const update={
+        status:'on_hold',
+        hold_reason:'Failed Testing — requires review and correction',
+        hold_by:cu.name,
+        hold_at:new Date().toISOString(),
+        testing_result:'failed',
+        updated_at:new Date().toISOString(),
+        updated_by:cu.name,
+      };
+      try{await db.update('pf_tasks',task.id,update);}catch(e){console.error(e);}
+      onUpdate({...task,...update});
+      sendLocalNotification('🚨 Testing Failed',task.title+' — placed on hold').catch(()=>{});
+      // Notify all assignees + CC
+      const allNotify=new Map();
+      (task.assignees||[]).forEach(a=>{const u=users.find(x=>x.id===a.id);if(u?.email)allNotify.set(u.id,u);});
+      (task.cc||[]).forEach(c=>{const u=users.find(x=>x.id===c.id);if(u?.email)allNotify.set(u.id,u);});
+      allNotify.forEach(u=>{
+        sendEmail({to:u.email,
+          subject:`🚨 Testing FAILED & task on hold: "${task.title}"`,
+          html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #7f1d1d">
+            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Black Fox QMS</div>
+            <div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.4);border-radius:10px;padding:20px;margin-bottom:20px;text-align:center">
+              <div style="font-size:40px;margin-bottom:8px">🚨</div>
+              <div style="font-size:18px;font-weight:800;color:#ef4444">TESTING FAILED</div>
+              <div style="font-size:13px;color:#fca5a5;margin-top:6px">"${task.title}"</div>
+              <div style="font-size:12px;color:#fca5a5;margin-top:4px">Task automatically placed On Hold</div>
+            </div>
+            <p style="font-size:13px;color:#7b8db8">Marked by <strong style="color:#e8edf8">${cu.name}</strong>. Please review, make corrections, and resubmit.</p>
+            <a href="${APP_URL}" style="display:inline-block;margin-top:16px;background:#ef4444;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">View Task →</a>
+          </div>`
+        });
+      });
+    } else {
+      // passed_testing → advance to cart_packaging
+      const update={testing_result:'passed',updated_at:new Date().toISOString(),updated_by:cu.name};
+      try{await db.update('pf_tasks',task.id,update);}catch(e){console.error(e);}
+      onUpdate({...task,...update});
+      sendLocalNotification('✅ Testing Passed!',task.title+' → advancing to Cart Packaging').catch(()=>{});
+      await advanceWorkflow();
+    }
+  }
+
+  // ── MICRO TASK HELPERS ──────────────────────────────────────────────────────
+  async function addMicroTask(){
+    if(!newMicro.title.trim()) return;
+    const mt={
+      id:'mt-'+Date.now(),
+      title:newMicro.title.trim(),
+      assignee_id:newMicro.assignee_id,
+      assignee_name:newMicro.assignee_name,
+      status:'not_started',
+      priority:newMicro.priority,
+      notes:[],
+      created_by:cu.name,
+      created_at:new Date().toISOString(),
+    };
+    const micro_tasks=[...(task.micro_tasks||[]),mt];
+    try{await db.update('pf_tasks',task.id,{micro_tasks,updated_at:new Date().toISOString(),updated_by:cu.name});}catch(e){console.error(e);}
+    onUpdate({...task,micro_tasks});
+    setNewMicro({title:'',assignee_id:'',assignee_name:'',status:'not_started',priority:'medium'});
+    setShowNewMicro(false);
+  }
+
+  async function updateMicroStatus(mtId,status){
+    const micro_tasks=(task.micro_tasks||[]).map(mt=>mt.id===mtId?{...mt,status,updated_at:new Date().toISOString()}:mt);
+    try{await db.update('pf_tasks',task.id,{micro_tasks,updated_at:new Date().toISOString(),updated_by:cu.name});}catch(e){console.error(e);}
+    onUpdate({...task,micro_tasks});
+  }
+
+  async function deleteMicroTask(mtId){
+    if(!window.confirm('Delete this sub-task?')) return;
+    const micro_tasks=(task.micro_tasks||[]).filter(mt=>mt.id!==mtId);
+    try{await db.update('pf_tasks',task.id,{micro_tasks,updated_at:new Date().toISOString(),updated_by:cu.name});}catch(e){console.error(e);}
+    onUpdate({...task,micro_tasks});
+  }
+
+  async function postMicroNote(mtId){
+    const text=microNote[mtId]||'';
+    const files=microNoteFiles[mtId]||[];
+    if(!text.trim()&&files.length===0) return;
+    const note={id:'n'+Date.now(),text,files,by:cu.name,by_id:cu.id,at:new Date().toISOString()};
+    const micro_tasks=(task.micro_tasks||[]).map(mt=>mt.id===mtId?{...mt,notes:[...(mt.notes||[]),note]}:mt);
+    try{await db.update('pf_tasks',task.id,{micro_tasks,updated_at:new Date().toISOString(),updated_by:cu.name});}catch(e){console.error(e);}
+    onUpdate({...task,micro_tasks});
+    setMicroNote(p=>({...p,[mtId]:''}));
+    setMicroNoteFiles(p=>({...p,[mtId]:[]}));
+  }
+
+  async function postNote(){
+    if(!newNote.trim()&&noteFiles.length===0)return;
+    setSaving(true);
+    const note={
+      id:'n'+Date.now(),
+      text:newNote,
+      by:cu.name,by_id:cu.id,
+      at:new Date().toISOString(),
+      files:noteFiles,
+    };
+    const notes=[...(task.notes||[]),note];
+    try{await db.update('pf_tasks',task.id,{notes,updated_at:new Date().toISOString(),updated_by:cu.name});}catch(e){console.error(e);}
+    onUpdate({...task,notes,updated_at:new Date().toISOString(),updated_by:cu.name});
+    // Notify all task members about the new comment
+    if(newNote.trim()){
+      const taskWithEmail={...task,_creatorEmail:users.find(u=>u.id===task.created_by_id)?.email};
+      notifyTask({
+        task:taskWithEmail,
+        actor:cu.name,
+        subject:`💬 New comment on "${task.title}"`,
+        body:`<strong>${cu.name}</strong> commented:<br><br>"${newNote.slice(0,200)}${newNote.length>200?'...':''}"${noteFiles.length>0?`<br><br>📎 ${noteFiles.length} file(s) attached`:''}`,
+        skipId:cu.id,
+      });
+    }
+    setNewNote('');setNoteFiles([]);setSaving(false);
+  }
+
+  const overdue=task.due_date&&task.due_date<today;
+  const pri=PRI[task.priority]||PRI.medium;
+
+  return el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&onClose()},
+    el('div',{className:'md',style:{width:700,maxHeight:'92vh'}},
+      el('div',{className:'mh'},
+        el('div',{style:{flex:1}},
+          el('div',{style:{display:'flex',gap:6,flexWrap:'wrap',marginBottom:8}},
+            el('span',{style:{background:pri.color+'22',color:pri.color,borderRadius:4,padding:'2px 8px',fontSize:11,fontWeight:600}},pri.label),
+            el('span',{className:'section-tag'},task.section),
+            el('span',{className:`badge ${task.status==='done'?'bb-green':task.status==='completed'?'bb-green':task.status==='under_review'?'bb-blue':task.status==='in_progress'?'bb-yellow':task.status==='on_hold'?'bb-red':task.status==='rejected'?'bb-red':'bb-gray'}`},
+              ({not_started:'Not Started',in_progress:'In Progress',completed:'Completed',under_review:'Under Review',done:'Done',on_hold:'On Hold',rejected:'Rejected'})[task.status]||task.status),
+            (task.tags||[]).map(tag=>el('span',{key:tag,className:'tag'},tag)),
+          ),
+          el('div',{style:{fontSize:16,fontWeight:700}},task.title),
+        ),
+        el('button',{className:'mc',onClick:onClose},'×'),
+      ),
+      el('div',{className:'mbd'},
+        el('div',{className:'pipeline'},
+          COLS.map(col=>{
+            const isActive=task.status===col.id;
+            const allowed=(()=>{
+              if(isCC) return false;
+              if(col.id==='not_started') return canEdit;
+              if(col.id==='in_progress') return isAssigned||canEdit;
+              if(col.id==='completed') return isAssigned; // assignee only
+              if(col.id==='under_review') return false; // auto-set
+              if(col.id==='done') return canApprove; // creator/admin only
+              return false;
+            })();
+            const btnLabel={
+              not_started:'⬜ '+col.label,
+              in_progress:'🔄 '+col.label,
+              completed:'✅ '+col.label,
+              under_review:'👁 '+col.label,
+              done:'🎉 '+col.label,
+            }[col.id]||col.label;
+            const btnHint={
+              completed:'Assignee marks done — sends to review',
+              under_review:'Auto-set when assignee completes',
+              done:canApprove?'Approve & complete':'Only creator/manager can approve',
+            }[col.id]||'';
+            return el('button',{key:col.id,className:`pipe-btn${isActive?' active':''}`,
+              disabled:!allowed,
+              title:btnHint,
+              onClick:()=>allowed&&changeStatus(col.id),
+              style:{
+                borderColor:isActive?col.color:col.id==='on_hold'||col.id==='rejected'?'rgba(239,68,68,.2)':col.id==='done'?'rgba(16,185,129,.2)':col.id==='completed'?'rgba(16,185,129,.2)':col.id==='under_review'?'rgba(59,130,246,.2)':'var(--border)',
+                background:isActive?col.color+'22':col.id==='on_hold'||col.id==='rejected'?'rgba(239,68,68,.04)':col.id==='done'?'rgba(16,185,129,.04)':col.id==='completed'?'rgba(16,185,129,.04)':col.id==='under_review'?'rgba(59,130,246,.04)':'transparent',
+                color:isActive?col.color:col.id==='on_hold'||col.id==='rejected'?'var(--red)':col.id==='done'?'var(--green)':col.id==='completed'?'var(--green)':col.id==='under_review'?'#93c5fd':'var(--text2)',
+                fontWeight:['on_hold','rejected','done','completed'].includes(col.id)?700:'inherit',
+                fontSize:10,
+              }},
+              btnLabel
+            );
+          })
+        ),
+        el('div',{className:'g2',style:{marginBottom:16}},
+          el('div',null,
+            el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:8}},'Assignees'),
+            (task.assignees||[]).length===0?el('div',{style:{fontSize:12,color:'var(--text3)'}},'None'):
+            el('div',{style:{display:'flex',flexDirection:'column',gap:6}},
+              (task.assignees||[]).map(a=>el('div',{key:a.id,style:{display:'flex',alignItems:'center',gap:8}},
+                el('div',{className:'avatar',style:{background:avatarColor(a.name)}},a.name.charAt(0).toUpperCase()),
+                el('div',null,el('div',{style:{fontSize:12,fontWeight:600}},a.name),el('div',{style:{fontSize:11,color:'var(--text2)'}},a.dept+' · '+a.loc)),
+              ))
+            ),
+          ),
+          el('div',null,
+            el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:8}},'Due Date'),
+            isAdmin||isCreator?el('input',{type:'date',value:task.due_date||'',onChange:ev=>updateField('due_date',ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px',color:overdue?'var(--red)':'var(--text)',fontFamily:'inherit',fontSize:13}}):
+            el('div',{style:{fontSize:13,fontWeight:600,color:overdue?'var(--red)':'var(--text)'}},task.due_date||'—'),
+            el('div',{style:{marginTop:10,display:'flex',alignItems:'center',gap:6}},
+              el('span',{style:{fontSize:11,color:'var(--text3)'}},'Created by'),
+              el('span',{style:{fontSize:11,fontWeight:700,color:'var(--accent)'}},task.created_by),
+            ),
+            isCC&&el('div',{style:{marginTop:6,background:'rgba(139,92,246,.06)',border:'1px solid rgba(139,92,246,.2)',borderRadius:6,padding:'5px 10px',fontSize:11,color:'var(--purple)'}},'👁 CC — view only access'),
+            !isCreator&&!isAdmin&&!isCC&&el('div',{style:{marginTop:6,background:'rgba(30,58,95,.05)',border:'1px solid rgba(30,58,95,.12)',borderRadius:6,padding:'5px 10px',fontSize:11,color:'var(--accent)'}},'👁 View only — only the creator can edit this task'),
+            el('div',{style:{fontSize:11,color:'var(--text3)'}},task.created_at?.slice(0,10)),
+          ),
+        ),
+        el('div',{className:'fg'},
+          el('label',null,'Description'),
+          isAdmin||isCreator?
+            el('textarea',{value:task.description||'',placeholder:'Add description...',onChange:ev=>updateField('description',ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:80,resize:'vertical'}}):
+            el('div',{style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'10px 14px',fontSize:13,color:'var(--text2)',lineHeight:1.6,minHeight:60}},task.description||'No description.'),
+        ),
+        canEdit&&el('div',{className:'fg'},
+          el('label',null,'Attach File'),
+          el('input',{type:'file',accept:'.pdf,.doc,.docx,.png,.jpg,.xlsx,.csv',onChange:async ev=>{
+            const file=ev.target.files[0];if(!file)return;
+            const att=await uploadFile(file,'tasks');
+            att.by=cu.name;att.at=new Date().toISOString();
+            await updateField('attachments',[...(task.attachments||[]),att]);
+          },style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px',color:'var(--text)',fontFamily:'inherit',fontSize:13}}),
+        ),
+        (task.attachments||[]).length>0&&el('div',{style:{marginBottom:14}},
+          (task.attachments||[]).map(att=>el('div',{key:att.id,style:{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'7px 10px',background:'var(--surface2)',borderRadius:6,marginBottom:5}},
+            el('span',{style:{fontSize:12}},`📎 ${att.name} — uploaded by ${att.by}`),
+            el('button',{className:'btn b-ghost btn-sm',onClick:()=>{const a=document.createElement('a');a.href=renderFileUrl(att);a.download=att.name;a.target='_blank';a.click();}},'Download'),
+          ))
+        ),
+        el('div',{className:'divider'}),
+
+        // ── CART PRODUCTION WORKFLOW (Michigan only) ─────────────────────────
+        isCartWF&&el('div',{style:{marginBottom:8}},
+          // Progress stepper
+          el('div',{style:{marginBottom:14}},
+            el('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}},
+              el('div',{style:{fontWeight:700,fontSize:14}},'🏭 Production Workflow'),
+              el('span',{style:{fontSize:11,color:'var(--text3)'}},`Step ${Math.min(cwfIdx+1,CART_WORKFLOW.length)} of ${CART_WORKFLOW.length}`),
+            ),
+            // Step pills
+            el('div',{style:{display:'flex',gap:3,flexWrap:'wrap',marginBottom:12}},
+              CART_WORKFLOW.map((step,i)=>{
+                const isDone=i<cwfIdx||(i===cwfIdx&&task.status==='done');
+                const isCurrent=i===cwfIdx&&task.status!=='done';
+                return el('div',{key:step.id,style:{
+                  display:'flex',alignItems:'center',gap:4,
+                  padding:'4px 10px',borderRadius:20,fontSize:11,fontWeight:600,
+                  background:isDone?'rgba(16,185,129,.15)':isCurrent?'rgba(30,58,95,.12)':'var(--surface2)',
+                  color:isDone?'var(--green)':isCurrent?'var(--accent)':'var(--text3)',
+                  border:'1px solid',
+                  borderColor:isDone?'rgba(16,185,129,.3)':isCurrent?'rgba(30,58,95,.25)':'var(--border)',
+                }},
+                  el('span',null,isDone?'✅':isCurrent?'🔄':'⬜'),
+                  step.label,
+                );
+              })
+            ),
+            // Progress bar
+            el('div',{style:{height:4,background:'var(--surface2)',borderRadius:4}},
+              el('div',{style:{width:Math.round((cwfIdx/CART_WORKFLOW.length)*100)+'%',height:'100%',background:'var(--green)',borderRadius:4,transition:'width .5s'}}),
+            ),
+          ),
+
+          // Current step info box
+          task.status!=='done'&&cwfStep&&el('div',{style:{background:'rgba(30,58,95,.05)',border:'1px solid rgba(30,58,95,.15)',borderRadius:10,padding:'14px 16px',marginBottom:12}},
+            el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:8}},
+              el('div',null,
+                el('div',{style:{fontSize:11,fontWeight:700,color:'var(--accent)',textTransform:'uppercase',letterSpacing:'.8px',marginBottom:4}},'Current Step'),
+                el('div',{style:{fontSize:16,fontWeight:700}},cwfStep.label),
+                el('div',{style:{fontSize:12,color:'var(--text2)',marginTop:3}},
+                  task.status==='on_hold'&&task.testing_result==='failed'
+                    ?'🚨 On Hold — Testing Failed'
+                    :`Status: ${task.status?.replace(/_/g,' ')||'Not Started'}`
+                ),
+              ),
+              // Action buttons
+              el('div',{style:{display:'flex',gap:6,flexWrap:'wrap'}},
+                // Testing step buttons
+                isTesting&&el('div',{style:{width:'100%'}},
+                  // Show result if already set
+                  task.testing_result&&el('div',{style:{
+                    display:'flex',alignItems:'center',gap:8,marginBottom:10,
+                    background:task.testing_result==='passed'?'rgba(16,185,129,.1)':'rgba(239,68,68,.1)',
+                    border:'1px solid',
+                    borderColor:task.testing_result==='passed'?'rgba(16,185,129,.3)':'rgba(239,68,68,.3)',
+                    borderRadius:8,padding:'8px 14px',fontSize:13,fontWeight:700,
+                    color:task.testing_result==='passed'?'var(--green)':'var(--red)',
+                  }},
+                    task.testing_result==='passed'?'✅ Passed Testing':'❌ Failed Testing',
+                    el('span',{style:{fontSize:11,fontWeight:400,marginLeft:4,color:'var(--text3)'}},
+                      task.testing_result==='passed'?'— advancing to Cart Packaging':'— task placed on hold'
+                    ),
+                  ),
+                  // Action buttons
+                  canTestingChange&&task.status!=='on_hold'&&el('div',{style:{display:'flex',gap:8,flexWrap:'wrap',marginTop:4}},
+                    el('button',{
+                      onClick:()=>handleTestingStatus('passed_testing'),
+                      style:{flex:1,background:'rgba(16,185,129,.15)',color:'var(--green)',border:'2px solid rgba(16,185,129,.4)',borderRadius:8,padding:'10px 16px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer',transition:'all .15s'}
+                    },'✅ Passed Testing'),
+                    el('button',{
+                      onClick:()=>handleTestingStatus('failed_testing'),
+                      style:{flex:1,background:'rgba(239,68,68,.1)',color:'var(--red)',border:'2px solid rgba(239,68,68,.3)',borderRadius:8,padding:'10px 16px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer',transition:'all .15s'}
+                    },'❌ Failed Testing'),
+                  ),
+                  !canTestingChange&&el('div',{style:{
+                    background:'rgba(30,58,95,.05)',border:'1px solid rgba(30,58,95,.12)',
+                    borderRadius:8,padding:'10px 14px',fontSize:12,color:'var(--text2)',lineHeight:1.5
+                  }},
+                    '🔒 Testing status can be changed by managers, admins, or CC members on this task.'
+                  ),
+                ),
+                // Non-testing: assignee or admin can mark complete to advance
+                !isTesting&&(isAssigned||isAdmin||isCreator)&&task.status!=='on_hold'&&el('button',{
+                  onClick:async()=>{
+                    if(task.status!=='under_review'){
+                      // Mark as completed first, then advance
+                      await advanceWorkflow();
+                    }
+                  },
+                  style:{background:'var(--accent)',color:'#ffffff',border:'none',borderRadius:8,padding:'8px 16px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:6}
+                },`✅ Complete & Send to ${cwfIdx+1<CART_WORKFLOW.length?CART_WORKFLOW[cwfIdx+1].label:'Done'}`),
+                // If on hold (failed testing) - manager can release back
+                task.status==='on_hold'&&task.testing_result==='failed'&&(isAdmin||isCCManager)&&el('button',{
+                  onClick:async()=>{
+                    const update={status:'not_started',hold_reason:'',testing_result:'',updated_at:new Date().toISOString(),updated_by:cu.name};
+                    try{await db.update('pf_tasks',task.id,update);}catch(e){console.error(e);}
+                    onUpdate({...task,...update});
+                  },
+                  style:{background:'rgba(30,58,95,.08)',color:'var(--accent)',border:'1px solid rgba(30,58,95,.25)',borderRadius:8,padding:'8px 14px',fontFamily:'inherit',fontSize:12,fontWeight:700,cursor:'pointer'}
+                },'↩ Release from Hold'),
+              ),
+            ),
+          ),
+
+          // Step history
+          (task.workflow_history||[]).length>0&&el('div',{style:{marginBottom:12}},
+            el('div',{style:{fontWeight:600,fontSize:12,color:'var(--text2)',marginBottom:8,textTransform:'uppercase',letterSpacing:'.5px'}},'Step History'),
+            el('div',{style:{display:'flex',flexDirection:'column',gap:4}},
+              (task.workflow_history||[]).map((h,i)=>el('div',{key:i,style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:8,padding:'10px 14px'}},
+                el('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:h.notes?.length>0?8:0}},
+                  el('div',{style:{display:'flex',alignItems:'center',gap:6}},
+                    el('span',{style:{color:'var(--green)',fontSize:14}},'✅'),
+                    el('span',{style:{fontWeight:600,fontSize:13}},h.step_label),
+                    el('span',{style:{fontSize:11,color:'var(--text3)'}},'completed by '+h.completed_by),
+                  ),
+                  el('span',{style:{fontSize:11,color:'var(--text3)'}},h.completed_at?.slice(0,10)),
+                ),
+                // Show notes from that step
+                h.notes?.length>0&&el('div',{style:{marginTop:6,paddingTop:6,borderTop:'1px solid var(--border)'}},
+                  el('div',{style:{fontSize:11,color:'var(--text3)',marginBottom:4}},`${h.notes.length} comment${h.notes.length>1?'s':''} from this step:`),
+                  h.notes.slice(0,2).map((n,ni)=>el('div',{key:ni,style:{fontSize:12,color:'var(--text2)',marginBottom:2}},
+                    el('strong',null,n.by+': '),n.text?.slice(0,80)+(n.text?.length>80?'...':''),
+                    (n.files||[]).length>0&&el('span',{style:{color:'var(--accent)',marginLeft:4}},`📎${(n.files||[]).length}`),
+                  )),
+                  h.notes.length>2&&el('div',{style:{fontSize:11,color:'var(--text3)'}},`+${h.notes.length-2} more comments`),
+                ),
+              ))
+            ),
+          ),
+        ),
+
+        // ── MICRO TASKS ─────────────────────────────────────────────────────
+        el('div',{style:{marginBottom:8}},
+          el('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}},
+            el('div',{style:{display:'flex',alignItems:'center',gap:8}},
+              el('span',{style:{fontWeight:700,fontSize:14}},'Sub-Tasks'),
+              el('span',{style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:10,padding:'1px 8px',fontSize:11,color:'var(--text2)',fontWeight:700}},(task.micro_tasks||[]).length),
+              (task.micro_tasks||[]).length>0&&el('span',{style:{fontSize:11,color:'var(--green)',fontWeight:600}},
+                `${(task.micro_tasks||[]).filter(m=>m.status==='done'||m.status==='completed').length}/${(task.micro_tasks||[]).length} done`
+              ),
+            ),
+            el('button',{
+              onClick:()=>setShowNewMicro(p=>!p),
+              style:{background:showNewMicro?'var(--surface2)':'var(--accent)',color:showNewMicro?'var(--text2)':'#000000',border:'1px solid',borderColor:showNewMicro?'var(--border)':'var(--accent)',borderRadius:'var(--rs)',padding:'5px 12px',fontFamily:'inherit',fontSize:12,fontWeight:700,cursor:'pointer',transition:'all .15s'}
+            },showNewMicro?'✕ Cancel':'＋ Add Sub-Task'),
+          ),
+
+          // Progress bar
+          (task.micro_tasks||[]).length>0&&el('div',{style:{height:4,background:'var(--surface2)',borderRadius:4,marginBottom:12}},
+            el('div',{style:{
+              width:Math.round(((task.micro_tasks||[]).filter(m=>m.status==='done'||m.status==='completed').length/(task.micro_tasks||[]).length)*100)+'%',
+              height:'100%',background:'var(--green)',borderRadius:4,transition:'width .3s'
+            }}),
+          ),
+
+          // New micro task form
+          showNewMicro&&el('div',{style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:10,padding:14,marginBottom:12}},
+            el('div',{className:'fg',style:{marginBottom:10}},
+              el('input',{
+                placeholder:'Sub-task title...',autoFocus:true,
+                value:newMicro.title,
+                onChange:ev=>setNewMicro(p=>({...p,title:ev.target.value})),
+                onKeyDown:ev=>ev.key==='Enter'&&newMicro.title.trim()&&addMicroTask(),
+                style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none'},
+              }),
+            ),
+            el('div',{style:{display:'flex',gap:8,flexWrap:'wrap'}},
+              el('select',{
+                value:newMicro.assignee_id,
+                onChange:ev=>{const u=users.find(x=>x.id===ev.target.value);setNewMicro(p=>({...p,assignee_id:ev.target.value,assignee_name:u?.name||''}));},
+                style:{flex:1,background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'7px 10px',color:'var(--text)',fontFamily:'inherit',fontSize:12},
+              },
+                el('option',{value:''},'Assign to...'),
+                ...[...new Set([...(task.assignees||[]).map(a=>a.id)])].map(id=>{
+                  const u=users.find(x=>x.id===id)||(task.assignees||[]).find(a=>a.id===id);
+                  return u?el('option',{key:u.id,value:u.id},u.name):null;
+                }).filter(Boolean),
+                ...users.filter(u=>u.approved&&!(task.assignees||[]).find(a=>a.id===u.id)).map(u=>el('option',{key:u.id,value:u.id},u.name+' (not on task)')),
+              ),
+              el('select',{
+                value:newMicro.priority,
+                onChange:ev=>setNewMicro(p=>({...p,priority:ev.target.value})),
+                style:{background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'7px 10px',color:'var(--text)',fontFamily:'inherit',fontSize:12},
+              },
+                Object.entries(PRI).map(([k,{label}])=>el('option',{key:k,value:k},label))
+              ),
+              el('button',{
+                onClick:addMicroTask,
+                disabled:!newMicro.title.trim(),
+                style:{background:'var(--accent)',color:'#ffffff',border:'none',borderRadius:'var(--rs)',padding:'7px 14px',fontFamily:'inherit',fontSize:12,fontWeight:700,cursor:'pointer'},
+              },'Add'),
+            ),
+          ),
+
+          // Micro task list
+          (task.micro_tasks||[]).map((mt,i)=>{
+            const isExpanded=expandedMicro[mt.id];
+            const pri=PRI[mt.priority]||PRI.medium;
+            return el('div',{key:mt.id,style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:10,marginBottom:6,overflow:'hidden'}},
+              // Header row
+              el('div',{style:{display:'flex',alignItems:'center',gap:8,padding:'10px 12px'}},
+                // Status dropdown
+                el('select',{
+                  value:mt.status,
+                  onChange:ev=>updateMicroStatus(mt.id,ev.target.value),
+                  onClick:ev=>ev.stopPropagation(),
+                  style:{
+                    background:mt.status==='done'?'rgba(16,185,129,.15)':mt.status==='under_review'?'rgba(59,130,246,.1)':mt.status==='completed'?'rgba(16,185,129,.08)':mt.status==='in_progress'?'rgba(30,58,95,.1)':'var(--bg)',
+                    color:mt.status==='done'?'var(--green)':mt.status==='under_review'?'#93c5fd':mt.status==='completed'?'var(--green)':mt.status==='in_progress'?'var(--accent)':'var(--text2)',
+                    border:'1px solid',
+                    borderColor:mt.status==='done'?'rgba(16,185,129,.3)':mt.status==='under_review'?'rgba(59,130,246,.3)':mt.status==='completed'?'rgba(16,185,129,.2)':mt.status==='in_progress'?'rgba(30,58,95,.25)':'var(--border)',
+                    borderRadius:6,padding:'3px 6px',fontFamily:'inherit',fontSize:11,fontWeight:700,cursor:'pointer',flexShrink:0,
+                  },
+                },
+                  el('option',{value:'not_started'},'⬜ Not Started'),
+                  el('option',{value:'in_progress'},'🔄 In Progress'),
+                  el('option',{value:'completed'},'✅ Completed'),
+                  el('option',{value:'under_review'},'👁 Under Review'),
+                  el('option',{value:'done'},'🎉 Done'),
+                ),
+                // Priority dot
+                el('div',{style:{width:6,height:6,borderRadius:'50%',background:pri.color,flexShrink:0}}),
+                // Title
+                el('div',{style:{flex:1,fontSize:13,fontWeight:mt.status==='done'?400:600,color:mt.status==='done'?'var(--text3)':'var(--text)',textDecoration:mt.status==='done'?'line-through':'none',lineHeight:1.4}},mt.title),
+                // Assignee avatar
+                mt.assignee_name&&el('div',{className:'avatar',title:mt.assignee_name,style:{background:avatarColor(mt.assignee_name),width:22,height:22,fontSize:9,flexShrink:0}},mt.assignee_name.charAt(0).toUpperCase()),
+                // Comment count
+                (mt.notes||[]).length>0&&el('span',{style:{fontSize:11,color:'var(--text3)',flexShrink:0}},`💬${(mt.notes||[]).length}`),
+                // Expand/collapse
+                el('button',{
+                  onClick:()=>setExpandedMicro(p=>({...p,[mt.id]:!p[mt.id]})),
+                  style:{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:14,padding:'0 2px',flexShrink:0,lineHeight:1}
+                },isExpanded?'▲':'▼'),
+                // Delete
+                (canEdit)&&el('button',{
+                  onClick:ev=>{ev.stopPropagation();deleteMicroTask(mt.id);},
+                  style:{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:14,padding:'0 2px',flexShrink:0}
+                },'×'),
+              ),
+
+              // Expanded: comments + file upload
+              isExpanded&&el('div',{style:{borderTop:'1px solid var(--border)',padding:'10px 12px'}},
+                // Existing comments
+                (mt.notes||[]).length>0&&el('div',{style:{marginBottom:10}},
+                  (mt.notes||[]).map(note=>el('div',{key:note.id,style:{display:'flex',gap:8,marginBottom:8}},
+                    el('div',{className:'avatar',style:{background:avatarColor(note.by),width:22,height:22,fontSize:9,flexShrink:0}},note.by.charAt(0).toUpperCase()),
+                    el('div',{style:{flex:1,background:'var(--bg)',borderRadius:'0 8px 8px 8px',padding:'7px 10px'}},
+                      el('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:3}},
+                        el('span',{style:{fontSize:11,fontWeight:600}},note.by),
+                        el('span',{style:{fontSize:10,color:'var(--text3)'}},note.at.slice(0,16).replace('T',' ')),
+                      ),
+                      note.text&&el('div',{style:{fontSize:12,lineHeight:1.5}},note.text),
+                      (note.files||[]).length>0&&el('div',{style:{display:'flex',flexWrap:'wrap',gap:4,marginTop:4}},
+                        (note.files||[]).map(f=>el('div',{key:f.id,style:{display:'flex',alignItems:'center',gap:4,background:'var(--surface2)',borderRadius:4,padding:'2px 7px',fontSize:10}},
+                          el('span',null,f.name.match(/\.(png|jpg|jpeg|gif|webp)$/i)?'🖼️':'📎'),
+                          el('span',{style:{color:'var(--text2)',maxWidth:80,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},f.name),
+                          el('button',{onClick:()=>{const a=document.createElement('a');a.href=renderFileUrl(f);a.download=f.name;a.target='_blank';a.click();},style:{background:'none',border:'none',color:'var(--accent)',cursor:'pointer',fontSize:10,fontWeight:600,padding:0,fontFamily:'inherit'}},'↓'),
+                        )),
+                      ),
+                      (note.files||[]).filter(f=>f.name.match(/\.(png|jpg|jpeg|gif|webp)$/i)).map(f=>
+                        el('img',{key:f.id,src:renderFileUrl(f),style:{maxWidth:'100%',maxHeight:120,borderRadius:4,marginTop:4,display:'block'}})
+                      ),
+                    ),
+                  ))
+                ),
+                // New comment input
+                el('div',{style:{display:'flex',gap:6,alignItems:'flex-start'}},
+                  el('div',{className:'avatar',style:{background:avatarColor(cu.name),width:22,height:22,fontSize:9,flexShrink:0,marginTop:2}},cu.name.charAt(0).toUpperCase()),
+                  el('div',{style:{flex:1}},
+                    el('input',{
+                      placeholder:'Add comment... (Enter to post)',
+                      value:microNote[mt.id]||'',
+                      onChange:ev=>setMicroNote(p=>({...p,[mt.id]:ev.target.value})),
+                      onKeyDown:ev=>ev.key==='Enter'&&postMicroNote(mt.id),
+                      style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'6px 10px',color:'var(--text)',fontFamily:'inherit',fontSize:12,outline:'none'},
+                    }),
+                    // File previews
+                    (microNoteFiles[mt.id]||[]).length>0&&el('div',{style:{display:'flex',flexWrap:'wrap',gap:4,marginTop:4}},
+                      (microNoteFiles[mt.id]||[]).map(f=>el('div',{key:f.id,style:{display:'flex',alignItems:'center',gap:4,background:'var(--surface)',border:'1px solid var(--border)',borderRadius:4,padding:'2px 7px',fontSize:10}},
+                        f.name.match(/\.(png|jpg|jpeg|gif|webp)$/i)?el('img',{src:f.data,style:{width:20,height:20,objectFit:'cover',borderRadius:2}}):el('span',null,'📎'),
+                        el('span',{style:{maxWidth:60,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},f.name),
+                        el('span',{onClick:()=>setMicroNoteFiles(p=>({...p,[mt.id]:(p[mt.id]||[]).filter(x=>x.id!==f.id)})),style:{cursor:'pointer',color:'var(--red)',fontWeight:700}},'×'),
+                      ))
+                    ),
+                    el('div',{style:{display:'flex',gap:4,marginTop:4}},
+                      el('label',{style:{display:'flex',alignItems:'center',gap:3,padding:'3px 8px',background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:6,cursor:'pointer',fontSize:11,color:'var(--text2)',fontWeight:600}},
+                        el('input',{type:'file',multiple:true,accept:'image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv',style:{display:'none'},
+                          onChange:async ev=>{
+                            const files=Array.from(ev.target.files);
+                            const loaded=await Promise.all(files.map(f=>uploadFile(f,'micro')));
+                            setMicroNoteFiles(p=>({...p,[mt.id]:[...(p[mt.id]||[]),...loaded]}));
+                            ev.target.value='';
+                          },
+                        }),
+                        '📎',
+                      ),
+                      el('button',{
+                        onClick:()=>postMicroNote(mt.id),
+                        disabled:!(microNote[mt.id]||'').trim()&&!(microNoteFiles[mt.id]||[]).length,
+                        style:{background:'var(--accent)',color:'#ffffff',border:'none',borderRadius:6,padding:'3px 10px',fontFamily:'inherit',fontSize:11,fontWeight:700,cursor:'pointer'},
+                      },'Post'),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }),
+        ),
+
+        el('div',{className:'divider'}),
+        el('div',{style:{fontWeight:600,marginBottom:14}},`Comments (${(task.notes||[]).length})`),
+        (task.notes||[]).map(note=>el('div',{key:note.id,style:{display:'flex',gap:10,marginBottom:12}},
+          el('div',{className:'avatar',style:{background:avatarColor(note.by),flexShrink:0}},note.by.charAt(0).toUpperCase()),
+          el('div',{style:{flex:1,background:'var(--surface2)',borderRadius:'0 10px 10px 10px',padding:'9px 13px'}},
+            el('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:5}},
+              el('span',{style:{fontSize:12,fontWeight:600}},note.by),
+              el('span',{style:{fontSize:11,color:'var(--text2)'}},note.at.slice(0,16).replace('T',' ')),
+            ),
+            note.text&&el('div',{style:{fontSize:13,lineHeight:1.5,marginBottom:(note.files||[]).length>0?8:0}},note.text),
+            (note.files||[]).length>0&&el('div',{style:{display:'flex',flexWrap:'wrap',gap:5,marginTop:4}},
+              (note.files||[]).map(f=>el('div',{key:f.id,style:{display:'flex',alignItems:'center',gap:6,background:'var(--surface)',border:'1px solid var(--border)',borderRadius:6,padding:'4px 10px',fontSize:11}},
+                el('span',null,f.name.match(/\.(png|jpg|jpeg|gif|webp)$/i)?'🖼️':f.name.match(/\.pdf$/i)?'📄':f.name.match(/\.(doc|docx)$/i)?'📝':f.name.match(/\.(xls|xlsx|csv)$/i)?'📊':'📎'),
+                el('span',{style:{color:'var(--text2)',maxWidth:120,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},f.name),
+                el('button',{
+                  onClick:()=>{const a=document.createElement('a');a.href=renderFileUrl(f);a.download=f.name;a.target='_blank';a.click();},
+                  style:{background:'none',border:'none',color:'var(--accent)',cursor:'pointer',fontSize:11,fontWeight:600,padding:0,fontFamily:'inherit'}
+                },'↓'),
+                // Show image inline if it's an image
+              )),
+            ),
+            // Inline image preview
+            (note.files||[]).filter(f=>f.name.match(/\.(png|jpg|jpeg|gif|webp)$/i)).map(f=>
+              el('img',{key:f.id+'img',src:f.data,alt:f.name,style:{maxWidth:'100%',maxHeight:200,borderRadius:6,marginTop:6,display:'block',objectFit:'contain'}})
+            ),
+          ),
+        )),
+        el('div',{style:{display:'flex',gap:10,alignItems:'flex-start'}},
+          el('div',{className:'avatar',style:{background:avatarColor(cu.name),flexShrink:0,marginTop:4}},cu.name.charAt(0).toUpperCase()),
+          el('div',{style:{flex:1}},
+            el('textarea',{
+              placeholder:'Write a comment... (Enter to post, Shift+Enter for new line)',
+              value:newNote,
+              onChange:ev=>setNewNote(ev.target.value),
+              onKeyDown:ev=>ev.key==='Enter'&&!ev.shiftKey&&(ev.preventDefault(),postNote()),
+              style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:60,resize:'none'},
+            }),
+            // File previews
+            noteFiles.length>0&&el('div',{style:{display:'flex',flexWrap:'wrap',gap:6,marginTop:6}},
+              noteFiles.map(f=>el('div',{key:f.id,style:{position:'relative',display:'flex',alignItems:'center',gap:6,background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:6,padding:'4px 10px',fontSize:11}},
+                f.name.match(/\.(png|jpg|jpeg|gif|webp)$/i)
+                  ?el('img',{src:renderFileUrl(f),style:{width:32,height:32,objectFit:'cover',borderRadius:4}})
+                  :el('span',null,f.name.match(/\.pdf$/i)?'📄':f.name.match(/\.(doc|docx)$/i)?'📝':f.name.match(/\.(xls|xlsx|csv)$/i)?'📊':'📎'),
+                el('span',{style:{maxWidth:100,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:'var(--text2)'}},f.name),
+                el('span',{
+                  onClick:()=>setNoteFiles(p=>p.filter(x=>x.id!==f.id)),
+                  style:{cursor:'pointer',color:'var(--red)',fontWeight:700,marginLeft:2,fontSize:13}
+                },'×'),
+              ))
+            ),
+            el('div',{style:{display:'flex',gap:6,marginTop:6,alignItems:'center'}},
+              // File upload button
+              el('label',{style:{display:'flex',alignItems:'center',gap:4,padding:'5px 10px',background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:'var(--rs)',cursor:'pointer',fontSize:12,color:'var(--text2)',fontWeight:600,transition:'all .15s'},
+                onMouseEnter:ev=>{ev.currentTarget.style.borderColor='var(--accent)';ev.currentTarget.style.color='var(--accent)';},
+                onMouseLeave:ev=>{ev.currentTarget.style.borderColor='var(--border)';ev.currentTarget.style.color='var(--text2)';}
+              },
+                el('input',{
+                  type:'file',
+                  multiple:true,
+                  accept:'image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.zip',
+                  style:{display:'none'},
+                  onChange:async ev=>{
+                    const files=Array.from(ev.target.files);
+                    const loaded=await Promise.all(files.map(f=>uploadFile(f,'comments')));
+                    setNoteFiles(p=>[...p,...loaded]);
+                    ev.target.value='';
+                  },
+                }),
+                '📎 Attach',
+              ),
+              el('button',{
+                className:'btn b-blue btn-sm',
+                onClick:postNote,
+                disabled:(!newNote.trim()&&noteFiles.length===0)||saving,
+              },saving?'Posting...':'Post'),
+            ),
+          ),
+        ),
+      ),
+      el('div',{className:'mf',style:{justifyContent:'space-between'}},
+        el('div',null,
+          canEdit&&el('button',{className:'btn b-red',onClick:async()=>{if(!window.confirm('Delete this task?'))return;await db.remove('pf_tasks',task.id).catch(console.error);onDelete(task.id);onClose();}},'Delete'),
+        ),
+        el('button',{className:'btn b-ghost',onClick:onClose},'Close'),
+      ),
+    )
+  );
+}
+
+// ── BOARD PAGE ────────────────────────────────────────────────────────────────
+// ── COMPLIANCE SUMMARY WIDGET (shown on Task Board for managers+) ────────────
+function ComplianceSummaryWidget({cu,setPage,SUPA_URL,SUPA_KEY,H}){
+  const[data,setData]=React.useState(null);
+
+  React.useEffect(()=>{
+    fetch(`${SUPA_URL}/rest/v1/pf_compliance_checks?select=*`,{headers:H.headers})
+      .then(r=>r.ok?r.json():[]).then(rows=>{
+        if(!Array.isArray(rows)){setData({});return;}
+        const byFw={};
+        Object.entries(COMPLIANCE_FRAMEWORKS).forEach(([k,fw])=>{
+          const total=fw.clauses.length;
+          const compliant=fw.clauses.filter(c=>rows.find(r=>r.clause_id===c.id&&r.framework===k&&r.status==='compliant')).length;
+          const gap=fw.clauses.filter(c=>rows.find(r=>r.clause_id===c.id&&r.framework===k&&r.status==='gap')).length;
+          byFw[k]={total,compliant,gap,pct:Math.round((compliant/total)*100)};
+        });
+        setData(byFw);
+      }).catch(()=>setData({}));
+  },[]);
+
+  if(!data) return el('div',{style:{padding:'16px',textAlign:'center',color:'var(--text3)',fontSize:13}},'Loading compliance data...');
+
+  const overall=Object.values(data).length?Math.round(Object.values(data).reduce((a,b)=>a+b.pct,0)/Object.values(data).length):0;
+  const totalGaps=Object.values(data).reduce((a,b)=>a+(b.gap||0),0);
+
+  return el('div',{style:{background:'#ffffff',border:'1px solid var(--border)',borderRadius:12,padding:'18px 20px',marginBottom:20,boxShadow:'0 1px 4px rgba(15,23,42,.06)'}},
+    el('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14,flexWrap:'wrap',gap:8}},
+      el('div',{style:{display:'flex',alignItems:'center',gap:10}},
+        el('div',{style:{fontSize:20}},'✅'),
+        el('div',null,
+          el('div',{style:{fontSize:15,fontWeight:800,color:'var(--text)'}},'Compliance Overview'),
+          el('div',{style:{fontSize:12,color:'var(--text2)',marginTop:1}},'ISO 9001 · cGMP · Missouri DCR · FSMA 21 CFR 117'),
+        ),
+      ),
+      el('div',{style:{display:'flex',alignItems:'center',gap:10}},
+        totalGaps>0&&el('div',{style:{background:'rgba(220,38,38,.1)',border:'1px solid rgba(220,38,38,.25)',borderRadius:8,padding:'4px 12px',fontSize:12,fontWeight:700,color:'#dc2626'}},
+          '⚠ '+totalGaps+' gap'+(totalGaps!==1?'s':'')+' require attention'
+        ),
+        el('button',{
+          onClick:()=>setPage('compliance'),
+          style:{background:'var(--accent)',color:'#fff',border:'none',borderRadius:8,padding:'7px 16px',fontFamily:'inherit',fontSize:12,fontWeight:700,cursor:'pointer'}
+        },'View Full Report →'),
+      ),
+    ),
+
+    // Overall bar
+    el('div',{style:{marginBottom:16}},
+      el('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:5,fontSize:12}},
+        el('span',{style:{color:'var(--text2)',fontWeight:600}},'Overall Compliance Score'),
+        el('span',{style:{fontWeight:800,fontSize:16,color:overall>=80?'#16a34a':overall>=50?'#d97706':'#dc2626'}},overall+'%'),
+      ),
+      el('div',{style:{background:'var(--surface2)',borderRadius:20,height:10,overflow:'hidden'}},
+        el('div',{style:{width:overall+'%',height:'100%',background:overall>=80?'#22c55e':overall>=50?'#f59e0b':'#ef4444',borderRadius:20,transition:'width .5s'}}),
+      ),
+    ),
+
+    // Per-framework grid
+    el('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))',gap:10}},
+      Object.entries(COMPLIANCE_FRAMEWORKS).map(([k,fw])=>{
+        const d=data[k]||{total:fw.clauses.length,compliant:0,gap:0,pct:0};
+        const pct=d.pct||0;
+        const col=pct>=80?'#16a34a':pct>=50?'#d97706':'#dc2626';
+        return el('div',{key:k,
+          onClick:()=>setPage('compliance'),
+          style:{background:pct>=80?'rgba(22,163,74,.05)':pct>=50?'rgba(217,119,6,.05)':'rgba(220,38,38,.05)',
+            border:'1px solid',borderColor:pct>=80?'rgba(22,163,74,.2)':pct>=50?'rgba(217,119,6,.2)':'rgba(220,38,38,.2)',
+            borderRadius:10,padding:'12px 14px',cursor:'pointer',transition:'all .15s'},
+          onMouseEnter:ev=>ev.currentTarget.style.transform='translateY(-1px)',
+          onMouseLeave:ev=>ev.currentTarget.style.transform='translateY(0)',
+        },
+          el('div',{style:{fontSize:18,marginBottom:4}},fw.icon),
+          el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text)',marginBottom:6,lineHeight:1.3}},fw.label),
+          el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:5}},
+            el('span',{style:{fontSize:11,color:'var(--text2)'}},d.compliant+'/'+d.total+' clauses'),
+            el('span',{style:{fontSize:14,fontWeight:800,color:col}},pct+'%'),
+          ),
+          el('div',{style:{background:'var(--surface2)',borderRadius:10,height:5,overflow:'hidden'}},
+            el('div',{style:{width:pct+'%',height:'100%',background:col,borderRadius:10,transition:'width .4s'}}),
+          ),
+          d.gap>0&&el('div',{style:{fontSize:10,color:'#dc2626',marginTop:5,fontWeight:600}},'⚠ '+d.gap+' gap'+(d.gap!==1?'s':'')),
+        );
+      }),
+    ),
+  );
+}
+
+function Board({tasks,setTasks,cu,users,locFilter,setLocFilter,canAccessQms,setPage,SUPA_URL,SUPA_KEY,H}){
+  const[view,setView]=useState('board');
+  const[section,setSection]=useState('All');
+  const[showNew,setNew]=useState(false);
+  const[selected,setSelected]=useState(null);
+  const[tagInput,setTagInput]=useState('');
+  const[saving,setSaving]=useState(false);
+  const[colOrder,setColOrder]=useState(()=>{try{const s=localStorage.getItem('pf_col_order');const saved=s?JSON.parse(s):null;const allIds=COLS.map(c=>c.id);if(saved){const merged=[...saved.filter(id=>allIds.includes(id)),...allIds.filter(id=>!saved.includes(id))];return merged;}return allIds;}catch{return COLS.map(c=>c.id);}});
+  const[dragCol,setDragCol]=useState(null);
+  const[dragOver,setDragOver]=useState(null);
+  const[f,setF]=useState({title:'',section:'Michigan Production',description:'',assignees:[],due_date:'',priority:'medium',loc:locFilter==='Nationwide'?'Nationwide':locFilter,tags:[]});
+  const today=new Date().toISOString().slice(0,10);
+  const isAdmin=cu.role==='admin';
+
+  const filtered=useMemo(()=>{
+    let list=tasks;
+    if(locFilter&&locFilter!=='Nationwide') list=list.filter(t=>!t.loc||t.loc===locFilter||t.loc==='Nationwide');
+    if(section!=='All') list=list.filter(t=>t.section===section);
+    if(cu.role!=='admin'){
+      list=list.filter(t=>{
+        if(t.created_by_id===cu.id) return true;
+        if((t.assignees||[]).some(a=>a.id===cu.id)) return true;
+        if((t.cc||[]).some(c=>c.id===cu.id)) return true;
+        return false;
+      });
+    }
+    return list;
+  },[tasks,locFilter,section,cu,users]);
+
+  async function createTask(){
+    if(!f.title||f.assignees.length===0)return;
+    setSaving(true);
+    const cartSecs=['Cart Department','Cart Priming','Cart Filling','Cart Cleaning','Cart Packaging'];
+    const isCartWFTask=f.loc==='Michigan'&&cartSecs.includes(f.section);
+    // Determine starting step based on section selected
+    const sectionToStep={'Cart Department':'cart_priming','Cart Priming':'cart_priming','Cart Filling':'cart_filling','Cart Cleaning':'cart_cleaning','Cart Packaging':'cart_packaging'};
+    const startStep=sectionToStep[f.section]||'cart_priming';
+    const task={id:'task-'+Date.now(),...f,
+      status:'not_started',
+      workflow_step:isCartWFTask?startStep:null,
+      workflow_history:isCartWFTask?[]:null,
+      created_by:cu.name,created_by_id:cu.id,
+      created_at:new Date().toISOString(),
+      updated_at:new Date().toISOString(),
+      updated_by:cu.name,
+      notes:[],attachments:[],
+    };
+    try{await db.insert('pf_tasks',task);}catch(e){console.error(e);setSaving(false);return;}
+    setTasks(p=>[task,...p]);
+    // Notify all assignees + their managers
+    const allNotify=[];
+    f.assignees.forEach(a=>{
+      if(a.email) allNotify.push({email:a.email,name:a.name,role:'assignee'});
+      const assigneeUser=users.find(u=>u.id===a.id);
+      (assigneeUser?.managers||[]).forEach(m=>{
+        if(m.email&&!allNotify.find(x=>x.email===m.email))
+          allNotify.push({email:m.email,name:m.name,role:'manager'});
+      });
+    });
+    const emailBody=`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:24px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f"><div style="color:#f5a623;font-size:18px;font-weight:800;margin-bottom:12px">📋 New Task Assigned</div><div style="font-size:15px;font-weight:700;margin-bottom:8px">${f.title}</div><div style="background:rgba(30,58,95,.07);border:1px solid rgba(245,166,35,.15);border-radius:8px;padding:12px;margin-bottom:14px;font-size:13px">${f.description||'No description'}${f.due_date?`<div style="margin-top:8px;color:#f5a623">📅 Due: ${f.due_date}</div>`:''}<div style="margin-top:6px;color:#7b8db8">📍 ${f.loc} · ${f.section}</div></div><div style="font-size:12px;color:#7b8db8">Assigned by ${cu.name}</div><a href="${APP_URL}" style="display:inline-block;margin-top:14px;background:#f5a623;color:#000000;padding:9px 20px;border-radius:8px;text-decoration:none;font-weight:700">Open Task →</a></div>`;
+    allNotify.filter(a=>a.email).forEach(a=>{
+      sendEmail({to:a.email,subject:`📋 New task assigned: "${f.title}"`,html:emailBody});
+    });
+    sendLocalNotification('📋 Task Created',`"${f.title}" assigned to ${f.assignees.map(a=>a.name.split(' ')[0]).join(', ')}`).catch(()=>{});
+    setF({title:'',section:'General',description:'',assignees:[],due_date:'',priority:'medium',loc:locFilter==='Nationwide'?'Nationwide':locFilter,tags:[]});
+    setNew(false);setSaving(false);
+  }
+
+  function handleUpdate(updated){setTasks(p=>p.map(t=>t.id===updated.id?updated:t));setSelected(updated);}
+  function handleDelete(id){setTasks(p=>p.filter(t=>t.id!==id));}
+
+  function onDragStart(colId){setDragCol(colId);}
+  function onDragOver(ev,colId){ev.preventDefault();setDragOver(colId);}
+  function onDrop(colId){
+    if(!dragCol||dragCol===colId)return;
+    const order=[...colOrder];
+    const from=order.indexOf(dragCol);
+    const to=order.indexOf(colId);
+    order.splice(from,1);order.splice(to,0,dragCol);
+    setColOrder(order);
+    localStorage.setItem('pf_col_order',JSON.stringify(order));
+    setDragCol(null);setDragOver(null);
+  }
+  function onDragEnd(){setDragCol(null);setDragOver(null);}
+  const orderedCols=colOrder.map(id=>COLS.find(c=>c.id===id)).filter(Boolean);
+
+  const myTasks=filtered.filter(t=>!['archived'].includes(t.status)&&(t.assignees||[]).some(a=>a.id===cu.id));
+  const overdue=filtered.filter(t=>!['done','archived'].includes(t.status)&&t.due_date&&t.due_date<today);
+  const dueToday=filtered.filter(t=>!['done','archived'].includes(t.status)&&t.due_date===today);
+  const inReview=filtered.filter(t=>t.status==='review');
+
+  const assignableUsers=useMemo(()=>{
+    if(isAdmin) return users.filter(u=>u.approved);
+    return users.filter(u=>{
+      if(!u.approved) return false;
+      if(u.id===cu.id) return true;
+      return (u.managers||[]).some(m=>m.id===cu.id);
+    });
+  },[users,cu,isAdmin]);
+
+  return el('div',null,
+    el('div',{className:'ph'},
+      el('div',null,el('div',{className:'pt'},'Task Board'),el('div',{className:'ps'},'Manage and track tasks across your team')),
+      el('div',{style:{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}},
+        el('div',{className:'view-toggle'},
+          el('button',{className:`vbtn${view==='board'?' on':''}`,onClick:()=>setView('board')},'⬛ Board'),
+          el('button',{className:`vbtn${view==='list'?' on':''}`,onClick:()=>setView('list')},'☰ List'),
+        ),
+        view==='board'&&el('button',{
+          className:'btn b-ghost btn-sm',
+          title:'Reset column order',
+          onClick:()=>{localStorage.removeItem('pf_col_order');const def=COLS.map(c=>c.id);setColOrder(def);},
+          style:{fontSize:11,opacity:.7}
+        },'↺ Reset Layout'),
+        el('button',{className:'btn b-blue',onClick:()=>setNew(true)},'+ New Task'),
+      ),
+    ),
+    el('div',{className:'g4',style:{marginBottom:20}},
+      [{l:'My Tasks',v:myTasks.length,c:'var(--accent)',ico:'📋'},{l:'Due Today',v:dueToday.length,c:dueToday.length>0?'var(--red)':'var(--text3)',ico:'🔴'},{l:'Overdue',v:overdue.length,c:overdue.length>0?'var(--red)':'var(--text3)',ico:'⚠️'},{l:'In Review',v:inReview.length,c:inReview.length>0?'var(--yellow)':'var(--text3)',ico:'👁'}]
+        .map(({l,v,c,ico})=>el('div',{key:l,className:'stat',style:{display:'flex',alignItems:'center',gap:14}},
+          el('div',{style:{fontSize:28}},ico),
+          el('div',null,el('div',{className:'sl'},l),el('div',{className:'sv',style:{color:c,fontSize:24}},v)),
+        ))
+    ),
+    canAccessQms&&el(ComplianceSummaryWidget,{cu,setPage,SUPA_URL,SUPA_KEY,H}),
+    el('div',{style:{display:'flex',gap:16,marginBottom:16,flexWrap:'wrap',alignItems:'center'}},
+      el('div',{style:{display:'flex',gap:6}},
+        LOCS.filter(l=>cu.role==='admin'||l===cu.loc||cu.loc==='Nationwide').map(l=>
+          el('button',{key:l,onClick:()=>setLocFilter(l),style:{padding:'5px 14px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:500,cursor:'pointer',background:locFilter===l?'var(--accent)':'transparent',color:locFilter===l?'#fff':'var(--text2)',borderColor:locFilter===l?'var(--accent)':'var(--border)'}},l==='Nationwide'?'🌐 All':l==='Michigan'?'🏭 Michigan':'🏗 Missouri')
+        )
+      ),
+      el('div',{style:{width:1,height:20,background:'var(--border)'}}),
+      el('div',{style:{display:'flex',gap:6,flexWrap:'wrap'}},
+        ['All',...SECTIONS].map(s=>el('button',{key:s,onClick:()=>setSection(s),style:{padding:'4px 12px',borderRadius:20,border:'1px solid',fontSize:11,fontWeight:500,cursor:'pointer',background:section===s?'var(--surface2)':'transparent',color:section===s?'var(--text)':'var(--text3)',borderColor:section===s?'var(--border)':'transparent'}},s))
+      ),
+    ),
+    view==='board'&&el('div',{className:'board'},
+      orderedCols.map(col=>{
+        const colTasks=filtered.filter(t=>t.status===col.id);
+        const isDragOver=dragOver===col.id;
+        const isDragging=dragCol===col.id;
+        return el('div',{
+          key:col.id,
+          className:'col',
+          draggable:true,
+          onDragStart:()=>onDragStart(col.id),
+          onDragOver:ev=>onDragOver(ev,col.id),
+          onDrop:()=>onDrop(col.id),
+          onDragEnd:onDragEnd,
+          style:{
+            opacity:isDragging?.4:1,
+            border:isDragOver?'2px solid var(--accent)':'1px solid var(--border)',
+            transform:isDragOver?'scale(1.01)':'none',
+            transition:'transform .15s,border-color .15s,opacity .15s',
+            cursor:'grab',
+          },
+        },
+          el('div',{className:'col-header'},
+            el('div',{className:'col-title'},
+              el('span',{style:{color:'var(--text3)',fontSize:12,cursor:'grab',marginRight:2}},'⠿'),
+              el('div',{className:'col-dot',style:{background:col.color}}),
+              col.label,
+              el('div',{className:'col-count'},colTasks.length)
+            ),
+            el('button',{onClick:ev=>{ev.stopPropagation();setF(p=>({...p,status:col.id}));setNew(true);},style:{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:20,lineHeight:1,padding:'0 4px'}},'＋'),
+          ),
+          colTasks.length===0?
+            el('div',{style:{border:'2px dashed var(--border)',borderRadius:8,padding:'24px 12px',textAlign:'center',color:'var(--text3)',fontSize:12}},'Drop here'):
+            colTasks.map(task=>el(TaskCard,{key:task.id,task,onClick:()=>setSelected(task)})),
+        );
+      })
+    ),
+    view==='list'&&el('div',null,
+      COLS.map(col=>{
+        // In Progress col also shows on_hold and rejected tasks
+        const extraStatuses=col.id==='in_progress'?['on_hold','rejected']:[];
+        const colTasks=filtered.filter(t=>t.status===col.id||extraStatuses.includes(t.status));
+        if(!colTasks.length) return null;
+        return el('div',{key:col.id,style:{marginBottom:20}},
+          el('div',{style:{display:'flex',alignItems:'center',gap:10,padding:'8px 0',borderBottom:'2px solid var(--border)',marginBottom:8}},
+            el('div',{style:{width:10,height:10,borderRadius:'50%',background:col.color}}),
+            el('div',{style:{fontWeight:700,fontSize:13}},col.label),
+            el('span',{style:{background:'var(--surface2)',borderRadius:10,padding:'1px 8px',fontSize:11,color:'var(--text2)'}},colTasks.length),
+          ),
+          el('div',{className:'card',style:{padding:0}},
+            colTasks.map((task,i)=>el('div',{key:task.id,
+              style:{display:'flex',alignItems:'center',gap:12,padding:'12px 16px',borderBottom:i<colTasks.length-1?'1px solid var(--border)':'none',cursor:'pointer'},
+              onClick:()=>setSelected(task)},
+              el('div',{style:{width:3,height:32,borderRadius:4,background:PRI[task.priority]?.color||'#6b7280',flexShrink:0}}),
+              el('div',{style:{flex:1,minWidth:0}},
+                el('div',{style:{fontSize:13,fontWeight:600}},task.title),
+                el('div',{style:{fontSize:11,color:'var(--text2)',marginTop:2}},task.section+' · Created by '+task.created_by+(task.loc&&task.loc!=='Nationwide'?' · '+task.loc:'')),
+                task.status==='on_hold'&&el('div',{style:{fontSize:11,color:'var(--red)',fontWeight:700,marginTop:2}},'🚨 ON HOLD — '+task.hold_reason?.slice(0,50)),
+              ),
+              el('div',{style:{display:'flex',gap:6,alignItems:'center',flexShrink:0}},
+                (task.assignees||[]).slice(0,3).map((a,i)=>el('div',{key:a.id,className:'avatar',title:a.name,style:{background:avatarColor(a.name),marginLeft:i>0?-6:0,width:22,height:22,fontSize:9}},a.name.charAt(0).toUpperCase())),
+                task.due_date&&el('span',{style:{fontSize:11,color:task.due_date<today?'var(--red)':task.due_date===today?'var(--yellow)':'var(--text3)',whiteSpace:'nowrap',marginLeft:6}},task.due_date),
+              ),
+            ))
+          ),
+        );
+      })
+    ),
+    showNew&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setNew(false)},
+      el('div',{className:'md',style:{width:640}},
+        el('div',{className:'mh'},el('div',{className:'mt2'},'New Task'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
+        el('div',{className:'mbd'},
+          el('div',{className:'fg'},el('label',null,'Title *'),el('input',{placeholder:'What needs to be done?',value:f.title,onChange:ev=>setF(p=>({...p,title:ev.target.value})),autoFocus:true})),
+          el('div',{className:'g2'},
+            el('div',{className:'fg',style:{marginBottom:0}},
+            el('label',null,'Section'),
+            el('select',{
+              value:f.section,
+              onChange:ev=>setF(p=>({...p,section:ev.target.value})),
+              style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13},
+            },
+              Object.entries(SECTION_TREE).map(([gm,mothers])=>[
+                el('option',{key:'h-'+gm,disabled:true,style:{fontWeight:800,color:'#f5a623',background:'var(--surface)'}},'── '+gm+' ──'),
+                el('option',{key:gm,value:gm,style:{fontWeight:700}},gm),
+                ...Object.entries(mothers).map(([mother,children])=>[
+                  el('option',{key:mother,value:mother},'  ↳ '+mother),
+                  ...children.map(child=>el('option',{key:child,value:child},'      ↳ '+child)),
+                ]).flat(),
+              ]).flat()
+            ),
+          ),
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Priority'),el('select',{value:f.priority,onChange:ev=>setF(p=>({...p,priority:ev.target.value}))},Object.entries(PRI).map(([k,{label}])=>el('option',{key:k,value:k},label)))),
+          ),
+          el('div',{className:'g2',style:{marginTop:13}},
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Due Date'),el('input',{type:'date',value:f.due_date,onChange:ev=>setF(p=>({...p,due_date:ev.target.value}))})),
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Location'),el('select',{value:f.loc,onChange:ev=>setF(p=>({...p,loc:ev.target.value}))},LOCS.map(l=>el('option',{key:l,value:l},l)))),
+          ),
+          el('div',{className:'fg'},el('label',null,'Description'),el('textarea',{placeholder:'More details...',value:f.description,onChange:ev=>setF(p=>({...p,description:ev.target.value}))})),
+          el('div',{className:'fg'},
+            el('label',null,'Assign To * (required)'),
+            el('select',{value:'',onChange:ev=>{const u=assignableUsers.find(x=>x.id===ev.target.value);if(u&&!f.assignees.find(a=>a.id===u.id))setF(p=>({...p,assignees:[...p.assignees,{id:u.id,name:u.name,email:u.email,dept:u.dept,loc:u.loc}]}));ev.target.value='';},style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+              el('option',{value:''},assignableUsers.length<=1?'Only yourself — ask admin to set up reports':'+ Add person...'),
+              ...assignableUsers.filter(u=>!f.assignees.find(a=>a.id===u.id)).map(u=>el('option',{key:u.id,value:u.id},`${u.name} — ${u.dept} — ${u.loc}`))
+            ),
+            f.assignees.length>0&&el('div',{style:{display:'flex',flexWrap:'wrap',gap:6,marginTop:8}},
+              f.assignees.map(a=>el('div',{key:a.id,style:{display:'flex',alignItems:'center',gap:6,background:'var(--surface2)',borderRadius:20,padding:'5px 12px',fontSize:12}},
+                el('div',{className:'avatar',style:{background:avatarColor(a.name),width:20,height:20,fontSize:9}},a.name.charAt(0).toUpperCase()),
+                a.name,
+                el('span',{style:{cursor:'pointer',color:'var(--text3)',marginLeft:4},onClick:()=>setF(p=>({...p,assignees:p.assignees.filter(x=>x.id!==a.id)}))},'×'),
+              ))
+            ),
+          ),
+          el('div',{className:'fg'},
+            el('label',null,'CC — View Access Only'),
+            el('select',{value:'',onChange:ev=>{const u=users.find(x=>x.id===ev.target.value);if(u&&!f.cc?.find(a=>a.id===u.id))setF(p=>({...p,cc:[...(p.cc||[]),{id:u.id,name:u.name,email:u.email,dept:u.dept}]}));ev.target.value='';},style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+              el('option',{value:''},'+ Add person to CC...'),
+              ...users.filter(u=>u.approved&&!f.assignees?.find(a=>a.id===u.id)&&!f.cc?.find(a=>a.id===u.id)).map(u=>el('option',{key:u.id,value:u.id},`${u.name} — ${u.dept} — ${u.loc}`))
+            ),
+            (f.cc||[]).length>0&&el('div',{style:{display:'flex',flexWrap:'wrap',gap:6,marginTop:8}},
+              (f.cc||[]).map(a=>el('div',{key:a.id,style:{display:'flex',alignItems:'center',gap:6,background:'rgba(139,92,246,.1)',border:'1px solid rgba(139,92,246,.2)',borderRadius:20,padding:'4px 12px',fontSize:12}},
+                el('div',{className:'avatar',style:{background:`hsl(${(a.name.charCodeAt(0)*47)%360},50%,35%)`,width:18,height:18,fontSize:9}},a.name.charAt(0).toUpperCase()),
+                el('span',{style:{color:'var(--purple)'}},a.name),
+                el('span',{style:{fontSize:10,color:'var(--text3)',marginLeft:2}},'CC'),
+                el('span',{style:{cursor:'pointer',color:'var(--text3)',marginLeft:4},onClick:()=>setF(p=>({...p,cc:(p.cc||[]).filter(x=>x.id!==a.id)}))},'×'),
+              ))
+            ),
+            el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:6}},'CC people can see this task but cannot change its status'),
+          ),
+          el('div',{className:'fg'},
+            el('label',null,'Tags'),
+            el('div',{style:{display:'flex',gap:8}},
+              el('input',{placeholder:'Type tag, press Enter',value:tagInput,onChange:ev=>setTagInput(ev.target.value),onKeyDown:ev=>{if(ev.key==='Enter'&&ev.target.value.trim()){setF(p=>({...p,tags:[...new Set([...p.tags,ev.target.value.trim()])]}));setTagInput('');}}}),
+            ),
+            f.tags.length>0&&el('div',{style:{display:'flex',flexWrap:'wrap',gap:6,marginTop:8}},
+              f.tags.map(tag=>el('div',{key:tag,style:{display:'flex',alignItems:'center',gap:4,background:'rgba(30,58,95,.12)',color:'var(--accent)',borderRadius:20,padding:'3px 10px',fontSize:12}},
+                tag,el('span',{style:{cursor:'pointer',marginLeft:4,color:'var(--accent)'},onClick:()=>setF(p=>({...p,tags:p.tags.filter(t=>t!==tag)}))},'×'),
+              ))
+            ),
+          ),
+        ),
+        el('div',{className:'mf'},
+          el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),
+          el('button',{className:'btn b-blue',onClick:createTask,disabled:saving||!f.title||f.assignees.length===0},saving?'Creating...':'Create & Notify'),
+        ),
+      )
+    ),
+    selected&&el(TaskModal,{task:selected,cu,users,onClose:()=>setSelected(null),onUpdate:handleUpdate,onDelete:handleDelete}),
+  );
+}
+
+// ── TEAM PAGE ────────────────────────────────────────────────────────────────
+function Team({users,setUsers,cu}){
+  const[editU,setEditU]=useState(null);
+  const[showAdd,setAdd]=useState(false);
+  const[search,setSearch]=useState('');
+  const[saveMsg,setSaveMsg]=useState('');
+  const[newPw,setNewPw]=useState('');
+  const[pwMsg,setPwMsg]=useState('');
+  const[af,setAf]=useState({firstName:'',lastName:'',email:'',pw:'',role:'employee',dept:'Production',loc:'Nationwide'});
+  const pending=users.filter(u=>!u.approved);
+  const approved=users.filter(u=>u.approved).filter(u=>
+    !search||u.name.toLowerCase().includes(search.toLowerCase())||
+    u.email?.toLowerCase().includes(search.toLowerCase())||
+    (RLABEL[u.role]||'').toLowerCase().includes(search.toLowerCase())
+  );
+
+  async function approve(id){
+    try{
+      await db.update('pf_users',id,{approved:true});
+      setUsers(p=>p.map(u=>u.id===id?{...u,approved:true}:u));
+      const user=users.find(u=>u.id===id);
+      sendLocalNotification('✅ Account Approved','Welcome to Black Fox QMS!').catch(()=>{});
+      if(user?.email) sendEmail({to:user.email,subject:'Your Black Fox QMS account is approved',html:`<div style="font-family:sans-serif;background:#0f1117;color:#e8eaf0;padding:24px;border-radius:12px;max-width:500px"><div style="color:#f5a623;font-size:20px;font-weight:700;margin-bottom:12px">Black Fox QMS</div><p>Hi ${user.name}, your account has been approved.</p><a href="${APP_URL}" style="display:inline-block;background:#f5a623;color:#000000;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:600;margin-top:12px">Sign In →</a></div>`});
+    }catch(e){console.error('approve error:',e);}
+  }
+
+  async function reject(id){
+    if(!window.confirm('Reject this request?'))return;
+    try{await db.remove('pf_users',id);setUsers(p=>p.filter(u=>u.id!==id));}catch(e){console.error(e);}
+  }
+
+  async function removeUser(id){
+    if(id===cu.id||!window.confirm('Remove this user?'))return;
+    try{await db.remove('pf_users',id);setUsers(p=>p.filter(u=>u.id!==id));}catch(e){console.error(e);}
+  }
+
+  async function saveEdit(){
+    setSaveMsg('Saving...');
+    const update={
+      name:editU.name,
+      email:editU.email,
+      role:editU.role,
+      dept:editU.dept,
+      depts:editU.depts||[],
+      licenses:editU.licenses||[],
+      loc:editU.loc,
+      managers:editU.managers||[],
+      oversees_depts:editU.oversees_depts||[],
+    };
+    // Try full update first; if oversees_depts column missing, add it then retry
+    async function doUpdate(){
+      return fetch(`${SUPA_URL}/rest/v1/pf_users?id=eq.${editU.id}`,{
+        method:'PATCH',
+        headers:{...H.headers,'Prefer':'return=representation'},
+        body:JSON.stringify(update),
+      }).then(async r=>{
+        if(!r.ok){
+          const txt=await r.text();
+          if(txt.includes('oversees_depts')||txt.includes('column')){
+            // Column missing — run ALTER then retry without oversees_depts first
+            throw new Error('MISSING_COLUMN:'+txt);
+          }
+          throw new Error(txt);
+        }
+        return r.json();
+      });
+    }
+    try{
+      await doUpdate();
+      setUsers(p=>p.map(u=>u.id===editU.id?{...u,...update}:u));
+      setSaveMsg('✓ Saved!');
+      setTimeout(()=>{setSaveMsg('');setEditU(null);},800);
+    }catch(e){
+      if(e.message.startsWith('MISSING_COLUMN')){
+        // Save without oversees_depts so at least other fields persist
+        setSaveMsg('Adding column… retrying…');
+        const fallback={role:editU.role,dept:editU.dept,depts:editU.depts||[],licenses:editU.licenses||[],loc:editU.loc,managers:editU.managers||[]};
+        try{
+          await fetch(`${SUPA_URL}/rest/v1/pf_users?id=eq.${editU.id}`,{method:'PATCH',headers:{...H.headers,'Prefer':'return=representation'},body:JSON.stringify(fallback)});
+          setUsers(p=>p.map(u=>u.id===editU.id?{...u,...fallback}:u));
+          setSaveMsg('⚠️ Saved (without dept access) — run SQL migration below');
+          setTimeout(()=>setSaveMsg(''),4000);
+          // Show migration prompt
+          navigator.clipboard.writeText("ALTER TABLE pf_users ADD COLUMN IF NOT EXISTS oversees_depts jsonb default '[]';").catch(()=>{});
+          alert('⚠️ Run this SQL in your Supabase SQL Editor to enable Department Access:\n\nALTER TABLE pf_users ADD COLUMN IF NOT EXISTS oversees_depts jsonb default \'[]\';\n\n(Copied to clipboard)');
+        }catch(e2){
+          setSaveMsg('❌ Save failed: '+e2.message.slice(0,60));
+        }
+      } else {
+        console.error('saveEdit error:',e);
+        setSaveMsg('❌ '+e.message.slice(0,80));
+      }
+    }
+  }
+
+  async function addUser(){
+    if(!af.firstName||!af.email||!af.pw)return;
+    const fullName=af.firstName.trim()+' '+(af.lastName||'').trim();
+    const nu={
+      id:'u'+Date.now(),name:fullName,
+      first_name:af.firstName,last_name:af.lastName||'',
+      email:af.email,pw:af.pw,role:af.role,
+      dept:af.dept,depts:af.depts||[af.dept],
+      licenses:af.licenses||[],loc:af.loc,
+      approved:true,perms:[],managers:[],oversees_depts:[],
+    };
+    try{
+      await db.insert('pf_users',nu);
+      setUsers(p=>[...p,nu]);
+      setAdd(false);
+      setAf({firstName:'',lastName:'',email:'',pw:'',role:'employee',dept:'Production',loc:'Nationwide'});
+    }catch(e){console.error('addUser error:',e);alert('Failed to add user: '+e.message);}
+  }
+
+  function toggleDept(dept){
+    setEditU(p=>{
+      const cur=new Set(p.oversees_depts||[]);
+      if(cur.has(dept)){
+        // Remove this dept AND any children that were auto-added by it
+        cur.delete(dept);
+        // Remove children if no other parent selects them
+        const remaining=[...cur];
+        const expanded=new Set(expandDepts(remaining));
+        return {...p,oversees_depts:remaining.filter(d=>expanded.has(d)||remaining.includes(d))};
+      } else {
+        cur.add(dept);
+        return {...p,oversees_depts:[...cur]};
+      }
+    });
+  }
+
+  // Get effective access (expanded) for display
+  function getEffectiveAccess(selected){
+    return expandDepts(selected||[]);
+  }
+
+  // Determine dept level for styling
+  function deptLevel(dept){
+    if(DEPT_TREE[dept]!==undefined) return 'grandmother';
+    for(const [gm,mothers] of Object.entries(DEPT_TREE)){
+      if(mothers[dept]!==undefined) return 'mother';
+      for(const children of Object.values(mothers)){
+        if(children.includes(dept)) return 'child';
+      }
+    }
+    return 'child';
+  }
+
+  const deptLevelStyle={
+    grandmother:{bg:'rgba(30,58,95,.1)',border:'rgba(30,58,95,.4)',color:'var(--accent)',fw:700},
+    mother:{bg:'rgba(59,130,246,.08)',border:'rgba(59,130,246,.3)',color:'#93c5fd',fw:600},
+    child:{bg:'var(--surface2)',border:'var(--border)',color:'var(--text2)',fw:500},
+  };
+
+  return el('div',null,
+    el('div',{className:'ph'},
+      el('div',null,el('div',{className:'pt'},'Team & Access'),el('div',{className:'ps'},'Manage roles, managers and department oversight')),
+      el('div',{style:{display:'flex',gap:8}},
+        el('input',{placeholder:'Search...',value:search,onChange:ev=>setSearch(ev.target.value),style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px 14px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',width:200}}),
+        el('button',{className:'btn b-blue',onClick:()=>setAdd(true)},'+ Add Member'),
+      ),
+    ),
+
+    // Pending approvals
+    pending.length>0&&el('div',{className:'card',style:{marginBottom:18,borderColor:'rgba(245,158,11,.3)'}},
+      el('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:12}},
+        el('span',{className:'badge bb-yellow'},'⏳ Pending'),
+        el('span',{style:{fontSize:13,color:'var(--text2)'}},pending.length+' waiting for approval'),
+      ),
+      pending.map(u=>el('div',{key:u.id,style:{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 0',borderBottom:'1px solid var(--border)',gap:12,flexWrap:'wrap'}},
+        el('div',null,
+          el('div',{style:{fontWeight:600,fontSize:13}},u.name),
+          el('div',{style:{fontSize:12,color:'var(--text2)'}},`${u.email} · ${u.dept} · ${u.loc}`),
+        ),
+        el('div',{style:{display:'flex',gap:8}},
+          el('button',{className:'btn b-green btn-sm',onClick:()=>approve(u.id)},'✓ Approve'),
+          el('button',{className:'btn b-red btn-sm',onClick:()=>reject(u.id)},'✗ Reject'),
+        ),
+      ))
+    ),
+
+    // Team table
+    el('div',{className:'card',style:{padding:0}},
+      el('div',{className:'tw'},
+        el('table',null,
+          el('thead',null,el('tr',null,['Member','Role','Location','Reports To','Oversees',''].map(h=>el('th',{key:h},h)))),
+          el('tbody',null,approved.map(u=>{
+            const effective=getEffectiveAccess(u.oversees_depts||[]);
+            return el('tr',{key:u.id},
+              el('td',null,
+                el('div',{style:{display:'flex',alignItems:'center',gap:8}},
+                  el('div',{className:'avatar',style:{background:avatarColor(u.name),width:32,height:32,fontSize:12}},u.name.charAt(0).toUpperCase()),
+                  el('div',null,
+                    el('div',{style:{fontWeight:600,fontSize:13}},u.name),
+                    el('div',{style:{fontSize:11,color:'var(--text3)'}},u.email),
+                  )
+                )
+              ),
+              el('td',null,el('span',{className:`badge ${RCOLOR[u.role]||'bb-gray'}`,style:{fontSize:11,whiteSpace:'nowrap'}},RLABEL[u.role]||u.role)),
+              el('td',null,el('span',{style:{fontSize:12,color:'var(--text2)'}},u.loc)),
+              el('td',null,
+                (u.managers||[]).length===0
+                  ?el('span',{style:{fontSize:12,color:'var(--text3)'}},'—')
+                  :el('div',null,(u.managers||[]).map(m=>el('div',{key:m.id,style:{fontSize:12,marginBottom:2}},m.name)))
+              ),
+              el('td',null,
+                (u.oversees_depts||[]).length===0
+                  ?el('span',{style:{fontSize:12,color:'var(--text3)'}},'—')
+                  :el('div',null,
+                    el('div',{style:{display:'flex',flexWrap:'wrap',gap:3,marginBottom:3}},
+                      (u.oversees_depts||[]).map(d=>{
+                        const lvl=deptLevel(d);
+                        const s=deptLevelStyle[lvl];
+                        return el('span',{key:d,style:{background:s.bg,color:s.color,border:'1px solid '+s.border,borderRadius:4,padding:'1px 6px',fontSize:10,fontWeight:s.fw}},d);
+                      })
+                    ),
+                    effective.length>(u.oversees_depts||[]).length&&el('div',{style:{fontSize:10,color:'var(--text3)'}},`+${effective.length-(u.oversees_depts||[]).length} auto-included`),
+                  )
+              ),
+              el('td',null,
+                el('button',{className:'btn b-ghost btn-sm',onClick:()=>setEditU({...u,oversees_depts:u.oversees_depts||[],managers:u.managers||[]})},'Edit'),
+                u.id!==cu.id&&el('button',{className:'btn b-red btn-sm',style:{marginLeft:6},onClick:()=>removeUser(u.id)},'Remove'),
+              ),
+            );
+          }))
+        )
+      )
+    ),
+
+    // ── EDIT MODAL ─────────────────────────────────────────────────────────
+    editU&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setEditU(null)},
+      el('div',{className:'md',style:{width:700,maxHeight:'92vh'}},
+        el('div',{className:'mh'},
+          el('div',{style:{flex:1,display:'flex',alignItems:'center',gap:10}},
+            el('div',{className:'avatar',style:{background:avatarColor(editU.name),width:36,height:36,fontSize:14}},editU.name.charAt(0).toUpperCase()),
+            el('div',null,el('div',{className:'mt2'},editU.name),el('div',{style:{fontSize:12,color:'var(--text2)'}},editU.email)),
+          ),
+          el('button',{className:'mc',onClick:()=>{setEditU(null);setNewPw('');setPwMsg('');}},'×'),
+        ),
+        el('div',{className:'mbd'},
+
+          // Name + Email edit
+          el('div',{className:'g2'},
+            el('div',{className:'fg',style:{marginBottom:0}},
+              el('label',null,'Full Name'),
+              el('input',{value:editU.name||'',onChange:ev=>setEditU(p=>({...p,name:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,boxSizing:'border-box'}}),
+            ),
+            el('div',{className:'fg',style:{marginBottom:0}},
+              el('label',null,'Email / Username'),
+              el('input',{type:'email',value:editU.email||'',onChange:ev=>setEditU(p=>({...p,email:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,boxSizing:'border-box'}}),
+            ),
+          ),
+
+          // Password Reset
+          el('div',{style:{background:'rgba(30,58,95,.05)',border:'1px solid rgba(30,58,95,.15)',borderRadius:10,padding:'14px 16px',marginBottom:14}},
+            el('div',{style:{fontSize:12,fontWeight:700,color:'var(--accent)',marginBottom:10,textTransform:'uppercase',letterSpacing:'.5px'}},'🔒 Reset Password'),
+            el('div',{style:{display:'flex',gap:8,alignItems:'center'}},
+              el('input',{
+                type:'password',
+                value:newPw,
+                onChange:ev=>{setNewPw(ev.target.value);setPwMsg('');},
+                placeholder:'Enter new password...',
+                style:{flex:1,background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none'},
+              }),
+              el('button',{
+                className:'btn b-blue btn-sm',
+                disabled:newPw.length<6,
+                onClick:async()=>{
+                  if(newPw.length<6){setPwMsg('⚠️ Min 6 characters');return;}
+                  setPwMsg('Saving...');
+                  try{
+                    await fetch(`${SUPA_URL}/rest/v1/pf_users?id=eq.${editU.id}`,{
+                      method:'PATCH',
+                      headers:{...H.headers,'Prefer':'return=representation'},
+                      body:JSON.stringify({pw:newPw}),
+                    });
+                    setNewPw('');
+                    setPwMsg('✓ Password updated!');
+                    setTimeout(()=>setPwMsg(''),3000);
+                  }catch(e){setPwMsg('❌ Failed: '+e.message);}
+                }
+              },'Set Password'),
+            ),
+            newPw.length>0&&newPw.length<6&&el('div',{style:{fontSize:11,color:'var(--red)',marginTop:4}},'Password must be at least 6 characters'),
+            pwMsg&&el('div',{style:{fontSize:12,marginTop:6,color:pwMsg.includes('✓')?'var(--green)':pwMsg.includes('❌')?'var(--red)':'var(--text2)'}},pwMsg),
+          ),
+
+          el('div',{className:'divider'}),
+
+          // Role dropdown (grouped)
+          el('div',{className:'fg'},
+            el('label',null,'Role'),
+            el('select',{
+              value:editU.role,
+              onChange:ev=>setEditU(p=>({...p,role:ev.target.value})),
+              style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'10px 14px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none'},
+            },
+              ROLE_GROUPS.map(g=>[
+                el('option',{key:'h-'+g.label,disabled:true,style:{color:'#6b7280',fontWeight:700}},'── '+g.label+' ──'),
+                ...g.roles.map(r=>el('option',{key:r,value:r,style:{paddingLeft:16}},RLABEL[r]||r))
+              ])
+            ),
+            el('div',{style:{marginTop:6,display:'flex',alignItems:'center',gap:6}},
+              el('span',{className:`badge ${RCOLOR[editU.role]||'bb-gray'}`,style:{fontSize:11}},RLABEL[editU.role]||editU.role),
+            ),
+          ),
+
+          el('div',{className:'divider'}),
+
+          // Location + Home Dept
+          el('div',{className:'g2'},
+            el('div',{className:'fg',style:{marginBottom:0}},
+              el('label',null,'Location'),
+              el('select',{value:editU.loc,onChange:ev=>setEditU(p=>({...p,loc:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+                LOCS.map(l=>el('option',{key:l,value:l},l))
+              )
+            ),
+            el('div',{className:'fg',style:{marginBottom:0}},
+              el('label',null,'Home Department'),
+              el('select',{value:editU.dept,onChange:ev=>setEditU(p=>({...p,dept:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+                DEPTS.map(d=>el('option',{key:d,value:d},d))
+              )
+            ),
+          ),
+
+          el('div',{className:'divider'}),
+
+          // Dept access / oversight with hierarchy
+          el('div',{className:'fg'},
+            el('label',null,'License(s) — Facilities this person works at'),
+            el('div',{style:{display:'flex',flexDirection:'column',gap:6,marginBottom:8}},
+              LICENSES.map(lic=>el('label',{key:lic.id,style:{display:'flex',alignItems:'center',gap:8,padding:'8px 12px',background:'var(--surface2)',border:'1px solid',borderColor:(editU.licenses||[]).includes(lic.id)?'var(--accent)':'var(--border)',borderRadius:8,cursor:'pointer',transition:'all .15s'}},
+                el('input',{type:'checkbox',checked:(editU.licenses||[]).includes(lic.id),onChange:ev=>{const cur=editU.licenses||[];setEditU(p=>({...p,licenses:ev.target.checked?[...cur,lic.id]:cur.filter(x=>x!==lic.id)}));},style:{accentColor:'var(--accent)'}}),
+                el('div',null,
+                  el('div',{style:{fontSize:12,fontWeight:600,color:(editU.licenses||[]).includes(lic.id)?'var(--accent)':'var(--text)'}},lic.name),
+                  el('div',{style:{fontSize:11,color:'var(--text3)'}},lic.state+' · '+lic.license_type),
+                )
+              ))
+            ),
+          ),
+          el('div',{className:'fg'},
+            el('label',null,'Department(s) — All departments this person works in'),
+            el('div',{style:{display:'flex',flexWrap:'wrap',gap:5,marginBottom:4}},
+              Object.keys(DEPT_TREE).map(gm=>el('div',{key:gm,
+                onClick:()=>setEditU(p=>{const cur=new Set(p.depts||[]);cur.has(gm)?cur.delete(gm):cur.add(gm);return{...p,depts:[...cur]};}),
+                style:{padding:'5px 12px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:600,cursor:'pointer',userSelect:'none',transition:'all .15s',
+                  background:(editU.depts||[]).includes(gm)?'rgba(30,58,95,.12)':'var(--surface2)',
+                  color:(editU.depts||[]).includes(gm)?'var(--accent)':'var(--text2)',
+                  borderColor:(editU.depts||[]).includes(gm)?'var(--accent)':'var(--border)',
+                }
+              },gm))
+            ),
+          ),
+          el('div',{className:'divider'}),
+          el('div',{className:'fg'},
+            el('label',null,'Department Access / Oversight'),
+            el('div',{style:{fontSize:11,color:'var(--text3)',marginBottom:10,lineHeight:1.5}},
+              '🟡 Selecting a ',el('strong',null,'top-level department'),' automatically grants access to all sub-departments. ',
+              '🔵 Selecting a ',el('strong',null,'mid-level'),' grants access to its sub-departments.'
+            ),
+            // Render by grandmother → mother → children
+            el('div',{style:{display:'flex',flexDirection:'column',gap:10}},
+              Object.entries(DEPT_TREE).map(([gm,mothers])=>{
+                const gmSelected=(editU.oversees_depts||[]).includes(gm);
+                const effective=new Set(expandDepts(editU.oversees_depts||[]));
+                const gmActive=effective.has(gm)||gmSelected;
+                return el('div',{key:gm,style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:10,padding:12}},
+                  // Grandmother row
+                  el('div',{
+                    onClick:()=>toggleDept(gm),
+                    style:{display:'flex',alignItems:'center',gap:8,cursor:'pointer',marginBottom:Object.keys(mothers).length>0?10:0},
+                  },
+                    el('div',{style:{width:18,height:18,borderRadius:4,border:'2px solid',borderColor:gmSelected?'var(--accent)':'var(--text3)',background:gmSelected?'var(--accent)':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,transition:'all .15s'}},
+                      gmSelected&&el('span',{style:{color:'#ffffff',fontSize:10,fontWeight:900}},'✓')
+                    ),
+                    el('span',{style:{fontSize:13,fontWeight:700,color:gmSelected?'var(--accent)':'var(--text)'}},gm),
+                    el('span',{style:{fontSize:10,color:'var(--text3)',marginLeft:4}},'(all sub-depts)'),
+                    !gmSelected&&gmActive&&el('span',{style:{fontSize:10,color:'var(--accent)',marginLeft:6}},'● partial'),
+                  ),
+                  // Mother rows
+                  Object.keys(mothers).length>0&&el('div',{style:{paddingLeft:16,display:'flex',flexDirection:'column',gap:6}},
+                    Object.entries(mothers).map(([mother,children])=>{
+                      const mSelected=(editU.oversees_depts||[]).includes(mother)||gmSelected;
+                      const mActive=effective.has(mother);
+                      return el('div',{key:mother},
+                        el('div',{
+                          onClick:()=>!gmSelected&&toggleDept(mother),
+                          style:{display:'flex',alignItems:'center',gap:7,cursor:gmSelected?'not-allowed':'pointer',marginBottom:children.length>0?6:0,opacity:gmSelected?.6:1},
+                        },
+                          el('div',{style:{width:15,height:15,borderRadius:3,border:'1.5px solid',borderColor:mActive?'#93c5fd':'var(--text3)',background:mActive?'rgba(59,130,246,.3)':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}},
+                            mActive&&el('span',{style:{color:'#93c5fd',fontSize:9,fontWeight:900}},'✓')
+                          ),
+                          el('span',{style:{fontSize:12,fontWeight:600,color:mActive?'#93c5fd':'var(--text2)'}},mother),
+                          children.length>0&&el('span',{style:{fontSize:10,color:'var(--text3)',marginLeft:3}},'('+children.length+' sub)'),
+                        ),
+                        // Children
+                        children.length>0&&el('div',{style:{paddingLeft:16,display:'flex',flexWrap:'wrap',gap:5,marginBottom:4}},
+                          children.map(child=>{
+                            const cActive=effective.has(child)||mActive;
+                            return el('div',{key:child,
+                              onClick:()=>!gmSelected&&!mSelected&&toggleDept(child),
+                              style:{display:'flex',alignItems:'center',gap:5,padding:'3px 9px',borderRadius:12,border:'1px solid',borderColor:cActive?'var(--border)':'var(--border)',background:cActive?'var(--surface3)':'transparent',color:cActive?'var(--text2)':'var(--text3)',fontSize:11,cursor:(gmSelected||mSelected)?'not-allowed':'pointer',opacity:(gmSelected||mSelected)?.6:1},
+                            },
+                              el('div',{style:{width:8,height:8,borderRadius:'50%',background:cActive?'var(--green)':'var(--text3)',flexShrink:0}}),
+                              child
+                            );
+                          })
+                        ),
+                      );
+                    })
+                  ),
+                );
+              })
+            ),
+            // Summary of what's granted
+            (()=>{
+              const selected=editU.oversees_depts||[];
+              const effective=expandDepts(selected);
+              if(effective.length===0) return null;
+              return el('div',{style:{marginTop:12,background:'rgba(30,58,95,.05)',border:'1px solid rgba(30,58,95,.15)',borderRadius:8,padding:'10px 14px'}},
+                el('div',{style:{fontSize:11,fontWeight:700,color:'var(--accent)',marginBottom:6,textTransform:'uppercase',letterSpacing:'.5px'}},'Effective Access ('+effective.length+' depts)'),
+                el('div',{style:{display:'flex',flexWrap:'wrap',gap:4}},
+                  effective.map(d=>el('span',{key:d,style:{background:'rgba(30,58,95,.08)',color:'var(--accent)',border:'1px solid rgba(30,58,95,.15)',borderRadius:3,padding:'1px 6px',fontSize:10,fontWeight:600}},d))
+                ),
+              );
+            })(),
+          ),
+
+          el('div',{className:'divider'}),
+
+          // Reports To (managers) — typeahead
+          el(ManagerTypeahead,{
+            editU,
+            setEditU,
+            users,
+          }),
+        ),
+        el('div',{className:'mf',style:{justifyContent:'space-between',alignItems:'center'}},
+          el('div',{style:{fontSize:13,fontWeight:600,color:saveMsg.includes('❌')?'var(--red)':saveMsg.includes('✓')?'var(--green)':'var(--text2)'}},saveMsg),
+          el('div',{style:{display:'flex',gap:8}},
+            el('button',{className:'btn b-ghost',onClick:()=>{setEditU(null);setNewPw('');setPwMsg('');}},'Cancel'),
+            el('button',{className:'btn b-blue',onClick:saveEdit},'Save Changes'),
+          ),
+        ),
+      )
+    ),
+
+    // ── ADD USER MODAL ────────────────────────────────────────────────────
+    showAdd&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setAdd(false)},
+      el('div',{className:'md'},
+        el('div',{className:'mh'},el('div',{className:'mt2'},'Add Team Member'),el('button',{className:'mc',onClick:()=>setAdd(false)},'×')),
+        el('div',{className:'mbd'},
+          el('div',{className:'g2'},
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'First Name'),el('input',{value:af.firstName,onChange:ev=>setAf(p=>({...p,firstName:ev.target.value}))})),
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Last Name'),el('input',{value:af.lastName,onChange:ev=>setAf(p=>({...p,lastName:ev.target.value}))})),
+          ),
+          el('div',{className:'fg'},el('label',null,'Email'),el('input',{type:'email',value:af.email,onChange:ev=>setAf(p=>({...p,email:ev.target.value}))})),
+          el('div',{className:'fg'},el('label',null,'Password'),el('input',{type:'password',value:af.pw,onChange:ev=>setAf(p=>({...p,pw:ev.target.value}))})),
+          el('div',{className:'fg'},
+            el('label',null,'Role'),
+            el('select',{value:af.role,onChange:ev=>setAf(p=>({...p,role:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+              ROLE_GROUPS.map(g=>[
+                el('option',{key:'h-'+g.label,disabled:true,style:{color:'#6b7280',fontWeight:700}},'── '+g.label+' ──'),
+                ...g.roles.map(r=>el('option',{key:r,value:r},RLABEL[r]||r))
+              ])
+            )
+          ),
+          el('div',{className:'g2'},
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Location'),el('select',{value:af.loc,onChange:ev=>setAf(p=>({...p,loc:ev.target.value}))},LOCS.map(l=>el('option',{key:l,value:l},l)))),
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Home Department'),el('select',{value:af.dept,onChange:ev=>setAf(p=>({...p,dept:ev.target.value}))},DEPTS.map(d=>el('option',{key:d,value:d},d)))),
+          ),
+        ),
+        el('div',{className:'mf'},
+          el('button',{className:'btn b-ghost',onClick:()=>setAdd(false)},'Cancel'),
+          el('button',{className:'btn b-blue',onClick:addUser},'Add & Approve'),
+        ),
+      )
+    ),
+  );
+}
+
+// ── VIDEO CALL ───────────────────────────────────────────────────────────────
+function VideoCall({room,displayName,meetLink,onEnd}){
+  useEffect(()=>{
+    const url=meetLink||'https://meet.jit.si/'+room;
+    window.open(url,'_blank');
+    onEnd();
+  },[]);
+  return null;
+}
+
+// ── SALES & MARKETING ─────────────────────────────────────────────────────────
+function SalesMarketing({salesTasks,setSalesTasks,cu,users,locFilter}){
+  const[view,setView]=useState('board');
+  const[showNew,setNew]=useState(false);
+  const[sel,setSel]=useState(null);
+  const[newNote,setNewNote]=useState('');
+  const[saving,setSaving]=useState(false);
+  const[cancelAlert,setCancelAlert]=useState(null);
+  const[showCancelModal,setShowCancelModal]=useState(false);
+  const[cancelReason,setCancelReason]=useState('');
+  const[cancelTarget,setCancelTarget]=useState(null);
+  const[f,setF]=useState({
+    type:'Retail Visit',title:'',description:'',
+    assigned_to:'',assigned_id:'',
+    date:'',time:'',
+    state:'Michigan',brand:'',location:'',
+    priority:'medium',report:'',
+  });
+
+  const isSalesAdmin=cu.role==='admin'||cu.dept==='Sales'||cu.dept==='Marketing'||SALES_ROLES.includes(cu.position)||SALES_ROLES.includes(cu.role);
+  const today=new Date().toISOString().slice(0,10);
+
+  const filtered=salesTasks.filter(t=>{
+    if(locFilter&&locFilter!=='Nationwide'&&t.state&&t.state!==locFilter) return false;
+    if(!isSalesAdmin) return t.created_by_id===cu.id||t.assigned_id===cu.id;
+    return true;
+  });
+
+  const byStatus={
+    pending:filtered.filter(t=>t.status==='pending'),
+    in_progress:filtered.filter(t=>t.status==='in_progress'),
+    completed:filtered.filter(t=>t.status==='completed'),
+    reported:filtered.filter(t=>t.status==='reported'),
+  };
+
+  const statusCols=[
+    {id:'pending',label:'Pending',color:'#4a5068'},
+    {id:'in_progress',label:'In Progress',color:'#f5a623'},
+    {id:'completed',label:'Completed',color:'#22c55e'},
+    {id:'reported',label:'Reported',color:'#8b5cf6'},
+    {id:'cancelled',label:'Cancelled',color:'#ef4444'},
+  ];
+
+  const assignable=users.filter(u=>{
+    if(!u.approved) return false;
+    if(cu.role==='admin') return true;
+    return u.dept==='Sales'||u.dept==='Marketing'||SALES_ROLES.includes(u.position)||u.id===cu.id;
+  });
+
+  // FIX 4: flat array lookup — no more [f.state] nesting
+  const brandLocations=f.brand&&RETAIL_BRANDS[f.brand]?RETAIL_BRANDS[f.brand]:[];
+
+  async function create(){
+    if(!f.title&&!f.type) return;
+    setSaving(true);
+    const task={
+      id:'st-'+Date.now(),...f,
+      title:f.title||f.type+' — '+f.brand+(f.location?' ('+f.location+')':''),
+      status:'pending',notes:[],attachments:[],
+      created_by:cu.name,created_by_id:cu.id,
+      created_at:new Date().toISOString(),updated_at:new Date().toISOString(),
+    };
+    try{await db.insert('pf_sales_tasks',task);}catch(e){console.error(e);setSaving(false);return;}
+    setSalesTasks(p=>[task,...p]);
+    const assignee=users.find(u=>u.id===f.assigned_id);
+    if(assignee?.email){
+      sendLocalNotification('🏪 New Sales Task',task.title+' assigned to '+f.assigned_to).catch(()=>{});
+    sendEmail({
+        to:assignee.email,
+        subject:`🏪 New Sales Task: "${task.title}"`,
+        html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
+          <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">🏪 Sales & Marketing Task</div>
+          <div style="font-size:17px;font-weight:700;margin-bottom:12px">${task.title}</div>
+          <div style="background:rgba(30,58,95,.06);border:1px solid rgba(30,58,95,.15);border-radius:10px;padding:14px;margin-bottom:20px">
+            ${f.date?`<div style="margin-bottom:6px">📅 <strong>${f.date}${f.time?' at '+f.time:''}</strong></div>`:''}
+            ${f.brand?`<div style="margin-bottom:6px">🏪 <strong>${f.brand}</strong></div>`:''}
+            ${f.location?`<div style="margin-bottom:6px">📍 ${f.location}</div>`:''}
+            ${f.state?`<div>🗺 ${f.state}</div>`:''}
+          </div>
+          ${f.description?`<p style="color:#7b8db8;margin-bottom:20px">${f.description}</p>`:''}
+          <a href="${APP_URL}" style="background:#f5a623;color:#000000;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">View Task →</a>
+        </div>`
+      });
+    }
+    setF({type:'Retail Visit',title:'',description:'',assigned_to:'',assigned_id:'',date:'',time:'',state:'Michigan',brand:'',location:'',priority:'medium',report:''});
+    setNew(false);setSaving(false);
+  }
+
+  async function updateStatus(task,status,reason){
+    if(status==='cancelled'&&!reason){
+      setCancelTarget(task);setCancelReason('');setShowCancelModal(true);return;
+    }
+    const update={status,updated_at:new Date().toISOString()};
+    if(status==='cancelled'&&reason) update.cancel_reason=reason;
+    try{await db.update('pf_sales_tasks',task.id,update);}catch(e){console.error(e);}
+    setSalesTasks(p=>p.map(t=>t.id===task.id?{...t,...update}:t));
+    setSel(s=>s?{...s,...update}:null);
+    // Buzz + notify assignee if cancelled
+    if(status==='cancelled'){
+      sendLocalNotification('🚫 Sales Task Cancelled',task.title+(reason?' — '+reason:'')).catch(()=>{});
+      const assignee=users.find(u=>u.id===task.assigned_id);
+      if(assignee?.email){
+        sendEmail({to:assignee.email,subject:`🚫 Sales Task Cancelled: "${task.title}"`,
+          html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #7f1d1d">
+            <div style="background:#ef4444;color:#fff;padding:16px;border-radius:10px;margin-bottom:20px;text-align:center">
+              <div style="font-size:32px;margin-bottom:8px">🚫</div>
+              <div style="font-size:20px;font-weight:800">TASK CANCELLED</div>
+            </div>
+            <div style="font-size:16px;font-weight:700;margin-bottom:12px">${task.title}</div>
+            ${reason?`<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;color:#fca5a5"><strong>Reason:</strong> ${reason}</div>`:''}
+            <div style="font-size:12px;color:#7b8db8">Cancelled by ${cu.name}</div>
+            <a href="${APP_URL}" style="display:inline-block;margin-top:16px;background:#ef4444;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">View in App →</a>
+          </div>`
+        });
+      }
+      // Show buzz alert to current user if they're the assignee
+      if(task.assigned_id===cu.id||!task.assigned_id){
+        setCancelAlert({...task,...update,cancel_reason:reason});
+      }
+    }
+  }
+
+  async function addNote(){
+    if(!newNote.trim()||!sel)return;
+    const note={id:'n'+Date.now(),text:newNote,by:cu.name,at:new Date().toISOString()};
+    const notes=[...(sel.notes||[]),note];
+    const update={notes,updated_at:new Date().toISOString()};
+    try{await db.update('pf_sales_tasks',sel.id,update);}catch(e){console.error(e);}
+    setSalesTasks(p=>p.map(t=>t.id===sel.id?{...t,...update}:t));
+    setSel(s=>({...s,...update}));
+    setNewNote('');
+  }
+
+  async function saveReport(report){
+    const update={report,status:'reported',updated_at:new Date().toISOString()};
+    try{await db.update('pf_sales_tasks',sel.id,update);}catch(e){console.error(e);}
+    setSalesTasks(p=>p.map(t=>t.id===sel.id?{...t,...update}:t));
+    setSel(s=>({...s,...update}));
+    sendLocalNotification('📋 Report Submitted',sel.title).catch(()=>{});
+    const creator=users.find(u=>u.id===sel.created_by_id);
+    if(creator?.email&&creator.id!==cu.id){
+      sendEmail({
+        to:creator.email,
+        subject:`📋 Report submitted: "${sel.title}"`,
+        html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
+          <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Visit Report Submitted</div>
+          <div style="font-size:16px;font-weight:700;margin-bottom:12px">${sel.title}</div>
+          <div style="background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.2);border-radius:10px;padding:14px;margin-bottom:20px">
+            <div style="font-size:13px;line-height:1.6">${report}</div>
+          </div>
+          <div style="font-size:12px;color:#7b8db8;">Submitted by ${cu.name}</div>
+          <a href="${APP_URL}" style="display:inline-block;margin-top:16px;background:#f5a623;color:#000000;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">View Report →</a>
+        </div>`
+      });
+    }
+  }
+
+  const total=filtered.length;
+  const pendingCt=filtered.filter(t=>t.status==='pending').length;
+  const done=filtered.filter(t=>t.status==='completed'||t.status==='reported').length;
+  const today_tasks=filtered.filter(t=>t.date===today).length;
+
+  return el('div',null,
+    el('div',{className:'ph'},
+      el('div',null,el('div',{className:'pt'},'Sales & Marketing'),el('div',{className:'ps'},'Retail visits, brand activations and field tasks')),
+      el('div',{style:{display:'flex',gap:8}},
+        el('div',{className:'view-toggle'},
+          el('button',{className:`vbtn${view==='board'?' on':''}`,onClick:()=>setView('board')},'⬛ Board'),
+          el('button',{className:`vbtn${view==='list'?' on':''}`,onClick:()=>setView('list')},'☰ List'),
+        ),
+        el('button',{className:'btn b-blue',onClick:()=>setNew(true)},'+ New Task'),
+      ),
+    ),
+    el('div',{className:'g4',style:{marginBottom:20}},
+      [{l:'Total',v:total,c:'var(--text)',ico:'📋'},{l:'Pending',v:pendingCt,c:'var(--accent)',ico:'⏳'},{l:'Today',v:today_tasks,c:today_tasks>0?'var(--red)':'var(--text3)',ico:'📅'},{l:'Completed',v:done,c:'var(--green)',ico:'✅'}]
+        .map(({l,v,c,ico})=>el('div',{key:l,className:'stat',style:{display:'flex',alignItems:'center',gap:14}},
+          el('div',{style:{fontSize:28}},ico),
+          el('div',null,el('div',{className:'sl'},l),el('div',{className:'sv',style:{color:c,fontSize:24}},v)),
+        ))
+    ),
+    view==='board'&&el('div',{style:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:14}},
+      statusCols.map(col=>el('div',{key:col.id,className:'col'},
+        el('div',{className:'col-header'},
+          el('div',{className:'col-title'},el('div',{className:'col-dot',style:{background:col.color}}),col.label,el('div',{className:'col-count'},byStatus[col.id]?.length||0)),
+          el('button',{onClick:()=>setNew(true),style:{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:20,lineHeight:1,padding:'0 4px'}},'＋'),
+        ),
+        (byStatus[col.id]||[]).length===0?
+          el('div',{style:{border:'2px dashed var(--border)',borderRadius:8,padding:'20px',textAlign:'center',color:'var(--text3)',fontSize:12}},'Empty'):
+        (byStatus[col.id]||[]).map(task=>el('div',{key:task.id,className:'task-card',onClick:()=>setSel(task)},
+          el('div',{style:{display:'flex',gap:8}},
+            el('div',{className:'pri-bar',style:{background:PRI[task.priority]?.color||'#f5a623',minHeight:40}}),
+            el('div',{style:{flex:1}},
+              el('div',{style:{display:'flex',gap:5,marginBottom:5,flexWrap:'wrap'}},
+                el('span',{style:{background:'rgba(30,58,95,.1)',color:'var(--accent)',borderRadius:4,padding:'1px 7px',fontSize:10,fontWeight:700}},task.type),
+                task.state&&el('span',{style:{background:'var(--surface2)',color:'var(--text2)',borderRadius:4,padding:'1px 7px',fontSize:10,fontWeight:600}},task.state),
+              ),
+              el('div',{style:{fontSize:13,fontWeight:600,marginBottom:6,lineHeight:1.4}},task.title||(task.brand+' — '+task.location)),
+              task.brand&&el('div',{style:{fontSize:11,color:'var(--text2)',marginBottom:3}},'🏪 '+task.brand),
+              task.location&&el('div',{style:{fontSize:11,color:'var(--text2)',marginBottom:6}},'📍 '+task.location),
+              el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center'}},
+                el('div',{style:{display:'flex',alignItems:'center',gap:6}},
+                  task.assigned_to&&el('div',{className:'avatar',title:task.assigned_to,style:{background:avatarColor(task.assigned_to),width:20,height:20,fontSize:9}},task.assigned_to.charAt(0).toUpperCase()),
+                  task.assigned_to&&el('span',{style:{fontSize:11,color:'var(--text2)'}},task.assigned_to.split(' ')[0]),
+                ),
+                el('div',{style:{display:'flex',gap:6,alignItems:'center'}},
+                  task.date&&el('span',{style:{fontSize:10,color:task.date<today&&task.status==='pending'?'var(--red)':'var(--text3)'}},'📅 '+task.date+(task.time?' '+task.time:'')),
+                  (task.notes||[]).length>0&&el('span',{style:{fontSize:10,color:'var(--text3)'}},'💬'+(task.notes||[]).length),
+                ),
+              ),
+            ),
+          ),
+        ))
+      ))
+    ),
+    view==='list'&&el('div',{className:'card',style:{padding:0}},
+      el('div',{className:'tw'},
+        el('table',null,
+          el('thead',null,el('tr',null,['Type','Title / Brand','Location','Assigned','Date & Time','Status',''].map(h=>el('th',{key:h},h)))),
+          el('tbody',null,filtered.map(task=>el('tr',{key:task.id},
+            el('td',null,el('span',{style:{background:'rgba(30,58,95,.1)',color:'var(--accent)',borderRadius:5,padding:'2px 8px',fontSize:11,fontWeight:700}},task.type)),
+            el('td',null,el('div',{style:{fontWeight:600,fontSize:13}},task.title||task.brand),el('div',{style:{fontSize:11,color:'var(--text2)',marginTop:2}},task.brand&&task.location?task.brand+' — '+task.location:task.brand||task.location||'')),
+            el('td',null,el('span',{style:{fontSize:12,color:'var(--text2)'}},task.state||'—')),
+            el('td',null,task.assigned_to&&el('div',{style:{display:'flex',alignItems:'center',gap:6}},el('div',{className:'avatar',style:{background:avatarColor(task.assigned_to),width:22,height:22,fontSize:9}},task.assigned_to.charAt(0).toUpperCase()),el('span',{style:{fontSize:12}},task.assigned_to))),
+            el('td',null,el('span',{style:{fontSize:12,color:'var(--text2)',whiteSpace:'nowrap'}},(task.date||'—')+(task.time?' '+task.time:''))),
+            el('td',null,el('span',{className:`badge ${task.status==='completed'||task.status==='reported'?'bb-green':task.status==='in_progress'?'bb-blue':'bb-gray'}`},task.status)),
+            el('td',null,el('button',{className:'btn b-ghost btn-sm',onClick:()=>setSel(task)},'View')),
+          )))
+        )
+      )
+    ),
+    showNew&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setNew(false)},
+      el('div',{className:'md',style:{width:620}},
+        el('div',{className:'mh'},el('div',{className:'mt2'},'New Sales & Marketing Task'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
+        el('div',{className:'mbd'},
+          el('div',{className:'g2'},
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Task Type'),el('select',{value:f.type,onChange:ev=>setF(p=>({...p,type:ev.target.value}))},SALES_TASK_TYPES.map(t=>el('option',{key:t,value:t},t)))),
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Priority'),el('select',{value:f.priority,onChange:ev=>setF(p=>({...p,priority:ev.target.value}))},Object.entries(PRI).map(([k,{label}])=>el('option',{key:k,value:k},label)))),
+          ),
+          el('div',{className:'fg'},el('label',null,'Title (optional)'),el('input',{placeholder:'e.g. Q4 Promo Drop at Ascend Detroit...',value:f.title,onChange:ev=>setF(p=>({...p,title:ev.target.value}))})),
+          el('div',{className:'fg'},
+            el('label',null,'Assign To *'),
+            el('select',{value:f.assigned_id,onChange:ev=>{const u=users.find(x=>x.id===ev.target.value);setF(p=>({...p,assigned_id:ev.target.value,assigned_to:u?.name||''}));},style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+              el('option',{value:''},'— Select Person —'),
+              ...assignable.map(u=>el('option',{key:u.id,value:u.id},`${u.name} — ${u.dept} — ${u.loc}`))
+            ),
+          ),
+          el('div',{className:'g2'},
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Date *'),el('input',{type:'date',value:f.date,onChange:ev=>setF(p=>({...p,date:ev.target.value}))})),
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Time'),el('input',{type:'time',value:f.time,onChange:ev=>setF(p=>({...p,time:ev.target.value}))})),
+          ),
+          el('div',{className:'fg',style:{marginTop:13}},
+            el('label',null,'State'),
+            el('div',{style:{display:'flex',gap:8,marginTop:4}},
+              ['Michigan','Missouri'].map(s=>el('button',{key:s,onClick:()=>setF(p=>({...p,state:s,brand:'',location:''})),style:{flex:1,padding:'9px',borderRadius:'var(--rs)',border:'2px solid',borderColor:f.state===s?'var(--accent)':'var(--border)',background:f.state===s?'rgba(30,58,95,.08)':'transparent',color:f.state===s?'var(--accent)':'var(--text2)',fontFamily:'inherit',fontWeight:600,fontSize:13,cursor:'pointer',transition:'all .15s'}},'🗺 '+s))
+            ),
+          ),
+          el('div',{className:'fg'},
+            el('label',null,'Retail Brand'),
+            el('select',{value:f.brand,onChange:ev=>setF(p=>({...p,brand:ev.target.value,location:''})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+              el('option',{value:''},'— Select Brand —'),
+              ...Object.keys(RETAIL_BRANDS).sort().map(b=>el('option',{key:b,value:b},b))
+            ),
+          ),
+          f.brand&&el('div',{className:'fg'},
+            el('label',null,f.brand+' — Location'),
+            brandLocations.length>0?
+              el('select',{value:f.location,onChange:ev=>setF(p=>({...p,location:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+                el('option',{value:''},'— Select Location —'),
+                ...brandLocations.map(l=>el('option',{key:l,value:l},l))
+              ):
+              el('div',{style:{background:'rgba(30,58,95,.05)',border:'1px solid rgba(30,58,95,.15)',borderRadius:8,padding:'10px 12px',fontSize:12,color:'var(--accent)'}},'No locations listed for this brand.'),
+          ),
+          el('div',{className:'fg'},el('label',null,'Description / Notes'),el('textarea',{placeholder:'Details about this task...',value:f.description,onChange:ev=>setF(p=>({...p,description:ev.target.value}))})),
+        ),
+        el('div',{className:'mf'},
+          el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),
+          el('button',{className:'btn b-blue',onClick:create,disabled:saving||!f.assigned_id||!f.date},saving?'Saving...':'Create & Notify'),
+        ),
+      )
+    ),
+    // ── CANCEL REASON MODAL ────────────────────────────────────────────────
+    showCancelModal&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setShowCancelModal(false)},
+      el('div',{className:'md',style:{width:480}},
+        el('div',{className:'mh'},
+          el('div',{className:'mt2',style:{color:'var(--red)'}},'🚫 Cancel Task'),
+          el('button',{className:'mc',onClick:()=>setShowCancelModal(false)},'×'),
+        ),
+        el('div',{className:'mbd'},
+          el('div',{style:{background:'rgba(239,68,68,.06)',border:'1px solid rgba(239,68,68,.2)',borderRadius:10,padding:'12px 16px',marginBottom:16,fontSize:13,fontWeight:600}},
+            cancelTarget?.title
+          ),
+          el('div',{className:'fg'},
+            el('label',null,'Reason for Cancellation *'),
+            el('textarea',{value:cancelReason,onChange:ev=>setCancelReason(ev.target.value),placeholder:'Explain why this task is being cancelled...',autoFocus:true,style:{width:'100%',background:'var(--bg)',border:'1px solid var(--red)',borderRadius:'var(--rs)',padding:'11px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:100,resize:'vertical'}}),
+          ),
+        ),
+        el('div',{className:'mf'},
+          el('button',{className:'btn b-ghost',onClick:()=>setShowCancelModal(false)},'Keep Task'),
+          el('button',{
+            onClick:async()=>{
+              if(!cancelReason.trim()){alert('Please enter a reason.');return;}
+              await updateStatus(cancelTarget,'cancelled',cancelReason.trim());
+              setShowCancelModal(false);setSel(null);
+            },
+            style:{background:'var(--red)',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'9px 20px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer'}
+          },'🚫 Confirm Cancel & Notify'),
+        ),
+      )
+    ),
+    // ── CANCELLED BUZZ ALERT ───────────────────────────────────────────────
+    cancelAlert&&el('div',{className:'cancelled-alert',onClick:()=>setCancelAlert(null)},
+      el('div',{className:'cancelled-banner'},
+        el('div',{style:{fontSize:40,marginBottom:12}},'🚫'),
+        el('div',{style:{fontSize:22,fontWeight:800,marginBottom:8,letterSpacing:'-.5px'}},'TASK CANCELLED'),
+        el('div',{style:{fontSize:16,fontWeight:700,marginBottom:12}},cancelAlert.title),
+        cancelAlert.cancel_reason&&el('div',{style:{fontSize:14,opacity:.9,marginBottom:16,lineHeight:1.5,background:'rgba(0,0,0,.2)',borderRadius:8,padding:'10px 14px'}},'"'+cancelAlert.cancel_reason+'"'),
+        el('div',{style:{fontSize:13,opacity:.8,marginBottom:20}},'Cancelled by '+cu.name),
+        el('button',{onClick:()=>setCancelAlert(null),style:{background:'rgba(255,255,255,.2)',border:'2px solid rgba(255,255,255,.5)',borderRadius:10,padding:'10px 28px',color:'#fff',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer'}},'Dismiss'),
+      )
+    ),
+    sel&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setSel(null)},
+      el('div',{className:'md',style:{width:660}},
+        el('div',{className:'mh'},
+          el('div',{style:{flex:1}},
+            el('div',{style:{display:'flex',gap:6,flexWrap:'wrap',marginBottom:8}},
+              el('span',{style:{background:'rgba(30,58,95,.1)',color:'var(--accent)',borderRadius:5,padding:'2px 10px',fontSize:11,fontWeight:700}},sel.type),
+              el('span',{className:`badge ${sel.status==='completed'||sel.status==='reported'?'bb-green':sel.status==='in_progress'?'bb-blue':'bb-gray'}`},sel.status),
+              el('span',{style:{background:PRI[sel.priority]?.color+'22',color:PRI[sel.priority]?.color,borderRadius:5,padding:'2px 8px',fontSize:11,fontWeight:600}},PRI[sel.priority]?.label),
+            ),
+            el('div',{style:{fontSize:16,fontWeight:700}},sel.title||(sel.brand+' — '+sel.location)),
+          ),
+          el('button',{className:'mc',onClick:()=>setSel(null)},'×'),
+        ),
+        el('div',{className:'mbd'},
+          el('div',{style:{display:'flex',gap:4,marginBottom:16}},
+            statusCols.map(col=>{
+              const isActive=sel.status===col.id;
+              const canChange=sel.assigned_id===cu.id||sel.created_by_id===cu.id||cu.role==='admin';
+              return el('button',{key:col.id,onClick:()=>canChange&&updateStatus(sel,col.id),style:{flex:1,padding:'7px 4px',borderRadius:8,border:`2px solid ${isActive?col.color:'var(--border)'}`,background:isActive?col.color+'22':'transparent',color:isActive?col.color:'var(--text2)',cursor:canChange?'pointer':'not-allowed',fontSize:11,fontWeight:600,transition:'all .15s',fontFamily:'inherit'}},col.label);
+            })
+          ),
+          el('div',{style:{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12,marginBottom:16}},
+            [['Assigned To',sel.assigned_to||'—'],['Date',sel.date||'—'],['Time',sel.time||'—'],['State',sel.state||'—'],['Brand',sel.brand||'—'],['Created By',sel.created_by]].map(([k,v])=>
+              el('div',{key:k,style:{background:'var(--surface2)',borderRadius:8,padding:'10px 12px'}},
+                el('div',{style:{fontSize:10,fontWeight:700,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'.8px',marginBottom:4}},k),
+                el('div',{style:{fontSize:13,fontWeight:600}},v),
+              )
+            )
+          ),
+          sel.location&&el('div',{style:{background:'rgba(30,58,95,.05)',border:'1px solid rgba(30,58,95,.15)',borderRadius:8,padding:'10px 14px',marginBottom:16,display:'flex',alignItems:'center',gap:8}},
+            el('span',{style:{fontSize:16}},'📍'),
+            el('div',null,el('div',{style:{fontSize:11,color:'var(--accent)',fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px'}},'Location'),el('div',{style:{fontSize:14,fontWeight:600}},sel.location)),
+          ),
+          sel.description&&el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:12,marginBottom:14}},el('div',{style:{fontSize:11,color:'var(--text3)',marginBottom:4,fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px'}},'Description'),el('div',{style:{fontSize:13,lineHeight:1.6}},sel.description)),
+          el('div',{className:'divider'}),
+          el('div',{style:{fontWeight:700,marginBottom:10,fontSize:14}},'📋 Visit Report'),
+          sel.assigned_id===cu.id||cu.role==='admin'?
+            el('div',null,
+              el('textarea',{value:sel.report||'',placeholder:'Write your visit report here...',onChange:ev=>{setSel(s=>({...s,report:ev.target.value}));},style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'11px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:100,resize:'vertical',lineHeight:1.6}}),
+              el('button',{onClick:()=>saveReport(sel.report),disabled:!sel.report?.trim(),style:{marginTop:8,background:sel.report?.trim()?'var(--purple)':'rgba(139,92,246,.2)',color:sel.report?.trim()?'#fff':'var(--text3)',border:'none',borderRadius:'var(--rs)',padding:'8px 18px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:sel.report?.trim()?'pointer':'not-allowed'}},'📤 Submit Report'),
+            ):
+            sel.report?el('div',{style:{background:'rgba(139,92,246,.06)',border:'1px solid rgba(139,92,246,.2)',borderRadius:8,padding:12}},el('div',{style:{fontSize:13,lineHeight:1.6}},sel.report)):
+            el('div',{style:{fontSize:12,color:'var(--text3)',fontStyle:'italic'}},'No report submitted yet'),
+          el('div',{className:'divider'}),
+          el('div',{className:'fg'},
+            el('label',null,'Upload Files / Photos'),
+            el('input',{type:'file',accept:'.pdf,.doc,.docx,.png,.jpg,.xlsx,.csv',multiple:true,onChange:async ev=>{
+              const files=Array.from(ev.target.files);
+              for(const file of files){
+                const att=await uploadFile(file,'sales');
+                att.by=cu.name;att.at=new Date().toISOString();
+                const atts=[...(sel.attachments||[]),att];
+                await db.update('pf_sales_tasks',sel.id,{attachments:atts,updated_at:new Date().toISOString()}).catch(console.error);
+                setSalesTasks(p=>p.map(t=>t.id===sel.id?{...t,attachments:atts}:t));
+                setSel(s=>({...s,attachments:atts}));
+              }
+            },style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px',color:'var(--text)',fontFamily:'inherit',fontSize:13}}),
+          ),
+          (sel.attachments||[]).length>0&&el('div',{style:{marginBottom:14}},
+            (sel.attachments||[]).map(att=>el('div',{key:att.id,style:{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'7px 10px',background:'var(--surface2)',borderRadius:6,marginBottom:5}},
+              el('span',{style:{fontSize:12}},`📎 ${att.name}`),
+              el('button',{className:'btn b-ghost btn-sm',onClick:()=>{const a=document.createElement('a');a.href=renderFileUrl(att);a.download=att.name;a.target='_blank';a.click();}},'Download'),
+            ))
+          ),
+          el('div',{className:'divider'}),
+          el('div',{style:{fontWeight:600,marginBottom:12}},'Comments'),
+          (sel.notes||[]).map(note=>el('div',{key:note.id,style:{display:'flex',gap:10,marginBottom:10}},
+            el('div',{className:'avatar',style:{background:avatarColor(note.by),flexShrink:0}},note.by.charAt(0).toUpperCase()),
+            el('div',{style:{flex:1,background:'var(--surface2)',borderRadius:'0 10px 10px 10px',padding:'8px 12px'}},
+              el('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:4}},el('span',{style:{fontSize:12,fontWeight:600}},note.by),el('span',{style:{fontSize:11,color:'var(--text2)'}},note.at.slice(0,16).replace('T',' '))),
+              el('div',{style:{fontSize:13}},note.text),
+            ),
+          )),
+          el('div',{style:{display:'flex',gap:8}},
+            el('div',{className:'avatar',style:{background:avatarColor(cu.name),flexShrink:0,marginTop:2}},cu.name.charAt(0).toUpperCase()),
+            el('div',{style:{flex:1}},
+              el('input',{placeholder:'Add a comment...',value:newNote,onChange:ev=>setNewNote(ev.target.value),onKeyDown:ev=>ev.key==='Enter'&&addNote(),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none'}}),
+            ),
+            el('button',{className:'btn b-blue',onClick:addNote,disabled:!newNote.trim()},'Post'),
+          ),
+        ),
+        el('div',{className:'mf',style:{justifyContent:'space-between'}},
+          el('div',null,cu.role==='admin'&&el('button',{className:'btn b-red',onClick:async()=>{if(!window.confirm('Delete?'))return;await db.remove('pf_sales_tasks',sel.id).catch(console.error);setSalesTasks(p=>p.filter(t=>t.id!==sel.id));setSel(null);}},'Delete')),
+          el('button',{className:'btn b-ghost',onClick:()=>setSel(null)},'Close'),
+        ),
+      )
+    ),
+  );
+}
+
+// ── AI MEETING NOTES ──────────────────────────────────────────────────────────
+function MeetingNotesModal({event,cu,users,meetingNotes,setMeetingNotes,onClose}){
+  const existingNote=meetingNotes.find(n=>n.event_id===event.id);
+  const[tab,setTab]=useState(existingNote?'notes':'record');
+  const[transcript,setTranscript]=useState(existingNote?.transcript||'');
+  const[listening,setListening]=useState(false);
+  const[processing,setProcessing]=useState(false);
+  const[notes,setNotes]=useState(existingNote||null);
+  const[recognition,setRecognition]=useState(null);
+  const[interimText,setInterimText]=useState('');
+  const[saved,setSaved]=useState(false);
+
+  function startListening(){
+    if(!('webkitSpeechRecognition' in window)&&!('SpeechRecognition' in window)){
+      alert('Speech recognition not supported. Use Chrome.\n\nYou can also type or paste the transcript manually.');return;
+    }
+    const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+    const rec=new SR();
+    rec.continuous=true;rec.interimResults=true;rec.lang='en-US';
+    rec.onresult=ev=>{
+      let interim='',final='';
+      for(let i=ev.resultIndex;i<ev.results.length;i++){
+        if(ev.results[i].isFinal){final+=ev.results[i][0].transcript+' ';}
+        else{interim+=ev.results[i][0].transcript;}
+      }
+      if(final) setTranscript(p=>p+final);
+      setInterimText(interim);
+    };
+    rec.onerror=ev=>{console.error('Speech error:',ev.error);setListening(false);};
+    rec.onend=()=>setListening(false);
+    rec.start();setRecognition(rec);setListening(true);
+  }
+
+  function stopListening(){if(recognition){recognition.stop();setRecognition(null);}setListening(false);setInterimText('');}
+
+  async function processWithAI(){
+    if(!transcript.trim()){alert('Please add a transcript first.');return;}
+    setProcessing(true);
+    try{
+      const attendeeNames=(event.attendees||[]).map(a=>a.name).join(', ')||'Not specified';
+      const prompt=`You are an expert meeting notes assistant. Analyze this meeting transcript and create structured meeting notes.
+Meeting: ${event.title}
+Date: ${event.date}
+Attendees: ${attendeeNames}
+Created by: ${event.created_by}
+TRANSCRIPT:
+${transcript}
+Create comprehensive meeting notes in this EXACT JSON format (no markdown, just JSON):
+{"summary":"2-3 sentence executive summary","key_points":["point 1","point 2"],"action_items":[{"item":"description","owner":"person","due":"timeframe"}],"decisions":["decision 1"],"follow_up":["follow up 1"],"sentiment":"productive|needs-follow-up|inconclusive"}`;
+      const res=await fetch(`${SUPA_URL}/functions/v1/claude-proxy`,{
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'Authorization':'Bearer '+SUPA_KEY,
+        },
+        body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1500,messages:[{role:'user',content:prompt}]})
+      });
+      const data=await res.json();
+      const text=data.content?.[0]?.text||'';
+      let parsed;
+      try{parsed=JSON.parse(text.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim());}
+      catch(e){parsed={summary:text,key_points:[],action_items:[],decisions:[],follow_up:[],sentiment:'productive'};}
+      setNotes(p=>({...p,...parsed}));setTab('notes');
+    }catch(e){console.error('AI error:',e);alert('AI processing failed. Check your connection.');}
+    setProcessing(false);
+  }
+
+  async function saveAndShare(){
+    const noteObj={
+      id:existingNote?.id||'mn-'+Date.now(),event_id:event.id,
+      title:'Meeting Notes: '+event.title,transcript,
+      summary:notes?.summary||'',action_items:notes?.action_items||[],
+      decisions:notes?.decisions||[],key_points:notes?.key_points||[],
+      follow_up:notes?.follow_up||[],sentiment:notes?.sentiment||'productive',
+      attendees:event.attendees||[],created_by:cu.name,created_by_id:cu.id,
+      created_at:existingNote?.created_at||new Date().toISOString(),updated_at:new Date().toISOString(),
+    };
+    try{
+      if(existingNote){await db.update('pf_meeting_notes',existingNote.id,noteObj);}
+      else{await db.insert('pf_meeting_notes',noteObj);}
+      setMeetingNotes(p=>existingNote?p.map(n=>n.id===existingNote.id?noteObj:n):[noteObj,...p]);
+    }catch(e){console.error(e);}
+    const recipients=(event.attendees||[]).filter(a=>a.email&&a.id!==cu.id);
+    if(recipients.length>0&&notes){
+      const actionItemsHtml=(notes.action_items||[]).map(a=>`<li><strong>${a.owner||'Team'}:</strong> ${a.item}</li>`).join('');
+      const decisionsHtml=(notes.decisions||[]).map(d=>`<li>${d}</li>`).join('');
+      recipients.forEach(a=>{
+        sendEmail({to:a.email,subject:`📋 Meeting Notes: ${event.title} — ${event.date}`,
+          html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:32px;border-radius:12px;max-width:620px;border:1px solid #1a2d4f">
+            <div style="color:#f5a623;font-size:22px;font-weight:800;margin-bottom:4px">📋 Black Fox QMS</div>
+            <div style="font-size:13px;color:#7b8db8;margin-bottom:24px">AI-Generated Meeting Notes</div>
+            <div style="font-size:20px;font-weight:700;margin-bottom:6px">${event.title}</div>
+            <div style="font-size:13px;color:#7b8db8;margin-bottom:24px">📅 ${event.date}${event.start_time?' at '+event.start_time:''} · Notes by ${cu.name}</div>
+            <div style="background:rgba(30,58,95,.06);border:1px solid rgba(30,58,95,.15);border-radius:10px;padding:16px;margin-bottom:20px">
+              <div style="font-size:11px;font-weight:700;color:#f5a623;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Summary</div>
+              <div style="font-size:14px;line-height:1.6">${notes?.summary||''}</div>
+            </div>
+            ${actionItemsHtml?`<div style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:16px;margin-bottom:20px"><div style="font-size:11px;font-weight:700;color:#ef4444;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Action Items</div><ul style="padding-left:20px;color:#e8edf8">${actionItemsHtml}</ul></div>`:''}
+            ${decisionsHtml?`<div style="margin-bottom:20px"><div style="font-size:11px;font-weight:700;color:#10b981;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Decisions Made</div><ul style="padding-left:20px;color:#e8edf8">${decisionsHtml}</ul></div>`:''}
+            <a href="${APP_URL}" style="background:#f5a623;color:#000000;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">View in App →</a>
+          </div>`
+        });
+      });
+    }
+    setSaved(true);setTimeout(()=>onClose(),1200);
+  }
+
+  const sentimentColors={productive:'var(--green)',inconclusive:'var(--yellow)','needs-follow-up':'var(--red)'};
+  const sentimentLabels={productive:'✅ Productive','needs-follow-up':'⚠️ Needs Follow-up',inconclusive:'❓ Inconclusive'};
+
+  return el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&onClose()},
+    el('div',{className:'md',style:{width:720,maxHeight:'92vh'}},
+      el('div',{className:'mh'},
+        el('div',{style:{flex:1}},
+          el('div',{style:{display:'flex',gap:8,alignItems:'center',marginBottom:6}},el('span',{style:{fontSize:20}},'🤖'),el('div',{className:'mt2'},'AI Meeting Notes')),
+          el('div',{style:{fontSize:12,color:'var(--text2)'}},'Meeting: '+event.title+' · '+event.date),
+        ),
+        el('button',{className:'mc',onClick:onClose},'×'),
+      ),
+      el('div',{style:{display:'flex',gap:3,background:'var(--surface2)',padding:4,margin:'0 24px 0',borderRadius:'var(--rs)',border:'1px solid var(--border)'}},
+        [{id:'record',label:'🎙 Record / Transcript'},{id:'notes',label:'📋 AI Notes',disabled:!notes&&!existingNote}].map(t=>
+          el('button',{key:t.id,onClick:()=>!t.disabled&&setTab(t.id),style:{flex:1,padding:'7px',borderRadius:8,border:'none',background:tab===t.id?'var(--surface)':'transparent',color:tab===t.id?'var(--text)':t.disabled?'var(--text3)':'var(--text2)',cursor:t.disabled?'not-allowed':'pointer',fontFamily:'inherit',fontSize:12,fontWeight:600,transition:'all .15s'}},t.label)
+        )
+      ),
+      el('div',{className:'mbd'},
+        tab==='record'&&el('div',null,
+          el('div',{style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:12,padding:20,marginBottom:16,textAlign:'center'}},
+            el('div',{style:{fontSize:13,color:'var(--text2)',marginBottom:14}},'Use live transcription during your meeting or paste/type the transcript below'),
+            el('div',{style:{display:'flex',gap:10,justifyContent:'center',flexWrap:'wrap'}},
+              !listening?
+                el('button',{onClick:startListening,style:{background:'var(--red)',color:'#fff',border:'none',borderRadius:10,padding:'12px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:8}},el('div',{style:{width:10,height:10,borderRadius:'50%',background:'#fff'}}),'Start Recording'):
+                el('button',{onClick:stopListening,style:{background:'rgba(239,68,68,.15)',color:'var(--red)',border:'2px solid var(--red)',borderRadius:10,padding:'12px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:8}},el('div',{style:{width:10,height:10,borderRadius:'50%',background:'var(--red)',animation:'pulse-red 1s infinite'}}),'Stop Recording'),
+              el('button',{onClick:()=>setTranscript(''),style:{background:'transparent',color:'var(--text3)',border:'1px solid var(--border)',borderRadius:10,padding:'12px 20px',fontFamily:'inherit',fontSize:13,cursor:'pointer'}},'Clear'),
+            ),
+            listening&&el('div',{style:{marginTop:12,fontSize:12,color:'var(--red)',fontWeight:600,display:'flex',alignItems:'center',gap:6,justifyContent:'center'}},
+              el('div',{style:{width:8,height:8,borderRadius:'50%',background:'var(--red)',animation:'pulse-red 1s infinite'}}),'Listening...'+(interimText?' — "'+interimText+'"':''),
+            ),
+          ),
+          el('div',{className:'fg'},
+            el('label',null,'Transcript ('+(transcript.split(' ').filter(Boolean).length)+' words)'),
+            el('textarea',{value:transcript+(interimText?' ['+interimText+']':''),onChange:ev=>setTranscript(ev.target.value),placeholder:'Transcript will appear here as you speak...\n\nOr paste/type the meeting transcript manually.',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:200,resize:'vertical',lineHeight:1.6}}),
+          ),
+          el('div',{style:{display:'flex',gap:10,justifyContent:'flex-end',marginTop:8}},
+            el('button',{onClick:processWithAI,disabled:processing||!transcript.trim(),style:{background:transcript.trim()&&!processing?'var(--accent)':'rgba(30,58,95,.15)',color:transcript.trim()&&!processing?'#000000':'var(--text3)',border:'none',borderRadius:10,padding:'12px 28px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:transcript.trim()&&!processing?'pointer':'not-allowed',display:'flex',alignItems:'center',gap:8,transition:'all .2s'}},
+              processing?el('div',{style:{width:16,height:16,border:'2px solid rgba(0,0,0,.3)',borderTopColor:'#000',borderRadius:'50%',animation:'spin .6s linear infinite'}}):'🤖',
+              processing?'AI is analyzing...':'Generate AI Notes',
+            ),
+          ),
+        ),
+        tab==='notes'&&notes&&el('div',null,
+          notes.sentiment&&el('div',{style:{display:'flex',justifyContent:'flex-end',marginBottom:12}},
+            el('span',{style:{background:sentimentColors[notes.sentiment]+'22',color:sentimentColors[notes.sentiment],border:'1px solid '+sentimentColors[notes.sentiment]+'44',borderRadius:20,padding:'4px 14px',fontSize:12,fontWeight:700}},sentimentLabels[notes.sentiment]||notes.sentiment),
+          ),
+          notes.summary&&el('div',{style:{background:'rgba(30,58,95,.05)',border:'1px solid rgba(30,58,95,.15)',borderRadius:12,padding:16,marginBottom:16}},
+            el('div',{style:{fontSize:11,fontWeight:700,color:'var(--accent)',textTransform:'uppercase',letterSpacing:'1px',marginBottom:8}},'Summary'),
+            el('div',{style:{fontSize:14,lineHeight:1.7,color:'var(--text)'}},notes.summary),
+          ),
+          (notes.key_points||[]).length>0&&el('div',{style:{marginBottom:16}},
+            el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'1px',marginBottom:10}},'Key Points'),
+            (notes.key_points||[]).map((p,i)=>el('div',{key:i,style:{display:'flex',gap:10,marginBottom:8,alignItems:'flex-start'}},
+              el('div',{style:{width:6,height:6,borderRadius:'50%',background:'var(--accent)',flexShrink:0,marginTop:6}}),
+              el('div',{style:{fontSize:13,lineHeight:1.5}},p),
+            )),
+          ),
+          (notes.action_items||[]).length>0&&el('div',{style:{background:'rgba(239,68,68,.04)',border:'1px solid rgba(239,68,68,.15)',borderRadius:12,padding:16,marginBottom:16}},
+            el('div',{style:{fontSize:11,fontWeight:700,color:'var(--red)',textTransform:'uppercase',letterSpacing:'1px',marginBottom:12}},'🔴 Action Items'),
+            (notes.action_items||[]).map((a,i)=>el('div',{key:i,style:{display:'flex',gap:12,marginBottom:10,alignItems:'flex-start',paddingBottom:10,borderBottom:i<notes.action_items.length-1?'1px solid rgba(239,68,68,.1)':'none'}},
+              el('div',{style:{background:'var(--red)',color:'#fff',borderRadius:20,padding:'2px 10px',fontSize:11,fontWeight:700,flexShrink:0,marginTop:2}},i+1),
+              el('div',{style:{flex:1}},
+                el('div',{style:{fontSize:13,fontWeight:600,marginBottom:3}},a.item),
+                el('div',{style:{display:'flex',gap:10,flexWrap:'wrap'}},
+                  a.owner&&el('span',{style:{fontSize:11,color:'var(--text2)'}},'👤 '+a.owner),
+                  a.due&&el('span',{style:{fontSize:11,color:'var(--yellow)'}},'📅 '+a.due),
+                ),
+              ),
+            )),
+          ),
+          (notes.decisions||[]).length>0&&el('div',{style:{marginBottom:16}},
+            el('div',{style:{fontSize:11,fontWeight:700,color:'var(--green)',textTransform:'uppercase',letterSpacing:'1px',marginBottom:10}},'✅ Decisions Made'),
+            (notes.decisions||[]).map((d,i)=>el('div',{key:i,style:{display:'flex',gap:10,marginBottom:8}},
+              el('div',{style:{color:'var(--green)',fontSize:16,flexShrink:0}},'✓'),
+              el('div',{style:{fontSize:13,lineHeight:1.5}},d),
+            )),
+          ),
+          el('div',{style:{display:'flex',gap:6,flexWrap:'wrap',marginBottom:16}},
+            el('div',{style:{fontSize:11,color:'var(--text3)',marginRight:4,alignSelf:'center'}},'Shared with:'),
+            (event.attendees||[]).map(a=>el('div',{key:a.id,style:{display:'flex',alignItems:'center',gap:5,background:'var(--surface2)',borderRadius:20,padding:'3px 10px',fontSize:11}},
+              el('div',{className:'avatar',style:{background:`hsl(${(a.name.charCodeAt(0)*47)%360},50%,35%)`,width:16,height:16,fontSize:8}},a.name.charAt(0).toUpperCase()),
+              a.name,
+            )),
+          ),
+          saved&&el('div',{style:{background:'rgba(16,185,129,.1)',border:'1px solid rgba(16,185,129,.3)',borderRadius:8,padding:'10px 14px',fontSize:13,color:'var(--green)',textAlign:'center',marginBottom:10}},'✓ Notes saved and emailed to all attendees!'),
+        ),
+        tab==='notes'&&!notes&&el('div',{className:'empty'},el('div',{className:'eico'},'🤖'),el('div',{className:'etxt'},'No notes yet — go to the Record tab to generate AI notes')),
+      ),
+      el('div',{className:'mf',style:{justifyContent:'space-between'}},
+        el('div',{style:{fontSize:12,color:'var(--text3)'}},(event.attendees||[]).length>0?'Will email notes to '+(event.attendees||[]).length+' attendee(s)':'No attendees to email'),
+        el('div',{style:{display:'flex',gap:8}},
+          el('button',{className:'btn b-ghost',onClick:onClose},'Close'),
+          tab==='notes'&&notes&&el('button',{onClick:saveAndShare,style:{background:'var(--accent)',color:'#ffffff',border:'none',borderRadius:'var(--rs)',padding:'9px 20px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer'}},saved?'✓ Saved!':'💾 Save & Email Attendees'),
+        ),
+      ),
+    ),
+  );
+}
+
+// ── QMS (Quality Management System) ──────────────────────────────────────────
+const QMS_TABS=[
+  {id:'dashboard',label:'Dashboard',ico:'📊'},
+  {id:'deviations',label:'Deviations',ico:'⚠️'},
+  {id:'capas',label:'CAPAs',ico:'🔧'},
+  {id:'audits',label:'Audits',ico:'🔍'},
+  {id:'changes',label:'Change Control',ico:'📝'},
+  {id:'complaints',label:'Complaints',ico:'📣'},
+  {id:'suppliers',label:'Suppliers',ico:'🏭'},
+  {id:'corrective',label:'Corrective Actions',ico:'⚖️'},
+  {id:'training',label:'Training Matrix',ico:'🎓'},
+];
+
+const QMS_DEPTS=['Cart Department','Pre-Roll Department','Gummy Department','Extraction','QC','Packaging','Compliance','Facility','Distribution','Warehouse'];
+const QMS_PRIORITIES={critical:{label:'Critical',color:'#ef4444'},major:{label:'Major',color:'#f59e0b'},minor:{label:'Minor',color:'#3b82f6'}};
+const QMS_STATUSES={open:{label:'Open',color:'#ef4444'},in_progress:{label:'In Progress',color:'#f5a623'},closed:{label:'Closed',color:'#10b981'},cancelled:{label:'Cancelled',color:'#6b7280'}};
+
+// ── COMPLIANCE MODULE (ISO 9001 + GMP + 21 CFR 117 + Missouri DCR) ──────────
+// ── RISK REGISTER (ISO 9001:2015 Clause 6.1) ────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// FACILITY LOGS MODULE
+// Covers: Sanitation, Waste Destruction, Security Malfunction, Pest Control,
+//         Equipment Maintenance, Temp/Humidity, Visitor Log, Environmental
+// ══════════════════════════════════════════════════════════════════════════════
+
+const LOG_TYPES={
+  sanitation:{
+    id:'sanitation', label:'Sanitation Log', icon:'🧹', color:'#065f46', bg:'#f0fdf4',
+    table:'pf_log_sanitation',
+    dcr:'cGMP / 21 CFR 117 / Missouri DCR',
+    freq:'Daily (each shift)',
+    fields:[
+      {key:'area',label:'Area / Zone Cleaned *',type:'text',placeholder:'e.g. Pre-Roll Room, Cart Fill Station'},
+      {key:'cleaned_by',label:'Cleaned By *',type:'text',placeholder:'Employee name'},
+      {key:'shift',label:'Shift',type:'select',options:['Day','Evening','Night']},
+      {key:'date',label:'Date *',type:'date'},
+      {key:'time',label:'Time Completed',type:'time'},
+      {key:'sanitizer_used',label:'Sanitizer / Chemical Used',type:'text',placeholder:'e.g. Sanidate 5.0, 70% IPA'},
+      {key:'concentration',label:'Concentration / Dilution',type:'text',placeholder:'e.g. 1:64 dilution'},
+      {key:'surfaces_cleaned',label:'Surfaces / Equipment Cleaned',type:'textarea',placeholder:'List all surfaces, equipment, and tools cleaned'},
+      {key:'verification_method',label:'Verification Method',type:'select',options:['Visual inspection','ATP swab test','pH test strip','UV light check']},
+      {key:'verification_result',label:'Verification Result',type:'select',options:['Pass - Acceptable','Pass - Clean','Fail - Re-cleaned','Fail - Supervisor notified']},
+      {key:'corrective_action',label:'Corrective Action Taken (if fail)',type:'textarea',placeholder:'Describe any corrective action taken'},
+      {key:'notes',label:'Additional Notes',type:'textarea',placeholder:'Any observations, issues, or comments'},
+    ],
+  },
+  waste:{
+    id:'waste', label:'Waste Destruction Log', icon:'🗑️', color:'#7c2d12', bg:'#fff7ed',
+    table:'pf_log_waste',
+    dcr:'Missouri DCR / 19 CSR 100-1 — METRC Required',
+    freq:'Every destruction event',
+    fields:[
+      {key:'date',label:'Date of Destruction *',type:'date'},
+      {key:'time',label:'Time of Destruction',type:'time'},
+      {key:'metrc_tag',label:'METRC Package Tag(s) *',type:'text',placeholder:'e.g. 1A4FF0100000022000012345'},
+      {key:'product_type',label:'Product Type *',type:'select',options:['Flower','Pre-Roll','Cartridge','Edible','Trim/Shake','Extract','Packaging','Other']},
+      {key:'quantity',label:'Quantity *',type:'text',placeholder:'e.g. 14.2g, 5 units'},
+      {key:'reason',label:'Reason for Destruction *',type:'select',options:['Failed testing','Contamination','Expiration','Overage/Reconciliation','Non-compliant packaging','Recall','Other']},
+      {key:'reason_detail',label:'Reason Detail',type:'textarea',placeholder:'Describe why this material is being destroyed'},
+      {key:'destruction_method',label:'Method of Destruction *',type:'select',options:['Grinding with non-cannabis waste (50%+)','Incineration (licensed facility)','Composting','Other approved method']},
+      {key:'witness_1',label:'Witness 1 Name *',type:'text',placeholder:'Required by DCR'},
+      {key:'witness_2',label:'Witness 2 Name',type:'text',placeholder:'Recommended'},
+      {key:'metrc_recorded',label:'Recorded in METRC?',type:'select',options:['Yes — recorded before destruction','Yes — recorded after destruction','Pending']},
+      {key:'disposal_location',label:'Disposal Location',type:'text',placeholder:'e.g. On-site waste receptacle, Licensed disposal vendor'},
+      {key:'notes',label:'Notes / Comments',type:'textarea',placeholder:'Any additional information'},
+    ],
+  },
+  security:{
+    id:'security', label:'Security Malfunction Log', icon:'🔒', color:'#1e3a5f', bg:'#eff6ff',
+    table:'pf_log_security',
+    dcr:'Missouri DCR Security Requirements',
+    freq:'Every malfunction event',
+    fields:[
+      {key:'date',label:'Date of Malfunction *',type:'date'},
+      {key:'time',label:'Time Discovered',type:'time'},
+      {key:'system_type',label:'System Type *',type:'select',options:['CCTV Camera','DVR/NVR Recorder','Motion Sensor','Door Access Control','Alarm System','Perimeter Fence/Gate','Safe/Vault','Other']},
+      {key:'location',label:'Location / Zone *',type:'text',placeholder:'e.g. Front entrance camera, Vault room'},
+      {key:'description',label:'Description of Malfunction *',type:'textarea',placeholder:'Describe what malfunctioned and how it was discovered'},
+      {key:'dcr_notified',label:'DCR Notified?',type:'select',options:['Yes — within 24 hours','Yes — within 48 hours','Not required — minor malfunction','Pending notification']},
+      {key:'dcr_notification_time',label:'DCR Notification Date/Time',type:'text',placeholder:'Date and time DCR was notified'},
+      {key:'temp_measure',label:'Temporary Security Measure Implemented',type:'textarea',placeholder:'Describe interim security measures taken while system is down'},
+      {key:'vendor_contacted',label:'Repair Vendor Contacted',type:'text',placeholder:'Vendor name and contact'},
+      {key:'repair_date',label:'Repair Completed Date',type:'date'},
+      {key:'resolution',label:'Resolution / Repair Description',type:'textarea',placeholder:'How was the malfunction resolved?'},
+      {key:'verified_by',label:'Verified Operational By',type:'text',placeholder:'Name of person who verified system is operational'},
+      {key:'notes',label:'Additional Notes',type:'textarea',placeholder:''},
+    ],
+  },
+  pest:{
+    id:'pest', label:'Pest Control Log', icon:'🐛', color:'#4c1d95', bg:'#f5f3ff',
+    table:'pf_log_pest',
+    dcr:'cGMP / 21 CFR 117 / Missouri DCR',
+    freq:'Each inspection / treatment',
+    fields:[
+      {key:'date',label:'Inspection / Treatment Date *',type:'date'},
+      {key:'type',label:'Type *',type:'select',options:['Routine inspection','Pest sighting report','Treatment / Extermination','Follow-up inspection','Bait station check','Glue trap check']},
+      {key:'performed_by',label:'Performed By *',type:'text',placeholder:'Name or licensed vendor'},
+      {key:'vendor_license',label:'Vendor License # (if applicable)',type:'text',placeholder:'PCO license number'},
+      {key:'areas_inspected',label:'Areas Inspected *',type:'textarea',placeholder:'List all areas inspected'},
+      {key:'pests_found',label:'Pests Found',type:'select',options:['None observed','Rodent evidence','Insects','Birds','Other']},
+      {key:'pest_detail',label:'Pest Detail (if found)',type:'textarea',placeholder:'Type, quantity, location of pest activity'},
+      {key:'treatment_applied',label:'Treatment / Chemical Applied',type:'text',placeholder:'Product name and EPA reg #'},
+      {key:'application_method',label:'Application Method',type:'text',placeholder:'e.g. Bait station, spray, trap'},
+      {key:'reentry_interval',label:'Re-entry Interval',type:'text',placeholder:'e.g. 4 hours, next day'},
+      {key:'corrective_action',label:'Corrective Action',type:'textarea',placeholder:'Any gaps sealed, entry points addressed, etc.'},
+      {key:'next_scheduled',label:'Next Scheduled Inspection',type:'date'},
+      {key:'notes',label:'Notes',type:'textarea',placeholder:''},
+    ],
+  },
+  equipment:{
+    id:'equipment', label:'Equipment Maintenance Log', icon:'🔧', color:'#92400e', bg:'#fffbeb',
+    table:'pf_log_equipment',
+    dcr:'cGMP / ISO 9001 Clause 7.1.3',
+    freq:'Each maintenance event',
+    fields:[
+      {key:'date',label:'Date *',type:'date'},
+      {key:'equipment_name',label:'Equipment Name *',type:'text',placeholder:'e.g. Futurola Knockbox, Filling Machine #2'},
+      {key:'equipment_id',label:'Equipment ID / Serial #',type:'text',placeholder:'Asset tag or serial number'},
+      {key:'maintenance_type',label:'Maintenance Type *',type:'select',options:['Routine/Preventive','Corrective/Repair','Calibration','Deep clean','Inspection','Part replacement','Software update']},
+      {key:'performed_by',label:'Performed By *',type:'text',placeholder:'Technician name'},
+      {key:'description',label:'Work Performed *',type:'textarea',placeholder:'Describe the maintenance performed'},
+      {key:'parts_replaced',label:'Parts Replaced',type:'text',placeholder:'Part names and part numbers'},
+      {key:'downtime_hours',label:'Downtime (hours)',type:'text',placeholder:'e.g. 2.5'},
+      {key:'production_impact',label:'Production Impact',type:'select',options:['None — performed during downtime','Minor — partial production delay','Major — full production stop','Batch affected']},
+      {key:'batch_affected',label:'Batch / Lot Affected (if any)',type:'text',placeholder:'METRC tag or batch number'},
+      {key:'next_maintenance',label:'Next Scheduled Maintenance',type:'date'},
+      {key:'pass_fail',label:'Equipment Status After Maintenance',type:'select',options:['Pass — returned to service','Conditional — monitor closely','Fail — out of service','Pending parts / repair']},
+      {key:'notes',label:'Notes',type:'textarea',placeholder:''},
+    ],
+  },
+  temperature:{
+    id:'temperature', label:'Temp / Humidity Log', icon:'🌡️', color:'#0369a1', bg:'#f0f9ff',
+    table:'pf_log_temperature',
+    dcr:'cGMP / Product Integrity',
+    freq:'Daily (each shift)',
+    fields:[
+      {key:'date',label:'Date *',type:'date'},
+      {key:'time',label:'Time *',type:'time'},
+      {key:'shift',label:'Shift',type:'select',options:['Day','Evening','Night']},
+      {key:'recorded_by',label:'Recorded By *',type:'text',placeholder:'Employee name'},
+      {key:'location',label:'Location / Room *',type:'text',placeholder:'e.g. Pre-Roll Room, Storage Vault, Receiving'},
+      {key:'temperature_f',label:'Temperature (°F) *',type:'text',placeholder:'e.g. 68.5'},
+      {key:'humidity_pct',label:'Relative Humidity (%) *',type:'text',placeholder:'e.g. 55'},
+      {key:'acceptable_range',label:'Acceptable Range',type:'text',placeholder:'e.g. 65–75°F / 55–65% RH'},
+      {key:'in_range',label:'Within Acceptable Range?',type:'select',options:['Yes — within range','No — out of range (action taken)','No — equipment malfunction']},
+      {key:'corrective_action',label:'Corrective Action (if out of range)',type:'textarea',placeholder:'Describe action taken to correct temperature/humidity'},
+      {key:'equipment_id',label:'Monitoring Equipment ID',type:'text',placeholder:'Thermometer / hygrometer ID or serial #'},
+      {key:'notes',label:'Notes',type:'textarea',placeholder:''},
+    ],
+  },
+  visitor:{
+    id:'visitor', label:'Visitor Log', icon:'👤', color:'#475569', bg:'#f8fafc',
+    table:'pf_log_visitor',
+    dcr:'Missouri DCR Security Requirements',
+    freq:'Every visitor entry',
+    fields:[
+      {key:'date',label:'Date *',type:'date'},
+      {key:'time_in',label:'Time In *',type:'time'},
+      {key:'time_out',label:'Time Out',type:'time'},
+      {key:'visitor_name',label:'Visitor Full Name *',type:'text',placeholder:''},
+      {key:'visitor_company',label:'Company / Organization',type:'text',placeholder:''},
+      {key:'visitor_id',label:'ID Type & Number',type:'text',placeholder:'e.g. MO DL A123456789'},
+      {key:'purpose',label:'Purpose of Visit *',type:'select',options:['Regulatory inspection (DCR)','Regulatory inspection (other)','Vendor / delivery','Maintenance / repair','Audit','Business meeting','Prospective employee','Other']},
+      {key:'areas_accessed',label:'Areas Accessed *',type:'textarea',placeholder:'List all facility areas visitor was allowed to enter'},
+      {key:'escorted_by',label:'Escorted By (employee) *',type:'text',placeholder:'Employee who supervised the visitor'},
+      {key:'dcr_agent',label:'DCR Agent? (if regulatory)',type:'select',options:['N/A','Yes — DCR agent','Yes — other regulatory']},
+      {key:'badge_issued',label:'Visitor Badge Issued?',type:'select',options:['Yes','No — brief visit only']},
+      {key:'notes',label:'Notes / Comments',type:'textarea',placeholder:''},
+    ],
+  },
+  environmental:{
+    id:'environmental', label:'Environmental Monitoring Log', icon:'🔬', color:'#0e7490', bg:'#ecfeff',
+    table:'pf_log_environmental',
+    dcr:'FSMA 21 CFR 117 / cGMP',
+    freq:'Monthly (minimum)',
+    fields:[
+      {key:'date',label:'Date *',type:'date'},
+      {key:'performed_by',label:'Performed By *',type:'text',placeholder:'QC technician name'},
+      {key:'location',label:'Sampling Location *',type:'text',placeholder:'e.g. Pre-Roll Room — floor drain, Cart Room — work surface'},
+      {key:'sample_type',label:'Sample Type *',type:'select',options:['ATP swab (surface)','Air sample','Water sample','Drain swab','Equipment surface swab','Hand swab']},
+      {key:'test_method',label:'Test Method / Equipment',type:'text',placeholder:'e.g. Hygiena SystemSURE Plus, 3M Petrifilm'},
+      {key:'result_value',label:'Result Value',type:'text',placeholder:'e.g. 245 RLU, <10 CFU'},
+      {key:'acceptable_limit',label:'Acceptable Limit',type:'text',placeholder:'e.g. <200 RLU, <100 CFU'},
+      {key:'pass_fail',label:'Pass / Fail *',type:'select',options:['Pass — within limit','Fail — exceeds limit','Inconclusive — retest required']},
+      {key:'corrective_action',label:'Corrective Action (if fail)',type:'textarea',placeholder:'Immediate corrective action taken'},
+      {key:'retest_date',label:'Retest Date (if required)',type:'date'},
+      {key:'retest_result',label:'Retest Result',type:'text',placeholder:''},
+      {key:'notes',label:'Notes',type:'textarea',placeholder:''},
+    ],
+  },
+};
+
+// ── PDF EXPORT FOR FACILITY LOGS ─────────────────────────────────────────────
+function exportLogPdf(logType,entries,dateFrom,dateTo){
+  const{jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:'pt',format:'letter'});
+  const W=612,H=792,margin=48;
+  const NAVY=[30,58,95],TEXT=[15,15,15],SUBTEXT=[75,85,99],LIGHT=[245,247,252],BORDER=[203,213,225];
+  const lt=LOG_TYPES[logType];
+  let y=0,pageNum=1;
+
+  function header(){
+    doc.setFillColor(...NAVY);
+    doc.rect(0,0,W,78,'F');
+    doc.setTextColor(255,255,255);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(15);
+    doc.text('BLACK FOX QMS',margin,30);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(10);
+    doc.setTextColor(180,200,230);
+    doc.text(lt.label+' — Official Record',margin,50);
+    doc.setTextColor(255,255,255);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(11);
+    doc.text('Page '+pageNum,W-margin,30,{align:'right'});
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(9);
+    doc.setTextColor(180,200,230);
+    doc.text('Generated: '+new Date().toLocaleString(),W-margin,50,{align:'right'});
+    y=100;
+  }
+
+  function checkPage(need){
+    if(y+need>H-60){doc.addPage();pageNum++;header();}
+  }
+
+  header();
+
+  // Title block
+  doc.setTextColor(...TEXT);
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(20);
+  doc.text(lt.label,margin,y);
+  y+=28;
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(11);
+  doc.setTextColor(...SUBTEXT);
+  doc.text('Regulatory Basis: '+lt.dcr,margin,y);
+  y+=18;
+  doc.text('Period: '+(dateFrom||'All dates')+' to '+(dateTo||'All dates')+' · Total Entries: '+entries.length,margin,y);
+  y+=18;
+  doc.text('Black Fox Manufacturing — HMBF Management Inc.',margin,y);
+  y+=10;
+  doc.setDrawColor(...BORDER);
+  doc.setLineWidth(0.5);
+  doc.line(margin,y,W-margin,y);
+  y+=20;
+
+  if(entries.length===0){
+    doc.setTextColor(...SUBTEXT);
+    doc.setFontSize(13);
+    doc.text('No entries found for the selected date range.',margin,y);
+  }
+
+  entries.forEach((entry,ei)=>{
+    const rowHeight=lt.fields.filter(f=>entry[f.key]).length*22+50;
+    checkPage(rowHeight);
+
+    // Entry header bar
+    doc.setFillColor(...LIGHT);
+    doc.rect(margin,y,W-margin*2,26,'F');
+    doc.setFillColor(...NAVY);
+    doc.rect(margin,y,4,26,'F');
+    doc.setTextColor(...NAVY);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(11);
+    doc.text('Entry #'+(ei+1)+'  ·  '+(entry.date||'')+(entry.time?' '+entry.time:''),margin+12,y+17);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(9);
+    doc.setTextColor(...SUBTEXT);
+    doc.text('Submitted by: '+(entry.submitted_by||'')+'  ·  '+new Date(entry.created_at||Date.now()).toLocaleString(),W-margin-4,y+17,{align:'right'});
+    y+=34;
+
+    // Fields
+    lt.fields.forEach(f=>{
+      const val=entry[f.key];
+      if(!val||String(val).trim()==='') return;
+      checkPage(22);
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(9);
+      doc.setTextColor(...SUBTEXT);
+      doc.text(f.label.replace(' *','').toUpperCase(),margin+8,y);
+      doc.setFont('helvetica','normal');
+      doc.setFontSize(10);
+      doc.setTextColor(...TEXT);
+      const lines=doc.splitTextToSize(String(val),W-margin*2-130);
+      doc.text(lines[0]||'',margin+155,y);
+      if(lines.length>1){
+        lines.slice(1).forEach((l,li)=>{y+=14;checkPage(14);doc.text(l,margin+155,y);});
+      }
+      y+=20;
+    });
+
+    // Signature
+    if(entry.signature_image){
+      checkPage(60);
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(9);
+      doc.setTextColor(...SUBTEXT);
+      doc.text('SIGNATURE',margin+8,y);
+      try{doc.addImage(entry.signature_image,'PNG',margin+155,y-14,110,30);}catch(e){}
+      y+=36;
+    } else if(entry.submitted_by){
+      checkPage(24);
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(9);
+      doc.setTextColor(...SUBTEXT);
+      doc.text('SUBMITTED BY',margin+8,y);
+      doc.setFont('helvetica','italic');
+      doc.setFontSize(12);
+      doc.setTextColor(...TEXT);
+      doc.text(entry.submitted_by,margin+155,y);
+      y+=20;
+    }
+
+    // Divider
+    checkPage(16);
+    doc.setDrawColor(...BORDER);
+    doc.line(margin,y+4,W-margin,y+4);
+    y+=16;
+  });
+
+  // Footer
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(8);
+  doc.setTextColor(22,163,74);
+  doc.text('Official record generated by Black Fox QMS · HMBF Management Inc. · Retain for minimum 5 years per Missouri DCR requirements.',margin,H-20);
+
+  doc.save('BlackFox_'+lt.label.replace(/[^a-z0-9]/gi,'_')+'_'+new Date().toISOString().slice(0,10)+'.pdf');
+}
+
+// ── LOG ENTRY FORM ────────────────────────────────────────────────────────────
+function LogEntryForm({logType,cu,onSave,onClose,SUPA_URL,SUPA_KEY,H}){
+  const lt=LOG_TYPES[logType];
+  const initForm=()=>{
+    const f={submitted_by:cu.name,created_at:new Date().toISOString()};
+    lt.fields.forEach(field=>{
+      if(field.type==='date') f[field.key]=new Date().toISOString().slice(0,10);
+      else if(field.type==='time') f[field.key]=new Date().toTimeString().slice(0,5);
+      else if(field.type==='select') f[field.key]=field.options[0];
+      else f[field.key]='';
+    });
+    return f;
+  };
+  const[form,setForm]=React.useState(initForm);
+  const[sig,setSig]=React.useState(null);
+  const[saving,setSaving]=React.useState(false);
+  const setF=(k,v)=>setForm(p=>({...p,[k]:v}));
+
+  async function save(){
+    const req=lt.fields.filter(f=>f.label.includes('*'));
+    for(const f of req){if(!form[f.key]?.trim()){alert(f.label.replace(' *','')+' is required.');return;}}
+    setSaving(true);
+    const rec={...form,id:'log-'+Date.now(),log_type:logType,signature_image:sig||null,submitted_by:cu.name,submitted_by_id:cu.id,created_at:new Date().toISOString()};
+    try{
+      const res=await fetch(`${SUPA_URL}/rest/v1/${lt.table}`,{method:'POST',headers:{...H.headers,'Prefer':'return=representation'},body:JSON.stringify(rec)});
+      if(!res.ok){const e=await res.json();throw new Error(e.message||'Save failed');}
+      onSave(rec);
+    }catch(e){alert('Save failed: '+e.message);}
+    setSaving(false);
+  }
+
+  const INP=(f)=>el('div',{key:f.key,className:'fg'},
+    el('label',null,f.label),
+    f.type==='select'
+      ?el('select',{value:form[f.key]||f.options[0],onChange:ev=>setF(f.key,ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+          f.options.map(o=>el('option',{key:o,value:o},o)))
+      :f.type==='textarea'
+        ?el('textarea',{value:form[f.key]||'',onChange:ev=>setF(f.key,ev.target.value),placeholder:f.placeholder||'',rows:2,style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,resize:'vertical',boxSizing:'border-box'}})
+        :el('input',{type:f.type||'text',value:form[f.key]||'',onChange:ev=>setF(f.key,ev.target.value),placeholder:f.placeholder||'',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,boxSizing:'border-box'}}),
+  );
+
+  return el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&onClose()},
+    el('div',{className:'md',style:{width:640,maxHeight:'93vh',overflowY:'auto'}},
+      el('div',{className:'mh'},
+        el('div',null,
+          el('div',{style:{fontSize:18}},[lt.icon,' ',lt.label,' Entry'].join('')),
+          el('div',{style:{fontSize:12,color:'var(--text2)',marginTop:2}},lt.dcr),
+        ),
+        el('button',{className:'mc',onClick:onClose},'×'),
+      ),
+      el('div',{className:'mbd'},
+        el('div',{style:{background:'rgba(30,58,95,.04)',border:'1px solid rgba(30,58,95,.1)',borderRadius:8,padding:'10px 14px',marginBottom:16,fontSize:12,color:'var(--text2)'}},
+          '📋 Fields marked with * are required. This record will be timestamped and signed, and is legally discoverable in a DCR inspection.',
+        ),
+        // Render fields — pairs where possible
+        (()=>{
+          const els=[];
+          let i=0;
+          while(i<lt.fields.length){
+            const f=lt.fields[i];
+            const next=lt.fields[i+1];
+            if((f.type==='text'||f.type==='select'||f.type==='date'||f.type==='time')&&next&&(next.type==='text'||next.type==='select'||next.type==='date'||next.type==='time')&&!f.type==='textarea'&&!next.type==='textarea'){
+              els.push(el('div',{key:f.key+'g',className:'g2'},INP(f),INP(next)));
+              i+=2;
+            } else {
+              els.push(INP(f));
+              i++;
+            }
+          }
+          return els;
+        })(),
+
+        // Signature
+        el('div',{style:{borderTop:'1px solid var(--border)',paddingTop:16,marginTop:8}},
+          el('div',{style:{fontSize:13,fontWeight:700,marginBottom:8}},'✍️ Signature'),
+          sig
+            ?el('div',null,
+                el('img',{src:sig,style:{border:'1px solid var(--border)',borderRadius:8,maxWidth:'100%',height:80}}),
+                el('button',{onClick:()=>setSig(null),className:'btn b-ghost btn-sm',style:{marginLeft:12,marginTop:4}},'Clear & Re-sign'),
+              )
+            :el(SignaturePad,{
+                label:'Draw your signature to certify this record is accurate',
+                onSave:dataUrl=>setSig(dataUrl),
+                onClear:()=>setSig(null),
+              }),
+          el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:6}},'Certifying as: '+cu.name+' · '+new Date().toLocaleString()),
+        ),
+
+        el('div',{className:'mf'},
+          el('button',{className:'btn b-ghost',onClick:onClose},'Cancel'),
+          el('button',{className:'btn b-blue',disabled:saving,onClick:save},saving?'Saving...':'✅ Submit & Sign'),
+        ),
+      ),
+    ),
+  );
+}
+
+// ── FACILITY LOGS MAIN ────────────────────────────────────────────────────────
+function FacilityLogs({cu,isElevated,isAdmin,SUPA_URL,SUPA_KEY,H}){
+  const[activeLog,setActiveLog]=React.useState(null); // which log type we're viewing
+  const[entries,setEntries]=React.useState([]);
+  const[loading,setLoading]=React.useState(false);
+  const[showForm,setShowForm]=React.useState(false);
+  const[dateFrom,setDateFrom]=React.useState('');
+  const[dateTo,setDateTo]=React.useState('');
+  const[search,setSearch]=React.useState('');
+
+  React.useEffect(()=>{
+    if(!activeLog) return;
+    setLoading(true);setEntries([]);
+    const lt=LOG_TYPES[activeLog];
+    let url=`${SUPA_URL}/rest/v1/${lt.table}?select=*&order=created_at.desc`;
+    if(dateFrom) url+=`&created_at=gte.${dateFrom}`;
+    if(dateTo) url+=`&created_at=lte.${dateTo}T23:59:59`;
+    fetch(url,{headers:H.headers})
+      .then(r=>r.ok?r.json():[])
+      .then(rows=>{setEntries(Array.isArray(rows)?rows:[]);setLoading(false);})
+      .catch(()=>setLoading(false));
+  },[activeLog,dateFrom,dateTo]);
+
+  const lt=activeLog?LOG_TYPES[activeLog]:null;
+  const filtered=entries.filter(e=>!search||(JSON.stringify(e).toLowerCase().includes(search.toLowerCase())));
+
+  // ── LANDING / LOG TYPE PICKER ──
+  if(!activeLog) return el('div',{style:{padding:'0 0 48px'}},
+    el('div',{style:{background:'linear-gradient(135deg,#1e3a5f,#2d5282)',borderRadius:14,padding:'24px 28px',marginBottom:24,color:'#fff'}},
+      el('div',{style:{fontSize:22,fontWeight:800,marginBottom:4}},'📋 Facility Logs'),
+      el('div',{style:{fontSize:13,opacity:.85,lineHeight:1.6}},'All logs are timestamped, signed, and exportable as PDF for DCR inspections and ISO 9001 audits.\nRetain all records for minimum 5 years per Missouri DCR requirements.'),
+    ),
+    el('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))',gap:14}},
+      Object.values(LOG_TYPES).map(log=>el('div',{key:log.id,
+        onClick:()=>setActiveLog(log.id),
+        style:{background:log.bg,border:'2px solid',borderColor:log.color+'30',borderRadius:14,padding:'20px',cursor:'pointer',transition:'all .2s'},
+        onMouseEnter:ev=>{ev.currentTarget.style.borderColor=log.color;ev.currentTarget.style.transform='translateY(-2px)';ev.currentTarget.style.boxShadow='0 4px 16px rgba(0,0,0,.08)';},
+        onMouseLeave:ev=>{ev.currentTarget.style.borderColor=log.color+'30';ev.currentTarget.style.transform='translateY(0)';ev.currentTarget.style.boxShadow='none';},
+      },
+        el('div',{style:{fontSize:32,marginBottom:8}},log.icon),
+        el('div',{style:{fontSize:15,fontWeight:800,color:log.color,marginBottom:4}},log.label),
+        el('div',{style:{fontSize:11,color:'#64748b',marginBottom:8}},log.dcr),
+        el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center'}},
+          el('div',{style:{fontSize:12,color:'#94a3b8'}},'Freq: '+log.freq),
+          el('div',{style:{background:log.color,color:'#fff',borderRadius:6,padding:'4px 10px',fontSize:11,fontWeight:700}},'Open →'),
+        ),
+      ))
+    ),
+  );
+
+  // ── LOG DETAIL VIEW ──
+  return el('div',{style:{padding:'0 0 48px'}},
+    // Header
+    el('div',{style:{background:lt.color,borderRadius:14,padding:'20px 24px',marginBottom:20,color:'#fff'}},
+      el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:10}},
+        el('div',null,
+          el('div',{style:{fontSize:20,fontWeight:800}},lt.icon+' '+lt.label),
+          el('div',{style:{fontSize:12,opacity:.8,marginTop:2}},lt.dcr+' · '+lt.freq),
+        ),
+        el('div',{style:{display:'flex',gap:8,flexWrap:'wrap'}},
+          el('button',{onClick:()=>setShowForm(true),style:{background:'#fff',color:lt.color,border:'none',borderRadius:8,padding:'8px 18px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer'}},'+ New Entry'),
+          el('button',{onClick:()=>exportLogPdf(activeLog,filtered,dateFrom,dateTo),style:{background:'rgba(255,255,255,.2)',color:'#fff',border:'1px solid rgba(255,255,255,.4)',borderRadius:8,padding:'8px 18px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer'}},'📄 Export PDF'),
+          el('button',{onClick:()=>setActiveLog(null),className:'btn b-ghost btn-sm',style:{color:'#fff',borderColor:'rgba(255,255,255,.4)'}},'← All Logs'),
+        ),
+      ),
+    ),
+
+    // Filters
+    el('div',{style:{display:'flex',gap:10,marginBottom:16,flexWrap:'wrap',alignItems:'center'}},
+      el('input',{type:'text',value:search,onChange:ev=>setSearch(ev.target.value),placeholder:'Search entries...',style:{flex:1,minWidth:160,background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px 12px',color:'var(--text)',fontFamily:'inherit',fontSize:13}}),
+      el('div',{style:{display:'flex',gap:8,alignItems:'center'}},
+        el('span',{style:{fontSize:12,color:'var(--text2)',whiteSpace:'nowrap'}},'From:'),
+        el('input',{type:'date',value:dateFrom,onChange:ev=>setDateFrom(ev.target.value),style:{background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px 12px',color:'var(--text)',fontFamily:'inherit',fontSize:13}}),
+        el('span',{style:{fontSize:12,color:'var(--text2)'}},'To:'),
+        el('input',{type:'date',value:dateTo,onChange:ev=>setDateTo(ev.target.value),style:{background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px 12px',color:'var(--text)',fontFamily:'inherit',fontSize:13}}),
+        (dateFrom||dateTo)&&el('button',{onClick:()=>{setDateFrom('');setDateTo('');},className:'btn b-ghost btn-sm'},'Clear'),
+      ),
+    ),
+
+    // Stats strip
+    el('div',{style:{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:10,padding:'12px 16px',marginBottom:16,display:'flex',gap:24,flexWrap:'wrap'}},
+      el('div',{style:{fontSize:13}},el('span',{style:{fontWeight:700,color:lt.color}},filtered.length),' entries'),
+      el('div',{style:{fontSize:13,color:'var(--text2)'}},dateFrom||dateTo?'Filtered date range':'All time'),
+      el('div',{style:{fontSize:13,color:'var(--text2)'}},'Last entry: '+(entries[0]?new Date(entries[0].created_at).toLocaleDateString():'None')),
+    ),
+
+    // Entry list
+    loading?el('div',{style:{textAlign:'center',padding:40,color:'var(--text3)'}},'Loading entries...')
+    :filtered.length===0
+      ?el('div',{style:{textAlign:'center',padding:'48px 24px',background:'var(--surface)',borderRadius:12,border:'1px solid var(--border)'}},
+          el('div',{style:{fontSize:36,marginBottom:12}},lt.icon),
+          el('div',{style:{fontSize:15,fontWeight:700,color:'var(--text)',marginBottom:6}},'No entries yet'),
+          el('div',{style:{fontSize:13,color:'var(--text2)',marginBottom:16}},'Click "+ New Entry" to log your first '+lt.label+' entry'),
+          el('button',{onClick:()=>setShowForm(true),style:{background:lt.color,color:'#fff',border:'none',borderRadius:8,padding:'10px 24px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer'}},'+ New Entry'),
+        )
+      :el('div',{style:{display:'flex',flexDirection:'column',gap:8}},
+          filtered.map((entry,i)=>{
+            const keyFields=lt.fields.slice(0,4);
+            return el('div',{key:entry.id||i,style:{background:'#ffffff',border:'1px solid var(--border)',borderRadius:12,padding:'14px 16px',boxShadow:'0 1px 3px rgba(15,23,42,.04)'}},
+              el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:8}},
+                el('div',{style:{flex:1,minWidth:0}},
+                  el('div',{style:{display:'flex',gap:8,marginBottom:8,flexWrap:'wrap',alignItems:'center'}},
+                    el('span',{style:{fontSize:12,fontWeight:700,color:lt.color}},lt.icon+' Entry #'+(filtered.length-i)),
+                    el('span',{style:{fontSize:11,color:'var(--text2)'}},'·'),
+                    el('span',{style:{fontSize:12,color:'var(--text2)'}},(entry.date||'')+(entry.time?' '+entry.time:'')),
+                    el('span',{style:{fontSize:11,color:'var(--text2)'}},'·'),
+                    el('span',{style:{fontSize:12,color:'var(--text2)'}},'By: '+(entry.submitted_by||'')),
+                    entry.signature_image&&el('span',{style:{background:'rgba(22,163,74,.1)',color:'#16a34a',borderRadius:4,padding:'2px 8px',fontSize:10,fontWeight:700}},'✍️ Signed'),
+                  ),
+                  el('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:6}},
+                    keyFields.map(f=>entry[f.key]?el('div',{key:f.key,style:{fontSize:12,color:'var(--text2)'}},
+                      el('span',{style:{fontWeight:600,color:'var(--text)'}},(f.label.replace(' *',''))+': '),entry[f.key]
+                    ):null)
+                  ),
+                ),
+                el('div',{style:{display:'flex',gap:6,flexShrink:0}},
+                  el('button',{
+                    onClick:()=>exportLogPdf(activeLog,[entry],'',''),
+                    className:'btn b-ghost btn-sm',
+                  },'📄 PDF'),
+                  isAdmin&&el('button',{
+                    onClick:async()=>{
+                      if(!confirm('Delete this entry? This cannot be undone.'))return;
+                      await fetch(`${SUPA_URL}/rest/v1/${lt.table}?id=eq.${entry.id}`,{method:'DELETE',headers:H.headers});
+                      setEntries(p=>p.filter(e=>e.id!==entry.id));
+                    },
+                    className:'btn b-red btn-sm',
+                  },'Delete'),
+                ),
+              ),
+            );
+          })
+        ),
+
+    // Form modal
+    showForm&&el(LogEntryForm,{
+      logType:activeLog,cu,SUPA_URL,SUPA_KEY,H,
+      onClose:()=>setShowForm(false),
+      onSave:(rec)=>{setEntries(p=>[rec,...p]);setShowForm(false);},
+    }),
+  );
+}
+
+const RISK_CATEGORIES=['Regulatory','Food Safety / GMP','Supplier','Equipment','Personnel','Cybersecurity','Environmental','Financial','Operational','Quality'];
+const RISK_LIKELIHOOD=['1 - Rare','2 - Unlikely','3 - Possible','4 - Likely','5 - Almost Certain'];
+const RISK_IMPACT=['1 - Negligible','2 - Minor','3 - Moderate','4 - Major','5 - Catastrophic'];
+
+function riskScore(l,i){return(parseInt(l)||1)*(parseInt(i)||1);}
+function riskLevel(score){
+  if(score>=15) return{label:'Critical',color:'#dc2626',bg:'rgba(220,38,38,.1)'};
+  if(score>=8)  return{label:'High',color:'#d97706',bg:'rgba(217,119,6,.1)'};
+  if(score>=4)  return{label:'Medium',color:'#ca8a04',bg:'rgba(202,138,4,.08)'};
+  return{label:'Low',color:'#16a34a',bg:'rgba(22,163,74,.1)'};
+}
+
+function RiskRegister({cu,isElevated,isAdmin,SUPA_URL,SUPA_KEY,H}){
+  const[risks,setRisks]=React.useState([]);
+  const[loading,setLoading]=React.useState(true);
+  const[showForm,setShowForm]=React.useState(false);
+  const[editRisk,setEditRisk]=React.useState(null);
+  const[filter,setFilter]=React.useState('all');
+  const[saving,setSaving]=React.useState(false);
+  const TABLE='pf_risk_register';
+
+  const EMPTY={title:'',category:'Regulatory',description:'',likelihood:'3 - Possible',impact:'3 - Moderate',current_controls:'',treatment_action:'',owner:'',target_date:'',residual_likelihood:'2 - Unlikely',residual_impact:'2 - Minor',status:'open'};
+  const[form,setForm]=React.useState(EMPTY);
+
+  React.useEffect(()=>{
+    fetch(`${SUPA_URL}/rest/v1/${TABLE}?select=*&order=created_at.desc`,{headers:H.headers})
+      .then(r=>r.ok?r.json():[]).then(rows=>{setRisks(Array.isArray(rows)?rows:[]);setLoading(false);})
+      .catch(()=>setLoading(false));
+  },[]);
+
+  function openNew(){setForm(EMPTY);setEditRisk(null);setShowForm(true);}
+  function openEdit(r){setForm({...r});setEditRisk(r);setShowForm(true);}
+
+  async function save(){
+    if(!form.title.trim()){alert('Risk title is required.');return;}
+    setSaving(true);
+    const rec={...form,updated_by:cu.name,updated_at:new Date().toISOString()};
+    try{
+      if(editRisk){
+        await fetch(`${SUPA_URL}/rest/v1/${TABLE}?id=eq.${editRisk.id}`,{method:'PATCH',headers:H.headers,body:JSON.stringify(rec)});
+        setRisks(p=>p.map(r=>r.id===editRisk.id?{...r,...rec}:r));
+      } else {
+        rec.id='risk-'+Date.now();rec.created_by=cu.name;rec.created_at=new Date().toISOString();
+        const res=await fetch(`${SUPA_URL}/rest/v1/${TABLE}`,{method:'POST',headers:{...H.headers,'Prefer':'return=representation'},body:JSON.stringify(rec)});
+        if(!res.ok)throw new Error(await res.text());
+        setRisks(p=>[rec,...p]);
+      }
+      setShowForm(false);
+    }catch(e){alert('Save failed: '+e.message);}
+    setSaving(false);
+  }
+
+  async function deleteRisk(id){
+    if(!confirm('Delete this risk?'))return;
+    await fetch(`${SUPA_URL}/rest/v1/${TABLE}?id=eq.${id}`,{method:'DELETE',headers:H.headers});
+    setRisks(p=>p.filter(r=>r.id!==id));
+  }
+
+  const FLD=(label,key,type='text',opts={})=>el('div',{className:'fg',style:{marginBottom:0}},
+    el('label',null,label),
+    type==='select'
+      ? el('select',{value:form[key],onChange:ev=>setF(key,ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+          (opts.options||[]).map(o=>el('option',{key:o,value:o},o))
+        )
+      : type==='textarea'
+        ? el('textarea',{value:form[key],onChange:ev=>setF(key,ev.target.value),rows:2,style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,resize:'vertical',boxSizing:'border-box'}})
+        : el('input',{type,value:form[key],onChange:ev=>setF(key,ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,boxSizing:'border-box'}}),
+  );
+  const setF=(k,v)=>setForm(p=>({...p,[k]:v}));
+
+  const filtered=filter==='all'?risks:risks.filter(r=>riskLevel(riskScore(r.likelihood,r.impact)).label.toLowerCase()===filter);
+  const counts={Critical:0,High:0,Medium:0,Low:0};
+  risks.forEach(r=>{const l=riskLevel(riskScore(r.likelihood,r.impact)).label;counts[l]=(counts[l]||0)+1;});
+
+  if(loading) return el('div',{style:{padding:24,color:'var(--text2)'}},'Loading risk register...');
+
+  return el('div',{style:{padding:'0 0 48px'}},
+    // Header
+    el('div',{style:{background:'linear-gradient(135deg,#7c2d12,#991b1b)',borderRadius:14,padding:'22px 28px',marginBottom:24,color:'#fff'}},
+      el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:12}},
+        el('div',null,
+          el('div',{style:{fontSize:22,fontWeight:800,marginBottom:3}},'⚠️ Risk Register'),
+          el('div',{style:{fontSize:13,opacity:.85}},'ISO 9001:2015 Clause 6.1 — Risk & Opportunity Management'),
+        ),
+        isElevated&&el('button',{onClick:openNew,style:{background:'#fff',color:'#7c2d12',border:'none',borderRadius:8,padding:'9px 20px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer'}},'+ Add Risk'),
+      ),
+      // Summary stats
+      el('div',{style:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10,marginTop:18}},
+        Object.entries(counts).map(([level,count])=>{
+          const rl=riskLevel(level==='Critical'?20:level==='High'?12:level==='Medium'?6:2);
+          return el('div',{key:level,style:{background:'rgba(255,255,255,.12)',borderRadius:10,padding:'12px 14px',textAlign:'center'}},
+            el('div',{style:{fontSize:28,fontWeight:800,color:'#fff'}},count),
+            el('div',{style:{fontSize:11,color:'rgba(255,255,255,.75)',marginTop:2}},level+' Risk'),
+          );
+        }),
+      ),
+    ),
+
+    // Filter tabs
+    el('div',{style:{display:'flex',gap:6,marginBottom:16,flexWrap:'wrap'}},
+      ['all','critical','high','medium','low'].map(f=>
+        el('button',{key:f,onClick:()=>setFilter(f),style:{
+          padding:'6px 16px',borderRadius:8,border:'1px solid',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'inherit',transition:'all .15s',
+          borderColor:filter===f?'var(--accent)':'var(--border)',
+          background:filter===f?'var(--accent)':'transparent',
+          color:filter===f?'#fff':'var(--text2)',
+        }},f.charAt(0).toUpperCase()+f.slice(1)+(f!=='all'?' ('+counts[f.charAt(0).toUpperCase()+f.slice(1)]+')':''))
+      ),
+    ),
+
+    // Risk list
+    filtered.length===0
+      ?el('div',{style:{textAlign:'center',padding:'48px 24px',color:'var(--text3)'}},
+          el('div',{style:{fontSize:40,marginBottom:12}},'✅'),
+          el('div',{style:{fontSize:15,fontWeight:700,color:'var(--text2)',marginBottom:6}},'No risks in this category'),
+          el('div',{style:{fontSize:13}},'Add risks to maintain your ISO 9001 Clause 6.1 compliance'),
+        )
+      :el('div',{style:{display:'flex',flexDirection:'column',gap:10}},
+        filtered.map(risk=>{
+          const inherentScore=riskScore(risk.likelihood,risk.impact);
+          const residualScore=riskScore(risk.residual_likelihood||risk.likelihood,risk.residual_impact||risk.impact);
+          const inherentLevel=riskLevel(inherentScore);
+          const residualLevel=riskLevel(residualScore);
+          return el('div',{key:risk.id,style:{background:'#fff',border:'1px solid var(--border)',borderRadius:12,padding:'16px 18px',boxShadow:'0 1px 4px rgba(15,23,42,.05)'}},
+            el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12,flexWrap:'wrap'}},
+              el('div',{style:{flex:1,minWidth:0}},
+                el('div',{style:{display:'flex',gap:8,marginBottom:8,flexWrap:'wrap',alignItems:'center'}},
+                  el('span',{style:{background:'rgba(30,58,95,.08)',color:'var(--accent)',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:700}},risk.category),
+                  el('span',{style:{background:inherentLevel.bg,color:inherentLevel.color,borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:700,border:'1px solid',borderColor:inherentLevel.color+'44'}},'Inherent: '+inherentLevel.label+' ('+inherentScore+')'),
+                  residualScore!==inherentScore&&el('span',{style:{background:residualLevel.bg,color:residualLevel.color,borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:700,border:'1px solid',borderColor:residualLevel.color+'44'}},'Residual: '+residualLevel.label+' ('+residualScore+')'),
+                  el('span',{style:{background:risk.status==='closed'?'rgba(22,163,74,.1)':'rgba(100,116,139,.1)',color:risk.status==='closed'?'#16a34a':'#64748b',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:700}},risk.status==='closed'?'✓ Closed':'Open'),
+                ),
+                el('div',{style:{fontSize:15,fontWeight:700,color:'var(--text)',marginBottom:4}},risk.title),
+                risk.description&&el('div',{style:{fontSize:13,color:'var(--text2)',lineHeight:1.5,marginBottom:8}},risk.description),
+                el('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:8}},
+                  risk.current_controls&&el('div',{style:{fontSize:12,color:'var(--text2)'}},el('span',{style:{fontWeight:700,color:'var(--text)'}},'Controls: '),risk.current_controls),
+                  risk.treatment_action&&el('div',{style:{fontSize:12,color:'var(--text2)'}},el('span',{style:{fontWeight:700,color:'var(--text)'}},'Action: '),risk.treatment_action),
+                  risk.owner&&el('div',{style:{fontSize:12,color:'var(--text2)'}},el('span',{style:{fontWeight:700,color:'var(--text)'}},'Owner: '),risk.owner),
+                  risk.target_date&&el('div',{style:{fontSize:12,color:'var(--text2)'}},el('span',{style:{fontWeight:700,color:'var(--text)'}},'Target: '),risk.target_date),
+                ),
+              ),
+              el('div',{style:{display:'flex',gap:6,flexShrink:0}},
+                isElevated&&el('button',{onClick:()=>openEdit(risk),className:'btn b-ghost btn-sm'},'✏️ Edit'),
+                isAdmin&&el('button',{onClick:()=>deleteRisk(risk.id),className:'btn b-red btn-sm'},'Delete'),
+              ),
+            ),
+          );
+        })
+      ),
+
+    // Add/Edit Modal
+    showForm&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setShowForm(false)},
+      el('div',{className:'md',style:{width:680,maxHeight:'92vh',overflowY:'auto'}},
+        el('div',{className:'mh'},
+          el('div',{className:'mt2'},editRisk?'Edit Risk':'Add New Risk'),
+          el('button',{className:'mc',onClick:()=>setShowForm(false)},'×'),
+        ),
+        el('div',{className:'mbd'},
+          el('div',{className:'fg'},el('label',null,'Risk Title *'),el('input',{value:form.title,autoFocus:true,onChange:ev=>setF('title',ev.target.value),placeholder:'e.g. Supplier COA not received before production',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,boxSizing:'border-box'}})),
+          el('div',{className:'g2'},
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Category'),el('select',{value:form.category,onChange:ev=>setF('category',ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},RISK_CATEGORIES.map(c=>el('option',{key:c,value:c},c)))),
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Status'),el('select',{value:form.status,onChange:ev=>setF('status',ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},el('option',{value:'open'},'Open'),el('option',{value:'closed'},'Closed'))),
+          ),
+          el('div',{className:'fg'},el('label',null,'Description'),el('textarea',{value:form.description,onChange:ev=>setF('description',ev.target.value),rows:2,placeholder:'Describe the risk scenario...',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,resize:'vertical',boxSizing:'border-box'}})),
+
+          el('div',{style:{background:'rgba(220,38,38,.04)',border:'1px solid rgba(220,38,38,.15)',borderRadius:10,padding:'14px',marginBottom:14}},
+            el('div',{style:{fontSize:11,fontWeight:800,color:'#dc2626',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:10}},'Inherent Risk (before controls)'),
+            el('div',{className:'g2'},
+              el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Likelihood'),el('select',{value:form.likelihood,onChange:ev=>setF('likelihood',ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},RISK_LIKELIHOOD.map(l=>el('option',{key:l,value:l},l)))),
+              el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Impact'),el('select',{value:form.impact,onChange:ev=>setF('impact',ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},RISK_IMPACT.map(i=>el('option',{key:i,value:i},i)))),
+            ),
+            el('div',{style:{marginTop:8,padding:'8px 12px',background:'rgba(220,38,38,.08)',borderRadius:8,fontSize:13,fontWeight:700,color:'#dc2626'}},
+              (()=>{const s=riskScore(form.likelihood,form.impact);const rl=riskLevel(s);return `Inherent Risk Score: ${s} — ${rl.label}`;})()
+            ),
+          ),
+
+          el('div',{className:'fg'},el('label',null,'Current Controls'),el('textarea',{value:form.current_controls,onChange:ev=>setF('current_controls',ev.target.value),rows:2,placeholder:'What controls are already in place?',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,resize:'vertical',boxSizing:'border-box'}})),
+          el('div',{className:'fg'},el('label',null,'Treatment Action (to further reduce risk)'),el('textarea',{value:form.treatment_action,onChange:ev=>setF('treatment_action',ev.target.value),rows:2,placeholder:'What additional action will be taken?',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,resize:'vertical',boxSizing:'border-box'}})),
+          el('div',{className:'g2'},
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Risk Owner'),el('input',{value:form.owner,onChange:ev=>setF('owner',ev.target.value),placeholder:'Person responsible',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,boxSizing:'border-box'}})),
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Target Closure Date'),el('input',{type:'date',value:form.target_date,onChange:ev=>setF('target_date',ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}})),
+          ),
+
+          el('div',{style:{background:'rgba(22,163,74,.04)',border:'1px solid rgba(22,163,74,.15)',borderRadius:10,padding:'14px',marginBottom:14,marginTop:4}},
+            el('div',{style:{fontSize:11,fontWeight:800,color:'#16a34a',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:10}},'Residual Risk (after controls & actions)'),
+            el('div',{className:'g2'},
+              el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Residual Likelihood'),el('select',{value:form.residual_likelihood,onChange:ev=>setF('residual_likelihood',ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},RISK_LIKELIHOOD.map(l=>el('option',{key:l,value:l},l)))),
+              el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Residual Impact'),el('select',{value:form.residual_impact,onChange:ev=>setF('residual_impact',ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},RISK_IMPACT.map(i=>el('option',{key:i,value:i},i)))),
+            ),
+            el('div',{style:{marginTop:8,padding:'8px 12px',background:'rgba(22,163,74,.08)',borderRadius:8,fontSize:13,fontWeight:700,color:'#16a34a'}},
+              (()=>{const s=riskScore(form.residual_likelihood,form.residual_impact);const rl=riskLevel(s);return `Residual Risk Score: ${s} — ${rl.label}`;})()
+            ),
+          ),
+
+          el('div',{className:'mf'},
+            el('button',{className:'btn b-ghost',onClick:()=>setShowForm(false)},'Cancel'),
+            el('button',{className:'btn b-blue',disabled:saving,onClick:save},saving?'Saving...':editRisk?'Save Changes':'Add Risk'),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+const COMPLIANCE_FRAMEWORKS={
+  iso9001:{label:'ISO 9001:2015',color:'#1e3a5f',icon:'🏆',clauses:[
+    {id:'4.1',title:'Context of the Organization',req:'Understand internal/external issues affecting the QMS.',actions:['Conduct SWOT analysis annually','Document interested parties and their requirements','Review context at management review meetings']},
+    {id:'5.1',title:'Leadership & Commitment',req:'Top management must demonstrate QMS leadership and commitment.',actions:['Hold quarterly management review meetings','Document and communicate quality policy','Assign QMS roles and responsibilities to leadership']},
+    {id:'5.3',title:'Roles & Responsibilities',req:'Define, assign and communicate QMS roles throughout the organization.',actions:['Maintain current org chart','Document role responsibilities in Black Fox QMS','Ensure all staff acknowledge their QMS role in writing']},
+    {id:'6.1',title:'Risk & Opportunity Management',req:'Plan actions to address risks and opportunities.',actions:['Complete risk register annually','Review and update CAPA log monthly','Document risk treatment actions and verify effectiveness']},
+    {id:'7.2',title:'Competence & Training',req:'Ensure all personnel are competent based on education, training and experience.',actions:['Maintain training matrix for all employees in Black Fox QMS','Document competency assessments per role','Record all SOP acknowledgements and training completions']},
+    {id:'7.5',title:'Documented Information',req:'Create, maintain and control all required QMS documents.',actions:['All SOPs must have version number and review date','Ensure SOPs are reviewed at minimum annually','Maintain document control log for external regulations']},
+    {id:'8.1',title:'Operational Planning & Control',req:'Plan, implement and control processes needed to meet requirements.',actions:['Document production processes and batch records','Set measurable quality objectives per product line','Review operational KPIs at management meetings']},
+    {id:'8.4',title:'Control of External Providers',req:'Qualify and monitor suppliers and external service providers.',actions:['Maintain approved supplier list in Black Fox QMS','Conduct annual supplier audits and document findings','Obtain COAs for all incoming raw materials and packaging']},
+    {id:'8.7',title:'Nonconforming Outputs',req:'Control outputs that do not conform to requirements.',actions:['Document all deviations in QMS Deviations module','Quarantine non-conforming materials immediately','Conduct root cause analysis and issue CAPA within 48 hours']},
+    {id:'9.2',title:'Internal Audit',req:'Conduct internal audits at planned intervals to ensure QMS conformity.',actions:['Complete annual internal audit schedule for all departments','Audit each department at least once per year','Document findings in QMS Audits module and assign CAPAs']},
+    {id:'9.3',title:'Management Review',req:'Top management must review the QMS at planned intervals.',actions:['Hold quarterly management review meetings','Document review minutes including quality objectives progress','Review customer feedback, audit results, and CAPA status']},
+    {id:'10.2',title:'Nonconformity & Corrective Action',req:'React to nonconformities, take corrective action and verify effectiveness.',actions:['Issue corrective actions in Black Fox QMS within 5 business days','Track and report CAPA closure rate at management review','Verify effectiveness of all corrective actions before closing']},
+  ]},
+  gmp:{label:'cGMP (21 CFR)',color:'#065f46',icon:'🧪',clauses:[
+    {id:'GMP-1',title:'Personnel Hygiene & Training',req:'All personnel must meet hygiene, health and training requirements.',actions:['Enforce glove change protocol per SOP','Document PPE training for all production staff','Conduct monthly hygiene compliance inspections']},
+    {id:'GMP-2',title:'Buildings & Facilities',req:'Facilities must be designed and maintained to prevent contamination.',actions:['Complete daily sanitation logs per facility SOP','Schedule and document quarterly equipment maintenance','Maintain active pest control contract and inspection logs']},
+    {id:'GMP-3',title:'Production & Process Controls',req:'Production must follow documented procedures to ensure product quality.',actions:['Complete batch records for every production run','Document all in-process quality checks and verifications','Maintain weight verification and metering records']},
+    {id:'GMP-4',title:'Laboratory Controls',req:'Testing must verify that product meets all specifications before release.',actions:['Submit samples for R&D Micro test before batch release','Obtain and file COAs for all finished batches in METRC','Document all out-of-spec investigations and dispositions']},
+    {id:'GMP-5',title:'Records & Reports',req:'Maintain complete, accurate and retrievable production records.',actions:['Retain all batch records for minimum 3 years','Document all deviations, corrections and rework activities','Maintain METRC compliance records and reconciliations']},
+    {id:'GMP-6',title:'Returned & Salvaged Products',req:'Control all returned and salvaged cannabis product.',actions:['Document all returns in METRC within 24 hours','Quarantine all returned product pending QA review and disposition','Complete disposition assessment and document outcome']},
+  ]},
+  dcr:{label:'Missouri DCR / 19 CSR 100-1',color:'#7c2d12',icon:'🏛️',clauses:[
+    {id:'DCR-1',title:'License Compliance',req:'Maintain active and current facility license at all times.',actions:['Track license renewal dates and renew 90 days in advance','Display license prominently in facility','Notify DCR of any material changes within 10 calendar days']},
+    {id:'DCR-2',title:'METRC Track & Trace',req:'All cannabis plants and products must be tracked in METRC.',actions:['Tag all plants and packages in METRC at creation','Reconcile METRC inventory daily against physical count','Report any discrepancies to DCR within 24 hours']},
+    {id:'DCR-3',title:'Security Requirements',req:'Maintain all required security measures per DCR regulations.',actions:['Test and document security camera functionality monthly','Maintain visitor log with signatures for all non-staff visitors','Verify all employees have current background check on file']},
+    {id:'DCR-4',title:'Testing Requirements',req:'All product must pass required laboratory testing before transfer or sale.',actions:['Submit representative samples to DCR-approved lab before transfer','File all COAs in METRC against the correct package','Document all failed tests, quarantine product, and report to DCR']},
+    {id:'DCR-5',title:'Employee Registration',req:'All cannabis facility employees must be registered with DCR.',actions:['Maintain current agent authorization cards for all employees','Report terminated employees to DCR within 10 calendar days','Verify all new hires are DCR-registered before their first shift']},
+    {id:'DCR-6',title:'Record Retention',req:'Maintain all facility records for a minimum of 5 years.',actions:['Archive SOPs, batch records, COAs, and training records','Maintain employee personnel files for 5 years post-termination','Backup all digital records monthly and verify backup integrity']},
+    {id:'DCR-7',title:'Cannabis Waste Disposal',req:'Cannabis waste must be rendered unusable and documented.',actions:['Document all waste destruction events with date, amount, and method','Record all waste disposal activities in METRC before disposal','Maintain waste manifests and disposal records for 5 years']},
+  ]},
+  fsma:{label:'21 CFR Part 117 (FSMA)',color:'#4c1d95',icon:'🍃',clauses:[
+    {id:'117.1',title:'Hazard Analysis & Preventive Controls',req:'Identify and implement preventive controls for all significant hazards.',actions:['Complete HACCP-based hazard analysis annually and after any process change','Document preventive control monitoring procedures and frequencies','Review and update process controls after any incident or near-miss']},
+    {id:'117.2',title:'Supply Chain Program',req:'Implement a risk-based supply chain program for raw material hazards.',actions:['Qualify all raw material and ingredient suppliers before use','Obtain supplier verification documentation annually','Document all supply chain program activities and approvals']},
+    {id:'117.3',title:'Sanitation Controls',req:'Implement sanitation controls to prevent contamination of food-grade cannabis.',actions:['Complete and retain daily sanitation logs for all production areas','Conduct environmental monitoring for pathogens monthly','Document all sanitation verification and corrective activities']},
+    {id:'117.4',title:'Allergen Controls',req:'Implement controls to prevent allergen cross-contact.',actions:['Clearly label all allergen-containing materials in storage','Conduct allergen cleaning verification before allergen changeovers','Train all production and QC staff on allergen control procedures']},
+    {id:'117.5',title:'Recall Program',req:'Establish and maintain a written recall plan.',actions:['Maintain current recall contact list including DCR and lab contacts','Conduct mock recall exercise at least annually and document results','Review and update recall SOP annually or after any regulatory change']},
+  ]},
+};
+
+function ComplianceModule({cu,isElevated,isAdmin,LICENSES,SUPA_URL,SUPA_KEY,H,db}){
+  const[framework,setFramework]=React.useState('iso9001');
+  const[checks,setChecks]=React.useState({});
+  const[notes,setNotes]=React.useState({});
+  const[saving,setSaving]=React.useState(false);
+  const[saved,setSaved]=React.useState('');
+  const[expanded,setExpanded]=React.useState({});
+  const[expandAll,setExpandAll]=React.useState(false);
+  const TABLE='pf_compliance_checks';
+  const fw=COMPLIANCE_FRAMEWORKS[framework];
+
+  React.useEffect(()=>{
+    fetch(`${SUPA_URL}/rest/v1/${TABLE}?framework=eq.${framework}&select=*`,{headers:H.headers})
+      .then(r=>r.ok?r.json():[]).then(rows=>{
+        if(!Array.isArray(rows))return;
+        const c={},n={};
+        rows.forEach(r=>{c[r.clause_id]=r.status||'pending';n[r.clause_id]=r.notes||'';});
+        setChecks(c);setNotes(n);
+      }).catch(()=>{});
+  },[framework]);
+
+  async function saveClause(clauseId,status,note){
+    const rec={clause_id:clauseId,framework,status,notes:note||'',updated_by:cu.name,updated_at:new Date().toISOString()};
+    try{
+      await fetch(`${SUPA_URL}/rest/v1/${TABLE}?clause_id=eq.${encodeURIComponent(clauseId)}&framework=eq.${framework}`,{method:'DELETE',headers:H.headers});
+      await fetch(`${SUPA_URL}/rest/v1/${TABLE}`,{method:'POST',headers:{...H.headers,'Prefer':'return=representation'},body:JSON.stringify(rec)});
+      setChecks(p=>({...p,[clauseId]:status}));
+      setNotes(p=>({...p,[clauseId]:note}));
+      setSaved('✓ Saved');setTimeout(()=>setSaved(''),2000);
+    }catch(e){alert('Save failed: '+e.message);}
+  }
+
+  const clauses=fw.clauses;
+  const total=clauses.length;
+  const completed=clauses.filter(c=>checks[c.id]==='compliant').length;
+  const inprog=clauses.filter(c=>checks[c.id]==='in_progress').length;
+  const gaps=clauses.filter(c=>checks[c.id]==='gap').length;
+  const pct=Math.round((completed/total)*100);
+
+  const STATUS=[
+    {v:'pending',label:'Not Started',color:'#64748b',bg:'rgba(100,116,139,.1)'},
+    {v:'in_progress',label:'In Progress',color:'#d97706',bg:'rgba(217,119,6,.1)'},
+    {v:'compliant',label:'Compliant',color:'#16a34a',bg:'rgba(22,163,74,.12)'},
+    {v:'gap',label:'Gap / Action Needed',color:'#dc2626',bg:'rgba(220,38,38,.1)'},
+  ];
+  const sStyle=v=>{const s=STATUS.find(o=>o.v===v)||STATUS[0];return{background:s.bg,color:s.color,border:'1px solid',borderColor:s.color+'55',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:700,whiteSpace:'nowrap'};};
+
+  return el('div',{style:{padding:'0 0 48px'}},
+    // Header card
+    el('div',{style:{background:'linear-gradient(135deg,#1e3a5f 0%,#2d5282 100%)',borderRadius:14,padding:'24px 28px',marginBottom:24,color:'#fff'}},
+      el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:12}},
+        el('div',null,
+          el('div',{style:{fontSize:22,fontWeight:800,marginBottom:3}},'✅ Compliance Center'),
+          el('div',{style:{fontSize:13,opacity:.8,lineHeight:1.5}},'Track ISO 9001:2015 · cGMP · Missouri DCR · FSMA 21 CFR 117'),
+        ),
+        el('div',{style:{display:'flex',gap:8,alignItems:'center'}},
+          saved&&el('div',{style:{background:'rgba(22,163,74,.25)',border:'1px solid rgba(22,163,74,.5)',borderRadius:8,padding:'6px 14px',fontSize:12,fontWeight:700,color:'#6ee7b7'}},saved),
+        ),
+      ),
+      el('div',{style:{marginTop:20}},
+        el('div',{style:{display:'flex',justifyContent:'space-between',fontSize:12,opacity:.85,marginBottom:6}},
+          el('span',null,fw.label+' — '+completed+' of '+total+' clauses compliant'),
+          el('span',{style:{fontWeight:800,fontSize:15}},pct+'%'),
+        ),
+        el('div',{style:{background:'rgba(255,255,255,.15)',borderRadius:20,height:12,overflow:'hidden'}},
+          el('div',{style:{width:pct+'%',height:'100%',background:pct>=80?'#22c55e':pct>=50?'#f59e0b':'#f87171',borderRadius:20,transition:'width .5s'}}),
+        ),
+        el('div',{style:{display:'flex',gap:20,marginTop:10,fontSize:11,opacity:.8}},
+          el('span',null,'✓ '+completed+' Compliant'),
+          el('span',null,'⏳ '+inprog+' In Progress'),
+          el('span',null,'⚠ '+gaps+' Gaps'),
+          el('span',null,'○ '+(total-completed-inprog-gaps)+' Not Started'),
+        ),
+      ),
+    ),
+
+    // Framework tabs
+    el('div',{style:{display:'flex',gap:8,flexWrap:'wrap',marginBottom:20}},
+      Object.entries(COMPLIANCE_FRAMEWORKS).map(([k,f])=>{
+        const tot=f.clauses.length;
+        const comp=f.clauses.filter(c=>checks[c.id]==='compliant').length;
+        const active=k===framework;
+        return el('button',{key:k,onClick:()=>{setFramework(k);setExpanded({});},style:{
+          display:'flex',alignItems:'center',gap:10,padding:'10px 16px',borderRadius:10,
+          border:'2px solid',borderColor:active?f.color:'var(--border)',
+          background:active?f.color:'var(--surface)',
+          color:active?'#fff':'var(--text)',
+          fontFamily:'inherit',fontSize:12,fontWeight:600,cursor:'pointer',transition:'all .15s',
+        }},
+          el('span',{style:{fontSize:20}},f.icon),
+          el('div',{style:{textAlign:'left'}},
+            el('div',{style:{fontWeight:700}},f.label),
+            el('div',{style:{fontSize:10,opacity:.75,marginTop:1}},comp+'/'+tot+' compliant'),
+          ),
+        );
+      }),
+    ),
+
+    // Toolbar
+    el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14,flexWrap:'wrap',gap:8}},
+      el('div',{style:{fontSize:14,fontWeight:700}},fw.icon+' '+fw.label+' — '+total+' Clauses'),
+      el('div',{style:{display:'flex',gap:8}},
+        el('button',{className:'btn b-ghost btn-sm',onClick:()=>setExpandAll(p=>!p)},expandAll?'▲ Collapse All':'▼ Expand All'),
+        isAdmin&&el('button',{className:'btn b-ghost btn-sm',onClick:()=>{
+          const rows=[['Clause','Title','Status','Notes','Updated By'],...clauses.map(c=>[c.id,c.title,checks[c.id]||'pending',notes[c.id]||'',cu.name])];
+          const csv=rows.map(r=>r.map(v=>'"'+(v||'').replace(/"/g,'""')+'"').join(',')).join('\n');
+          const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+          a.download='compliance-'+framework+'-'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+        }},'📥 Export CSV'),
+      ),
+    ),
+
+    // Clause list
+    el('div',{style:{display:'flex',flexDirection:'column',gap:8}},
+      clauses.map(clause=>{
+        const status=checks[clause.id]||'pending';
+        const note=notes[clause.id]||'';
+        const isOpen=expandAll||(expanded[clause.id]||false);
+        const so=STATUS.find(o=>o.v===status)||STATUS[0];
+
+        return el('div',{key:clause.id,style:{background:'#ffffff',border:'1px solid var(--border)',borderRadius:12,overflow:'hidden',boxShadow:isOpen?'0 2px 12px rgba(15,23,42,.08)':'0 1px 3px rgba(15,23,42,.04)',transition:'box-shadow .2s'}},
+          // Header row
+          el('div',{onClick:()=>setExpanded(p=>({...p,[clause.id]:!p[clause.id]})),
+            style:{display:'flex',alignItems:'center',gap:12,padding:'14px 16px',cursor:'pointer',userSelect:'none',background:isOpen?'rgba(30,58,95,.03)':'transparent'},
+          },
+            el('div',{style:{background:fw.color,color:'#fff',borderRadius:6,padding:'4px 8px',fontSize:10,fontWeight:800,flexShrink:0,textAlign:'center',minWidth:56}},clause.id),
+            el('div',{style:{flex:1,minWidth:0}},
+              el('div',{style:{fontSize:14,fontWeight:700,color:'var(--text)'}},clause.title),
+              !isOpen&&el('div',{style:{fontSize:12,color:'var(--text2)',marginTop:2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},clause.req),
+            ),
+            el('span',{style:sStyle(status)},so.label),
+            el('span',{style:{color:'var(--text3)',fontSize:12,marginLeft:6,flexShrink:0}},isOpen?'▲':'▼'),
+          ),
+
+          // Expanded body
+          isOpen&&el('div',{style:{borderTop:'1px solid var(--border)',padding:'18px 16px',background:'#fafcff'}},
+            // Requirement
+            el('div',{style:{background:'rgba(30,58,95,.04)',border:'1px solid rgba(30,58,95,.1)',borderRadius:8,padding:'12px 14px',marginBottom:16}},
+              el('div',{style:{fontSize:10,fontWeight:800,color:'var(--accent)',textTransform:'uppercase',letterSpacing:'.6px',marginBottom:5}},'Requirement'),
+              el('div',{style:{fontSize:13,color:'var(--text)',lineHeight:1.6}},clause.req),
+            ),
+
+            // Actions checklist
+            el('div',{style:{marginBottom:16}},
+              el('div',{style:{fontSize:10,fontWeight:800,color:'var(--accent)',textTransform:'uppercase',letterSpacing:'.6px',marginBottom:8}},'Required Actions'),
+              el('div',{style:{display:'flex',flexDirection:'column',gap:7}},
+                clause.actions.map((action,i)=>el('div',{key:i,style:{display:'flex',alignItems:'flex-start',gap:10,fontSize:13,color:'var(--text)',lineHeight:1.5}},
+                  el('span',{style:{color:status==='compliant'?'#16a34a':'#cbd5e1',fontSize:17,flexShrink:0,marginTop:0}},status==='compliant'?'✓':'○'),
+                  action,
+                ))
+              ),
+            ),
+
+            // Status buttons
+            el('div',{style:{marginBottom:14}},
+              el('div',{style:{fontSize:10,fontWeight:800,color:'var(--accent)',textTransform:'uppercase',letterSpacing:'.6px',marginBottom:8}},'Set Status'),
+              el('div',{style:{display:'flex',gap:6,flexWrap:'wrap'}},
+                STATUS.map(opt=>el('button',{key:opt.v,
+                  onClick:()=>saveClause(clause.id,opt.v,note),
+                  style:{padding:'7px 14px',borderRadius:8,border:'2px solid',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'inherit',transition:'all .15s',
+                    borderColor:status===opt.v?opt.color:'var(--border)',
+                    background:status===opt.v?opt.bg:'transparent',
+                    color:status===opt.v?opt.color:'var(--text2)',
+                  }
+                },opt.label)),
+              ),
+            ),
+
+            // Notes
+            el('div',null,
+              el('div',{style:{fontSize:10,fontWeight:800,color:'var(--accent)',textTransform:'uppercase',letterSpacing:'.6px',marginBottom:6}},'Notes / Evidence'),
+              el('textarea',{
+                value:note,
+                onChange:ev=>setNotes(p=>({...p,[clause.id]:ev.target.value})),
+                onBlur:ev=>saveClause(clause.id,status,ev.target.value),
+                placeholder:'Document evidence, responsible person, target date, or gaps found...',
+                rows:3,
+                style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 12px',color:'var(--text)',fontFamily:'inherit',fontSize:13,resize:'vertical',boxSizing:'border-box'},
+              }),
+              el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:4}},'Notes auto-save on blur · Last saved by '+cu.name),
+            ),
+          ),
+        );
+      }),
+    ),
+  );
+}
+
+function QMSBadge({status,type}){
+  const s=QMS_STATUSES[status];
+  if(!s) return el('span',{style:{fontSize:11,color:'var(--text3)'}},status||'—');
+  return el('span',{style:{background:s.color+'22',color:s.color,border:'1px solid '+s.color+'44',borderRadius:4,padding:'2px 8px',fontSize:11,fontWeight:700}},s.label);
+}
+function PriBadge({priority}){
+  const p=QMS_PRIORITIES[priority];
+  if(!p) return null;
+  return el('span',{style:{background:p.color+'22',color:p.color,border:'1px solid '+p.color+'44',borderRadius:4,padding:'2px 8px',fontSize:11,fontWeight:700}},p.label);
+}
+
+// ── DEVIATION FORM ────────────────────────────────────────────────────────────
+function DeviationForm({cu,users,onSave,onCancel,existing}){
+  const[f,setF]=useState(existing||{
+    title:'',dept:'Cart Department',description:'',
+    product_affected:'',lot_number:'',
+    immediate_action:'',root_cause:'',
+    priority:'major',status:'open',
+    license_id:(cu.licenses||[])[0]||'',
+    reported_by:cu.name,reported_by_id:cu.id,
+    attachments:[],notes:[],
+  });
+  const[saving,setSaving]=useState(false);
+  const[error,setError]=useState('');
+  async function save(){
+    if(!f.title.trim()) return;
+    if(!f.license_id){setError('Please select which license this deviation belongs to.');return;}
+    setError('');
+    setSaving(true);
+    const rec={...f,
+      id:existing?.id||'dev-'+Date.now(),
+      created_by:cu.name,created_by_id:cu.id,
+      created_at:existing?.created_at||new Date().toISOString(),
+      updated_at:new Date().toISOString(),updated_by:cu.name,
+    };
+    try{
+      if(existing){await db.update('pf_qms_deviations',existing.id,rec);}
+      else{await db.insert('pf_qms_deviations',rec);}
+      onSave(rec);
+    }catch(e){
+      console.error(e);
+      alert('Save failed. Run SQL migration:\nCREATE TABLE IF NOT EXISTS pf_qms_deviations (id text primary key, title text, dept text, description text, product_affected text, lot_number text, immediate_action text, root_cause text, priority text, status text default \'open\', reported_by text, reported_by_id text, attachments jsonb default \'[]\', notes jsonb default \'[]\', created_by text, created_by_id text, created_at text, updated_at text, updated_by text, closed_at text);\nALTER TABLE pf_qms_deviations DISABLE ROW LEVEL SECURITY;');
+      navigator.clipboard.writeText("CREATE TABLE IF NOT EXISTS pf_qms_deviations (id text primary key, title text, dept text, description text, product_affected text, lot_number text, immediate_action text, root_cause text, priority text, status text default 'open', reported_by text, reported_by_id text, attachments jsonb default '[]', notes jsonb default '[]', created_by text, created_by_id text, created_at text, updated_at text, updated_by text, closed_at text);\nALTER TABLE pf_qms_deviations DISABLE ROW LEVEL SECURITY;").catch(()=>{});
+    }
+    setSaving(false);
+  }
+  return el('div',{className:'mbd'},
+    el('div',{className:'fg'},el('label',null,'License *'),el('select',{value:f.license_id,onChange:ev=>setF(p=>({...p,license_id:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+      el('option',{value:''},'— Select License —'),
+      LICENSES.map(lic=>el('option',{key:lic.id,value:lic.id},lic.name+' ('+lic.state+')'))
+    )),
+    el('div',{className:'fg'},el('label',null,'Deviation Title *'),el('input',{value:f.title,onChange:ev=>setF(p=>({...p,title:ev.target.value})),placeholder:'e.g. Wrong label applied to Pre-Roll batch',autoFocus:true})),
+    error&&el('div',{style:{background:'rgba(239,68,68,.1)',border:'1px solid rgba(239,68,68,.3)',borderRadius:8,padding:'8px 12px',fontSize:12,color:'var(--red)',marginBottom:10}},error),
+    el('div',{className:'g2'},
+      el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Department'),el('select',{value:f.dept,onChange:ev=>setF(p=>({...p,dept:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},QMS_DEPTS.map(d=>el('option',{key:d,value:d},d)))),
+      el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Priority'),el('select',{value:f.priority,onChange:ev=>setF(p=>({...p,priority:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},Object.entries(QMS_PRIORITIES).map(([k,{label}])=>el('option',{key:k,value:k},label)))),
+    ),
+    el('div',{className:'g2',style:{marginTop:13}},
+      el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Product Affected'),el('input',{value:f.product_affected,onChange:ev=>setF(p=>({...p,product_affected:ev.target.value})),placeholder:'e.g. Live Resin Carts 1g'})),
+      el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Lot / Batch Number'),el('input',{value:f.lot_number,onChange:ev=>setF(p=>({...p,lot_number:ev.target.value})),placeholder:'e.g. LOT-2026-0601'})),
+    ),
+    el('div',{className:'fg'},el('label',null,'What Happened? *'),el('textarea',{value:f.description,onChange:ev=>setF(p=>({...p,description:ev.target.value})),placeholder:'Describe the deviation in detail...'})),
+    el('div',{className:'fg'},el('label',null,'Immediate Action Taken'),el('textarea',{value:f.immediate_action,onChange:ev=>setF(p=>({...p,immediate_action:ev.target.value})),placeholder:'What was done right away to contain the issue?'})),
+    el('div',{className:'fg'},el('label',null,'Root Cause (if known)'),el('textarea',{value:f.root_cause,onChange:ev=>setF(p=>({...p,root_cause:ev.target.value})),placeholder:'Why did this happen?'})),
+    existing&&el('div',{className:'fg'},el('label',null,'Status'),el('select',{value:f.status,onChange:ev=>setF(p=>({...p,status:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},Object.entries(QMS_STATUSES).map(([k,{label}])=>el('option',{key:k,value:k},label)))),
+    el('div',{className:'mf'},
+      el('button',{className:'btn b-ghost',onClick:onCancel},'Cancel'),
+      el('button',{className:'btn b-blue',onClick:save,disabled:saving||!f.title.trim()},saving?'Saving...':existing?'Update':'Submit Deviation'),
+    ),
+  );
+}
+
+// ── CAPA FORM ─────────────────────────────────────────────────────────────────
+function CAPAForm({cu,users,deviations,onSave,onCancel,existing}){
+  const[f,setF]=useState(existing||{
+    title:'',linked_deviation:'',dept:'Cart Department',
+    issue_description:'',correction:'',preventive_action:'',
+    responsible_person_id:'',responsible_person_name:'',
+    due_date:'',verification_method:'',
+    priority:'major',status:'open',effectiveness_rating:'',
+    license_id:(cu.licenses||[])[0]||'',
+    attachments:[],notes:[],
+  });
+  const[saving,setSaving]=useState(false);
+  const[error,setError]=useState('');
+  async function save(){
+    if(!f.title.trim()) return;
+    if(!f.license_id){setError('Please select which license this CAPA belongs to.');return;}
+    setError('');
+    setSaving(true);
+    const rec={...f,
+      id:existing?.id||'capa-'+Date.now(),
+      created_by:cu.name,created_by_id:cu.id,
+      created_at:existing?.created_at||new Date().toISOString(),
+      updated_at:new Date().toISOString(),updated_by:cu.name,
+    };
+    try{
+      if(existing){await db.update('pf_qms_capas',existing.id,rec);}
+      else{await db.insert('pf_qms_capas',rec);}
+      onSave(rec);
+    }catch(e){console.error(e);alert('Save failed. Create table pf_qms_capas in Supabase SQL Editor.');}
+    setSaving(false);
+  }
+  return el('div',{className:'mbd'},
+    el('div',{className:'fg'},el('label',null,'License *'),el('select',{value:f.license_id,onChange:ev=>setF(p=>({...p,license_id:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+      el('option',{value:''},'— Select License —'),
+      LICENSES.map(lic=>el('option',{key:lic.id,value:lic.id},lic.name+' ('+lic.state+')'))
+    )),
+    el('div',{className:'fg'},el('label',null,'CAPA Title *'),el('input',{value:f.title,onChange:ev=>setF(p=>({...p,title:ev.target.value})),placeholder:'e.g. Pre-roll weight deviation CAPA',autoFocus:true})),
+    error&&el('div',{style:{background:'rgba(239,68,68,.1)',border:'1px solid rgba(239,68,68,.3)',borderRadius:8,padding:'8px 12px',fontSize:12,color:'var(--red)',marginBottom:10}},error),
+    el('div',{className:'g2'},
+      el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Department'),el('select',{value:f.dept,onChange:ev=>setF(p=>({...p,dept:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},QMS_DEPTS.map(d=>el('option',{key:d,value:d},d)))),
+      el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Priority'),el('select',{value:f.priority,onChange:ev=>setF(p=>({...p,priority:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},Object.entries(QMS_PRIORITIES).map(([k,{label}])=>el('option',{key:k,value:k},label)))),
+    ),
+    deviations.length>0&&el('div',{className:'fg'},
+      el('label',null,'Linked Deviation (optional)'),
+      el('select',{value:f.linked_deviation,onChange:ev=>setF(p=>({...p,linked_deviation:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+        el('option',{value:''},'— None —'),
+        ...deviations.map(d=>el('option',{key:d.id,value:d.id},d.title)),
+      ),
+    ),
+    el('div',{className:'fg'},el('label',null,'Issue Description *'),el('textarea',{value:f.issue_description,onChange:ev=>setF(p=>({...p,issue_description:ev.target.value})),placeholder:'Describe the problem being addressed...'})),
+    el('div',{className:'fg'},el('label',null,'Correction (Immediate Fix)'),el('textarea',{value:f.correction,onChange:ev=>setF(p=>({...p,correction:ev.target.value})),placeholder:'What was done to fix the immediate problem?'})),
+    el('div',{className:'fg'},el('label',null,'Preventive Action (Long-term Fix)'),el('textarea',{value:f.preventive_action,onChange:ev=>setF(p=>({...p,preventive_action:ev.target.value})),placeholder:'What process changes prevent recurrence? e.g. Add hourly weight verification, supervisor signoff every batch'})),
+    el('div',{className:'g2'},
+      el('div',{className:'fg',style:{marginBottom:0}},
+        el('label',null,'Responsible Person'),
+        el('select',{value:f.responsible_person_id,onChange:ev=>{const u=users.find(x=>x.id===ev.target.value);setF(p=>({...p,responsible_person_id:ev.target.value,responsible_person_name:u?.name||''}));},style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+          el('option',{value:''},'— Select —'),
+          ...users.filter(u=>u.approved).map(u=>el('option',{key:u.id,value:u.id},u.name+' — '+u.dept)),
+        ),
+      ),
+      el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Due Date'),el('input',{type:'date',value:f.due_date,onChange:ev=>setF(p=>({...p,due_date:ev.target.value}))})),
+    ),
+    el('div',{className:'fg'},el('label',null,'Verification Method'),el('input',{value:f.verification_method,onChange:ev=>setF(p=>({...p,verification_method:ev.target.value})),placeholder:'How will you verify the fix worked?'})),
+    existing&&el('div',{className:'g2'},
+      el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Status'),el('select',{value:f.status,onChange:ev=>setF(p=>({...p,status:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},Object.entries(QMS_STATUSES).map(([k,{label}])=>el('option',{key:k,value:k},label)))),
+      el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Effectiveness (if closed)'),el('select',{value:f.effectiveness_rating,onChange:ev=>setF(p=>({...p,effectiveness_rating:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+        el('option',{value:''},'— Rate effectiveness —'),
+        el('option',{value:'effective'},'✅ Effective'),
+        el('option',{value:'partially'},'⚠️ Partially Effective'),
+        el('option',{value:'ineffective'},'❌ Ineffective — Reopen'),
+      )),
+    ),
+    el('div',{className:'mf'},
+      el('button',{className:'btn b-ghost',onClick:onCancel},'Cancel'),
+      el('button',{className:'btn b-blue',onClick:save,disabled:saving||!f.title.trim()},saving?'Saving...':existing?'Update CAPA':'Create CAPA'),
+    ),
+  );
+}
+
+// ── AUDIT FORM ────────────────────────────────────────────────────────────────
+const AUDIT_TYPES=['METRC Audit','Packaging Audit','Security Audit','Training Audit','Testing Audit','SOP Compliance Audit','Equipment Calibration Audit','Sanitation Audit','Full Facility Audit','Custom'];
+function AuditForm({cu,users,onSave,onCancel,existing}){
+  const[f,setF]=useState(existing||{
+    title:'',audit_type:'METRC Audit',dept:'Compliance',
+    audit_date:new Date().toISOString().slice(0,10),
+    auditor_id:cu.id,auditor_name:cu.name,
+    scope:'',findings:[],
+    total_findings:0,critical_findings:0,
+    recommendations:'',conclusion:'',
+    status:'open',next_audit_date:'',
+    license_id:(cu.licenses||[])[0]||'',
+    attachments:[],
+  });
+  const[newFinding,setNewFinding]=useState({description:'',severity:'minor',corrective_action:'',status:'open'});
+  const[saving,setSaving]=useState(false);
+  const[error,setError]=useState('');
+
+  function addFinding(){
+    if(!newFinding.description.trim()) return;
+    const finding={...newFinding,id:'f'+Date.now()};
+    setF(p=>({...p,findings:[...p.findings,finding],total_findings:(p.findings||[]).length+1,critical_findings:(p.findings||[]).filter(x=>x.severity==='critical').length+(finding.severity==='critical'?1:0)}));
+    setNewFinding({description:'',severity:'minor',corrective_action:'',status:'open'});
+  }
+
+  async function save(){
+    if(!f.title.trim()) return;
+    if(!f.license_id){setError('Please select which license this audit belongs to.');return;}
+    setError('');
+    setSaving(true);
+    const rec={...f,id:existing?.id||'aud-'+Date.now(),created_by:cu.name,created_by_id:cu.id,created_at:existing?.created_at||new Date().toISOString(),updated_at:new Date().toISOString(),updated_by:cu.name};
+    try{
+      if(existing){await db.update('pf_qms_audits',existing.id,rec);}
+      else{await db.insert('pf_qms_audits',rec);}
+      onSave(rec);
+    }catch(e){console.error(e);alert('Audit save failed: '+e.message);}
+    setSaving(false);
+  }
+  return el('div',{className:'mbd'},
+    el('div',{className:'fg'},el('label',null,'License *'),el('select',{value:f.license_id,onChange:ev=>setF(p=>({...p,license_id:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+      el('option',{value:''},'— Select License —'),
+      LICENSES.map(lic=>el('option',{key:lic.id,value:lic.id},lic.name+' ('+lic.state+')'))
+    )),
+    el('div',{className:'fg'},el('label',null,'Audit Title *'),el('input',{value:f.title,onChange:ev=>setF(p=>({...p,title:ev.target.value})),placeholder:'e.g. Monthly METRC Audit — June 2026',autoFocus:true})),
+    el('div',{className:'g2'},
+      el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Audit Type'),el('select',{value:f.audit_type,onChange:ev=>setF(p=>({...p,audit_type:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},AUDIT_TYPES.map(t=>el('option',{key:t,value:t},t)))),
+      el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Audit Date'),el('input',{type:'date',value:f.audit_date,onChange:ev=>setF(p=>({...p,audit_date:ev.target.value}))})),
+    ),
+    el('div',{className:'g2',style:{marginTop:13}},
+      el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Department'),el('select',{value:f.dept,onChange:ev=>setF(p=>({...p,dept:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},QMS_DEPTS.map(d=>el('option',{key:d,value:d},d)))),
+      el('div',{className:'fg',style:{marginBottom:0}},
+        el('label',null,'Lead Auditor'),
+        el('select',{value:f.auditor_id,onChange:ev=>{const u=users.find(x=>x.id===ev.target.value);setF(p=>({...p,auditor_id:ev.target.value,auditor_name:u?.name||''}));},style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+          ...users.filter(u=>u.approved).map(u=>el('option',{key:u.id,value:u.id},u.name)),
+        ),
+      ),
+    ),
+    el('div',{className:'fg'},el('label',null,'Audit Scope'),el('textarea',{value:f.scope,onChange:ev=>setF(p=>({...p,scope:ev.target.value})),placeholder:'What areas/processes were reviewed?'})),
+    el('div',{className:'divider'}),
+    el('div',{style:{fontWeight:700,fontSize:14,marginBottom:10}},'Findings'),
+    (f.findings||[]).map((finding,i)=>el('div',{key:finding.id,style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:8,padding:12,marginBottom:6,display:'flex',gap:10,alignItems:'flex-start'}},
+      el('div',{style:{flex:1}},
+        el('div',{style:{display:'flex',gap:6,marginBottom:4}},
+          el('span',{style:{background:finding.severity==='critical'?'rgba(239,68,68,.15)':finding.severity==='major'?'rgba(245,158,11,.15)':'rgba(59,130,246,.1)',color:finding.severity==='critical'?'var(--red)':finding.severity==='major'?'var(--accent)':'#93c5fd',borderRadius:4,padding:'1px 7px',fontSize:10,fontWeight:700}},finding.severity.toUpperCase()),
+        ),
+        el('div',{style:{fontSize:13,fontWeight:600}},finding.description),
+        finding.corrective_action&&el('div',{style:{fontSize:12,color:'var(--text2)',marginTop:3}},'Action: '+finding.corrective_action),
+      ),
+      el('button',{onClick:()=>setF(p=>({...p,findings:p.findings.filter((_,j)=>j!==i)})),style:{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:16}},'×'),
+    )),
+    el('div',{style:{background:'var(--surface2)',border:'1px dashed var(--border)',borderRadius:8,padding:12,marginBottom:14}},
+      el('div',{style:{fontSize:12,fontWeight:700,color:'var(--text2)',marginBottom:8}},'Add Finding'),
+      el('textarea',{value:newFinding.description,onChange:ev=>setNewFinding(p=>({...p,description:ev.target.value})),placeholder:'Describe the finding...',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px',color:'var(--text)',fontFamily:'inherit',fontSize:12,outline:'none',minHeight:50,resize:'vertical',marginBottom:8}}),
+      el('div',{style:{display:'flex',gap:8}},
+        el('select',{value:newFinding.severity,onChange:ev=>setNewFinding(p=>({...p,severity:ev.target.value})),style:{background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'6px',color:'var(--text)',fontFamily:'inherit',fontSize:12}},
+          el('option',{value:'minor'},'Minor'),el('option',{value:'major'},'Major'),el('option',{value:'critical'},'Critical'),
+        ),
+        el('input',{value:newFinding.corrective_action,onChange:ev=>setNewFinding(p=>({...p,corrective_action:ev.target.value})),placeholder:'Required corrective action...',style:{flex:1,background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'6px 10px',color:'var(--text)',fontFamily:'inherit',fontSize:12,outline:'none'}}),
+        el('button',{onClick:addFinding,disabled:!newFinding.description.trim(),className:'btn b-blue btn-sm'},'+ Add'),
+      ),
+    ),
+    el('div',{className:'fg'},el('label',null,'Recommendations'),el('textarea',{value:f.recommendations,onChange:ev=>setF(p=>({...p,recommendations:ev.target.value})),placeholder:'Overall recommendations from this audit...'})),
+    el('div',{className:'fg'},el('label',null,'Conclusion / Summary'),el('textarea',{value:f.conclusion,onChange:ev=>setF(p=>({...p,conclusion:ev.target.value})),placeholder:'Overall audit conclusion...'})),
+    el('div',{className:'g2'},
+      el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Status'),el('select',{value:f.status,onChange:ev=>setF(p=>({...p,status:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},Object.entries(QMS_STATUSES).map(([k,{label}])=>el('option',{key:k,value:k},label)))),
+      el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Next Audit Date'),el('input',{type:'date',value:f.next_audit_date,onChange:ev=>setF(p=>({...p,next_audit_date:ev.target.value}))})),
+    ),
+
+    // ── ATTACHMENTS ──────────────────────────────────────────────────────────
+    el('div',{className:'divider'}),
+    el('div',{style:{marginBottom:14}},
+      el('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}},
+        el('div',{style:{fontWeight:700,fontSize:14}},'📎 Attachments'),
+        el('label',{style:{cursor:'pointer'}},
+          el('span',{className:'btn b-ghost btn-sm'},'+ Upload File'),
+          el('input',{type:'file',accept:'.pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xlsx,.csv',style:{display:'none'},
+            onChange:ev=>{
+              const file=ev.target.files[0];
+              if(!file)return;
+              if(file.size>5*1024*1024){alert('Max file size is 5MB.');return;}
+              const reader=new FileReader();
+              reader.onload=re=>{
+                const att={id:'att-'+Date.now(),name:file.name,type:file.type,size:file.size,data:re.target.result,uploaded_by:cu.name,uploaded_at:new Date().toISOString()};
+                setF(p=>({...p,attachments:[...(p.attachments||[]),att]}));
+              };
+              reader.readAsDataURL(file);
+              ev.target.value='';
+            }
+          }),
+        ),
+      ),
+      (f.attachments||[]).length===0
+        ?el('div',{style:{fontSize:12,color:'var(--text3)',padding:'10px 0'}},'No attachments yet. Upload audit reports, checklists, photos, or supporting docs.')
+        :el('div',{style:{display:'flex',flexDirection:'column',gap:6}},
+          (f.attachments||[]).map((att,i)=>el('div',{key:att.id,style:{display:'flex',alignItems:'center',justifyContent:'space-between',background:'var(--surface2)',borderRadius:8,padding:'8px 12px'}},
+            el('div',{style:{display:'flex',alignItems:'center',gap:8,flex:1,minWidth:0}},
+              el('span',{style:{fontSize:18,flexShrink:0}},att.type&&att.type.includes('pdf')?'📄':att.type&&att.type.includes('image')?'🖼️':'📎'),
+              el('div',{style:{minWidth:0}},
+                el('a',{href:att.data,download:att.name,style:{fontSize:12,fontWeight:600,color:'var(--accent)',textDecoration:'none',display:'block',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},att.name),
+                el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:1}},(att.size>1024*1024?(att.size/1024/1024).toFixed(1)+'MB':(att.size/1024).toFixed(0)+'KB')+' · '+att.uploaded_by),
+              ),
+            ),
+            el('button',{onClick:()=>setF(p=>({...p,attachments:p.attachments.filter((_,j)=>j!==i)})),style:{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:16,flexShrink:0,marginLeft:6}},'×'),
+          ))
+        ),
+      el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:6}},'Supported: PDF, PNG, JPG, WEBP, DOC, DOCX, XLSX, CSV · Max 5MB per file'),
+    ),
+
+    error&&el('div',{style:{background:'rgba(239,68,68,.1)',border:'1px solid rgba(239,68,68,.3)',borderRadius:8,padding:'8px 12px',fontSize:12,color:'var(--red)',marginBottom:10}},error),
+    el('div',{className:'mf'},
+      el('button',{className:'btn b-ghost',onClick:onCancel},'Cancel'),
+      el('button',{className:'btn b-blue',onClick:save,disabled:saving||!f.title.trim()},saving?'Saving...':existing?'Update Audit':'Submit Audit'),
+    ),
+  );
+}
+
+// ── EMPLOYEE TYPEAHEAD PICKER ─────────────────────────────────────────────────
+function EmployeeTypeahead({users,value,onChange,placeholder}){
+  const[query,setQuery]=useState(value?.name||'');
+  const[open,setOpen]=useState(false);
+  const approved=users.filter(u=>u.approved);
+  const matches=query.trim().length>=3?approved.filter(u=>u.name.toLowerCase().includes(query.trim().toLowerCase())).slice(0,8):[];
+
+  return el('div',{style:{position:'relative'}},
+    el('input',{
+      value:query,
+      onChange:ev=>{setQuery(ev.target.value);setOpen(true);if(!ev.target.value)onChange(null);},
+      onFocus:()=>setOpen(true),
+      onBlur:()=>setTimeout(()=>setOpen(false),150),
+      placeholder:placeholder||'Type at least 3 letters of employee name...',
+      style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none'},
+    }),
+    open&&matches.length>0&&el('div',{style:{position:'absolute',top:'100%',left:0,right:0,marginTop:4,background:'var(--surface3)',border:'1px solid var(--border)',borderRadius:8,boxShadow:'0 8px 24px rgba(0,0,0,.4)',zIndex:50,maxHeight:240,overflowY:'auto'}},
+      matches.map(u=>el('div',{key:u.id,
+        onMouseDown:()=>{onChange(u);setQuery(u.name);setOpen(false);},
+        style:{padding:'9px 13px',cursor:'pointer',display:'flex',alignItems:'center',gap:8,borderBottom:'1px solid var(--border)',transition:'background .1s'},
+        onMouseEnter:ev=>ev.currentTarget.style.background='var(--surface2)',
+        onMouseLeave:ev=>ev.currentTarget.style.background='transparent',
+      },
+        el('div',{className:'avatar',style:{background:avatarColor(u.name),width:24,height:24,fontSize:10}},u.name.charAt(0).toUpperCase()),
+        el('div',null,
+          el('div',{style:{fontSize:12,fontWeight:600,color:'var(--text)'}},u.name),
+          el('div',{style:{fontSize:10,color:'var(--text3)'}},(RLABEL[u.role]||u.role)+(u.dept?' · '+u.dept:'')),
+        ),
+      ))
+    ),
+    open&&query.trim().length>=3&&matches.length===0&&el('div',{style:{position:'absolute',top:'100%',left:0,right:0,marginTop:4,background:'var(--surface3)',border:'1px solid var(--border)',borderRadius:8,padding:'9px 13px',fontSize:12,color:'var(--text3)',zIndex:50}},'No matching employees'),
+  );
+}
+
+// ── CORRECTIVE ACTION GENERATOR ───────────────────────────────────────────────
+// ── SIGNATURE PAD (canvas draw + clear) ──────────────────────────────────────
+function SignaturePad({onSave,onClear,label='Draw your signature below'}){
+  const canvasRef=React.useRef(null);
+  const drawing=React.useRef(false);
+  const[hasStrokes,setHasStrokes]=React.useState(false);
+
+  function getPos(e,canvas){
+    const r=canvas.getBoundingClientRect();
+    const src=e.touches?e.touches[0]:e;
+    return{x:(src.clientX-r.left)*(canvas.width/r.width),y:(src.clientY-r.top)*(canvas.height/r.height)};
+  }
+  function start(e){
+    e.preventDefault();
+    const canvas=canvasRef.current;
+    const ctx=canvas.getContext('2d');
+    const{x,y}=getPos(e,canvas);
+    ctx.beginPath();ctx.moveTo(x,y);
+    drawing.current=true;
+  }
+  function move(e){
+    e.preventDefault();
+    if(!drawing.current)return;
+    const canvas=canvasRef.current;
+    const ctx=canvas.getContext('2d');
+    const{x,y}=getPos(e,canvas);
+    ctx.lineTo(x,y);
+    ctx.strokeStyle='#0f172a';ctx.lineWidth=2.5;ctx.lineCap='round';ctx.lineJoin='round';
+    ctx.stroke();
+    setHasStrokes(true);
+  }
+  function end(e){e.preventDefault();drawing.current=false;}
+  function clear(){
+    const canvas=canvasRef.current;
+    canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);
+    setHasStrokes(false);
+    onClear&&onClear();
+  }
+  function save(){
+    if(!hasStrokes)return;
+    const dataUrl=canvasRef.current.toDataURL('image/png');
+    onSave(dataUrl);
+  }
+
+  return el('div',null,
+    el('div',{style:{fontSize:12,color:'var(--text2)',marginBottom:6}},label),
+    el('div',{style:{position:'relative',border:'2px solid var(--border)',borderRadius:8,background:'#ffffff',touchAction:'none'}},
+      el('canvas',{
+        ref:canvasRef,width:520,height:120,
+        style:{display:'block',width:'100%',height:120,cursor:'crosshair',borderRadius:6},
+        onMouseDown:start,onMouseMove:move,onMouseUp:end,onMouseLeave:end,
+        onTouchStart:start,onTouchMove:move,onTouchEnd:end,
+      }),
+      el('div',{style:{position:'absolute',bottom:6,left:8,fontSize:10,color:'rgba(0,0,0,.25)',pointerEvents:'none',fontStyle:'italic'}},'Sign here'),
+    ),
+    el('div',{style:{display:'flex',gap:8,marginTop:8}},
+      el('button',{onClick:clear,className:'btn b-ghost btn-sm'},'Clear'),
+      el('button',{onClick:save,disabled:!hasStrokes,className:'btn b-blue btn-sm',style:{opacity:hasStrokes?1:.4}},'✓ Apply Signature'),
+    ),
+  );
+}
+
+// ── CA REVISE MODAL ─────────────────────────────────────────────────────────
+function CAReviseModal({ca,cu,onClose,onSave}){
+  const gen=ca.generated_content?JSON.parse(ca.generated_content):{};
+  const[f,setF]=React.useState({
+    incident_summary:gen.incident_summary||'',
+    policy_reference:gen.policy_reference||'',
+    expected_standard:gen.expected_standard||'',
+    corrective_steps:(gen.corrective_steps||[]).join('\n'),
+    consequences_of_recurrence:gen.consequences_of_recurrence||'',
+    support_offered:gen.support_offered||'',
+    employee_acknowledgement_text:gen.employee_acknowledgement_text||'',
+  });
+  const[aiNotes,setAiNotes]=React.useState('');
+  const[saving,setSaving]=React.useState(false);
+  const[generating,setGenerating]=React.useState(false);
+  const[error,setError]=React.useState('');
+  const[tab,setTab]=React.useState('manual'); // manual | ai
+
+  async function aiRevise(){
+    if(!aiNotes.trim()){setError('Describe what needs to be changed.');return;}
+    setError('');setGenerating(true);
+    const prompt=`You are revising an existing Corrective Action document. Here is the current content:
+
+${JSON.stringify(gen)}
+
+REVISION INSTRUCTIONS: ${aiNotes}
+
+Return ONLY the full revised JSON with the same structure, no markdown. Keep unchanged fields identical. Make requested changes only.`;
+    try{
+      const res=await fetch(`${SUPA_URL}/functions/v1/claude-proxy`,{
+        method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPA_KEY},
+        body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:4000,messages:[{role:'user',content:prompt}]}),
+      });
+      const data=await res.json();
+      if(!res.ok||data.error)throw new Error(data.error?.message||'Generation failed');
+      let clean=(data.content?.[0]?.text||'').replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+      const parsed=JSON.parse(clean);
+      setF({
+        incident_summary:parsed.incident_summary||f.incident_summary,
+        policy_reference:parsed.policy_reference||f.policy_reference,
+        expected_standard:parsed.expected_standard||f.expected_standard,
+        corrective_steps:(parsed.corrective_steps||[]).join('\n'),
+        consequences_of_recurrence:parsed.consequences_of_recurrence||f.consequences_of_recurrence,
+        support_offered:parsed.support_offered||f.support_offered,
+        employee_acknowledgement_text:parsed.employee_acknowledgement_text||f.employee_acknowledgement_text,
+      });
+      setTab('manual');
+      setAiNotes('');
+    }catch(e){setError('Revision failed: '+e.message);}
+    setGenerating(false);
+  }
+
+  async function save(){
+    setSaving(true);
+    const steps=f.corrective_steps.split('\n').map(s=>s.trim()).filter(Boolean);
+    const updated={...gen,...f,corrective_steps:steps,title:ca.title,ca_number:ca.ca_number,date_issued:gen.date_issued};
+    const update={generated_content:JSON.stringify(updated),updated_at:new Date().toISOString(),updated_by:cu.name};
+    try{
+      await fetch(`${SUPA_URL}/rest/v1/pf_qms_corrective?id=eq.${ca.id}`,{method:'PATCH',headers:{...H.headers},body:JSON.stringify(update)});
+      onSave({...ca,...update});
+    }catch(e){setError('Save failed: '+e.message);}
+    setSaving(false);
+  }
+
+  const TA=(label,key,rows=3)=>el('div',{className:'fg'},
+    el('label',null,label),
+    el('textarea',{value:f[key],rows,onChange:ev=>setF(p=>({...p,[key]:ev.target.value})),
+      style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,resize:'vertical',minHeight:rows*22,boxSizing:'border-box'}}),
+  );
+
+  return el('div',{className:'mo',style:{zIndex:1200},onClick:ev=>ev.target===ev.currentTarget&&onClose()},
+    el('div',{className:'md',style:{width:700,maxHeight:'92vh',overflowY:'auto'}},
+      el('div',{className:'mh'},
+        el('div',null,
+          el('div',{className:'mt2'},'✏️ Revise Corrective Action'),
+          el('div',{style:{fontSize:12,color:'var(--text2)',marginTop:2}},ca.ca_number+' — '+ca.employee_name),
+        ),
+        el('button',{className:'mc',onClick:onClose},'×'),
+      ),
+      el('div',{className:'mbd'},
+        // Tab switcher
+        el('div',{style:{display:'flex',gap:4,background:'var(--surface2)',borderRadius:8,padding:4,marginBottom:16}},
+          ['manual','ai'].map(t=>el('button',{key:t,onClick:()=>setTab(t),style:{flex:1,padding:'7px 0',borderRadius:6,border:'none',fontFamily:'inherit',fontSize:13,fontWeight:tab===t?700:500,cursor:'pointer',background:tab===t?'var(--accent)':'transparent',color:tab===t?'#ffffff':'var(--text2)',transition:'all .15s'}},t==='manual'?'✏️ Manual Edit':'🤖 AI Revise')),
+        ),
+
+        // AI tab
+        tab==='ai'&&el('div',null,
+          el('div',{className:'fg'},
+            el('label',null,'What needs to change? Be specific.'),
+            el('textarea',{value:aiNotes,onChange:ev=>setAiNotes(ev.target.value),rows:4,autoFocus:true,
+              placeholder:'e.g. "Make the corrective steps more specific to cannabis manufacturing. Add a reference to SOP-CART-003. Translate the acknowledgement text to Spanish."',
+              style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,resize:'vertical',boxSizing:'border-box'}}),
+          ),
+          error&&el('div',{style:{background:'rgba(239,68,68,.1)',border:'1px solid rgba(239,68,68,.3)',borderRadius:8,padding:'10px',fontSize:12,color:'var(--red)',marginBottom:8}},error),
+          el('div',{className:'mf'},
+            el('button',{className:'btn b-ghost',onClick:onClose},'Cancel'),
+            el('button',{disabled:generating||!aiNotes.trim(),onClick:aiRevise,
+              style:{background:'linear-gradient(135deg,#667eea,#764ba2)',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'10px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:generating?'not-allowed':'pointer'}
+            },generating?'Revising...':'🤖 Apply AI Revisions'),
+          ),
+        ),
+
+        // Manual tab
+        tab==='manual'&&el('div',null,
+          TA('Incident Summary','incident_summary',4),
+          TA('Policy / SOP Violated','policy_reference',2),
+          TA('Expected Standard','expected_standard',3),
+          el('div',{className:'fg'},
+            el('label',null,'Corrective Steps (one per line)'),
+            el('textarea',{value:f.corrective_steps,rows:5,onChange:ev=>setF(p=>({...p,corrective_steps:ev.target.value})),
+              style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,resize:'vertical',boxSizing:'border-box'}}),
+            el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:3}},'Each line = one corrective step'),
+          ),
+          TA('Consequences of Recurrence','consequences_of_recurrence',3),
+          TA('Support Offered','support_offered',2),
+          TA('Employee Acknowledgement Text','employee_acknowledgement_text',3),
+          error&&el('div',{style:{background:'rgba(239,68,68,.1)',border:'1px solid rgba(239,68,68,.3)',borderRadius:8,padding:'10px',fontSize:12,color:'var(--red)',marginBottom:8}},error),
+          el('div',{className:'mf'},
+            el('button',{className:'btn b-ghost',onClick:onClose},'Cancel'),
+            el('button',{className:'btn b-ghost',onClick:()=>{
+              const steps=f.corrective_steps.split('\n').map(s=>s.trim()).filter(Boolean);
+              exportCorrectiveActionPdf({...ca,generated_content:JSON.stringify({...gen,...f,corrective_steps:steps})});
+            }},'👁️ Preview PDF'),
+            el('button',{disabled:saving,className:'btn b-blue',onClick:save},saving?'Saving...':'💾 Save Changes'),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+function CorrectiveActionGenerator({cu,users,onClose,onSave}){
+  const[step,setStep]=useState(1); // 1=setup, 2=generating, 3=review/edit, 4=sent
+  const[employee,setEmployee]=useState(null);
+  const[license,setLicense]=useState(LICENSES[0]);
+  const[violationType,setViolationType]=useState('SOP Non-Compliance');
+  const[violationDesc,setViolationDesc]=useState('');
+  const[severity,setSeverity]=useState('written_warning');
+  const[generating,setGenerating]=useState(false);
+  const[error,setError]=useState('');
+  const[generatedCA,setGeneratedCA]=useState(null);
+  const[editedCA,setEditedCA]=useState(null);
+  const[editMode,setEditMode]=useState(false);
+  const[saving,setSaving]=useState(false);
+  const[caAttachments,setCaAttachments]=useState([]);
+  const[sig,setSig]=useState(null); // admin signature dataURL
+
+  const VIOLATION_TYPES=['SOP Non-Compliance','Safety Violation','Attendance/Punctuality','METRC/Compliance Error','Quality Control Failure','Conduct/Behavior','Equipment Misuse','Other'];
+  const SEVERITY_LEVELS=[
+    {id:'verbal_warning',label:'Verbal Warning (Documented)',color:'var(--blue)'},
+    {id:'written_warning',label:'Written Warning',color:'var(--accent)'},
+    {id:'final_warning',label:'Final Written Warning',color:'var(--red)'},
+    {id:'suspension',label:'Suspension',color:'var(--red)'},
+  ];
+
+  async function generate(){
+    if(!employee){setError('Please select the employee involved.');return;}
+    if(!violationDesc.trim()){setError('Please describe what happened.');return;}
+    setError('');setGenerating(true);setStep(2);
+
+    const prompt=`You are an HR/compliance officer at a licensed cannabis manufacturing facility writing a formal Corrective Action document for an employee violation.
+
+EMPLOYEE: ${employee.name} (${RLABEL[employee.role]||employee.role}, ${employee.dept||'N/A'} department)
+LICENSE/FACILITY: ${license.name} (${license.state})
+VIOLATION TYPE: ${violationType}
+SEVERITY: ${SEVERITY_LEVELS.find(s=>s.id===severity)?.label}
+WHAT HAPPENED (as reported by management): ${violationDesc}
+${caAttachments.length>0?'SUPPORTING EVIDENCE: '+caAttachments.length+' file(s) attached by management — '+caAttachments.map(a=>a.name).join(', ')+'. Reference these in your incident summary as supporting documentation.':''}
+
+Write a formal, professional Corrective Action notice. Be factual, specific, and fair — this is a real HR document that the employee will read and sign. Respond with ONLY this JSON (no markdown):
+{
+  "title": "CA — [Violation Type] — [Employee Name]",
+  "ca_number": "${license.state==='Missouri'?'MO':'MI'}-[3 digits]",
+  "date_issued": "${new Date().toISOString().slice(0,10)}",
+  "incident_summary": "2-3 sentences on what happened",
+  "policy_reference": "Policy or SOP violated",
+  "expected_standard": "1-2 sentences on correct behavior",
+  "corrective_steps": ["3-4 specific actionable steps"],
+  "consequences_of_recurrence": "1-2 sentences on consequences",
+  "support_offered": "1 sentence on support/training offered",
+  "employee_acknowledgement_text": "Brief acknowledgement statement (1-2 sentences, no admission of guilt)"
+}`;
+
+    try{
+      const res=await fetch(`${SUPA_URL}/functions/v1/claude-proxy`,{
+        method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPA_KEY},
+        body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:8000,messages:[{role:'user',content:prompt}]}),
+      });
+      const data=await res.json();
+      if(!res.ok||data.error){throw new Error(data.error?.message||'Generation failed');}
+      let clean=(data.content?.[0]?.text||'').replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+      // If JSON is truncated, try to close it gracefully
+      if(!clean.endsWith('}')){
+        // Find last complete key-value pair and close the object
+        const lastComma=clean.lastIndexOf('",');
+        const lastQuote=clean.lastIndexOf('"');
+        if(lastComma>0) clean=clean.slice(0,lastComma)+'"}';}
+      // Ensure arrays are closed
+      clean=clean.replace(/,\s*$/, '').replace(/\[\s*$/, '[]').replace(/,\s*\]/, ']');
+      let parsed;
+      try{parsed=JSON.parse(clean);}
+      catch(pe){
+        // Last resort: extract what we can field by field
+        const extract=(key)=>{const m=clean.match(new RegExp('"'+key+'"\s*:\s*"([^"]*)"'));return m?m[1]:'';};
+        const extractArr=(key)=>{const m=clean.match(new RegExp('"'+key+'"\s*:\s*\[([^\]]*?)\]?'));if(!m)return[];return m[1].split('","').map(s=>s.replace(/^["\s]+|["\s]+$/g,'').trim()).filter(Boolean);};
+        parsed={
+          title:extract('title')||'Corrective Action — '+violationType,
+          ca_number:extract('ca_number')||(license?.state==='Missouri'?'MO':'MI')+'-'+Date.now().toString().slice(-3),
+          date_issued:new Date().toISOString().slice(0,10),
+          incident_summary:extract('incident_summary')||violationDesc,
+          policy_reference:extract('policy_reference')||'Company SOP',
+          expected_standard:extract('expected_standard')||'Employee must follow all applicable SOPs.',
+          corrective_steps:extractArr('corrective_steps')||['Review and sign applicable SOPs','Meet with supervisor to discuss expectations','Complete required retraining'],
+          consequences_of_recurrence:extract('consequences_of_recurrence')||'Further disciplinary action up to and including termination.',
+          support_offered:extract('support_offered')||'Retraining will be provided.',
+          employee_acknowledgement_text:extract('employee_acknowledgement_text')||'I acknowledge receipt of this corrective action notice.',
+        };
+      }
+      setGeneratedCA(parsed);
+      setEditedCA(parsed);
+      setStep(3);
+    }catch(e){
+      console.error(e);
+      setError('Generation failed: '+e.message);
+      setStep(1);
+    }
+    setGenerating(false);
+  }
+
+  async function sendToEmployee(){
+    if(!editedCA) return;
+    setSaving(true);
+    const rec={
+      id:'ca-'+Date.now(),
+      employee_id:employee.id,
+      employee_name:employee.name,
+      employee_email:employee.email,
+      license_id:license.id,
+      license_name:license.name,
+      violation_type:violationType,
+      severity,
+      generated_content:JSON.stringify(editedCA),
+      title:editedCA.title,
+      ca_number:editedCA.ca_number,
+      status:'pending', // pending -> acknowledged
+      acknowledged_at:null,
+      // Store only metadata in DB to avoid timeout — full data in sessionStorage
+      attachments:(caAttachments||[]).map(a=>({id:a.id,name:a.name,type:a.type,size:a.size})),
+      issued_by:cu.name,
+      issued_by_id:cu.id,
+      created_at:new Date().toISOString(),
+      updated_at:new Date().toISOString(),
+      updated_by:cu.name,
+    };
+    try{
+      // Use direct fetch with longer timeout for CA saves
+      const caInsertRes=await fetch(`${SUPA_URL}/rest/v1/pf_qms_corrective`,{
+        method:'POST',
+        headers:{...H.headers,'Prefer':'return=representation','statement_timeout':'30000'},
+        body:JSON.stringify(rec),
+      });
+      if(!caInsertRes.ok){const err=await caInsertRes.json();throw new Error(err.message||err.details||'Insert failed');}
+      // Notify the employee
+      if(employee.email){
+        await sendEmail({to:employee.email,
+          subject:`⚖️ Corrective Action Notice — ${editedCA.title}`,
+          html:`<div style="font-family:sans-serif;background:#121212;color:#f0eee8;padding:28px;border-radius:12px;max-width:520px;border:1px solid #333">
+            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">⚖️ Black Fox QMS</div>
+            <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:20px;margin-bottom:20px;text-align:center">
+              <div style="font-size:36px;margin-bottom:10px">⚖️</div>
+              <div style="font-size:17px;font-weight:700;margin-bottom:6px">Corrective Action Notice</div>
+              <div style="font-size:14px;color:#fca5a5">${editedCA.ca_number} — ${license.name}</div>
+            </div>
+            <p style="font-size:13px;color:#9d9a92;margin-bottom:20px">A formal corrective action has been issued to you. Please log in to review the full details and acknowledge receipt.</p>
+            <a href="${APP_URL}" style="display:inline-block;background:#f5a623;color:#000;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">Review & Acknowledge →</a>
+          </div>`
+        });
+      }
+      onSave(rec);
+    }catch(e){
+      console.error(e);
+      alert('Save failed: '+e.message+'. Make sure the pf_qms_corrective table exists in Supabase.');
+    }
+    setSaving(false);
+  }
+
+  return el('div',{className:'mo',style:{zIndex:1100},onClick:ev=>ev.target===ev.currentTarget&&onClose()},
+    el('div',{className:'md',style:{width:720,maxHeight:'92vh',overflowY:'auto'}},
+      el('div',{className:'mh'},
+        el('div',{style:{flex:1}},
+          el('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:4}},
+            el('span',{style:{fontSize:20}},'⚖️'),
+            el('div',{className:'mt2'},'AI Corrective Action Generator'),
+          ),
+          el('div',{style:{display:'flex',gap:8}},
+            [{n:1,l:'Setup'},{n:2,l:'Generating'},{n:3,l:'Review & Edit'}].map(({n,l})=>
+              el('div',{key:n,style:{display:'flex',alignItems:'center',gap:4,fontSize:11,color:step>=n?'var(--accent)':'var(--text3)',fontWeight:step===n?700:400}},
+                el('div',{style:{width:18,height:18,borderRadius:'50%',background:step>=n?'var(--accent)':'var(--surface2)',border:'1px solid',borderColor:step>=n?'var(--accent)':'var(--border)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,fontWeight:700,color:step>=n?'#000':'var(--text3)'}},n),
+                l,n<3&&el('span',{style:{color:'var(--border)'}},'→'),
+              )
+            )
+          ),
+        ),
+        el('button',{className:'mc',onClick:onClose},'×'),
+      ),
+
+      el('div',{className:'mbd'},
+
+        // STEP 1: SETUP
+        step===1&&el('div',null,
+          el('div',{className:'fg'},
+            el('label',null,'Employee *'),
+            el(EmployeeTypeahead,{users,value:employee,onChange:setEmployee,placeholder:'Type first 3+ letters of employee name...'}),
+            employee&&el('div',{style:{marginTop:6,display:'flex',alignItems:'center',gap:8,background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:8,padding:'6px 10px'}},
+              el('div',{className:'avatar',style:{background:avatarColor(employee.name),width:22,height:22,fontSize:10}},employee.name.charAt(0).toUpperCase()),
+              el('span',{style:{fontSize:12,color:'var(--text)',fontWeight:600}},employee.name),
+              el('span',{style:{fontSize:11,color:'var(--text3)'}},employee.email),
+            ),
+          ),
+
+          el('div',{className:'g2'},
+            el('div',{className:'fg',style:{marginBottom:0}},
+              el('label',null,'License / Facility *'),
+              el('select',{value:license.id,onChange:ev=>setLicense(LICENSES.find(l=>l.id===ev.target.value)),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+                LICENSES.map(l=>el('option',{key:l.id,value:l.id},l.name+' ('+l.state+')'))
+              ),
+            ),
+            el('div',{className:'fg',style:{marginBottom:0}},
+              el('label',null,'Violation Type *'),
+              el('select',{value:violationType,onChange:ev=>setViolationType(ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+                VIOLATION_TYPES.map(v=>el('option',{key:v,value:v},v))
+              ),
+            ),
+          ),
+
+          el('div',{className:'fg'},
+            el('label',null,'Severity *'),
+            el('div',{style:{display:'flex',gap:6,flexWrap:'wrap'}},
+              SEVERITY_LEVELS.map(s=>el('button',{key:s.id,
+                onClick:()=>setSeverity(s.id),
+                style:{padding:'7px 14px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:600,cursor:'pointer',
+                  background:severity===s.id?s.color:'transparent',
+                  color:severity===s.id?'#000':'var(--text2)',
+                  borderColor:severity===s.id?s.color:'var(--border)',
+                }
+              },s.label))
+            ),
+          ),
+
+          el('div',{className:'fg'},
+            el('label',null,'What happened? (be factual and specific) *'),
+            el('textarea',{
+              value:violationDesc,onChange:ev=>setViolationDesc(ev.target.value),
+              placeholder:'e.g. "On 6/20/26, employee failed to follow Cart Cleaning SOP-CART-001 step 7, leaving METRC tags unaccounted for at end of shift. This is the second occurrence in 30 days."',
+              autoFocus:true,
+              style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'10px 14px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:110,resize:'vertical'},
+            }),
+          ),
+
+          // ── SUPPORTING DOCUMENTS / PHOTOS ────────────────────────────────
+          el('div',{style:{background:'rgba(30,58,95,.04)',border:'1px solid rgba(30,58,95,.12)',borderRadius:10,padding:'14px 16px',marginBottom:14}},
+            el('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}},
+              el('div',{style:{fontWeight:700,fontSize:13}},'📎 Supporting Evidence'),
+              el('div',{style:{fontSize:11,color:'var(--text2)'}},'Photos, docs, or screenshots — AI will reference these'),
+            ),
+            el('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:8}},
+              el('label',{style:{cursor:'pointer'}},
+                el('span',{className:'btn b-ghost btn-sm'},'+ Add Photo / Doc'),
+                el('input',{type:'file',accept:'.pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xlsx,.csv',multiple:true,style:{display:'none'},
+                  onChange:ev=>{
+                    const files=Array.from(ev.target.files);
+                    files.forEach(file=>{
+                      if(file.size>5*1024*1024){alert(file.name+' exceeds 5MB limit.');return;}
+                      if(file.type.startsWith('image/')){
+                        // Compress images before storing
+                        const img=new Image();
+                        const url=URL.createObjectURL(file);
+                        img.onload=()=>{
+                          const canvas=document.createElement('canvas');
+                          const MAX=800;
+                          let w=img.width,h=img.height;
+                          if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}
+                          if(h>MAX){w=Math.round(w*MAX/h);h=MAX;}
+                          canvas.width=w;canvas.height=h;
+                          canvas.getContext('2d').drawImage(img,0,0,w,h);
+                          const compressed=canvas.toDataURL('image/jpeg',0.7);
+                          URL.revokeObjectURL(url);
+                          setCaAttachments(p=>[...p,{id:'att-'+Date.now()+Math.random(),name:file.name,type:'image/jpeg',size:Math.round(compressed.length*0.75),data:compressed}]);
+                        };
+                        img.src=url;
+                      } else {
+                        const reader=new FileReader();
+                        reader.onload=re=>{
+                          setCaAttachments(p=>[...p,{id:'att-'+Date.now()+Math.random(),name:file.name,type:file.type,size:file.size,data:re.target.result}]);
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    });
+                    ev.target.value='';
+                  }
+                }),
+              ),
+              el('span',{style:{fontSize:11,color:'var(--text3)'}},'Max 5MB per file · PDF, PNG, JPG, DOCX'),
+            ),
+            caAttachments.length>0&&el('div',{style:{display:'flex',flexDirection:'column',gap:6}},
+              caAttachments.map((att,i)=>el('div',{key:att.id,style:{display:'flex',alignItems:'center',gap:8,background:'var(--surface2)',borderRadius:6,padding:'6px 10px'}},
+                el('span',{style:{fontSize:16}},att.type&&att.type.includes('image')?'🖼️':'📄'),
+                el('div',{style:{flex:1,minWidth:0}},
+                  el('div',{style:{fontSize:12,fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},att.name),
+                  el('div',{style:{fontSize:10,color:'var(--text3)'}},(att.size>1024*1024?(att.size/1024/1024).toFixed(1)+'MB':(att.size/1024).toFixed(0)+'KB')),
+                ),
+                el('button',{onClick:()=>setCaAttachments(p=>p.filter((_,j)=>j!==i)),style:{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:16}},'×'),
+              ))
+            ),
+            caAttachments.length===0&&el('div',{style:{fontSize:12,color:'var(--text3)'}},'No files added yet'),
+          ),
+
+          error&&el('div',{style:{background:'rgba(239,68,68,.1)',border:'1px solid rgba(239,68,68,.3)',borderRadius:8,padding:'10px 14px',fontSize:13,color:'var(--red)',marginBottom:8}},error),
+
+          el('div',{className:'mf'},
+            el('button',{className:'btn b-ghost',onClick:onClose},'Cancel'),
+            el('button',{
+              onClick:generate,
+              disabled:!employee||!violationDesc.trim(),
+              style:{background:(employee&&violationDesc.trim())?'var(--accent)':'rgba(30,58,95,.15)',color:(employee&&violationDesc.trim())?'#ffffff':'var(--text3)',border:'none',borderRadius:'var(--rs)',padding:'10px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:(employee&&violationDesc.trim())?'pointer':'not-allowed',display:'flex',alignItems:'center',gap:8}
+            },el('span',null,'🤖'),'Generate Corrective Action'),
+          ),
+        ),
+
+        // STEP 2: GENERATING
+        step===2&&el('div',{style:{textAlign:'center',padding:'60px 20px'}},
+          el('div',{style:{width:60,height:60,border:'4px solid var(--border)',borderTopColor:'var(--accent)',borderRadius:'50%',animation:'spin .8s linear infinite',margin:'0 auto 20px'}}),
+          el('div',{style:{fontSize:18,fontWeight:700,marginBottom:8}},'Drafting corrective action notice...'),
+          el('div',{style:{fontSize:13,color:'var(--text2)'}},'Writing a formal, fair, and specific document'),
+        ),
+
+        // STEP 3: REVIEW & EDIT
+        step===3&&editedCA&&el('div',null,
+          el('div',{style:{background:'rgba(239,68,68,.06)',border:'1px solid rgba(239,68,68,.2)',borderRadius:10,padding:'14px 16px',marginBottom:16}},
+            el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:8}},
+              el('div',null,
+                el('div',{style:{fontSize:11,fontWeight:700,color:'var(--red)',textTransform:'uppercase',letterSpacing:'.8px',marginBottom:4}},editedCA.ca_number),
+                el('div',{style:{fontSize:17,fontWeight:800}},editedCA.title),
+                el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:4}},'For: '+employee.name+' · '+license.name),
+              ),
+              el('button',{onClick:()=>setEditMode(!editMode),className:'btn b-ghost btn-sm'},editMode?'👁 Preview':'✏️ Edit JSON'),
+            ),
+          ),
+
+          el('div',{style:{background:'rgba(30,58,95,.05)',border:'1px solid rgba(30,58,95,.15)',borderRadius:8,padding:'10px 14px',marginBottom:16,fontSize:11,color:'var(--text2)'}},
+            '✏️ You can edit any part of this document before sending. Once the employee acknowledges it, it can no longer be edited or revised — it becomes a permanent record.'
+          ),
+
+          !editMode&&el('div',null,
+            [['Incident Summary','incident_summary'],['Policy/SOP Violated','policy_reference'],['Expected Standard','expected_standard'],['Consequences if Repeated','consequences_of_recurrence'],['Support Offered','support_offered']].map(([label,key])=>
+              el('div',{key,style:{marginBottom:12}},
+                el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:5}},label),
+                el('textarea',{
+                  value:editedCA[key]||'',
+                  onChange:ev=>setEditedCA(p=>({...p,[key]:ev.target.value})),
+                  style:{width:'100%',background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:8,padding:'10px 14px',fontSize:12,lineHeight:1.6,color:'var(--text2)',fontFamily:'inherit',outline:'none',minHeight:50,resize:'vertical'},
+                }),
+              )
+            ),
+            el('div',{style:{marginBottom:12}},
+              el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:6}},'Corrective Steps Required'),
+              (editedCA.corrective_steps||[]).map((s,i)=>el('div',{key:i,style:{display:'flex',gap:8,marginBottom:6}},
+                el('div',{style:{width:20,height:20,borderRadius:'50%',background:'var(--accent)',color:'#000',display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:800,flexShrink:0,marginTop:2}},i+1),
+                el('input',{value:s,onChange:ev=>setEditedCA(p=>{const steps=[...p.corrective_steps];steps[i]=ev.target.value;return{...p,corrective_steps:steps};}),
+                  style:{flex:1,background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:6,padding:'6px 10px',fontSize:12,color:'var(--text2)',fontFamily:'inherit',outline:'none'}}),
+                el('button',{onClick:()=>setEditedCA(p=>({...p,corrective_steps:p.corrective_steps.filter((_,idx)=>idx!==i)})),style:{background:'none',border:'none',color:'var(--red)',cursor:'pointer',fontSize:14}},'×'),
+              )),
+              el('button',{onClick:()=>setEditedCA(p=>({...p,corrective_steps:[...(p.corrective_steps||[]),'']})),className:'btn b-ghost btn-sm',style:{marginTop:4}},'+ Add Step'),
+            ),
+          ),
+
+          editMode&&el('div',{className:'fg'},
+            el('textarea',{value:JSON.stringify(editedCA,null,2),onChange:ev=>{try{setEditedCA(JSON.parse(ev.target.value));}catch(e){}},style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:10,color:'var(--text)',fontFamily:'DM Mono, monospace',fontSize:11,outline:'none',minHeight:300,resize:'vertical'}}),
+          ),
+
+          error&&el('div',{style:{background:'rgba(239,68,68,.1)',border:'1px solid rgba(239,68,68,.3)',borderRadius:8,padding:'10px 14px',fontSize:13,color:'var(--red)',marginBottom:8}},error),
+
+          el('div',{style:{background:'rgba(30,58,95,.05)',border:'1px solid rgba(30,58,95,.12)',borderRadius:10,padding:'12px 16px',marginBottom:14,fontSize:12,color:'var(--text2)',lineHeight:1.6}},
+            el('div',{style:{fontWeight:700,marginBottom:4,fontSize:13}},'What would you like to do?'),
+            el('div',null,'• ',el('strong',null,'Save Draft'),' — saves the CA as a draft. No email sent. You can send later from the Corrective Actions list.'),
+            el('div',null,'• ',el('strong',null,'Send to Employee'),' — saves and emails ',el('strong',null,employee.name),'. Status becomes ',el('strong',null,'Pending Acknowledgement'),' until they sign.'),
+          ),
+          el('div',{className:'mf',style:{justifyContent:'space-between',flexWrap:'wrap',gap:8}},
+            el('button',{className:'btn b-ghost',onClick:()=>setStep(1)},'← Back'),
+            el('div',{style:{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}},
+              el('button',{
+                className:'btn b-ghost',
+                onClick:()=>{
+                  const draftCa={...editedCA,title:editedCA.title,ca_number:editedCA.ca_number,employee_name:employee.name,employee_email:employee.email,license_id:license.id,license_name:license.name,violation_type:violationType,severity,generated_content:JSON.stringify(editedCA),status:'pending',issued_by:cu.name,created_at:new Date().toISOString()};
+                  exportCorrectiveActionPdf(draftCa);
+                }
+              },'👁️ Preview PDF'),
+              el('button',{
+                className:'btn b-ghost',
+                disabled:saving,
+                onClick:async()=>{
+                  setSaving(true);
+                  const rec={
+                    id:'ca-'+Date.now(),
+                    employee_id:employee.id,employee_name:employee.name,employee_email:employee.email,
+                    license_id:license.id,license_name:license.name,violation_type:violationType,severity,
+                    generated_content:JSON.stringify(editedCA),title:editedCA.title,ca_number:editedCA.ca_number,
+                    status:'draft',
+                    acknowledged_at:null,
+                    attachments:(caAttachments||[]).map(a=>({id:a.id,name:a.name,type:a.type,size:a.size})),
+                    issued_by:cu.name,issued_by_id:cu.id,
+                    created_at:new Date().toISOString(),updated_at:new Date().toISOString(),updated_by:cu.name,
+                  };
+                  try{
+                    const r=await fetch(`${SUPA_URL}/rest/v1/pf_qms_corrective`,{method:'POST',headers:{...H.headers,'Prefer':'return=representation'},body:JSON.stringify(rec)});
+                    if(!r.ok){const e=await r.json();throw new Error(e.message||'Save failed');}
+                    onSave(rec);
+                    alert('✓ Saved as draft. Find it in Corrective Actions — status: Draft.');
+                  }catch(e){alert('Save failed: '+e.message);}
+                  setSaving(false);
+                },
+                style:{borderColor:'var(--accent)',color:'var(--accent)'}
+              },saving?'Saving...':'💾 Save Draft'),
+              el('button',{
+                onClick:sendToEmployee,disabled:saving,
+                style:{background:'#dc2626',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'10px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:saving?'not-allowed':'pointer',display:'flex',alignItems:'center',gap:6}
+              },saving?'Sending...':el('span',null,'📨 Send to '+employee.name.split(' ')[0])),
+            ),
+          ),
+        ),
+      ),
+    )
+  );
+}
+
+// ── MAIN QMS COMPONENT ────────────────────────────────────────────────────────
+// ── SUPPLIER TAB (list + add + edit + certificates) ──────────────────────────
+// ── RECORD LIST (standalone, used by SupplierTab and QMS) ───────────────────
+function RecordList({items,emptyMsg,renderRow,onNew,newLabel,canCreate=true}){
+  return el('div',null,
+    el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}},
+      el('div',{style:{fontSize:13,color:'var(--text2)'}},(items.length)+' record'+(items.length!==1?'s':'')),
+      canCreate&&el('button',{className:'btn b-blue',onClick:onNew},newLabel||'+ New'),
+    ),
+    items.length===0?el('div',{className:'empty'},el('div',{className:'eico'},'📋'),el('div',{className:'etxt'},emptyMsg)):
+    el('div',{style:{display:'flex',flexDirection:'column',gap:6}},items.map(renderRow)),
+  );
+}
+
+function SupplierTab({cu,isElevated,suppliers,setSuppliers,filterByLic,handleSave,deleteRec,db,LICENSES,showNew,setNew,sel,setSel}){
+  const[editMode,setEditMode]=React.useState(false);
+  const[editData,setEditData]=React.useState(null);
+  const[certUploading,setCertUploading]=React.useState(false);
+  const[certMsg,setCertMsg]=React.useState('');
+  const[savingEdit,setSavingEdit]=React.useState(false);
+
+  // ── field helpers ──
+  const INP=(id,opts={})=>el('input',{id,style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,boxSizing:'border-box'},...opts});
+  const SEL=(id,children,opts={})=>el('select',{id,style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13},...opts},...children);
+  const CAT_OPTS=['Cones/Pre-roll Supplies','Packaging','Distillate/Extract','Terpenes','Ingredients','Testing Lab','Equipment','Labels','Other'];
+
+  // ── supplier form fields (shared by Add and Edit) ──
+  function SupplierForm({defaults={},idPfx='sup'}){
+    return el('div',null,
+      el('div',{className:'fg'},el('label',null,'License *'),
+        SEL(idPfx+'-license',[el('option',{key:'',value:''},'— Select License —'),...LICENSES.map(lic=>el('option',{key:lic.id,value:lic.id,selected:defaults.license_id===lic.id},lic.name+' ('+lic.state+')'))]),
+      ),
+      el('div',{className:'fg'},el('label',null,'Supplier Name *'),INP(idPfx+'-name',{placeholder:'e.g. Futurola USA',defaultValue:defaults.name||'',autoFocus:true})),
+      el('div',{className:'g2'},
+        el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Category'),
+          SEL(idPfx+'-cat',CAT_OPTS.map(c=>el('option',{key:c,value:c,selected:defaults.category===c},c)))
+        ),
+        el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Status'),
+          SEL(idPfx+'-status',[el('option',{value:'pending',selected:defaults.status!=='approved'},'Pending Approval'),el('option',{value:'approved',selected:defaults.status==='approved'},'Approved')])
+        ),
+      ),
+      el('div',{className:'fg'},el('label',null,'Products Supplied'),INP(idPfx+'-prods',{placeholder:'e.g. 98mm cones, 109mm cones',defaultValue:defaults.products_supplied||''})),
+      el('div',{className:'g2'},
+        el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Contact Name'),INP(idPfx+'-contact',{placeholder:'Sales rep name',defaultValue:defaults.contact_name||''})),
+        el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Contact Email/Phone'),INP(idPfx+'-email',{placeholder:'contact@supplier.com',defaultValue:defaults.contact_email||''})),
+      ),
+      el('div',{className:'g2',style:{marginTop:13}},
+        el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'COA Expiry Date'),el('input',{type:'date',id:idPfx+'-coa',defaultValue:defaults.coa_expiry||'',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,boxSizing:'border-box'}})),
+        el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Last Audit Date'),el('input',{type:'date',id:idPfx+'-audit',defaultValue:defaults.last_audit||'',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,boxSizing:'border-box'}})),
+      ),
+      el('div',{className:'fg'},el('label',null,'Notes / Certifications'),el('textarea',{id:idPfx+'-notes',placeholder:'Any certifications, qualifications, or notes...',defaultValue:defaults.notes||'',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,minHeight:80,resize:'vertical',boxSizing:'border-box'}})),
+    );
+  }
+
+  function readVals(pfx){
+    const g=id=>document.getElementById(pfx+'-'+id)?.value||'';
+    return{name:g('name').trim(),license_id:g('license'),category:g('cat'),status:g('status'),products_supplied:g('prods'),contact_name:g('contact'),contact_email:g('email'),coa_expiry:g('coa'),last_audit:g('audit'),notes:g('notes')};
+  }
+
+  // ── certificate upload ──
+  async function handleCertUpload(e,supplier){
+    const file=e.target.files[0];
+    if(!file)return;
+    if(file.size>5*1024*1024){alert('File must be under 5MB.');return;}
+    setCertUploading(true);setCertMsg('Uploading...');
+    try{
+      const reader=new FileReader();
+      reader.onload=async ev=>{
+        const cert={id:'cert-'+Date.now(),name:file.name,type:file.type,size:file.size,data:ev.target.result,uploaded_by:cu.name,uploaded_at:new Date().toISOString()};
+        const existing=supplier.certificates||[];
+        const updated={...supplier,certificates:[...existing,cert],updated_at:new Date().toISOString(),updated_by:cu.name};
+        await db.update('pf_qms_suppliers',supplier.id,{certificates:[...existing,cert],updated_at:updated.updated_at,updated_by:cu.name});
+        setSuppliers(prev=>prev.map(s=>s.id===supplier.id?updated:s));
+        setSel(updated);
+        setCertMsg('✓ Uploaded');setTimeout(()=>setCertMsg(''),3000);
+        setCertUploading(false);
+      };
+      reader.readAsDataURL(file);
+    }catch(err){setCertMsg('❌ Failed: '+err.message);setCertUploading(false);}
+  }
+
+  async function deleteCert(supplier,certId){
+    if(!confirm('Remove this certificate?'))return;
+    const updated={...supplier,certificates:(supplier.certificates||[]).filter(c=>c.id!==certId),updated_at:new Date().toISOString(),updated_by:cu.name};
+    await db.update('pf_qms_suppliers',supplier.id,{certificates:updated.certificates,updated_at:updated.updated_at,updated_by:cu.name});
+    setSuppliers(prev=>prev.map(s=>s.id===supplier.id?updated:s));
+    setSel(updated);
+  }
+
+  function certIcon(type){
+    if(type&&type.includes('pdf'))return '📄';
+    if(type&&type.includes('image'))return '🖼️';
+    return '📎';
+  }
+  function fmtSize(bytes){return bytes>1024*1024?(bytes/1024/1024).toFixed(1)+'MB':(bytes/1024).toFixed(0)+'KB';}
+
+  // ── list view ──
+  if(!showNew&&!sel){
+    return el(RecordList,{
+      items:filterByLic(suppliers),emptyMsg:'No suppliers qualified',newLabel:'+ Add Supplier',onNew:()=>setNew(true),canCreate:isElevated,
+      renderRow:s=>el('div',{key:s.id,onClick:()=>{setSel(s);setEditMode(false);},style:{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:10,padding:'14px 16px',cursor:'pointer',transition:'all .15s'},onMouseEnter:ev=>ev.currentTarget.style.borderColor='rgba(30,58,95,.25)',onMouseLeave:ev=>ev.currentTarget.style.borderColor='var(--border)'},
+        el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},
+          el('div',{style:{flex:1}},
+            el('div',{style:{display:'flex',gap:6,marginBottom:5}},
+              el('span',{style:{background:s.status==='approved'?'rgba(16,185,129,.1)':'rgba(245,158,11,.1)',color:s.status==='approved'?'var(--green)':'var(--accent)',border:'1px solid',borderColor:s.status==='approved'?'rgba(16,185,129,.3)':'rgba(245,158,11,.3)',borderRadius:4,padding:'2px 7px',fontSize:11,fontWeight:700}},s.status==='approved'?'✅ Approved':'⏳ Pending'),
+              el('span',{style:{background:'var(--surface2)',color:'var(--text2)',border:'1px solid var(--border)',borderRadius:4,padding:'2px 7px',fontSize:11}},s.category),
+              (s.certificates||[]).length>0&&el('span',{style:{background:'rgba(99,102,241,.12)',color:'#818cf8',border:'1px solid rgba(99,102,241,.3)',borderRadius:4,padding:'2px 7px',fontSize:11}},`📎 ${(s.certificates||[]).length} cert${(s.certificates||[]).length!==1?'s':''}`)
+            ),
+            el('div',{style:{fontSize:14,fontWeight:700,marginBottom:3}},s.name),
+            el('div',{style:{fontSize:12,color:'var(--text2)'}},s.products_supplied),
+          ),
+          el('div',{style:{fontSize:11,color:'var(--text3)',flexShrink:0,marginLeft:12}},s.coa_expiry?'COA: '+s.coa_expiry:''),
+        ),
+      ),
+    });
+  }
+
+  // ── add form ──
+  if(showNew){
+    return el('div',{className:'card'},
+      el('div',{className:'mh'},el('div',{className:'mt2'},'Add Supplier'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
+      el('div',{className:'mbd'},
+        el(SupplierForm,{defaults:{},idPfx:'sup'}),
+        el('div',{className:'mf'},
+          el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),
+          el('button',{className:'btn b-blue',onClick:async()=>{
+            const vals=readVals('sup');
+            if(!vals.name)return;
+            if(!vals.license_id){alert('Please select which license this supplier applies to.');return;}
+            const rec={id:'sup-'+Date.now(),...vals,certificates:[],created_by:cu.name,created_by_id:cu.id,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),updated_by:cu.name};
+            try{
+              await db.insert('pf_qms_suppliers',rec);
+              handleSave('supplier',rec,setSuppliers,suppliers);
+            }catch(e){alert('Save failed: '+e.message);}
+          }},'Add Supplier'),
+        ),
+      ),
+    );
+  }
+
+  // ── detail / edit view ──
+  if(sel){
+    return el('div',{className:'card'},
+      // header
+      el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:16}},
+        el('div',null,
+          el('div',{style:{display:'flex',gap:6,marginBottom:8}},
+            el('span',{style:{background:sel.status==='approved'?'rgba(16,185,129,.1)':'rgba(245,158,11,.1)',color:sel.status==='approved'?'var(--green)':'var(--accent)',borderRadius:4,padding:'2px 8px',fontSize:11,fontWeight:700}},sel.status==='approved'?'✅ Approved':'⏳ Pending'),
+          ),
+          el('div',{style:{fontSize:18,fontWeight:700}},sel.name),
+          el('div',{style:{fontSize:12,color:'var(--text3)',marginTop:4}},sel.category),
+        ),
+        el('div',{style:{display:'flex',gap:6,flexWrap:'wrap'}},
+          isElevated&&!editMode&&el('button',{className:'btn b-ghost btn-sm',onClick:()=>{setEditMode(true);}},'✏️ Edit'),
+          isElevated&&el('button',{className:'btn b-red btn-sm',onClick:()=>deleteRec('supplier',sel.id,setSuppliers)},'Delete'),
+          el('button',{className:'btn b-ghost btn-sm',onClick:()=>{setSel(null);setEditMode(false);}},'← Back'),
+        ),
+      ),
+
+      // edit form
+      editMode?el('div',null,
+        el(SupplierForm,{defaults:sel,idPfx:'sedit'}),
+        el('div',{className:'mf'},
+          el('button',{className:'btn b-ghost',onClick:()=>setEditMode(false)},'Cancel'),
+          el('button',{className:'btn b-blue',disabled:savingEdit,onClick:async()=>{
+            const vals=readVals('sedit');
+            if(!vals.name)return;
+            if(!vals.license_id){alert('Please select a license.');return;}
+            setSavingEdit(true);
+            try{
+              const updated={...sel,...vals,updated_at:new Date().toISOString(),updated_by:cu.name};
+              await db.update('pf_qms_suppliers',sel.id,{...vals,updated_at:updated.updated_at,updated_by:cu.name});
+              setSuppliers(prev=>prev.map(s=>s.id===sel.id?updated:s));
+              setSel(updated);
+              setEditMode(false);
+            }catch(e){alert('Save failed: '+e.message);}
+            setSavingEdit(false);
+          }},savingEdit?'Saving...':'Save Changes'),
+        ),
+      )
+
+      // read-only detail
+      :el('div',null,
+        el('div',{style:{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:12,marginBottom:14}},
+          [['Products Supplied',sel.products_supplied],['Contact',sel.contact_name+(sel.contact_email?' · '+sel.contact_email:'')],['COA Expiry',sel.coa_expiry||'—'],['Last Audit',sel.last_audit||'—'],['License',LICENSES.find(l=>l.id===sel.license_id)?.name||sel.license_id||'—']].map(([k,v])=>v&&v.trim&&v.trim()&&v!=='—'?el('div',{key:k,style:{background:'var(--surface2)',borderRadius:8,padding:'10px 12px'}},el('div',{style:{fontSize:10,color:'var(--text3)',fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px',marginBottom:3}},k),el('div',{style:{fontSize:13,fontWeight:600}},v)):null)
+        ),
+        sel.notes&&el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:'10px 14px',fontSize:13,lineHeight:1.6,marginBottom:14}},sel.notes),
+
+        // ── CERTIFICATES ──
+        el('div',{style:{borderTop:'1px solid var(--border)',paddingTop:16,marginTop:4}},
+          el('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}},
+            el('div',{style:{fontSize:13,fontWeight:700}},'📎 Certificates & Documents'),
+            el('label',{style:{cursor:'pointer'}},
+              el('span',{style:{background:'var(--accent)',color:'#000',borderRadius:'var(--rs)',padding:'6px 14px',fontSize:12,fontWeight:700,cursor:certUploading?'not-allowed':'pointer',opacity:certUploading?.6:1}},certUploading?'Uploading...':'+ Upload'),
+              el('input',{type:'file',accept:'.pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xlsx',style:{display:'none'},disabled:certUploading,onChange:e=>handleCertUpload(e,sel)})
+            ),
+          ),
+          certMsg&&el('div',{style:{fontSize:12,color:certMsg.includes('❌')?'var(--red)':'var(--green)',marginBottom:8}},certMsg),
+          (sel.certificates||[]).length===0
+            ?el('div',{style:{fontSize:12,color:'var(--text3)',padding:'12px 0'}},'No certificates uploaded yet. Upload COAs, lab results, compliance docs, or any relevant files.')
+            :el('div',{style:{display:'flex',flexDirection:'column',gap:8}},
+              (sel.certificates||[]).map(cert=>el('div',{key:cert.id,style:{display:'flex',alignItems:'center',justifyContent:'space-between',background:'var(--surface2)',borderRadius:8,padding:'10px 14px'}},
+                el('div',{style:{display:'flex',alignItems:'center',gap:10,flex:1,minWidth:0}},
+                  el('span',{style:{fontSize:20,flexShrink:0}},certIcon(cert.type)),
+                  el('div',{style:{minWidth:0}},
+                    el('a',{href:cert.data,download:cert.name,style:{fontSize:13,fontWeight:600,color:'var(--accent)',textDecoration:'none',display:'block',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},cert.name),
+                    el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:1}},fmtSize(cert.size)+' · '+cert.uploaded_by+' · '+new Date(cert.uploaded_at).toLocaleDateString())
+                  ),
+                ),
+                isElevated&&el('button',{style:{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:16,flexShrink:0,marginLeft:8},onClick:()=>deleteCert(sel,cert.id)},'×'),
+              ))
+            ),
+          el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:8}},'Supported: PDF, PNG, JPG, WEBP, DOC, DOCX, XLSX · Max 5MB per file'),
+        ),
+      ),
+    );
+  }
+  return null;
+}
+
+function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits,setAudits,changes,setChanges,complaints,setComplaints,suppliers,setSuppliers,corrective,setCorrective}){
+  const[tab,setTab]=useState('dashboard');
+  const[showNew,setNew]=useState(false);
+  const[sel,setSel]=useState(null);
+  const[editing,setEditing]=useState(null);
+  const[licFilter,setLicFilter]=useState(()=>{
+    const ul=cu.licenses||[];
+    const elevated=cu.role==='admin'||['coo','director_production','director_operations','general_manager','compliance_manager','director_sales_marketing'].includes(cu.role);
+    if(elevated||ul.length===0) return 'all';
+    return ul.length===1?ul[0]:'all';
+  });
+  const[showCAGenerator,setShowCAGenerator]=useState(false);
+  const[reviseCA,setReviseCA]=useState(null);
+  const[showSignModal,setShowSignModal]=useState(false);
+  const[signatureName,setSignatureName]=useState('');
+  const[caSearch,setCaSearch]=useState('');
+  const[profileEmployee,setProfileEmployee]=useState(null);
+  const isAdmin=cu.role==='admin';
+  // Senior leadership roles get elevated OPERATIONAL access (creating deviations/CAPAs/audits,
+  // seeing the full QMS dashboard) but are NOT treated as Admin for privacy-sensitive checks
+  // like disciplinary records or full Training Matrix visibility — those stay strict isAdmin only.
+  const isElevated=isAdmin||['coo','director_production','director_operations','general_manager','compliance_manager','director_sales_marketing'].includes(cu.role);
+  const qmsRoleGroup=ROLE_GROUPS.find(g=>g.roles.includes(cu.role))?.label;
+  const isManager=qmsRoleGroup==='Managers';
+  const isSupervisor=qmsRoleGroup==='Supervisors';
+  // Managers and above can report Deviations/CAPAs/Audits; Supervisors are read-only in those tabs.
+  const canReport=isElevated||isManager;
+  // License scope for QMS
+  const qmsUserLicenses=cu.licenses||[];
+  const qmsAllowedLicenses=isElevated?LICENSES:LICENSES.filter(l=>qmsUserLicenses.includes(l.id));
+  const qmsCanSeeAll=isElevated;
+  // Direct reports: users whose `managers` array includes this person's id (up to 5 managers per user).
+  const directReports=users.filter(u=>(u.managers||[]).some(m=>(m.id||m)===cu.id));
+  // Training Matrix scope — uses full role-based visibility hierarchy.
+  // getVisibleUsers() implements the complete per-role visibility rules:
+  // Employee=self, Lead=self+reports, Supervisor=self+leads+employees,
+  // Manager=self+supervisors+leads+employees (scoped by license),
+  // GM/AGM=everyone in their facility, Director=their dept across all licenses,
+  // COO/Admin=everyone.
+  const trainingMatrixScope=getVisibleUsers(cu,users)
+    .filter(u=>licFilter==='all'||(u.licenses||[]).includes(licFilter)||u.loc==='Nationwide');
+  const today=new Date().toISOString().slice(0,10);
+
+  // Dashboard stats
+  // Filter by license
+  const filterByLic=(arr)=>licFilter==='all'?arr:arr.filter(r=>{
+    if(r.license_ids&&r.license_ids.length>0) return r.license_ids.includes(licFilter);
+    return r.license_id===licFilter;
+  });
+  const openDeviations=filterByLic(deviations).filter(d=>d.status==='open');
+  const openCAPAs=capas.filter(c=>c.status==='open'||c.status==='in_progress');
+  const overdueCAPAs=capas.filter(c=>c.due_date&&c.due_date<today&&c.status!=='closed');
+  const openComplaints=complaints.filter(c=>c.status==='open');
+  const pendingAudits=audits.filter(a=>a.next_audit_date&&a.next_audit_date<=new Date(Date.now()+7*86400000).toISOString().slice(0,10));
+  // Scoped target users per SOP (same license_id + dept logic used in SOPs module)
+  function targetUsersForSop(sop){
+    return users.filter(u=>{
+      if(!u.approved) return false;
+      // Step 1: License check — if the SOP is tied to specific licenses,
+      // only include users who are assigned to at least one of those licenses.
+      // Users with no licenses assigned are excluded (not counted as required signers)
+      // unless they are the admin, who is always counted for oversight tracking only.
+      const sopLicIds=sop.license_ids&&sop.license_ids.length>0?sop.license_ids:(sop.license_id?[sop.license_id]:(sop.license_name?[LICENSES.find(l=>l.name===sop.license_name)?.id].filter(Boolean):[]));
+      if(sopLicIds.length>0){
+        // Admin is counted but only if they have this license assigned OR if they
+        // have no licenses at all (legacy admin setup). This prevents admin from
+        // inflating the count on licenses they don't belong to.
+        if(u.role==='admin'){
+          const adminLics=u.licenses||[];
+          if(adminLics.length>0&&!sopLicIds.some(id=>adminLics.includes(id))) return false;
+        } else if(u.loc==='Nationwide'){
+          // Nationwide users work across all states — they bypass the license check
+          // entirely and are scoped only by department below.
+          // e.g. Cart Cleaning Supervisor Nationwide sees Cart SOPs in both MI and MO.
+        } else {
+          const userLicenses=u.licenses||[];
+          // Strictly require license match — empty licenses = excluded
+          if(!sopLicIds.some(id=>userLicenses.includes(id))) return false;
+        }
+      }
+      if((sop.visible_to_depts||[]).length>0){
+        const userDepts=[...(u.depts||[]),u.dept].filter(Boolean);
+        const sopDepts=expandDepts(sop.visible_to_depts);
+        const hasAccess=userDepts.some(d=>sopDepts.includes(d)||sop.visible_to_depts.includes(d));
+        if(!hasAccess) return false;
+      }
+      return true;
+    });
+  }
+  // SOP ack rate — scoped per-SOP, filtered to current license filter
+  const approvedUsers=licFilter==='all'?users.filter(u=>u.approved):users.filter(u=>u.approved&&(u.licenses||[]).includes(licFilter));
+  const publishedSOPs=filterByLic(sops.filter(s=>s.status==='published'));
+  const avgAckRate=publishedSOPs.length>0?Math.round(publishedSOPs.reduce((sum,s)=>{
+    const targets=targetUsersForSop(s);
+    const acked=(s.acknowledgements||[]).filter(a=>targets.some(t=>t.id===a.id)).length;
+    return sum+(targets.length>0?acked/targets.length:0);
+  },0)/publishedSOPs.length*100):0;
+  // Training: users who have NOT acked all SOPs that target them specifically
+  // Dashboard training gap panel uses same visibility hierarchy as Training Matrix.
+  const dashboardScope=getVisibleUsers(cu,users)
+    .filter(u=>licFilter==='all'||(u.licenses||[]).includes(licFilter)||u.loc==='Nationwide');
+  const untrainedUsers=dashboardScope.filter(u=>publishedSOPs.some(s=>{
+    const targets=targetUsersForSop(s);
+    const isTargeted=targets.some(t=>t.id===u.id);
+    return isTargeted&&!(s.acknowledgements||[]).some(a=>a.id===u.id);
+  }));
+
+  function handleSave(type,rec,setter,list){
+    setter(p=>{const exists=p.find(x=>x.id===rec.id);return exists?p.map(x=>x.id===rec.id?rec:x):[rec,...p];});
+    setNew(false);setEditing(null);setSel(rec);
+  }
+
+  async function deleteRec(type,id,setter){
+    if(!window.confirm('Delete this record?')) return;
+    const tableMap={deviation:'pf_qms_deviations',capa:'pf_qms_capas',audit:'pf_qms_audits',change:'pf_qms_changes',complaint:'pf_qms_complaints',supplier:'pf_qms_suppliers'};
+    try{await db.remove(tableMap[type],id);}catch(e){console.error(e);}
+    setter(p=>p.filter(x=>x.id!==id));
+    setSel(null);
+  }
+
+  // Generic list renderer
+  function QMSRecordList({items,emptyMsg,renderRow,onNew,newLabel}){
+    // Managers+Admin can report Deviations/CAPAs/Audits. Complaints, Change Control,
+    // and Suppliers stay admin-only creation (compliance-sensitive records).
+    const canCreateThisTab=isElevated||(canReport&&['deviations','capas','audits'].includes(tab));
+    return el('div',null,
+      el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}},
+        el('div',{style:{fontSize:13,color:'var(--text2)'}},(items.length)+' record'+(items.length!==1?'s':'')),
+        canCreateThisTab&&el('button',{className:'btn b-blue',onClick:onNew},newLabel||'+ New'),
+      ),
+      items.length===0?el('div',{className:'empty'},el('div',{className:'eico'},'📋'),el('div',{className:'etxt'},emptyMsg)):
+      el('div',{style:{display:'flex',flexDirection:'column',gap:6}},items.map(renderRow)),
+    );
+  }
+
+  return el('div',null,
+    el('div',{className:'ph'},
+      el('div',null,
+        el('div',{className:'pt'},'Quality Management System'),
+        el('div',{className:'ps'},'DCR Compliance — Missouri QMS Requirements'),
+      ),
+    ),
+
+    // License filter
+    el('div',{style:{display:'flex',gap:6,marginBottom:12,flexWrap:'wrap',alignItems:'center'}},
+      el('span',{style:{fontSize:11,fontWeight:700,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'.5px'}},'License:'),
+      qmsCanSeeAll&&el('button',{onClick:()=>setLicFilter('all'),style:{padding:'4px 12px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:500,cursor:'pointer',background:licFilter==='all'?'var(--accent)':'transparent',color:licFilter==='all'?'#ffffff':'var(--text2)',borderColor:licFilter==='all'?'var(--accent)':'var(--border)',transition:'all .15s'}},'All Licenses'),
+      ...qmsAllowedLicenses.map(lic=>el('button',{key:lic.id,onClick:()=>setLicFilter(lic.id),style:{padding:'4px 12px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:500,cursor:'pointer',background:licFilter===lic.id?'var(--accent)':'transparent',color:licFilter===lic.id?'#ffffff':'var(--text2)',borderColor:licFilter===lic.id?'var(--accent)':'var(--border)',transition:'all .15s'}},lic.name)),
+    ),
+
+    // Tabs — Supervisors only get Dashboard + Training Matrix (read-only everywhere else)
+    el('div',{style:{display:'flex',gap:4,flexWrap:'wrap',marginBottom:20,background:'var(--surface)',border:'1px solid var(--border)',borderRadius:'var(--r)',padding:4}},
+      QMS_TABS.filter(t=>{
+        if(t.id==='corrective') return isAdmin; // Disciplinary records are admin-only — nobody else can see this tab
+        return isElevated||isManager||['dashboard','training'].includes(t.id);
+      }).map(t=>el('button',{key:t.id,onClick:()=>{setTab(t.id);setNew(false);setSel(null);},style:{display:'flex',alignItems:'center',gap:6,padding:'8px 14px',borderRadius:8,border:'none',background:tab===t.id?'var(--accent)':'transparent',color:tab===t.id?'#000000':'var(--text2)',fontFamily:'inherit',fontSize:12,fontWeight:tab===t.id?700:500,cursor:'pointer',transition:'all .15s'}},
+        el('span',null,t.ico),t.label,
+        // Badges
+        t.id==='deviations'&&openDeviations.length>0&&el('span',{style:{background:'rgba(239,68,68,.8)',color:'#fff',borderRadius:10,padding:'0 5px',fontSize:10,fontWeight:700}},openDeviations.length),
+        t.id==='capas'&&overdueCAPAs.length>0&&el('span',{style:{background:'rgba(239,68,68,.8)',color:'#fff',borderRadius:10,padding:'0 5px',fontSize:10,fontWeight:700}},overdueCAPAs.length),
+        t.id==='complaints'&&openComplaints.length>0&&el('span',{style:{background:'rgba(245,158,11,.8)',color:'#fff',borderRadius:10,padding:'0 5px',fontSize:10,fontWeight:700}},openComplaints.length),
+      ))
+    ),
+
+    // ── DASHBOARD ─────────────────────────────────────────────────────────────
+    tab==='dashboard'&&el('div',null,
+      el('div',{className:'g4',style:{marginBottom:20}},
+        [{l:'Open Deviations',v:openDeviations.length,c:openDeviations.length>0?'var(--red)':'var(--green)',ico:'⚠️'},
+         {l:'Open CAPAs',v:openCAPAs.length,c:openCAPAs.length>0?'var(--accent)':'var(--green)',ico:'🔧'},
+         {l:'Overdue CAPAs',v:overdueCAPAs.length,c:overdueCAPAs.length>0?'var(--red)':'var(--green)',ico:'🚨'},
+         {l:'Open Complaints',v:openComplaints.length,c:openComplaints.length>0?'var(--accent)':'var(--green)',ico:'📣'},
+        ].map(({l,v,c,ico})=>el('div',{key:l,className:'stat',style:{display:'flex',alignItems:'center',gap:14}},el('div',{style:{fontSize:28}},ico),el('div',null,el('div',{className:'sl'},l),el('div',{className:'sv',style:{color:c,fontSize:24}},v))))
+      ),
+      el('div',{className:'g2',style:{marginBottom:20}},
+        // SOP Training compliance
+        el('div',{className:'card'},
+          el('div',{style:{fontWeight:700,fontSize:14,marginBottom:12}},'📚 SOP Training Compliance'),
+          el('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:6}},
+            el('span',{style:{fontSize:13,color:'var(--text2)'}},'Average Acknowledgement Rate'),
+            el('span',{style:{fontSize:16,fontWeight:800,color:avgAckRate>=80?'var(--green)':avgAckRate>=50?'var(--accent)':'var(--red)'}},avgAckRate+'%'),
+          ),
+          el('div',{style:{height:6,background:'var(--surface2)',borderRadius:4,marginBottom:12}},
+            el('div',{style:{width:avgAckRate+'%',height:'100%',background:avgAckRate>=80?'var(--green)':avgAckRate>=50?'var(--accent)':'var(--red)',borderRadius:4,transition:'width .5s'}}),
+          ),
+          untrainedUsers.length>0&&el('div',null,
+            el('div',{style:{fontSize:11,fontWeight:700,color:'var(--red)',marginBottom:6,textTransform:'uppercase',letterSpacing:'.5px'}},'Pending Acknowledgements'),
+            untrainedUsers.slice(0,5).map(u=>el('div',{key:u.id,style:{display:'flex',alignItems:'center',gap:8,marginBottom:5}},
+              el('div',{className:'avatar',style:{background:avatarColor(u.name),width:22,height:22,fontSize:9}},u.name.charAt(0).toUpperCase()),
+              el('span',{style:{fontSize:12}},u.name),
+              el('span',{style:{fontSize:11,color:'var(--text3)'}},publishedSOPs.filter(s=>!(s.acknowledgements||[]).some(a=>a.id===u.id)).length+' SOPs pending'),
+            )),
+            untrainedUsers.length>5&&el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:4}},'+'+( untrainedUsers.length-5)+' more'),
+          ),
+          untrainedUsers.length===0&&el('div',{style:{color:'var(--green)',fontWeight:600,fontSize:13}},'✅ All staff current on SOPs'),
+        ),
+        // DCR Readiness
+        el('div',{className:'card'},
+          el('div',{style:{fontWeight:700,fontSize:14,marginBottom:12}},'🛡️ DCR Inspection Readiness'),
+          [
+            {l:'SOP Library',v:sops.filter(s=>s.status==='published').length+' published',ok:sops.filter(s=>s.status==='published').length>0},
+            {l:'Training Records',v:avgAckRate+'% compliance',ok:avgAckRate>=80},
+            {l:'Open Deviations',v:openDeviations.length+' open',ok:openDeviations.length===0},
+            {l:'CAPAs',v:openCAPAs.length+' active',ok:overdueCAPAs.length===0},
+            {l:'Internal Audits',v:audits.length+' on record',ok:audits.length>0},
+            {l:'Supplier Records',v:suppliers.length+' qualified',ok:suppliers.length>0},
+          ].map(({l,v,ok})=>el('div',{key:l,style:{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'7px 0',borderBottom:'1px solid var(--border)'}},
+            el('div',{style:{display:'flex',alignItems:'center',gap:8}},
+              el('span',{style:{fontSize:14}},ok?'✅':'⚠️'),
+              el('span',{style:{fontSize:13}},l),
+            ),
+            el('span',{style:{fontSize:12,color:ok?'var(--green)':'var(--accent)',fontWeight:600}},v),
+          )),
+        ),
+      ),
+      // Recent activity
+      el('div',{className:'card'},
+        el('div',{style:{fontWeight:700,fontSize:14,marginBottom:12}},'Recent QMS Activity'),
+        el('div',{className:'tw'},
+          el('table',null,
+            el('thead',null,el('tr',null,['Type','Record','Status','Date','By'].map(h=>el('th',{key:h},h)))),
+            el('tbody',null,
+              [...deviations.slice(0,3).map(r=>({type:'⚠️ Deviation',r,status:r.status})),
+               ...capas.slice(0,3).map(r=>({type:'🔧 CAPA',r,status:r.status})),
+               ...audits.slice(0,2).map(r=>({type:'🔍 Audit',r,status:r.status})),
+              ].sort((a,b)=>b.r.created_at?.localeCompare(a.r.created_at||'')||0).slice(0,8).map(({type,r,status})=>
+                el('tr',{key:r.id},
+                  el('td',null,el('span',{style:{fontSize:12}},type)),
+                  el('td',null,el('span',{style:{fontSize:13,fontWeight:600}},r.title)),
+                  el('td',null,el(QMSBadge,{status})),
+                  el('td',null,el('span',{style:{fontSize:12,color:'var(--text2)'}},r.created_at?.slice(0,10))),
+                  el('td',null,el('span',{style:{fontSize:12,color:'var(--text2)'}},r.created_by)),
+                )
+              )
+            )
+          )
+        )
+      ),
+    ),
+
+    // ── DEVIATIONS ────────────────────────────────────────────────────────────
+    tab==='deviations'&&el('div',null,
+      !showNew&&!sel&&el(QMSRecordList,{
+        items:filterByLic(deviations),
+        emptyMsg:'No deviations recorded',
+        newLabel:'+ Report Deviation',
+        onNew:()=>setNew(true),
+        renderRow:d=>el('div',{key:d.id,onClick:()=>setSel(d),style:{background:'var(--surface)',border:'1px solid var(--border)',borderLeft:'3px solid '+(d.priority==='critical'?'var(--red)':d.priority==='major'?'var(--accent)':'#3b82f6'),borderRadius:10,padding:'14px 16px',cursor:'pointer',transition:'all .15s'},onMouseEnter:ev=>ev.currentTarget.style.borderColor='rgba(30,58,95,.25)',onMouseLeave:ev=>ev.currentTarget.style.borderColor='var(--border)'},
+          el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},
+            el('div',{style:{flex:1}},
+              el('div',{style:{display:'flex',gap:6,marginBottom:5}},el(QMSBadge,{status:d.status}),el(PriBadge,{priority:d.priority}),el('span',{style:{background:'var(--surface2)',color:'var(--text2)',border:'1px solid var(--border)',borderRadius:4,padding:'2px 7px',fontSize:11}},d.dept)),
+              el('div',{style:{fontSize:14,fontWeight:700,marginBottom:3}},d.title),
+              d.product_affected&&el('div',{style:{fontSize:12,color:'var(--text2)'}},'Product: '+d.product_affected+(d.lot_number?' · Lot: '+d.lot_number:'')),
+            ),
+            el('div',{style:{fontSize:11,color:'var(--text3)',flexShrink:0,marginLeft:12}},d.created_at?.slice(0,10)),
+          ),
+        ),
+      }),
+      showNew&&el('div',{className:'card',style:{padding:0}},
+        el('div',{className:'mh'},el('div',{className:'mt2'},'Report Deviation'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
+        el(DeviationForm,{cu,users,onSave:r=>handleSave('deviation',r,setDeviations,deviations),onCancel:()=>setNew(false)}),
+      ),
+      sel&&!editing&&el('div',{className:'card'},
+        el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:16}},
+          el('div',null,
+            el('div',{style:{display:'flex',gap:6,marginBottom:8}},el(QMSBadge,{status:sel.status}),el(PriBadge,{priority:sel.priority}),el('span',{style:{background:'var(--surface2)',color:'var(--text2)',border:'1px solid var(--border)',borderRadius:4,padding:'2px 7px',fontSize:11}},sel.dept)),
+            el('div',{style:{fontSize:18,fontWeight:700}},sel.title),
+            el('div',{style:{fontSize:12,color:'var(--text3)',marginTop:4}},'Reported by '+sel.reported_by+' · '+sel.created_at?.slice(0,10)),
+          ),
+          el('div',{style:{display:'flex',gap:6}},
+            el('button',{className:'btn b-ghost btn-sm',onClick:()=>setEditing(sel)},'Edit'),
+            isElevated&&el('button',{className:'btn b-red btn-sm',onClick:()=>deleteRec('deviation',sel.id,setDeviations)},'Delete'),
+            el('button',{className:'btn b-ghost btn-sm',onClick:()=>setSel(null)},'← Back'),
+          ),
+        ),
+        sel.product_affected&&el('div',{style:{background:'rgba(30,58,95,.05)',border:'1px solid rgba(30,58,95,.12)',borderRadius:8,padding:'10px 14px',marginBottom:14,display:'flex',gap:20}},
+          el('div',null,el('div',{style:{fontSize:10,color:'var(--accent)',fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px'}},'Product'),el('div',{style:{fontSize:13,fontWeight:600}},sel.product_affected)),
+          sel.lot_number&&el('div',null,el('div',{style:{fontSize:10,color:'var(--accent)',fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px'}},'Lot #'),el('div',{style:{fontSize:13,fontWeight:600}},sel.lot_number)),
+        ),
+        [['What Happened',sel.description],['Immediate Action',sel.immediate_action],['Root Cause',sel.root_cause]].filter(([,v])=>v).map(([label,val])=>
+          el('div',{key:label,style:{marginBottom:14}},
+            el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:5}},label),
+            el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:'10px 14px',fontSize:13,lineHeight:1.6}},val),
+          )
+        ),
+        // Link to CAPA
+        el('div',{style:{marginTop:14,paddingTop:14,borderTop:'1px solid var(--border)',display:'flex',gap:8,alignItems:'center'}},
+          el('span',{style:{fontSize:13,color:'var(--text2)'}},'Linked CAPAs:'),
+          capas.filter(c=>c.linked_deviation===sel.id).length===0
+            ?el('span',{style:{fontSize:12,color:'var(--text3)'}},'None — ')
+            :capas.filter(c=>c.linked_deviation===sel.id).map(c=>el('span',{key:c.id,style:{background:'rgba(30,58,95,.08)',color:'var(--accent)',borderRadius:4,padding:'2px 8px',fontSize:12,fontWeight:600}},c.title)),
+          el('button',{onClick:()=>{setTab('capas');setNew(true);},className:'btn b-ghost btn-sm'},'+ Create CAPA'),
+        ),
+      ),
+      editing&&el('div',{className:'card',style:{padding:0}},
+        el('div',{className:'mh'},el('div',{className:'mt2'},'Edit Deviation'),el('button',{className:'mc',onClick:()=>setEditing(null)},'×')),
+        el(DeviationForm,{cu,users,existing:editing,onSave:r=>{handleSave('deviation',r,setDeviations,deviations);setEditing(null);},onCancel:()=>setEditing(null)}),
+      ),
+    ),
+
+    // ── CAPAs ─────────────────────────────────────────────────────────────────
+    tab==='capas'&&el('div',null,
+      !showNew&&!sel&&el(QMSRecordList,{
+        items:filterByLic(capas),emptyMsg:'No CAPAs yet',newLabel:'+ New CAPA',onNew:()=>setNew(true),
+        renderRow:c=>el('div',{key:c.id,onClick:()=>setSel(c),style:{background:'var(--surface)',border:'1px solid var(--border)',borderLeft:'3px solid '+(c.status==='closed'?'var(--green)':c.due_date&&c.due_date<today?'var(--red)':'var(--accent)'),borderRadius:10,padding:'14px 16px',cursor:'pointer',transition:'all .15s'},onMouseEnter:ev=>ev.currentTarget.style.borderColor='rgba(30,58,95,.25)',onMouseLeave:ev=>ev.currentTarget.style.borderColor='var(--border)'},
+          el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},
+            el('div',{style:{flex:1}},
+              el('div',{style:{display:'flex',gap:6,marginBottom:5}},el(QMSBadge,{status:c.status}),el(PriBadge,{priority:c.priority}),el('span',{style:{background:'var(--surface2)',color:'var(--text2)',border:'1px solid var(--border)',borderRadius:4,padding:'2px 7px',fontSize:11}},c.dept)),
+              el('div',{style:{fontSize:14,fontWeight:700,marginBottom:3}},c.title),
+              c.responsible_person_name&&el('div',{style:{fontSize:12,color:'var(--text2)'}},'Responsible: '+c.responsible_person_name),
+            ),
+            el('div',{style:{textAlign:'right',flexShrink:0,marginLeft:12}},
+              c.due_date&&el('div',{style:{fontSize:11,fontWeight:700,color:c.due_date<today&&c.status!=='closed'?'var(--red)':'var(--text3)'}},'Due: '+c.due_date),
+              el('div',{style:{fontSize:11,color:'var(--text3)'}},c.created_at?.slice(0,10)),
+            ),
+          ),
+        ),
+      }),
+      showNew&&el('div',{className:'card',style:{padding:0}},
+        el('div',{className:'mh'},el('div',{className:'mt2'},'New CAPA'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
+        el(CAPAForm,{cu,users,deviations,onSave:r=>handleSave('capa',r,setCapas,capas),onCancel:()=>setNew(false)}),
+      ),
+      sel&&!editing&&el('div',{className:'card'},
+        el('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:16}},
+          el('div',null,
+            el('div',{style:{display:'flex',gap:6,marginBottom:8}},el(QMSBadge,{status:sel.status}),el(PriBadge,{priority:sel.priority})),
+            el('div',{style:{fontSize:18,fontWeight:700}},sel.title),
+            el('div',{style:{fontSize:12,color:'var(--text3)',marginTop:4}},'Created '+sel.created_at?.slice(0,10)+' · Due '+( sel.due_date||'—')),
+          ),
+          el('div',{style:{display:'flex',gap:6}},
+            el('button',{className:'btn b-ghost btn-sm',onClick:()=>setEditing(sel)},'Edit'),
+            isElevated&&el('button',{className:'btn b-red btn-sm',onClick:()=>deleteRec('capa',sel.id,setCapas)},'Delete'),
+            el('button',{className:'btn b-ghost btn-sm',onClick:()=>setSel(null)},'← Back'),
+          ),
+        ),
+        [['Issue',sel.issue_description],['Correction',sel.correction],['Preventive Action',sel.preventive_action],['Verification Method',sel.verification_method]].filter(([,v])=>v).map(([label,val])=>
+          el('div',{key:label,style:{marginBottom:14}},
+            el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:5}},label),
+            el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:'10px 14px',fontSize:13,lineHeight:1.6}},val),
+          )
+        ),
+        sel.responsible_person_name&&el('div',{style:{display:'flex',alignItems:'center',gap:8,marginTop:8}},
+          el('div',{className:'avatar',style:{background:avatarColor(sel.responsible_person_name),width:28,height:28,fontSize:11}},sel.responsible_person_name.charAt(0).toUpperCase()),
+          el('div',null,el('div',{style:{fontSize:12,fontWeight:600}},sel.responsible_person_name),el('div',{style:{fontSize:11,color:'var(--text3)'}},'Responsible Person')),
+        ),
+        sel.effectiveness_rating&&el('div',{style:{marginTop:14,background:'rgba(16,185,129,.06)',border:'1px solid rgba(16,185,129,.2)',borderRadius:8,padding:'10px 14px'}},
+          el('div',{style:{fontSize:11,fontWeight:700,color:'var(--green)',textTransform:'uppercase',marginBottom:4}},'Effectiveness'),
+          el('div',{style:{fontSize:13}},({effective:'✅ Effective',partially:'⚠️ Partially Effective',ineffective:'❌ Ineffective'})[sel.effectiveness_rating]||sel.effectiveness_rating),
+        ),
+      ),
+      editing&&el('div',{className:'card',style:{padding:0}},
+        el('div',{className:'mh'},el('div',{className:'mt2'},'Edit CAPA'),el('button',{className:'mc',onClick:()=>setEditing(null)},'×')),
+        el(CAPAForm,{cu,users,deviations,existing:editing,onSave:r=>{handleSave('capa',r,setCapas,capas);setEditing(null);},onCancel:()=>setEditing(null)}),
+      ),
+    ),
+
+    // ── AUDITS ────────────────────────────────────────────────────────────────
+    tab==='audits'&&el('div',null,
+      !showNew&&!sel&&el(QMSRecordList,{
+        items:filterByLic(audits),emptyMsg:'No audits on record',newLabel:'+ New Audit',onNew:()=>setNew(true),
+        renderRow:a=>el('div',{key:a.id,onClick:()=>setSel(a),style:{background:'var(--surface)',border:'1px solid var(--border)',borderLeft:'3px solid '+(a.status==='closed'?'var(--green)':'#3b82f6'),borderRadius:10,padding:'14px 16px',cursor:'pointer',transition:'all .15s'},onMouseEnter:ev=>ev.currentTarget.style.borderColor='rgba(30,58,95,.25)',onMouseLeave:ev=>ev.currentTarget.style.borderColor='var(--border)'},
+          el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},
+            el('div',{style:{flex:1}},
+              el('div',{style:{display:'flex',gap:6,marginBottom:5}},el(QMSBadge,{status:a.status}),el('span',{style:{background:'rgba(59,130,246,.1)',color:'#93c5fd',border:'1px solid rgba(59,130,246,.2)',borderRadius:4,padding:'2px 7px',fontSize:11,fontWeight:600}},a.audit_type)),
+              el('div',{style:{fontSize:14,fontWeight:700,marginBottom:3}},a.title),
+              el('div',{style:{fontSize:12,color:'var(--text2)'}},a.auditor_name+' · '+(a.findings||[]).length+' findings'),
+            ),
+            el('div',{style:{textAlign:'right',flexShrink:0,marginLeft:12}},
+              el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text3)'}},a.audit_date),
+              a.next_audit_date&&el('div',{style:{fontSize:10,color:a.next_audit_date<=new Date(Date.now()+7*86400000).toISOString().slice(0,10)?'var(--red)':'var(--text3)'}},'Next: '+a.next_audit_date),
+            ),
+          ),
+        ),
+      }),
+      showNew&&el('div',{className:'card',style:{padding:0,maxHeight:'85vh',overflowY:'auto'}},
+        el('div',{className:'mh'},el('div',{className:'mt2'},'New Audit Report'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
+        el(AuditForm,{cu,users,onSave:r=>handleSave('audit',r,setAudits,audits),onCancel:()=>setNew(false)}),
+      ),
+      sel&&!editing&&el('div',{className:'card'},
+        el('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:16}},
+          el('div',null,
+            el('div',{style:{display:'flex',gap:6,marginBottom:8}},el(QMSBadge,{status:sel.status}),el('span',{style:{background:'rgba(59,130,246,.1)',color:'#93c5fd',border:'1px solid rgba(59,130,246,.2)',borderRadius:4,padding:'2px 7px',fontSize:11,fontWeight:600}},sel.audit_type)),
+            el('div',{style:{fontSize:18,fontWeight:700}},sel.title),
+            el('div',{style:{fontSize:12,color:'var(--text3)',marginTop:4}},sel.auditor_name+' · '+sel.audit_date),
+          ),
+          el('div',{style:{display:'flex',gap:6}},
+            el('button',{className:'btn b-ghost btn-sm',onClick:()=>setEditing(sel)},'Edit'),
+            isElevated&&el('button',{className:'btn b-red btn-sm',onClick:()=>deleteRec('audit',sel.id,setAudits)},'Delete'),
+            el('button',{className:'btn b-ghost btn-sm',onClick:()=>setSel(null)},'← Back'),
+          ),
+        ),
+        sel.scope&&el('div',{style:{marginBottom:14}},el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:5}},'Scope'),el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:'10px 14px',fontSize:13,lineHeight:1.6}},sel.scope)),
+        (sel.findings||[]).length>0&&el('div',{style:{marginBottom:14}},
+          el('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:8}},
+            el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px'}},'Findings ('+( sel.findings||[]).length+')'),
+            el('div',{style:{display:'flex',gap:6}},
+              (sel.findings||[]).filter(f=>f.severity==='critical').length>0&&el('span',{style:{background:'rgba(239,68,68,.1)',color:'var(--red)',borderRadius:4,padding:'2px 7px',fontSize:11,fontWeight:700}},(sel.findings||[]).filter(f=>f.severity==='critical').length+' Critical'),
+              (sel.findings||[]).filter(f=>f.severity==='major').length>0&&el('span',{style:{background:'rgba(245,158,11,.1)',color:'var(--accent)',borderRadius:4,padding:'2px 7px',fontSize:11,fontWeight:700}},(sel.findings||[]).filter(f=>f.severity==='major').length+' Major'),
+            ),
+          ),
+          (sel.findings||[]).map(f=>el('div',{key:f.id,style:{background:'var(--surface2)',border:'1px solid var(--border)',borderLeft:'3px solid '+(f.severity==='critical'?'var(--red)':f.severity==='major'?'var(--accent)':'#3b82f6'),borderRadius:8,padding:'10px 14px',marginBottom:6}},
+            el('div',{style:{display:'flex',gap:6,marginBottom:4}},el('span',{style:{background:f.severity==='critical'?'rgba(239,68,68,.15)':f.severity==='major'?'rgba(245,158,11,.15)':'rgba(59,130,246,.1)',color:f.severity==='critical'?'var(--red)':f.severity==='major'?'var(--accent)':'#93c5fd',borderRadius:4,padding:'1px 7px',fontSize:10,fontWeight:700}},f.severity?.toUpperCase())),
+            el('div',{style:{fontSize:13,fontWeight:600}},f.description),
+            f.corrective_action&&el('div',{style:{fontSize:12,color:'var(--text2)',marginTop:3}},'Required: '+f.corrective_action),
+          )),
+        ),
+        [['Recommendations',sel.recommendations],['Conclusion',sel.conclusion]].filter(([,v])=>v).map(([label,val])=>
+          el('div',{key:label,style:{marginBottom:14}},el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:5}},label),el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:'10px 14px',fontSize:13,lineHeight:1.6}},val))
+        ),
+        // Attachments section in detail view
+        el('div',{style:{borderTop:'1px solid var(--border)',paddingTop:14,marginTop:4}},
+          el('div',{style:{fontSize:13,fontWeight:700,marginBottom:10}},'📎 Attachments'),
+          (sel.attachments||[]).length===0
+            ?el('div',{style:{fontSize:12,color:'var(--text3)'}},'No attachments on this audit.')
+            :el('div',{style:{display:'flex',flexDirection:'column',gap:6}},
+              (sel.attachments||[]).map(att=>el('div',{key:att.id,style:{display:'flex',alignItems:'center',gap:10,background:'var(--surface2)',borderRadius:8,padding:'8px 12px'}},
+                el('span',{style:{fontSize:18,flexShrink:0}},att.type&&att.type.includes('pdf')?'📄':att.type&&att.type.includes('image')?'🖼️':'📎'),
+                el('div',{style:{minWidth:0,flex:1}},
+                  el('a',{href:att.data,download:att.name,style:{fontSize:12,fontWeight:600,color:'var(--accent)',textDecoration:'none',display:'block',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},att.name),
+                  el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:1}},(att.size>1024*1024?(att.size/1024/1024).toFixed(1)+'MB':(att.size/1024).toFixed(0)+'KB')+' · '+att.uploaded_by+' · '+new Date(att.uploaded_at).toLocaleDateString()),
+                ),
+              ))
+            ),
+        ),
+      ),
+      editing&&el('div',{className:'card',style:{padding:0,maxHeight:'85vh',overflowY:'auto'}},
+        el('div',{className:'mh'},el('div',{className:'mt2'},'Edit Audit'),el('button',{className:'mc',onClick:()=>setEditing(null)},'×')),
+        el(AuditForm,{cu,users,existing:editing,onSave:r=>{handleSave('audit',r,setAudits,audits);setEditing(null);},onCancel:()=>setEditing(null)}),
+      ),
+    ),
+
+    // ── CHANGE CONTROL ────────────────────────────────────────────────────────
+    tab==='changes'&&el('div',null,
+      !showNew&&!sel&&el(QMSRecordList,{
+        items:filterByLic(changes),emptyMsg:'No change records',newLabel:'+ New Change',onNew:()=>setNew(true),
+        renderRow:c=>el('div',{key:c.id,onClick:()=>setSel(c),style:{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:10,padding:'14px 16px',cursor:'pointer',transition:'all .15s'},onMouseEnter:ev=>ev.currentTarget.style.borderColor='rgba(30,58,95,.25)',onMouseLeave:ev=>ev.currentTarget.style.borderColor='var(--border)'},
+          el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},
+            el('div',{style:{flex:1}},
+              el('div',{style:{display:'flex',gap:6,marginBottom:5}},el(QMSBadge,{status:c.status}),el('span',{style:{background:'var(--surface2)',color:'var(--text2)',border:'1px solid var(--border)',borderRadius:4,padding:'2px 7px',fontSize:11}},c.change_type||'Change')),
+              el('div',{style:{fontSize:14,fontWeight:700,marginBottom:3}},c.title),
+              c.description&&el('div',{style:{fontSize:12,color:'var(--text2)'}},c.description.slice(0,100)+(c.description.length>100?'...':'')),
+            ),
+            el('div',{style:{fontSize:11,color:'var(--text3)',flexShrink:0,marginLeft:12}},c.created_at?.slice(0,10)),
+          ),
+        ),
+      }),
+      showNew&&el('div',{className:'card'},
+        el('div',{className:'mh'},el('div',{className:'mt2'},'New Change Control Record'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
+        el('div',{className:'mbd'},
+          el('div',{className:'fg'},el('label',null,'License *'),el('select',{id:'chg-license',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+      el('option',{value:''},'— Select License —'),
+      LICENSES.map(lic=>el('option',{key:lic.id,value:lic.id},lic.name+' ('+lic.state+')'))
+    )),
+    el('div',{className:'fg'},el('label',null,'Title *'),el('input',{id:'chg-title',placeholder:'e.g. Switch pre-roll cone supplier — Futurola to Raw',autoFocus:true})),
+          el('div',{className:'g2'},
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Change Type'),el('select',{id:'chg-type',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+              ['Equipment','Process','Packaging','Label','Supplier','Formulation','Facility','Personnel','Software','Other'].map(t=>el('option',{key:t,value:t},t))
+            )),
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Priority'),el('select',{id:'chg-pri',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},Object.entries(QMS_PRIORITIES).map(([k,{label}])=>el('option',{key:k,value:k},label)))),
+          ),
+          el('div',{className:'fg'},el('label',null,'What is changing and why?'),el('textarea',{id:'chg-desc',placeholder:'Describe what is changing and the reason...'})),
+          el('div',{className:'fg'},el('label',null,'Impact Assessment'),el('textarea',{id:'chg-impact',placeholder:'What is the potential impact on product, process, compliance?'})),
+          el('div',{className:'fg'},el('label',null,'Implementation Plan'),el('textarea',{id:'chg-plan',placeholder:'How and when will this change be implemented?'})),
+          el('div',{className:'fg'},el('label',null,'Approved By'),el('select',{id:'chg-approver',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+            el('option',{value:''},'— Select Approver —'),
+            ...users.filter(u=>u.approved&&['admin','manager','coo','director_production','director_operations','general_manager'].includes(u.role)).map(u=>el('option',{key:u.id,value:u.name},u.name+' — '+( RLABEL[u.role]||u.role))),
+          )),
+          el('div',{className:'mf'},
+            el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),
+            el('button',{className:'btn b-blue',onClick:async()=>{
+              const title=document.getElementById('chg-title').value.trim();
+              const license_id=document.getElementById('chg-license').value;
+              if(!title) return;
+              if(!license_id){alert('Please select which license this change applies to.');return;}
+              const rec={
+                id:'chg-'+Date.now(),title,license_id,
+                change_type:document.getElementById('chg-type').value,
+                priority:document.getElementById('chg-pri').value,
+                description:document.getElementById('chg-desc').value,
+                impact_assessment:document.getElementById('chg-impact').value,
+                implementation_plan:document.getElementById('chg-plan').value,
+                approved_by:document.getElementById('chg-approver').value,
+                status:'open',created_by:cu.name,created_by_id:cu.id,
+                created_at:new Date().toISOString(),updated_at:new Date().toISOString(),updated_by:cu.name,
+              };
+              try{
+                await db.insert('pf_qms_changes',rec);
+                handleSave('change',rec,setChanges,changes);
+              }catch(e){
+                alert('Save failed: '+e.message+'. Make sure the pf_qms_changes table exists in Supabase — this change record was NOT saved.');
+              }
+            }},'Submit Change Record'),
+          ),
+        ),
+      ),
+      sel&&!editing&&el('div',{className:'card'},
+        el('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:16}},
+          el('div',null,el('div',{style:{display:'flex',gap:6,marginBottom:8}},el(QMSBadge,{status:sel.status}),el('span',{style:{background:'var(--surface2)',color:'var(--text2)',border:'1px solid var(--border)',borderRadius:4,padding:'2px 7px',fontSize:11}},sel.change_type)),el('div',{style:{fontSize:18,fontWeight:700}},sel.title)),
+          el('div',{style:{display:'flex',gap:6}},isElevated&&el('button',{className:'btn b-red btn-sm',onClick:()=>deleteRec('change',sel.id,setChanges)},'Delete'),el('button',{className:'btn b-ghost btn-sm',onClick:()=>setSel(null)},'← Back')),
+        ),
+        [['Description',sel.description],['Impact Assessment',sel.impact_assessment],['Implementation Plan',sel.implementation_plan]].filter(([,v])=>v).map(([label,val])=>
+          el('div',{key:label,style:{marginBottom:14}},el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:5}},label),el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:'10px 14px',fontSize:13,lineHeight:1.6}},val))
+        ),
+        sel.approved_by&&el('div',{style:{background:'rgba(16,185,129,.06)',border:'1px solid rgba(16,185,129,.2)',borderRadius:8,padding:'10px 14px',marginTop:8,fontSize:13}},'✅ Approved by: '+sel.approved_by),
+      ),
+    ),
+
+    // ── COMPLAINTS ────────────────────────────────────────────────────────────
+    tab==='complaints'&&el('div',null,
+      !showNew&&!sel&&el(QMSRecordList,{
+        items:filterByLic(complaints),emptyMsg:'No complaints on record',newLabel:'+ Log Complaint',onNew:()=>setNew(true),
+        renderRow:c=>el('div',{key:c.id,onClick:()=>setSel(c),style:{background:'var(--surface)',border:'1px solid var(--border)',borderLeft:'3px solid '+(c.type==='adverse_event'?'var(--red)':c.status==='open'?'var(--accent)':'var(--green)'),borderRadius:10,padding:'14px 16px',cursor:'pointer',transition:'all .15s'},onMouseEnter:ev=>ev.currentTarget.style.borderColor='rgba(30,58,95,.25)',onMouseLeave:ev=>ev.currentTarget.style.borderColor='var(--border)'},
+          el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},
+            el('div',{style:{flex:1}},
+              el('div',{style:{display:'flex',gap:6,marginBottom:5}},el(QMSBadge,{status:c.status}),el('span',{style:{background:c.type==='adverse_event'?'rgba(239,68,68,.1)':'var(--surface2)',color:c.type==='adverse_event'?'var(--red)':'var(--text2)',border:'1px solid',borderColor:c.type==='adverse_event'?'rgba(239,68,68,.3)':'var(--border)',borderRadius:4,padding:'2px 7px',fontSize:11,fontWeight:600}},({consumer:'Consumer',dispensary:'Dispensary',return:'Product Return',adverse_event:'⚠️ Adverse Event'})[c.type]||c.type)),
+              el('div',{style:{fontSize:14,fontWeight:700,marginBottom:3}},c.title),
+              c.product&&el('div',{style:{fontSize:12,color:'var(--text2)'}},'Product: '+c.product),
+            ),
+            el('div',{style:{fontSize:11,color:'var(--text3)',flexShrink:0,marginLeft:12}},c.created_at?.slice(0,10)),
+          ),
+        ),
+      }),
+      showNew&&el('div',{className:'card'},
+        el('div',{className:'mh'},el('div',{className:'mt2'},'Log Complaint'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
+        el('div',{className:'mbd'},
+          el('div',{className:'fg'},el('label',null,'License *'),el('select',{id:'comp-license',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+            el('option',{value:''},'— Select License —'),
+            LICENSES.map(lic=>el('option',{key:lic.id,value:lic.id},lic.name+' ('+lic.state+')'))
+          )),
+          el('div',{className:'fg'},el('label',null,'Title *'),el('input',{id:'comp-title',placeholder:'e.g. Customer reported harsh taste on Live Resin Cart',autoFocus:true})),
+          el('div',{className:'g2'},
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Complaint Type'),el('select',{id:'comp-type',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+              [['consumer','Consumer Complaint'],['dispensary','Dispensary Complaint'],['return','Product Return'],['adverse_event','Adverse Event']].map(([k,l])=>el('option',{key:k,value:k},l))
+            )),
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Priority'),el('select',{id:'comp-pri',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},Object.entries(QMS_PRIORITIES).map(([k,{label}])=>el('option',{key:k,value:k},label)))),
+          ),
+          el('div',{className:'g2',style:{marginTop:13}},
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Product'),el('input',{id:'comp-prod',placeholder:'Product name/SKU'})),
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Lot Number'),el('input',{id:'comp-lot',placeholder:'LOT-XXXX'})),
+          ),
+          el('div',{className:'fg'},el('label',null,'Description'),el('textarea',{id:'comp-desc',placeholder:'Describe the complaint in detail...'})),
+          el('div',{className:'fg'},el('label',null,'Investigation / Resolution'),el('textarea',{id:'comp-res',placeholder:'How was this investigated and resolved?'})),
+          el('div',{className:'mf'},
+            el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),
+            el('button',{className:'btn b-blue',onClick:async()=>{
+              const title=document.getElementById('comp-title').value.trim();
+              const license_id=document.getElementById('comp-license').value;
+              if(!title) return;
+              if(!license_id){alert('Please select which license this complaint applies to.');return;}
+              const rec={id:'comp-'+Date.now(),title,license_id,type:document.getElementById('comp-type').value,priority:document.getElementById('comp-pri').value,product:document.getElementById('comp-prod').value,lot_number:document.getElementById('comp-lot').value,description:document.getElementById('comp-desc').value,resolution:document.getElementById('comp-res').value,status:'open',created_by:cu.name,created_by_id:cu.id,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),updated_by:cu.name};
+              try{
+                await db.insert('pf_qms_complaints',rec);
+                handleSave('complaint',rec,setComplaints,complaints);
+              }catch(e){
+                alert('Save failed: '+e.message+'. Make sure the pf_qms_complaints table exists in Supabase — this complaint was NOT saved.');
+              }
+            }},'Log Complaint'),
+          ),
+        ),
+      ),
+      sel&&el('div',{className:'card'},
+        el('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:16}},
+          el('div',null,el('div',{style:{display:'flex',gap:6,marginBottom:8}},el(QMSBadge,{status:sel.status})),el('div',{style:{fontSize:18,fontWeight:700}},sel.title),el('div',{style:{fontSize:12,color:'var(--text3)',marginTop:4}},sel.created_at?.slice(0,10))),
+          el('div',{style:{display:'flex',gap:6}},isElevated&&el('button',{className:'btn b-red btn-sm',onClick:()=>deleteRec('complaint',sel.id,setComplaints)},'Delete'),el('button',{className:'btn b-ghost btn-sm',onClick:()=>setSel(null)},'← Back')),
+        ),
+        sel.product&&el('div',{style:{display:'flex',gap:20,background:'rgba(30,58,95,.05)',border:'1px solid rgba(30,58,95,.12)',borderRadius:8,padding:'10px 14px',marginBottom:14}},
+          el('div',null,el('div',{style:{fontSize:10,color:'var(--accent)',fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px'}},'Product'),el('div',{style:{fontSize:13,fontWeight:600}},sel.product)),
+          sel.lot_number&&el('div',null,el('div',{style:{fontSize:10,color:'var(--accent)',fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px'}},'Lot #'),el('div',{style:{fontSize:13,fontWeight:600}},sel.lot_number)),
+        ),
+        [['Description',sel.description],['Resolution',sel.resolution]].filter(([,v])=>v).map(([label,val])=>el('div',{key:label,style:{marginBottom:14}},el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:5}},label),el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:'10px 14px',fontSize:13,lineHeight:1.6}},val))),
+      ),
+    ),
+
+    // ── SUPPLIERS ─────────────────────────────────────────────────────────────
+    tab==='suppliers'&&el(SupplierTab,{cu,isElevated,suppliers,setSuppliers,filterByLic,handleSave,deleteRec,db,LICENSES,showNew,setNew,sel,setSel}),
+
+    // ── CORRECTIVE ACTIONS ──────────────────────────────────────────────────────
+    tab==='corrective'&&el('div',null,
+      !sel&&el('div',null,
+        el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12,flexWrap:'wrap',gap:10}},
+          el('div',{style:{fontSize:13,color:'var(--text2)'}},
+            (()=>{
+              const filtered=filterByLic(corrective).filter(c=>{
+                if(!caSearch.trim()) return true;
+                const q=caSearch.trim().toLowerCase();
+                const gen=c.generated_content?(()=>{try{return JSON.parse(c.generated_content);}catch(e){return{};}})():{};
+                return (c.employee_name||'').toLowerCase().includes(q)
+                  ||(c.violation_type||'').toLowerCase().includes(q)
+                  ||(c.title||'').toLowerCase().includes(q)
+                  ||(gen.incident_summary||'').toLowerCase().includes(q)
+                  ||(c.ca_number||'').toLowerCase().includes(q);
+              });
+              return filtered.length+' corrective action'+(filtered.length!==1?'s':'');
+            })()
+          ),
+          el('div',{style:{display:'flex',gap:8,alignItems:'center'}},
+            el('input',{
+              value:caSearch,onChange:ev=>setCaSearch(ev.target.value),
+              placeholder:'Search by name or reason (e.g. "safety")...',
+              style:{background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:12,outline:'none',width:240},
+            }),
+            isAdmin&&el('button',{
+              onClick:()=>setShowCAGenerator(true),
+              style:{background:'var(--red)',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'9px 16px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:6,whiteSpace:'nowrap'}
+            },'⚖️ New Corrective Action'),
+          ),
+        ),
+        (()=>{
+          const filtered=filterByLic(corrective).filter(c=>{
+            if(!caSearch.trim()) return true;
+            const q=caSearch.trim().toLowerCase();
+            const gen=c.generated_content?(()=>{try{return JSON.parse(c.generated_content);}catch(e){return{};}})():{};
+            return (c.employee_name||'').toLowerCase().includes(q)
+              ||(c.violation_type||'').toLowerCase().includes(q)
+              ||(c.title||'').toLowerCase().includes(q)
+              ||(gen.incident_summary||'').toLowerCase().includes(q)
+              ||(c.ca_number||'').toLowerCase().includes(q);
+          });
+          return filtered.length===0?el('div',{className:'empty'},el('div',{className:'eico'},'⚖️'),el('div',{className:'etxt'},caSearch.trim()?'No matching corrective actions':'No corrective actions on record')):
+          el('div',{style:{display:'flex',flexDirection:'column',gap:6}},
+            filtered.map(c=>el('div',{key:c.id,onClick:()=>setSel(c),style:{background:'var(--surface)',border:'1px solid var(--border)',borderLeft:'3px solid '+(c.status==='acknowledged'?'var(--green)':'var(--red)'),borderRadius:10,padding:'14px 16px',cursor:'pointer',transition:'all .15s'},onMouseEnter:ev=>ev.currentTarget.style.borderColor='rgba(30,58,95,.25)',onMouseLeave:ev=>ev.currentTarget.style.borderColor='var(--border)'},
+              el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},
+              el('div',{style:{flex:1}},
+                el('div',{style:{display:'flex',gap:6,marginBottom:5,flexWrap:'wrap'}},
+                  el('span',{style:{background:c.status==='acknowledged'?'rgba(16,185,129,.1)':c.status==='draft'?'rgba(100,116,139,.1)':'rgba(245,158,11,.1)',color:c.status==='acknowledged'?'var(--green)':c.status==='draft'?'var(--text2)':'#d97706',border:'1px solid',borderColor:c.status==='acknowledged'?'rgba(16,185,129,.3)':c.status==='draft'?'rgba(100,116,139,.3)':'rgba(245,158,11,.3)',borderRadius:4,padding:'2px 7px',fontSize:11,fontWeight:700}},c.status==='acknowledged'?'✅ Completed':c.status==='draft'?'📝 Draft':'⏳ Pending Acknowledgement'),
+                  el('span',{style:{background:'var(--surface2)',color:'var(--text2)',border:'1px solid var(--border)',borderRadius:4,padding:'2px 7px',fontSize:11}},c.ca_number),
+                  el('span',{style:{background:'var(--surface2)',color:'var(--text2)',border:'1px solid var(--border)',borderRadius:4,padding:'2px 7px',fontSize:11}},c.violation_type),
+                ),
+                el('div',{style:{fontSize:14,fontWeight:700,marginBottom:3}},c.title),
+                el('div',{style:{fontSize:12,color:'var(--text2)'}},
+                  'Employee: ',
+                  el('span',{
+                    onClick:ev=>{ev.stopPropagation();const emp=users.find(u=>u.id===c.employee_id);if(emp)setProfileEmployee(emp);},
+                    style:{color:'var(--accent)',cursor:'pointer',fontWeight:600,textDecoration:'underline'},
+                  },c.employee_name),
+                  ' · Issued by '+c.issued_by,
+                ),
+              ),
+              el('div',{style:{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:6,flexShrink:0,marginLeft:12}},
+                el('div',{style:{fontSize:11,color:'var(--text3)'}},c.created_at?.slice(0,10)),
+                isAdmin&&el('button',{
+                  onClick:ev=>{
+                    ev.stopPropagation();
+                    if(!window.confirm('Delete this corrective action permanently?')) return;
+                    db.remove('pf_qms_corrective',c.id).then(()=>setCorrective(p=>p.filter(x=>x.id!==c.id))).catch(e=>alert('Delete failed: '+e.message));
+                  },
+                  style:{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:13,padding:0},
+                  onMouseEnter:ev=>ev.currentTarget.style.color='var(--red)',
+                  onMouseLeave:ev=>ev.currentTarget.style.color='var(--text3)',
+                },'🗑'),
+              ),
+            ),
+          )));
+        })(),
+      ),
+
+      // ── DETAIL VIEW ────────────────────────────────────────────────────────
+      sel&&tab==='corrective'&&el('div',null,
+        el('button',{className:'btn b-ghost btn-sm',onClick:()=>setSel(null),style:{marginBottom:14}},'← Back to list'),
+        (()=>{
+          const gen=sel.generated_content?JSON.parse(sel.generated_content):{};
+          const isMe=cu.id===sel.employee_id;
+          const canAck=isMe&&sel.status!=='acknowledged';
+          return el('div',null,
+            el('div',{style:{background:'rgba(239,68,68,.06)',border:'1px solid rgba(239,68,68,.2)',borderRadius:10,padding:'16px 18px',marginBottom:16}},
+              el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:8}},
+                el('div',null,
+                  el('div',{style:{fontSize:11,fontWeight:700,color:'var(--red)',textTransform:'uppercase',letterSpacing:'.8px',marginBottom:4}},sel.ca_number),
+                  el('div',{style:{fontSize:18,fontWeight:800}},sel.title),
+                  el('div',{style:{display:'flex',gap:10,flexWrap:'wrap',marginTop:6}},
+                    el('span',{style:{fontSize:12,color:'var(--text2)'}},'Employee: '+sel.employee_name),
+                    el('span',{style:{fontSize:12,color:'var(--text2)'}},'License: '+sel.license_name),
+                    el('span',{style:{fontSize:12,color:'var(--text2)'}},'Issued: '+sel.created_at?.slice(0,10)+' by '+sel.issued_by),
+                  ),
+                ),
+                el('span',{style:{background:sel.status==='acknowledged'?'rgba(16,185,129,.1)':sel.status==='draft'?'rgba(100,116,139,.1)':'rgba(245,158,11,.1)',color:sel.status==='acknowledged'?'var(--green)':sel.status==='draft'?'var(--text2)':'#d97706',border:'1px solid',borderColor:sel.status==='acknowledged'?'rgba(16,185,129,.3)':sel.status==='draft'?'rgba(100,116,139,.3)':'rgba(245,158,11,.3)',borderRadius:6,padding:'5px 12px',fontSize:12,fontWeight:700}},sel.status==='acknowledged'?'✅ Completed — '+sel.acknowledged_at?.slice(0,10):sel.status==='draft'?'📝 Draft':'⏳ Pending Acknowledgement'),
+              ),
+            ),
+
+            sel.status==='acknowledged'&&el('div',{style:{background:'rgba(16,185,129,.06)',border:'1px solid rgba(16,185,129,.25)',borderRadius:10,padding:'14px 18px',marginBottom:16}},
+              el('div',{style:{fontSize:11,fontWeight:700,color:'var(--green)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:8}},'Signed Acknowledgement'),
+              el('div',{style:{display:'flex',alignItems:'baseline',gap:16,flexWrap:'wrap'}},
+                el('div',null,
+                  el('div',{style:{fontFamily:'cursive',fontSize:22,color:'var(--text)',borderBottom:'1px solid var(--border2)',paddingBottom:4,marginBottom:3}},sel.signature_name||sel.employee_name),
+                  el('div',{style:{fontSize:10,color:'var(--text3)'}},'Employee Signature'),
+                ),
+                el('div',null,
+                  el('div',{style:{fontFamily:'cursive',fontSize:18,color:'var(--text)',borderBottom:'1px solid var(--border2)',paddingBottom:4,marginBottom:3}},sel.acknowledged_at?.slice(0,10)),
+                  el('div',{style:{fontSize:10,color:'var(--text3)'}},'Date'),
+                ),
+              ),
+            ),
+
+            [['Incident Summary',gen.incident_summary],['Policy/SOP Violated',gen.policy_reference],['Expected Standard',gen.expected_standard]].filter(([,v])=>v).map(([label,val])=>
+              el('div',{key:label,style:{marginBottom:12}},
+                el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:5}},label),
+                el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:'10px 14px',fontSize:13,lineHeight:1.6,color:'var(--text2)'}},val),
+              )
+            ),
+
+            (gen.corrective_steps||[]).length>0&&el('div',{style:{marginBottom:12}},
+              el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:6}},'Corrective Steps Required'),
+              gen.corrective_steps.map((s,i)=>el('div',{key:i,style:{display:'flex',gap:8,marginBottom:6,alignItems:'flex-start'}},
+                el('div',{style:{width:20,height:20,borderRadius:'50%',background:'var(--accent)',color:'#000',display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:800,flexShrink:0,marginTop:1}},i+1),
+                el('div',{style:{fontSize:13,color:'var(--text2)',lineHeight:1.5}},s),
+              )),
+            ),
+
+            [['Consequences if Repeated',gen.consequences_of_recurrence],['Support Offered',gen.support_offered]].filter(([,v])=>v).map(([label,val])=>
+              el('div',{key:label,style:{marginBottom:12}},
+                el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:5}},label),
+                el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:'10px 14px',fontSize:13,lineHeight:1.6,color:'var(--text2)'}},val),
+              )
+            ),
+
+            gen.employee_acknowledgement_text&&el('div',{style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:10,padding:'14px 16px',marginTop:16,marginBottom:16}},
+              el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:6}},'Acknowledgement Statement'),
+              el('div',{style:{fontSize:12,color:'var(--text2)',lineHeight:1.6,fontStyle:'italic'}},gen.employee_acknowledgement_text),
+            ),
+
+            el('div',{style:{display:'flex',gap:8,marginTop:16,flexWrap:'wrap',alignItems:'center'}},
+              el('button',{className:'btn b-ghost',onClick:()=>exportCorrectiveActionPdf(sel)},'📄 Download PDF'),
+              isElevated&&sel.status!=='acknowledged'&&el('button',{className:'btn b-ghost',onClick:()=>setReviseCA(sel)},'✏️ Revise'),
+              sel.status==='draft'&&isElevated&&el('button',{
+                style:{background:'#dc2626',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'9px 18px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer'},
+                onClick:async()=>{
+                  if(!sel.employee_email){alert('No email on file for this employee.');return;}
+                  if(!window.confirm('Send to '+sel.employee_name+'? They will receive an email and must sign.')) return;
+                  try{
+                    await fetch(`${SUPA_URL}/rest/v1/pf_qms_corrective?id=eq.${sel.id}`,{method:'PATCH',headers:{...H.headers},body:JSON.stringify({status:'pending',updated_at:new Date().toISOString(),updated_by:cu.name})});
+                    setCorrective(p=>p.map(c=>c.id===sel.id?{...c,status:'pending'}:c));
+                    setSel(p=>({...p,status:'pending'}));
+                    await sendEmail({to:sel.employee_email,subject:`⚖️ Corrective Action Notice — ${sel.title}`,
+                      html:`<div style="font-family:sans-serif;background:#121212;color:#f0eee8;padding:28px;border-radius:12px;max-width:520px;border:1px solid #333"><div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">⚖️ Black Fox QMS</div><p style="font-size:14px">A corrective action has been issued to you. Please log in to review and sign.</p><a href="${APP_URL}" style="display:inline-block;background:#f5a623;color:#000;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700;margin-top:12px">Review & Sign →</a></div>`
+                    });
+                    alert('✓ Sent to '+sel.employee_name+'. Status: Pending Acknowledgement.');
+                  }catch(e){alert('Failed: '+e.message);}
+                }
+              },'📨 Send to Employee'),
+              isAdmin&&el('button',{
+                onClick:async()=>{
+                  if(!window.confirm('Delete this corrective action permanently? This cannot be undone.')) return;
+                  try{
+                    await db.remove('pf_qms_corrective',sel.id);
+                    setCorrective(p=>p.filter(c=>c.id!==sel.id));
+                    setSel(null);
+                  }catch(e){console.error(e);alert('Delete failed: '+e.message);}
+                },
+                className:'btn b-red',
+              },'🗑 Delete'),
+              canAck&&el('button',{
+                onClick:()=>{setSignatureName(cu.name);setShowSignModal(true);},
+                style:{background:'var(--green)',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'10px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer'}
+              },'I Have Read and Understood This Notice'),
+
+              showSignModal&&el('div',{className:'mo',style:{zIndex:1200},onClick:ev=>ev.target===ev.currentTarget&&setShowSignModal(false)},
+                el('div',{className:'md',style:{width:480}},
+                  el('div',{className:'mh'},
+                    el('div',{className:'mt2'},'Sign & Acknowledge'),
+                    el('button',{className:'mc',onClick:()=>setShowSignModal(false)},'×'),
+                  ),
+                  el('div',{className:'mbd'},
+                    el('div',{style:{fontSize:13,color:'var(--text2)',marginBottom:16,lineHeight:1.6}},
+                      gen.employee_acknowledgement_text||'I acknowledge that I have read and understand this Corrective Action Notice.'
+                    ),
+                    el('div',{className:'fg'},
+                      el('label',null,'Sign below to acknowledge *'),
+                      el(SignaturePad,{
+                        label:'Draw your signature — by signing you confirm you have read and understand this notice',
+                        onSave:dataUrl=>{setSignatureName(sel.employee_name||cu.name);window._caSigData=dataUrl;},
+                        onClear:()=>{setSignatureName('');window._caSigData=null;},
+                      }),
+                      el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:6}},'Signing as: '+sel.employee_name+' · Date: '+new Date().toISOString().slice(0,10)),
+                    ),
+                    el('div',{className:'mf'},
+                      el('button',{className:'btn b-ghost',onClick:()=>{setShowSignModal(false);setSignatureName('');window._caSigData=null;}},'Cancel'),
+                      el('button',{
+                        disabled:!signatureName,
+                        onClick:async()=>{
+                          const update={status:'acknowledged',acknowledged_at:new Date().toISOString(),signature_name:signatureName.trim(),signature_image:window._caSigData||null,updated_at:new Date().toISOString(),updated_by:cu.name};
+                          try{
+                            await db.update('pf_qms_corrective',sel.id,update);
+                            setCorrective(p=>p.map(c=>c.id===sel.id?{...c,...update}:c));
+                            setSel(p=>({...p,...update}));
+                            setShowSignModal(false);
+                            const issuer=users.find(u=>u.id===sel.issued_by_id);
+                            if(issuer?.email) sendEmail({to:issuer.email,
+                              subject:`Corrective Action Acknowledged — ${sel.employee_name}`,
+                              html:`<div style="font-family:sans-serif;background:#121212;color:#f0eee8;padding:24px;border-radius:12px;max-width:480px;border:1px solid #333">
+                                <div style="color:#f5a623;font-size:18px;font-weight:800;margin-bottom:12px">⚖️ Black Fox QMS</div>
+                                <p style="font-size:14px">${sel.employee_name} has signed and acknowledged corrective action ${sel.ca_number} ("${sel.title}") on ${update.acknowledged_at.slice(0,10)}.</p>
+                              </div>`
+                            });
+                          }catch(e){console.error(e);alert('Failed to save acknowledgement: '+e.message);}
+                        },
+                        style:{background:signatureName?'var(--green)':'rgba(16,185,129,.3)',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'10px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:signatureName?'pointer':'not-allowed'}
+                      },'Sign & Submit'),
+                    ),
+                  ),
+                )
+              ),
+              !canAck&&!isMe&&sel.status==='acknowledged'&&el('div',{style:{fontSize:12,color:'var(--green)',fontWeight:600,display:'flex',alignItems:'center'}},'✓ Acknowledged by employee — record is now locked'),
+            ),
+          );
+        })(),
+      ),
+
+      reviseCA&&el(CAReviseModal,{
+      ca:reviseCA,cu,
+      onClose:()=>setReviseCA(null),
+      onSave:(updated)=>{
+        setCorrective(p=>p.map(c=>c.id===updated.id?updated:c));
+        if(sel?.id===updated.id) setSel(updated);
+        setReviseCA(null);
+      },
+    }),
+    showCAGenerator&&el(CorrectiveActionGenerator,{
+        cu,users,
+        onClose:()=>setShowCAGenerator(false),
+        onSave:(rec)=>{setCorrective(p=>[rec,...p]);setShowCAGenerator(false);setSel(rec);},
+      }),
+    ),
+
+    // ── TRAINING MATRIX ───────────────────────────────────────────────────────
+    tab==='training'&&el('div',null,
+      el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:10,marginBottom:4}},
+        el('div',{style:{fontWeight:700,fontSize:14,color:'var(--text2)'}},'SOP Acknowledgement Tracking — '+publishedSOPs.length+' Published SOPs · '+trainingMatrixScope.length+' Team Members'),
+        isAdmin&&licFilter!=='all'&&el('button',{
+          onClick:()=>exportComplianceSnapshotPdf(LICENSES.find(l=>l.id===licFilter),publishedSOPs,trainingMatrixScope,targetUsersForSop),
+          style:{background:'var(--accent)',color:'#000',border:'none',borderRadius:'var(--rs)',padding:'8px 16px',fontFamily:'inherit',fontSize:12,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:6,whiteSpace:'nowrap'}
+        },'📋 Compliance Snapshot PDF'),
+        isAdmin&&licFilter==='all'&&el('div',{style:{fontSize:11,color:'var(--text3)'}},'Select a specific license above to generate a Compliance Snapshot'),
+      ),
+      !isAdmin&&el('div',{style:{fontSize:11,color:'var(--text3)',marginBottom:14}},'Showing your direct reports only'),
+      isAdmin&&el('div',{style:{marginBottom:14}}),
+      publishedSOPs.length===0?el('div',{className:'empty'},el('div',{className:'eico'},'📚'),el('div',{className:'etxt'},'No published SOPs yet — publish SOPs to track training')):
+      el('div',{className:'card',style:{padding:0,overflowX:'auto'}},
+        el('table',{style:{width:'100%',borderCollapse:'collapse',minWidth:600}},
+          el('thead',null,
+            el('tr',null,
+              el('th',{style:{textAlign:'left',fontSize:11,fontWeight:700,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'1px',padding:'10px 14px',borderBottom:'1px solid var(--border)',whiteSpace:'nowrap',minWidth:150}},'Team Member'),
+              ...publishedSOPs.map(s=>el('th',{key:s.id,style:{fontSize:10,fontWeight:700,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'.5px',padding:'10px 8px',borderBottom:'1px solid var(--border)',textAlign:'center',maxWidth:100,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}},s.title.slice(0,20)+(s.title.length>20?'...':''))),
+              el('th',{style:{fontSize:11,fontWeight:700,color:'var(--text3)',textTransform:'uppercase',padding:'10px 14px',borderBottom:'1px solid var(--border)',textAlign:'center'}},'Rate'),
+              el('th',{style:{fontSize:11,fontWeight:700,color:'var(--text3)',textTransform:'uppercase',padding:'10px 14px',borderBottom:'1px solid var(--border)',textAlign:'center'}},'Report'),
+            )
+          ),
+          el('tbody',null,
+            trainingMatrixScope.map(u=>{
+              // Only count SOPs that actually target this user (their license + dept)
+              const applicableSOPs=publishedSOPs.filter(s=>targetUsersForSop(s).some(t=>t.id===u.id));
+              const acked=applicableSOPs.filter(s=>(s.acknowledgements||[]).some(a=>a.id===u.id));
+              const rate=applicableSOPs.length>0?Math.round(acked.length/applicableSOPs.length*100):0;
+              return el('tr',{key:u.id},
+                el('td',{style:{padding:'10px 14px',borderBottom:'1px solid var(--border)',whiteSpace:'nowrap'}},
+                  el('div',{
+                    onClick:()=>setProfileEmployee(u),
+                    style:{display:'flex',alignItems:'center',gap:8,cursor:'pointer'},
+                    onMouseEnter:ev=>ev.currentTarget.querySelector('.emp-name').style.color='var(--accent)',
+                    onMouseLeave:ev=>ev.currentTarget.querySelector('.emp-name').style.color='var(--text)',
+                  },
+                    el('div',{className:'avatar',style:{background:avatarColor(u.name),width:24,height:24,fontSize:10}},u.name.charAt(0).toUpperCase()),
+                    el('div',null,el('div',{className:'emp-name',style:{fontSize:12,fontWeight:600,color:'var(--text)',transition:'color .15s'}},u.name),el('div',{style:{fontSize:10,color:'var(--text3)'}},RLABEL[u.role]||u.role)),
+                  )
+                ),
+                ...publishedSOPs.map(s=>{
+                  const inScope=targetUsersForSop(s).some(t=>t.id===u.id);
+                  if(!inScope) return el('td',{key:s.id,style:{padding:'8px',borderBottom:'1px solid var(--border)',textAlign:'center'}},
+                    el('div',{title:'Not applicable — different license/department',style:{color:'var(--text3)',fontSize:13,opacity:.35}},'—')
+                  );
+                  const a=(s.acknowledgements||[]).find(a=>a.id===u.id);
+                  return el('td',{key:s.id,style:{padding:'8px',borderBottom:'1px solid var(--border)',textAlign:'center'}},
+                    a?el('div',{title:'Acknowledged '+a.at?.slice(0,10),style:{color:'var(--green)',fontSize:16}},'✅'):el('div',{style:{color:'var(--text3)',fontSize:16}},'⬜'),
+                  );
+                }),
+                el('td',{style:{padding:'10px 14px',borderBottom:'1px solid var(--border)',textAlign:'center'}},
+                  el('div',{style:{fontSize:12,fontWeight:700,color:rate===100?'var(--green)':rate>=80?'var(--accent)':'var(--red)'}},rate+'%'),
+                ),
+                el('td',{style:{padding:'10px 14px',borderBottom:'1px solid var(--border)',textAlign:'center'}},
+                  el('button',{
+                    onClick:()=>exportEmployeeTrainingPdf(u,applicableSOPs),
+                    title:'Download training report for '+u.name,
+                    style:{background:'none',border:'1px solid var(--border)',borderRadius:6,padding:'4px 9px',color:'var(--text2)',cursor:'pointer',fontSize:11},
+                    onMouseEnter:ev=>{ev.currentTarget.style.borderColor='var(--accent)';ev.currentTarget.style.color='var(--accent)';},
+                    onMouseLeave:ev=>{ev.currentTarget.style.borderColor='var(--border)';ev.currentTarget.style.color='var(--text2)';},
+                  },'📄 PDF'),
+                ),
+              );
+            })
+          )
+        )
+      ),
+    ),
+
+    profileEmployee&&el(EmployeeProfileModal,{
+      employee:profileEmployee,
+      cu,users,
+      publishedSOPs,
+      // Disciplinary history is admin-only, even when viewing a profile from the Training Matrix.
+      corrective:isAdmin?filterByLic(corrective).filter(c=>c.employee_id===profileEmployee.id):[],
+      showCorrectiveSection:isAdmin,
+      targetUsersForSop,
+      onClose:()=>setProfileEmployee(null),
+      onOpenCA:(c)=>{setProfileEmployee(null);setTab('corrective');setSel(c);},
+    }),
+  );
+}
+
+
+// ── SCOREBOARD ───────────────────────────────────────────────────────────────
+function Scoreboard({tasks,cu,users}){
+  const[period,setPeriod]=useState('all');
+  const today=new Date().toISOString().slice(0,10);
+
+  function filterByPeriod(t){
+    if(period==='all') return true;
+    const created=t.created_at?.slice(0,10)||'';
+    const now=new Date();
+    if(period==='month'){
+      const start=new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10);
+      return created>=start;
+    }
+    if(period==='week'){
+      const start=new Date(now-7*86400000).toISOString().slice(0,10);
+      return created>=start;
+    }
+    return true;
+  }
+
+  const approvedUsers=users.filter(u=>u.approved);
+  const periodTasks=tasks.filter(filterByPeriod);
+
+  // Calculate score per user
+  const scores=approvedUsers.map(u=>{
+    const assigned=periodTasks.filter(t=>(t.assignees||[]).some(a=>a.id===u.id));
+    const total=assigned.length;
+    const done=assigned.filter(t=>t.status==='done'||t.status==='completed');
+    const inProgress=assigned.filter(t=>['in_progress','under_review','completed'].includes(t.status));
+    const inReview=assigned.filter(t=>t.status==='review');
+    const notStarted=assigned.filter(t=>t.status==='not_started');
+    const onHold=assigned.filter(t=>t.status==='on_hold');
+
+    // On time: done before or on due_date
+    const doneOnTime=done.filter(t=>t.due_date&&t.completed_at&&t.completed_at.slice(0,10)<=t.due_date);
+    // Late: done after due_date
+    const doneLate=done.filter(t=>t.due_date&&t.completed_at&&t.completed_at.slice(0,10)>t.due_date);
+    // Overdue: not done and past due
+    const overdue=assigned.filter(t=>!['done','archived'].includes(t.status)&&t.due_date&&t.due_date<today);
+    // Never completed (archived without done)
+    const notCompleted=assigned.filter(t=>t.status==='archived'&&!t.completed_at);
+
+    // Score formula: +10 per done on time, +5 per done late, -3 per overdue, -5 per not completed
+    const score=(doneOnTime.length*10)+(doneLate.length*5)-(overdue.length*3)-(notCompleted.length*5);
+    const completionRate=total>0?Math.round((done.length/total)*100):0;
+    const onTimeRate=done.length>0?Math.round((doneOnTime.length/done.length)*100):0;
+
+    return{
+      user:u, total, done:done.length, inProgress:inProgress.length,
+      inReview:inReview.length, notStarted:notStarted.length,
+      onHold:onHold.length, doneOnTime:doneOnTime.length,
+      doneLate:doneLate.length, overdue:overdue.length,
+      notCompleted:notCompleted.length, score, completionRate, onTimeRate,
+    };
+  }).sort((a,b)=>b.score-a.score);
+
+  const maxScore=Math.max(...scores.map(s=>s.score),1);
+  const weakest=scores.filter(s=>s.total>0).sort((a,b)=>a.score-b.score).slice(0,3);
+  const strongest=scores.filter(s=>s.total>0).sort((a,b)=>b.score-a.score).slice(0,3);
+
+  function medalColor(i){return['#f5a623','#94a3b8','#b45309'][i]||'var(--text3)';}
+  function medalEmoji(i){return['🥇','🥈','🥉'][i]||'';}
+  function scoreColor(s){
+    if(s>=50) return 'var(--green)';
+    if(s>=20) return 'var(--accent)';
+    if(s>=0)  return 'var(--text2)';
+    return 'var(--red)';
+  }
+
+  return el('div',null,
+    el('div',{className:'ph'},
+      el('div',null,el('div',{className:'pt'},'Scoreboard'),el('div',{className:'ps'},'Task performance — who\'s crushing it, who needs support')),
+      el('div',{style:{display:'flex',gap:6}},
+        [{id:'week',l:'This Week'},{id:'month',l:'This Month'},{id:'all',l:'All Time'}].map(p=>
+          el('button',{key:p.id,onClick:()=>setPeriod(p.id),style:{padding:'6px 14px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:500,cursor:'pointer',background:period===p.id?'var(--accent)':'transparent',color:period===p.id?'#000000':'var(--text2)',borderColor:period===p.id?'var(--accent)':'var(--border)',transition:'all .15s'}},p.l)
+        )
+      )
+    ),
+
+    // Top 3 podium
+    strongest.length>0&&el('div',{style:{display:'flex',justifyContent:'center',gap:12,marginBottom:28,alignItems:'flex-end',flexWrap:'wrap'}},
+      [1,0,2].map(i=>{
+        const s=strongest[i];
+        if(!s) return null;
+        const heights=[160,200,140];
+        const isFirst=i===0;
+        return el('div',{key:s.user.id,style:{display:'flex',flexDirection:'column',alignItems:'center',gap:8}},
+          el('div',{style:{fontSize:isFirst?36:28}},medalEmoji(i)),
+          el('div',{className:'avatar',style:{background:avatarColor(s.user.name),width:isFirst?48:40,height:isFirst?48:40,fontSize:isFirst?18:14,border:'3px solid '+medalColor(i)}},s.user.name.charAt(0).toUpperCase()),
+          el('div',{style:{fontWeight:700,fontSize:isFirst?14:12,maxWidth:90,textAlign:'center',lineHeight:1.3}},s.user.name.split(' ')[0]),
+          el('div',{style:{fontSize:isFirst?20:16,fontWeight:800,color:scoreColor(s.score)}},s.score),
+          el('div',{style:{
+            width:isFirst?80:70,height:heights[i],
+            background:`linear-gradient(to top, ${medalColor(i)}33, ${medalColor(i)}88)`,
+            border:'1px solid '+medalColor(i),
+            borderRadius:'6px 6px 0 0',display:'flex',alignItems:'flex-start',justifyContent:'center',paddingTop:8,
+          }},
+            el('div',{style:{fontSize:11,fontWeight:700,color:medalColor(i)}},'#'+(i===0?1:i===1?2:3))
+          ),
+        );
+      })
+    ),
+
+    // Needs attention
+    weakest.length>0&&el('div',{style:{background:'rgba(239,68,68,.04)',border:'1px solid rgba(239,68,68,.15)',borderRadius:12,padding:'14px 16px',marginBottom:20}},
+      el('div',{style:{fontWeight:700,fontSize:13,color:'var(--red)',marginBottom:10}},'⚠️ Needs Attention'),
+      el('div',{style:{display:'flex',gap:10,flexWrap:'wrap'}},
+        weakest.map(s=>el('div',{key:s.user.id,style:{display:'flex',alignItems:'center',gap:8,background:'rgba(239,68,68,.06)',borderRadius:8,padding:'8px 12px',flex:1,minWidth:180}},
+          el('div',{className:'avatar',style:{background:avatarColor(s.user.name),width:28,height:28,fontSize:11}},s.user.name.charAt(0).toUpperCase()),
+          el('div',null,
+            el('div',{style:{fontSize:12,fontWeight:600}},s.user.name),
+            el('div',{style:{fontSize:11,color:'var(--text3)'}},
+              s.overdue>0?`${s.overdue} overdue`:s.doneLate>0?`${s.doneLate} late`:s.notCompleted>0?`${s.notCompleted} incomplete`:'Low score'
+            ),
+          ),
+          el('div',{style:{marginLeft:'auto',fontSize:16,fontWeight:800,color:'var(--red)'}},s.score),
+        ))
+      ),
+    ),
+
+    // Full table
+    el('div',{className:'card',style:{padding:0}},
+      el('div',{className:'tw'},
+        el('table',null,
+          el('thead',null,el('tr',null,
+            ['#','Member','Score','Tasks','Done','On Time','Late','Overdue','Incomplete','In Progress','Rate'].map(h=>el('th',{key:h},h))
+          )),
+          el('tbody',null,scores.map((s,i)=>
+            el('tr',{key:s.user.id,style:{background:i===0?'rgba(30,58,95,.06)':i===scores.length-1&&s.total>0?'rgba(239,68,68,.03)':''}},
+              el('td',null,el('span',{style:{fontSize:16}},medalEmoji(i)||String(i+1))),
+              el('td',null,
+                el('div',{style:{display:'flex',alignItems:'center',gap:8}},
+                  el('div',{className:'avatar',style:{background:avatarColor(s.user.name),width:28,height:28,fontSize:11}},s.user.name.charAt(0).toUpperCase()),
+                  el('div',null,
+                    el('div',{style:{fontWeight:600,fontSize:13}},s.user.name),
+                    el('div',{style:{fontSize:11,color:'var(--text3)'}},RLABEL[s.user.role]||s.user.role),
+                  )
+                )
+              ),
+              el('td',null,
+                el('div',null,
+                  el('div',{style:{fontSize:16,fontWeight:800,color:scoreColor(s.score)}},s.score),
+                  el('div',{style:{width:60,height:3,background:'var(--surface2)',borderRadius:2,marginTop:3}},
+                    el('div',{style:{width:Math.max(0,Math.min(100,(s.score/maxScore)*100))+'%',height:'100%',background:scoreColor(s.score),borderRadius:2}})
+                  ),
+                )
+              ),
+              el('td',null,el('span',{style:{fontWeight:600}},s.total)),
+              el('td',null,el('span',{style:{color:'var(--green)',fontWeight:s.done>0?700:400}},s.done)),
+              el('td',null,el('span',{style:{color:s.doneOnTime>0?'var(--green)':'var(--text3)',fontWeight:s.doneOnTime>0?700:400}},s.doneOnTime)),
+              el('td',null,el('span',{style:{color:s.doneLate>0?'var(--accent)':'var(--text3)',fontWeight:s.doneLate>0?600:400}},s.doneLate)),
+              el('td',null,el('span',{style:{color:s.overdue>0?'var(--red)':'var(--text3)',fontWeight:s.overdue>0?700:400}},s.overdue)),
+              el('td',null,el('span',{style:{color:s.notCompleted>0?'var(--red)':'var(--text3)'}},s.notCompleted)),
+              el('td',null,el('span',{style:{color:'var(--blue)'}},s.inProgress)),
+              el('td',null,
+                s.total>0?el('div',null,
+                  el('div',{style:{fontSize:12,fontWeight:600,color:s.completionRate>=80?'var(--green)':s.completionRate>=50?'var(--accent)':'var(--red)'}},s.completionRate+'%'),
+                  el('div',{style:{width:50,height:3,background:'var(--surface2)',borderRadius:2,marginTop:2}},
+                    el('div',{style:{width:s.completionRate+'%',height:'100%',background:s.completionRate>=80?'var(--green)':s.completionRate>=50?'var(--accent)':'var(--red)',borderRadius:2}})
+                  ),
+                ):el('span',{style:{color:'var(--text3)',fontSize:12}},'—'),
+              ),
+            )
+          ))
+        )
+      )
+    ),
+
+    // Score legend
+    el('div',{style:{marginTop:16,background:'var(--surface)',border:'1px solid var(--border)',borderRadius:10,padding:'12px 16px'}},
+      el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'.8px',marginBottom:8}},'How scores are calculated'),
+      el('div',{style:{display:'flex',gap:16,flexWrap:'wrap',fontSize:12,color:'var(--text2)'}},
+        el('span',{style:{color:'var(--green)'}},'✅ Done on time = +10 pts'),
+        el('span',{style:{color:'var(--accent)'}},'⏰ Done late = +5 pts'),
+        el('span',{style:{color:'var(--red)'}},'⚠️ Overdue = −3 pts'),
+        el('span',{style:{color:'var(--red)'}},'❌ Not completed = −5 pts'),
+      ),
+    ),
+  );
+}
+
+// ── SOPs ──────────────────────────────────────────────────────────────────────
+// ── LICENSE & REGULATORY CONSTANTS ───────────────────────────────────────────
+const LICENSES=[
+  {id:'mi10',name:'Michigan Investments 10',state:'Michigan',license_type:'Adult Use Grower / Processor'},
+  {id:'wvc',name:'Wellness & Vitality Consulting',state:'Michigan',license_type:'Comprehensive Facility License'},
+  {id:'bfm',name:'Black Fox Manufacturing',state:'Missouri',license_type:'Comprehensive Facility License'},
+];
+
+const STATE_REGS={
+  Michigan:{
+    agency:'Michigan Cannabis Regulatory Agency (CRA)',
+    code:'MRTMA / MMFLA',
+    key_rules:[
+      'R 420.301-420.807 — Marihuana Growers/Processors',
+      'MCL 333.27101-333.27801 — MRTMA Act',
+      'Tracking via METRC required for all plant/product movement',
+      'All cannabis must be tested by a licensed provisioning center before transfer',
+      'Labels must include: license number, product name, net weight, THC/CBD content, batch number, harvest date, test results, warning statements',
+      'Employees must have valid LARA background check clearance',
+      'Inventory reconciliation must be performed monthly',
+      'All waste must be rendered unrecognizable and unusable before disposal',
+      'Security cameras required — 30-day retention minimum',
+      'Packaging must be child-resistant and opaque',
+    ],
+    sop_header_fields:['SOP Number','Revision Number','Effective Date','Approved By','Department','License Number','METRC Relevant','Review Frequency'],
+  },
+  Missouri:{
+    agency:'Missouri Division of Cannabis Regulation (DCR)',
+    code:'19 CSR 100-1 et seq.',
+    key_rules:[
+      '19 CSR 100-1.030 — Comprehensive Facility License requirements',
+      'METRC tracking required for all cannabis and cannabis-infused products',
+      'Testing required: potency, pesticides, heavy metals, microbials, residual solvents',
+      'Labels must include: license number, net weight, THC content (total), warning: "Keep out of reach of children", batch/lot number, test date and lab name',
+      'QMS required within 1 year of receiving approval — must follow recognized standard (ISO/ASTM/CSQ/FOCUS)',
+      'Employee background check required — no disqualifying felony offenses',
+      'Seed-to-sale tracking — no untracked transfers permitted',
+      'Waste disposal: 50% rendered unusable by mixing with non-consumable material',
+      'Facility must maintain cleaning and sanitation logs',
+      'All SOPs must be signed/acknowledged by employees performing the tasks',
+    ],
+    sop_header_fields:['SOP Number','Revision Number','Effective Date','Approved By','Department','License Number','DCR Regulation Reference','Review Frequency','Training Required'],
+  },
+};
+
+const SOP_CATEGORIES=[
+  'Production — Cart Department',
+  'Production — Pre-Roll Department',
+  'Production — Gummy Department',
+  'Production — Extraction',
+  'Production — Biomass',
+  'Quality Control — Testing',
+  'Quality Control — Packaging',
+  'Quality Control — Labeling',
+  'Compliance — METRC',
+  'Compliance — Waste Disposal',
+  'Compliance — Inventory',
+  'Facility — Sanitation & Cleaning',
+  'Facility — Equipment Calibration',
+  'Facility — Security',
+  'HR — Employee Onboarding',
+  'HR — Training',
+  'Distribution — Transfers',
+  'Distribution — Receiving',
+  'Sales & Marketing',
+  'Other',
+];
+
+const SOP_STRUCTURE_PROMPT=(title,category,license,state,uploadedContent)=>`You are an expert cannabis compliance officer and technical writer specializing in ${state} cannabis regulations.
+
+Create a complete, detailed Standard Operating Procedure (SOP) for a licensed cannabis operation.
+
+LICENSE INFORMATION:
+- License Holder: ${license.name}
+- License Type: ${license.license_type}
+- State: ${state}
+- Regulatory Agency: ${STATE_REGS[state].agency}
+- Applicable Code: ${STATE_REGS[state].code}
+
+SOP DETAILS:
+- Title: ${title}
+- Category: ${category}
+
+KEY ${state.toUpperCase()} REGULATORY REQUIREMENTS TO INCORPORATE:
+${STATE_REGS[state].key_rules.map((r,i)=>`${i+1}. ${r}`).join('\n')}
+
+${uploadedContent?`UPLOADED REFERENCE CONTENT (use this as the basis, enhance and formalize it):\n---\n${uploadedContent.slice(0,3000)}\n---\n`:''}
+
+Generate a professional SOP in this EXACT JSON format (respond with JSON only, no markdown, keep each field concise to avoid truncation):
+{
+  "sop_number": "SOP-[DEPT_CODE]-[3_DIGIT_NUMBER]",
+  "title": "${title}",
+  "revision": "1.0",
+  "effective_date": "${new Date().toISOString().slice(0,10)}",
+  "review_frequency": "Annual or after regulatory change",
+  "department": "[relevant department]",
+  "license_name": "${license.name}",
+  "state": "${state}",
+  "regulatory_references": ["list of specific ${state} regulations that apply"],
+  "purpose": "2-3 sentence explanation of why this SOP exists and what it ensures",
+  "scope": "Who this applies to and what operations it covers",
+  "responsibilities": [
+    {"role": "Job title", "responsibility": "What they are responsible for under this SOP"}
+  ],
+  "definitions": [
+    {"term": "Term", "definition": "Definition"}
+  ],
+  "required_materials": ["list of materials, equipment, PPE needed"],
+  "steps": [
+    {"step_number": 1, "title": "Step title", "instruction": "Detailed instruction", "regulatory_note": "Relevant regulation or requirement if applicable", "critical": true}
+  ],
+  "quality_checks": ["specific quality checkpoints"],
+  "documentation_required": ["forms, logs, METRC entries, records that must be completed"],
+  "deviation_procedure": "What to do if this SOP cannot be followed as written",
+  "training_requirements": "Who must be trained, how, and how often",
+  "revision_history": [
+    {"revision": "1.0", "date": "${new Date().toISOString().slice(0,10)}", "description": "Initial release", "approved_by": ""}
+  ]
+}`;
+
+// ── SOP PDF EXPORT ────────────────────────────────────────────────────────────
+function exportSopPdf(sop){
+  const{jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:'pt',format:'letter'});
+  const W=612,H=792;
+  const margin=48;
+  let y=0;
+
+  // All text colors are dark — no light gray on white background
+  const NAVY=[30,58,95],GOLD=[180,120,20],TEXT=[15,15,15],SUBTEXT=[50,60,75],MUTED=[90,100,115],LIGHT=[245,247,252],BORDER=[200,210,220];
+  const gen=sop.generated_content?JSON.parse(sop.generated_content):null;
+  const lic=sop.license_name||gen?.license_name||'BFM';
+
+  function header(){
+    doc.setFillColor(...NAVY);
+    doc.rect(0,0,W,78,'F');
+    doc.setFillColor(...GOLD);
+    doc.rect(0,76,W,3,'F');
+    // Logo text
+    doc.setTextColor(255,255,255);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(18);
+    doc.text('BLACK FOX QMS',margin,26);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(10);
+    doc.setTextColor(180,200,230);
+    doc.text('Standard Operating Procedure',margin,50);
+    // SOP number & revision
+    doc.setTextColor(255,255,255);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(12);
+    doc.text(gen?.sop_number||sop.sop_number||'SOP-DRAFT',W-margin,32,{align:'right'});
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(10);
+    doc.setTextColor(180,200,230);
+    doc.text('Rev '+(gen?.revision||sop.version||'1.0'),W-margin,50,{align:'right'});
+    y=100;
+  }
+
+  function footer(pageNum){
+    doc.setDrawColor(...BORDER);
+    doc.setLineWidth(0.5);
+    doc.line(margin,H-46,W-margin,H-46);
+    doc.setTextColor(...MUTED);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(8);
+    doc.text('CONFIDENTIAL — '+lic+' — Internal Use Only',margin,H-30);
+    doc.text('Page '+pageNum,W-margin,H-30,{align:'right'});
+  }
+
+  function checkPageBreak(need){
+    if(y+need>H-62){doc.addPage();header();}
+  }
+
+  function sectionTitle(txt){
+    checkPageBreak(42);
+    y+=4;
+    doc.setFillColor(...LIGHT);
+    doc.rect(margin,y,W-margin*2,28,'F');
+    doc.setFillColor(...NAVY);
+    doc.rect(margin,y,4,28,'F');
+    doc.setTextColor(...NAVY);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(11);
+    doc.text(txt.toUpperCase(),margin+12,y+19);
+    y+=36;
+  }
+
+  function bodyText(txt,opts={}){
+    if(!txt||!String(txt).trim()) return;
+    const sz=opts.size||11;
+    const lh=sz*1.6;
+    doc.setTextColor(...(opts.color||TEXT));
+    doc.setFont('helvetica',opts.bold?'bold':'normal');
+    doc.setFontSize(sz);
+    const indent=opts.indent||0;
+    const lines=doc.splitTextToSize(String(txt),W-margin*2-indent);
+    checkPageBreak(lines.length*lh+10);
+    lines.forEach(line=>{doc.text(line,margin+indent,y);y+=lh;});
+    y+=opts.spaceAfter!==undefined?opts.spaceAfter:8;
+  }
+
+  function infoRow(label,value){
+    if(!value||String(value).trim()==='—'||String(value).trim()==='') return;
+    checkPageBreak(22);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(9);
+    doc.setTextColor(...SUBTEXT);
+    doc.text(label.toUpperCase(),margin,y);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(11);
+    doc.setTextColor(...TEXT);
+    const valLines=doc.splitTextToSize(String(value),W-margin-170);
+    valLines.forEach((l,i)=>doc.text(l,margin+155,y+(i*14)));
+    y+=Math.max(20,valLines.length*14+4);
+  }
+
+  // ── BUILD DOCUMENT ──────────────────────────────────────────────────────────
+  header();
+
+  // Document title
+  doc.setTextColor(...TEXT);
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(20);
+  const titleLines=doc.splitTextToSize(gen?.title||sop.title||'Standard Operating Procedure',W-margin*2);
+  titleLines.forEach(l=>{doc.text(l,margin,y);y+=26;});
+  y+=6;
+
+  // Info block
+  doc.setDrawColor(...BORDER);
+  doc.setLineWidth(0.5);
+  doc.line(margin,y,W-margin,y);
+  y+=12;
+  infoRow('SOP Number',gen?.sop_number||sop.sop_number||'');
+  infoRow('Revision',gen?.revision||sop.version||'1.0');
+  infoRow('Effective Date',gen?.effective_date||sop.created_at?.slice(0,10)||'');
+  infoRow('Department',gen?.department||(sop.depts||[]).join(', ')||sop.dept||'');
+  infoRow('License / Facility',gen?.license_name||sop.license_name||'');
+  infoRow('State / Regulation',gen?.state||sop.state||'');
+  infoRow('Review Frequency',gen?.review_frequency||'Annual or upon regulatory change');
+  infoRow('Status',(sop.status||'draft').toUpperCase());
+  infoRow('Prepared By',sop.created_by||'');
+  infoRow('Approved / Revised By',sop.revised_by||sop.created_by||'');
+  y+=4;
+  doc.line(margin,y,W-margin,y);
+  y+=18;
+
+  // Regulatory references
+  const refs=gen?.regulatory_references||sop.regulatory_references||[];
+  if(refs.length>0){
+    sectionTitle('Regulatory References');
+    refs.forEach(r=>bodyText('• '+r,{size:10,color:SUBTEXT,spaceAfter:4}));
+    y+=4;
+  }
+
+  if(gen?.purpose||sop.description){sectionTitle('Purpose');bodyText(gen?.purpose||sop.description);}
+  if(gen?.scope){sectionTitle('Scope');bodyText(gen.scope);}
+
+  // Responsibilities
+  if((gen?.responsibilities||[]).length>0){
+    sectionTitle('Responsibilities');
+    gen.responsibilities.forEach(r=>{
+      checkPageBreak(30);
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(11);
+      doc.setTextColor(...TEXT);
+      doc.text((r.role||'')+':',margin,y);
+      y+=16;
+      bodyText(r.responsibility||'',{indent:16,spaceAfter:6});
+    });
+  }
+
+  if((gen?.required_materials||[]).length>0){
+    sectionTitle('Required Materials / PPE');
+    gen.required_materials.forEach(m=>bodyText('• '+m,{size:11,spaceAfter:4}));
+    y+=4;
+  }
+
+  // Steps — ALL dark text
+  const steps=gen?.steps||(sop.steps||[]).map((s,i)=>({step_number:i+1,title:'',instruction:s.text||String(s)}));
+  if(steps.length>0){
+    sectionTitle('Procedure ('+steps.length+' Steps)');
+    steps.forEach((step,i)=>{
+      const stepText=step.instruction||'';
+      const stepTitle=step.title||'';
+      const titleLines2=stepTitle?doc.splitTextToSize(stepTitle,W-margin*2-28):[];
+      const instrLines=doc.splitTextToSize(stepText,W-margin*2-28);
+      checkPageBreak((titleLines2.length+instrLines.length)*16+28);
+
+      // Step badge
+      doc.setFillColor(...NAVY);
+      doc.circle(margin+10,y+5,10,'F');
+      doc.setTextColor(255,255,255);
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(9);
+      doc.text(String(step.step_number||i+1),margin+10,y+8,{align:'center'});
+
+      let sx=margin+28;
+      // Step title — bold dark
+      if(stepTitle){
+        doc.setTextColor(...TEXT);
+        doc.setFont('helvetica','bold');
+        doc.setFontSize(11);
+        titleLines2.forEach((l,li)=>{doc.text(l,sx,y+(li===0?4:4+li*15));});
+        y+=titleLines2.length*15+4;
+      }
+      // Step instruction — normal dark (NOT gray)
+      doc.setTextColor(...TEXT);
+      doc.setFont('helvetica','normal');
+      doc.setFontSize(11);
+      instrLines.forEach((l,li)=>{doc.text(l,sx,y+(li===0?(stepTitle?0:4):li*16+(stepTitle?0:4)));});
+      y+=instrLines.length*16+(stepTitle?2:6);
+
+      // Regulatory note
+      if(step.regulatory_note){
+        doc.setFont('helvetica','italic');
+        doc.setFontSize(9);
+        doc.setTextColor(...SUBTEXT);
+        const regL=doc.splitTextToSize('⚖ '+step.regulatory_note,W-margin*2-28);
+        checkPageBreak(regL.length*13+4);
+        regL.forEach(l=>{doc.text(l,sx,y);y+=13;});
+        y+=2;
+      }
+      // Critical flag
+      if(step.critical){
+        doc.setFillColor(220,38,38);
+        doc.rect(sx,y,W-margin*2-28,16,'F');
+        doc.setTextColor(255,255,255);
+        doc.setFont('helvetica','bold');
+        doc.setFontSize(9);
+        doc.text('⚠ CRITICAL STEP — Verify and document before proceeding',sx+6,y+11);
+        y+=22;
+      }
+      y+=10;
+    });
+  }
+
+  if((gen?.quality_checks||[]).length>0){
+    sectionTitle('Quality Checks');
+    gen.quality_checks.forEach(q=>bodyText('✓ '+q,{size:11,spaceAfter:5}));
+  }
+  if((gen?.documentation_required||[]).length>0){
+    sectionTitle('Documentation Required');
+    gen.documentation_required.forEach(d=>bodyText('• '+d,{size:11,spaceAfter:5}));
+  }
+  if(gen?.deviation_procedure){sectionTitle('Deviation Procedure');bodyText(gen.deviation_procedure);}
+  if(gen?.training_requirements){sectionTitle('Training Requirements');bodyText(gen.training_requirements);}
+
+  if((gen?.revision_history||[]).length>0){
+    sectionTitle('Revision History');
+    gen.revision_history.forEach(rh=>{
+      bodyText('Rev '+rh.revision+' — '+rh.date+' — '+rh.description+(rh.approved_by?' (Approved: '+rh.approved_by+')':''),{size:10,color:SUBTEXT,spaceAfter:5});
+    });
+  }
+
+  // Acknowledgements
+  const sopAcks=sop.acknowledgements||[];
+  if(sopAcks.length>0){
+    sectionTitle('Acknowledgement Records');
+    bodyText('The following employees have read, understood, and signed this SOP:',{size:11,color:SUBTEXT});
+    y+=6;
+    sopAcks.forEach((ack,idx)=>{
+      checkPageBreak(70);
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(11);
+      doc.setTextColor(...TEXT);
+      doc.text((idx+1)+'. '+ack.name,margin,y);
+      doc.setFont('helvetica','normal');
+      doc.setFontSize(9);
+      doc.setTextColor(...SUBTEXT);
+      doc.text((ack.role||'')+' · Signed: '+(ack.at?.slice(0,10)||''),margin,y+14);
+      y+=22;
+      if(ack.signature_image){
+        try{
+          doc.addImage(ack.signature_image,'PNG',margin,y,110,30);
+          doc.setDrawColor(...BORDER);
+          doc.line(margin,y+32,margin+120,y+32);
+          y+=40;
+        }catch(e){
+          doc.setFont('helvetica','italic');
+          doc.setFontSize(14);
+          doc.setTextColor(...TEXT);
+          doc.text(ack.signature_name||ack.name,margin,y+14);
+          doc.setDrawColor(...BORDER);
+          doc.line(margin,y+18,margin+120,y+18);
+          y+=28;
+        }
+      } else {
+        doc.setFont('helvetica','italic');
+        doc.setFontSize(14);
+        doc.setTextColor(...TEXT);
+        doc.text(ack.signature_name||ack.name,margin,y+14);
+        doc.setDrawColor(...BORDER);
+        doc.line(margin,y+18,margin+120,y+18);
+        y+=28;
+      }
+      y+=8;
+    });
+    y+=6;
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(9);
+    doc.setTextColor(22,163,74);
+    doc.text('Electronically signed via Black Fox QMS — Records are tamper-evident.',margin,y);
+    y+=10;
+  } else {
+    checkPageBreak(70);
+    sectionTitle('Acknowledgement');
+    bodyText('I have read, understood, and agree to follow this Standard Operating Procedure in full.',{size:11});
+    y+=10;
+    doc.setDrawColor(...BORDER);
+    doc.line(margin,y,margin+210,y);
+    doc.line(margin+270,y,margin+380,y);
+    y+=12;
+    doc.setFontSize(8);
+    doc.setTextColor(...TEXT2);
+    doc.text('Employee Signature',margin,y);
+    doc.text('Date',margin+260,y);
+  }
+
+  // Footer on all pages
+  const pageCount=doc.internal.getNumberOfPages();
+  for(let i=1;i<=pageCount;i++){
+    doc.setPage(i);
+    footer(i);
+  }
+
+  const filename=(gen?.sop_number||sop.sop_number||sop.title||'SOP').replace(/[^a-z0-9]/gi,'_')+'_v'+(gen?.revision||sop.version||'1.0')+'.pdf';
+  doc.save(filename);
+}
+
+// ── SOP EDIT MODAL (title, license, departments — admin only, any status) ─────
+// ── SOP EDIT MODAL (state, license, departments — any status, admin/canCreate) ─
+function SOPEditModal({sop,cu,onClose,onSave}){
+  const initLic=LICENSES.find(l=>l.id===sop.license_id)||LICENSES.find(l=>l.name===sop.license_name)||null;
+  const[ef,setEf]=useState({
+    title:sop.title||'',
+    state:sop.state||initLic?.state||'Michigan',
+    license_ids:sop.license_id?[sop.license_id]:(initLic?[initLic.id]:[]),
+    depts:sop.visible_to_depts||sop.depts||[],
+  });
+  const[saving,setSaving]=useState(false);
+  const[error,setError]=useState('');
+
+  const stateLicenses=LICENSES.filter(l=>l.state===ef.state);
+
+  function toggleLicense(id){
+    setEf(p=>{
+      const cur=new Set(p.license_ids||[]);
+      cur.has(id)?cur.delete(id):cur.add(id);
+      return{...p,license_ids:[...cur]};
+    });
+  }
+  function toggleDept(d){
+    setEf(p=>{
+      const cur=new Set(p.depts||[]);
+      cur.has(d)?cur.delete(d):cur.add(d);
+      return{...p,depts:[...cur]};
+    });
+  }
+
+  async function save(){
+    if(!ef.title.trim()){setError('Title is required.');return;}
+    if((ef.license_ids||[]).length===0){setError('Select at least one license.');return;}
+    if((ef.depts||[]).length===0){setError('Select at least one department.');return;}
+    setSaving(true);setError('');
+    // Store first license as the primary license_id/license_name (for legacy single-license
+    // logic elsewhere), plus the full list as license_ids for multi-license SOPs.
+    const primaryLic=LICENSES.find(l=>l.id===ef.license_ids[0]);
+    const update={
+      title:ef.title.trim(),
+      state:ef.state,
+      license_id:ef.license_ids[0],
+      license_ids:ef.license_ids,
+      license_name:primaryLic?.name||sop.license_name,
+      depts:ef.depts,
+      visible_to_depts:ef.depts,
+      updated_at:new Date().toISOString(),
+      updated_by:cu.name,
+    };
+    try{
+      await db.update('pf_sops',sop.id,update);
+      onSave({...sop,...update});
+    }catch(e){
+      console.error('SOP edit save failed:',e);
+      setError('Save failed: '+e.message);
+    }
+    setSaving(false);
+  }
+
+  return el('div',{className:'mo',style:{zIndex:1100},onClick:ev=>ev.target===ev.currentTarget&&onClose()},
+    el('div',{className:'md',style:{width:600,maxHeight:'88vh',overflowY:'auto'}},
+      el('div',{className:'mh'},
+        el('div',{className:'mt2'},'Edit SOP'),
+        el('button',{className:'mc',onClick:onClose},'×'),
+      ),
+      el('div',{className:'mbd'},
+        el('div',{className:'fg'},
+          el('label',null,'Title *'),
+          el('input',{value:ef.title,onChange:ev=>setEf(p=>({...p,title:ev.target.value})),autoFocus:true,
+            style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'10px 14px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none'}}),
+        ),
+
+        el('div',{className:'fg'},
+          el('label',null,'State *'),
+          el('div',{style:{display:'flex',gap:8}},
+            ['Michigan','Missouri'].map(s=>el('button',{key:s,
+              onClick:()=>setEf(p=>({...p,state:s,license_ids:[]})), // reset licenses when state changes
+              style:{flex:1,padding:'9px',borderRadius:'var(--rs)',border:'2px solid',borderColor:ef.state===s?'var(--accent)':'var(--border)',background:ef.state===s?'rgba(30,58,95,.08)':'transparent',color:ef.state===s?'var(--accent)':'var(--text2)',fontFamily:'inherit',fontWeight:600,fontSize:13,cursor:'pointer',transition:'all .15s'}
+            },s))
+          ),
+        ),
+
+        el('div',{className:'fg'},
+          el('label',null,'License(s) — select all that apply *'),
+          el('div',{style:{display:'flex',flexDirection:'column',gap:6}},
+            stateLicenses.map(lic=>el('label',{key:lic.id,style:{display:'flex',alignItems:'center',gap:8,padding:'8px 12px',background:'var(--surface2)',border:'1px solid',borderColor:(ef.license_ids||[]).includes(lic.id)?'var(--accent)':'var(--border)',borderRadius:8,cursor:'pointer',transition:'all .15s'}},
+              el('input',{type:'checkbox',checked:(ef.license_ids||[]).includes(lic.id),onChange:()=>toggleLicense(lic.id),style:{accentColor:'var(--accent)'}}),
+              el('div',null,
+                el('div',{style:{fontSize:12,fontWeight:600,color:(ef.license_ids||[]).includes(lic.id)?'var(--accent)':'var(--text)'}},lic.name),
+                el('div',{style:{fontSize:11,color:'var(--text3)'}},lic.license_type),
+              )
+            )),
+          ),
+          stateLicenses.length===0&&el('div',{style:{fontSize:12,color:'var(--text3)'}},'No licenses configured for '+ef.state),
+        ),
+
+        el('div',{className:'fg'},
+          el('label',null,'Department(s) — who must see & acknowledge it *'),
+          el('div',{style:{fontSize:11,color:'var(--text3)',marginBottom:8,lineHeight:1.5}},
+            'Select any combination of top-level departments, mid-level departments, or specific micro-departments. Selecting a parent does not require selecting its children — only the items you check apply.'
+          ),
+          el('div',{style:{display:'flex',flexDirection:'column',gap:8,maxHeight:320,overflowY:'auto',paddingRight:4}},
+            Object.entries(DEPT_TREE).map(([gm,mothers])=>{
+              const gmSelected=(ef.depts||[]).includes(gm);
+              return el('div',{key:gm,style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:10,padding:10}},
+                // Grandmother (top-level) row
+                el('div',{
+                  onClick:()=>toggleDept(gm),
+                  style:{display:'flex',alignItems:'center',gap:8,cursor:'pointer',marginBottom:Object.keys(mothers).length>0?8:0,userSelect:'none'},
+                },
+                  el('div',{style:{width:16,height:16,borderRadius:4,border:'2px solid',borderColor:gmSelected?'var(--accent)':'var(--text3)',background:gmSelected?'var(--accent)':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}},
+                    gmSelected&&el('span',{style:{color:'#ffffff',fontSize:9,fontWeight:900}},'✓')
+                  ),
+                  el('span',{style:{fontSize:12,fontWeight:700,color:gmSelected?'var(--accent)':'var(--text)'}},gm),
+                  el('span',{style:{fontSize:10,color:'var(--text3)'}},'(top-level)'),
+                ),
+                // Mother (mid-level) + children (micro) rows
+                Object.keys(mothers).length>0&&el('div',{style:{paddingLeft:14,display:'flex',flexDirection:'column',gap:6}},
+                  Object.entries(mothers).map(([mother,children])=>{
+                    const mSelected=(ef.depts||[]).includes(mother);
+                    return el('div',{key:mother},
+                      el('div',{
+                        onClick:()=>toggleDept(mother),
+                        style:{display:'flex',alignItems:'center',gap:8,cursor:'pointer',marginBottom:children.length>0?5:0,userSelect:'none'},
+                      },
+                        el('div',{style:{width:14,height:14,borderRadius:4,border:'2px solid',borderColor:mSelected?'var(--blue)':'var(--text3)',background:mSelected?'var(--blue)':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}},
+                          mSelected&&el('span',{style:{color:'#fff',fontSize:8,fontWeight:900}},'✓')
+                        ),
+                        el('span',{style:{fontSize:12,fontWeight:600,color:mSelected?'#93c5fd':'var(--text2)'}},mother),
+                        el('span',{style:{fontSize:9,color:'var(--text3)'}},'(mid-level)'),
+                      ),
+                      children.length>0&&el('div',{style:{paddingLeft:22,display:'flex',flexWrap:'wrap',gap:4}},
+                        children.map(child=>{
+                          const cSelected=(ef.depts||[]).includes(child);
+                          return el('div',{key:child,
+                            onClick:()=>toggleDept(child),
+                            style:{padding:'3px 9px',borderRadius:14,border:'1px solid',fontSize:10.5,fontWeight:500,cursor:'pointer',userSelect:'none',transition:'all .15s',
+                              background:cSelected?'var(--green)':'var(--surface)',
+                              color:cSelected?'#fff':'var(--text3)',
+                              borderColor:cSelected?'var(--green)':'var(--border)',
+                            }
+                          },(cSelected?'✓ ':'')+child);
+                        })
+                      ),
+                    );
+                  })
+                ),
+              );
+            })
+          ),
+          (ef.depts||[]).length>0&&el('div',{style:{marginTop:8,display:'flex',flexWrap:'wrap',gap:4}},
+            el('span',{style:{fontSize:10,color:'var(--text3)',marginRight:4}},'Selected:'),
+            (ef.depts||[]).map(d=>el('span',{key:d,style:{background:'rgba(30,58,95,.1)',color:'var(--accent)',border:'1px solid rgba(30,58,95,.25)',borderRadius:4,padding:'1px 7px',fontSize:10,fontWeight:600}},d))
+          ),
+          (ef.depts||[]).length===0&&el('div',{style:{fontSize:11,color:'var(--red)',marginTop:4}},'Select at least one department'),
+        ),
+
+        el('div',{style:{background:'rgba(139,92,246,.06)',border:'1px solid rgba(139,92,246,.2)',borderRadius:8,padding:'10px 14px',fontSize:11,color:'var(--text2)'}},
+          '🔒 Only employees assigned to ',el('strong',{style:{color:'#c4b5fd'}},ef.state),' + the selected license(s) + the selected department(s) will see and be required to acknowledge this SOP.'
+        ),
+
+        error&&el('div',{style:{background:'rgba(239,68,68,.1)',border:'1px solid rgba(239,68,68,.3)',borderRadius:8,padding:'10px 14px',fontSize:13,color:'var(--red)',marginTop:10}},error),
+
+        el('div',{className:'mf'},
+          el('button',{className:'btn b-ghost',onClick:onClose},'Cancel'),
+          el('button',{className:'btn b-blue',onClick:save,disabled:saving},saving?'Saving...':'Save Changes'),
+        ),
+      ),
+    )
+  );
+}
+
+// ── CORRECTIVE ACTION PDF EXPORT ──────────────────────────────────────────────
+function exportCorrectiveActionPdf(ca){
+  const{jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:'pt',format:'letter'});
+  const W=612,H=792;
+  const margin=48;
+  let y=0;
+
+  const NAVY=[30,58,95],RED=[185,28,28],TEXT=[15,15,15],TEXT2=[75,85,99],LIGHT=[248,250,252],BORDER=[203,213,225];
+  const gen=ca.generated_content?JSON.parse(ca.generated_content):{};
+  const lic=LICENSES.find(l=>l.id===ca.license_id)||LICENSES.find(l=>l.name===ca.license_name);
+  const isMissouri=(lic?.state||ca.state)==='Missouri';
+  const companyName=isMissouri?'HMBF MANAGEMENT INC':'BLACK FOX MANUFACTURING';
+
+  function header(){
+    // Header background
+    doc.setFillColor(...NAVY);
+    doc.rect(0,0,W,80,'F');
+    // Red accent bar
+    doc.setFillColor(...RED);
+    doc.rect(0,78,W,3,'F');
+    // Company name
+    doc.setTextColor(255,255,255);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(15);
+    doc.text(companyName,margin,26);
+    // Subtitle
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(10);
+    doc.setTextColor(180,200,230);
+    doc.text('CORRECTIVE ACTION NOTICE',margin,48);
+    // CA number top right
+    doc.setTextColor(255,255,255);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(13);
+    doc.text(ca.ca_number||'DRAFT',W-margin,30,{align:'right'});
+    // Status badge top right
+    const statusTxt=ca.status==='acknowledged'?'COMPLETED':ca.status==='draft'?'DRAFT':'PENDING';
+    const statusCol=ca.status==='acknowledged'?[16,185,129]:ca.status==='draft'?[148,163,184]:[239,68,68];
+    doc.setFillColor(...statusCol);
+    doc.roundedRect(W-margin-60,38,62,16,4,4,'F');
+    doc.setTextColor(255,255,255);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(8);
+    doc.text(statusTxt,W-margin-29,49,{align:'center'});
+    y=100;
+  }
+
+  function footer(pageNum){
+    doc.setDrawColor(...BORDER);
+    doc.setLineWidth(0.5);
+    doc.line(margin,H-48,W-margin,H-48);
+    doc.setTextColor(...TEXT2);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(8);
+    doc.text('CONFIDENTIAL — '+(ca.license_name||companyName)+' — Internal HR Record',margin,H-32);
+    doc.text('Page '+pageNum,W-margin,H-32,{align:'right'});
+  }
+
+  function checkPageBreak(need){
+    if(y+need>H-65){doc.addPage();header();}
+  }
+
+  function sectionTitle(txt){
+    checkPageBreak(40);
+    y+=4;
+    doc.setFillColor(...LIGHT);
+    doc.rect(margin,y,W-margin*2,28,'F');
+    doc.setFillColor(...NAVY);
+    doc.rect(margin,y,4,28,'F');
+    doc.setTextColor(...NAVY);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(11);
+    doc.text(txt.toUpperCase(),margin+12,y+19);
+    y+=36;
+  }
+
+  function bodyText(txt,opts={}){
+    if(!txt||!txt.trim()) return;
+    const sz=opts.size||11;
+    doc.setTextColor(...(opts.color||TEXT));
+    doc.setFont('helvetica',opts.bold?'bold':'normal');
+    doc.setFontSize(sz);
+    const lh=sz*1.55;
+    const indent=opts.indent||0;
+    const lines=doc.splitTextToSize(txt,W-margin*2-indent);
+    checkPageBreak(lines.length*lh+10);
+    lines.forEach(line=>{doc.text(line,margin+indent,y);y+=lh;});
+    y+=opts.spaceAfter!==undefined?opts.spaceAfter:8;
+  }
+
+  function infoRow(label,value){
+    if(!value||String(value).trim()==='') return;
+    checkPageBreak(22);
+    const col1=margin,col2=margin+160;
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(9);
+    doc.setTextColor(...TEXT2);
+    doc.text(label.toUpperCase(),col1,y);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(11);
+    doc.setTextColor(...TEXT);
+    const valLines=doc.splitTextToSize(String(value),W-col2-margin);
+    valLines.forEach((l,i)=>{doc.text(l,col2,y+(i*13));});
+    y+=Math.max(20,valLines.length*13+4);
+  }
+
+  // ── PAGE 1 ──────────────────────────────────────────────────────────────────
+  header();
+
+  // Document title
+  doc.setTextColor(...TEXT);
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(20);
+  const titleLines=doc.splitTextToSize(ca.title||gen.title||'Corrective Action Notice',W-margin*2);
+  titleLines.forEach(l=>{doc.text(l,margin,y);y+=26;});
+  y+=6;
+
+  // Info block with subtle border
+  doc.setFillColor(...LIGHT);
+  doc.rect(margin,y,W-margin*2,1,'F');
+  y+=10;
+  const sevLabel={verbal_warning:'Verbal Warning (Documented)',written_warning:'Written Warning',final_warning:'Final Written Warning',suspension:'Suspension'};
+  infoRow('Employee',ca.employee_name);
+  infoRow('CA Number',ca.ca_number);
+  infoRow('License / Facility',ca.license_name);
+  infoRow('Violation Type',ca.violation_type);
+  infoRow('Severity',sevLabel[ca.severity]||ca.severity||'');
+  infoRow('Date Issued',ca.created_at?.slice(0,10)||'');
+  infoRow('Issued By',ca.issued_by||'');
+  infoRow('Status',ca.status==='acknowledged'?'Completed — Signed on '+ca.acknowledged_at?.slice(0,10):ca.status==='draft'?'Draft — Not yet sent':'Pending Employee Acknowledgement');
+  y+=4;
+  doc.setDrawColor(...BORDER);
+  doc.setLineWidth(0.5);
+  doc.line(margin,y,W-margin,y);
+  y+=18;
+
+  // Body sections
+  if(gen.incident_summary){sectionTitle('Incident Summary');bodyText(gen.incident_summary);}
+  if(gen.policy_reference){sectionTitle('Policy / SOP Violated');bodyText(gen.policy_reference);}
+  if(gen.expected_standard){sectionTitle('Expected Standard of Conduct');bodyText(gen.expected_standard);}
+
+  if((gen.corrective_steps||[]).length>0){
+    sectionTitle('Required Corrective Steps');
+    gen.corrective_steps.forEach((s,i)=>{
+      checkPageBreak(40);
+      // Step number badge
+      doc.setFillColor(...NAVY);
+      doc.circle(margin+10,y+4,9,'F');
+      doc.setTextColor(255,255,255);
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(9);
+      doc.text(String(i+1),margin+10,y+7,{align:'center'});
+      // Step text
+      doc.setTextColor(...TEXT);
+      doc.setFont('helvetica','normal');
+      doc.setFontSize(11);
+      const lines=doc.splitTextToSize(s,W-margin*2-28);
+      lines.forEach((l,li)=>{doc.text(l,margin+26,y+(li===0?4:4+li*16));});
+      y+=Math.max(24,lines.length*16+6);
+    });
+    y+=6;
+  }
+
+  if(gen.consequences_of_recurrence){sectionTitle('Consequences of Recurrence');bodyText(gen.consequences_of_recurrence);}
+  if(gen.support_offered){sectionTitle('Support & Resources Offered');bodyText(gen.support_offered);}
+
+  checkPageBreak(120);
+  sectionTitle('Employee Acknowledgement');
+  bodyText(gen.employee_acknowledgement_text||'I acknowledge that I have read and understand this Corrective Action Notice.',{size:11});
+  y+=10;
+  doc.setDrawColor(...TEXT2);
+  doc.line(margin,y,margin+200,y);
+  doc.line(margin+260,y,margin+360,y);
+  y+=12;
+  doc.setFontSize(8);
+  doc.setTextColor(...TEXT2);
+  if(ca.status==='acknowledged'){
+    if(ca.signature_image){
+      // Embed the drawn signature image above the line
+      try{
+        doc.addImage(ca.signature_image,'PNG',margin,y-32,100,28);
+      }catch(e){
+        // fallback to text if image fails
+        doc.setFont('helvetica','italic');
+        doc.setFontSize(15);
+        doc.setTextColor(30,30,30);
+        doc.text(ca.signature_name||ca.employee_name||'',margin+4,y-6);
+      }
+    } else {
+      doc.setFont('helvetica','italic');
+      doc.setFontSize(15);
+      doc.setTextColor(30,30,30);
+      doc.text(ca.signature_name||ca.employee_name||'',margin+4,y-6);
+    }
+    doc.setFont('helvetica','italic');
+    doc.setFontSize(13);
+    doc.setTextColor(30,30,30);
+    doc.text(ca.acknowledged_at?.slice(0,10)||'',margin+264,y-6);
+  }
+  doc.text('Employee Signature',margin,y);
+  doc.text('Date',margin+260,y);
+  if(ca.status==='acknowledged'){
+    y+=18;
+    doc.setFont('helvetica','bold');
+    doc.setTextColor(40,140,80);
+    doc.setFontSize(9);
+    doc.text('Electronically signed via Black Fox QMS on '+(ca.acknowledged_at?.slice(0,10)||''),margin,y);
+    y+=8;
+    doc.setFont('helvetica','normal');
+    doc.setTextColor(...TEXT2);
+    doc.text('Signature verified: '+ca.signature_name+' | Record ID: '+(ca.id||''),margin,y);
+  }
+
+  const pageCount=doc.internal.getNumberOfPages();
+  for(let i=1;i<=pageCount;i++){
+    doc.setPage(i);
+    footer(i);
+  }
+
+  const filename=(ca.ca_number||'CA').replace(/[^a-z0-9]/gi,'_')+'_'+(ca.employee_name||'employee').replace(/[^a-z0-9]/gi,'_')+'.pdf';
+  doc.save(filename);
+}
+
+// ── EMPLOYEE TRAINING REPORT PDF EXPORT ───────────────────────────────────────
+function exportEmployeeTrainingPdf(employee,applicableSOPs){
+  const{jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:'pt',format:'letter'});
+  const W=612,H=792;
+  const margin=50;
+  let y=0;
+
+  const DARK=[18,18,18],GOLD=[245,166,35],GREEN=[16,150,90],TEXT=[20,20,20],TEXT2=[90,90,90],BORDER=[210,210,215];
+
+  function header(){
+    doc.setFillColor(...DARK);
+    doc.rect(0,0,W,70,'F');
+    doc.setFillColor(...GOLD);
+    doc.rect(0,68,W,2,'F');
+    doc.setTextColor(...GOLD);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(16);
+    doc.text('Black Fox QMS',margin,32);
+    doc.setTextColor(230,230,230);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(9);
+    doc.text('Employee Training Report',margin,48);
+    doc.setTextColor(...GOLD);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(10);
+    doc.text(new Date().toISOString().slice(0,10),W-margin,32,{align:'right'});
+    y=95;
+  }
+
+  function footer(pageNum){
+    doc.setDrawColor(...BORDER);
+    doc.line(margin,H-50,W-margin,H-50);
+    doc.setTextColor(...TEXT2);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(7);
+    doc.text('CONFIDENTIAL — Employee Training Record',margin,H-35);
+    doc.text('Page '+pageNum,W-margin,H-35,{align:'right'});
+  }
+
+  function checkPageBreak(neededHeight){
+    if(y+neededHeight>H-70){
+      doc.addPage();
+      header();
+    }
+  }
+
+  header();
+
+  doc.setTextColor(...DARK);
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(18);
+  doc.text(employee.name,margin,y);
+  y+=22;
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(11);
+  doc.setTextColor(...TEXT2);
+  doc.text((RLABEL[employee.role]||employee.role)+(employee.dept?' · '+employee.dept:''),margin,y);
+  y+=20;
+
+  doc.setDrawColor(...BORDER);
+  doc.setLineWidth(0.5);
+  doc.line(margin,y,W-margin,y);
+  y+=16;
+
+  const acked=applicableSOPs.filter(s=>(s.acknowledgements||[]).some(a=>a.id===employee.id));
+  const pending=applicableSOPs.filter(s=>!(s.acknowledgements||[]).some(a=>a.id===employee.id));
+  const rate=applicableSOPs.length>0?Math.round(acked.length/applicableSOPs.length*100):0;
+
+  // Summary stat boxes
+  const boxW=(W-margin*2-16)/3;
+  function statBox(x,label,value,color){
+    doc.setFillColor(245,246,250);
+    doc.roundedRect?doc.roundedRect(x,y,boxW,54,4,4,'F'):doc.rect(x,y,boxW,54,'F');
+    doc.setTextColor(...color);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(20);
+    doc.text(String(value),x+12,y+30);
+    doc.setTextColor(...TEXT2);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(8.5);
+    doc.text(label.toUpperCase(),x+12,y+44);
+  }
+  statBox(margin,'SOPs Required',applicableSOPs.length,DARK);
+  statBox(margin+boxW+8,'Signed',acked.length,GREEN);
+  statBox(margin+(boxW+8)*2,'Compliance Rate',rate+'%',rate===100?GREEN:rate>=80?GOLD:[200,60,60]);
+  y+=70;
+
+  // Signed SOPs
+  if(acked.length>0){
+    checkPageBreak(30);
+    doc.setFillColor(245,246,250);
+    doc.rect(margin,y,W-margin*2,22,'F');
+    doc.setDrawColor(...GREEN);
+    doc.setLineWidth(2);
+    doc.line(margin,y,margin,y+22);
+    doc.setTextColor(...DARK);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(11);
+    doc.text('SIGNED & ACKNOWLEDGED ('+acked.length+')',margin+10,y+15);
+    y+=32;
+
+    acked.forEach(s=>{
+      const a=(s.acknowledgements||[]).find(a=>a.id===employee.id);
+      checkPageBreak(28);
+      doc.setFillColor(...GREEN);
+      doc.circle(margin+8,y+2,7,'F');
+      doc.setTextColor(255,255,255);
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(9);
+      doc.text('OK',margin+8,y+4.5,{align:'center'});
+      doc.setTextColor(...TEXT);
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(10);
+      doc.text(s.title,margin+22,y+4);
+      doc.setFont('helvetica','normal');
+      doc.setFontSize(8.5);
+      doc.setTextColor(...TEXT2);
+      doc.text('Rev '+(s.version||'1.0')+' — Signed '+(a?.at?.slice(0,10)||''),margin+22,y+16);
+      y+=26;
+    });
+    y+=8;
+  }
+
+  // Pending SOPs
+  if(pending.length>0){
+    checkPageBreak(30);
+    doc.setFillColor(245,246,250);
+    doc.rect(margin,y,W-margin*2,22,'F');
+    doc.setDrawColor(200,60,60);
+    doc.setLineWidth(2);
+    doc.line(margin,y,margin,y+22);
+    doc.setTextColor(...DARK);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(11);
+    doc.text('PENDING ACKNOWLEDGEMENT ('+pending.length+')',margin+10,y+15);
+    y+=32;
+
+    pending.forEach(s=>{
+      checkPageBreak(24);
+      doc.setDrawColor(200,60,60);
+      doc.setLineWidth(1.5);
+      doc.circle(margin+8,y+2,7);
+      doc.setTextColor(...TEXT);
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(10);
+      doc.text(s.title,margin+22,y+4);
+      doc.setFont('helvetica','normal');
+      doc.setFontSize(8.5);
+      doc.setTextColor(...TEXT2);
+      doc.text('Rev '+(s.version||'1.0')+' — Not yet signed',margin+22,y+16);
+      y+=26;
+    });
+  }
+
+  const pageCount=doc.internal.getNumberOfPages();
+  for(let i=1;i<=pageCount;i++){
+    doc.setPage(i);
+    footer(i);
+  }
+
+  doc.save('Training_Report_'+employee.name.replace(/[^a-z0-9]/gi,'_')+'.pdf');
+}
+
+// ── MANAGER TYPEAHEAD (up to 5, search by typing 3+ chars) ───────────────────
+function ManagerTypeahead({editU,setEditU,users}){
+  const [query,setQuery]=React.useState('');
+  const [open,setOpen]=React.useState(false);
+  const inputRef=React.useRef(null);
+  const dropRef=React.useRef(null);
+  const mgrs=editU.managers||[];
+  const canAdd=mgrs.length<5;
+
+  const filtered=React.useMemo(()=>{
+    if(query.length<3)return[];
+    const q=query.toLowerCase();
+    return users.filter(u=>
+      u.approved&&
+      u.id!==editU.id&&
+      !mgrs.find(m=>m.id===u.id)&&
+      u.name&&u.name.toLowerCase().includes(q)
+    ).slice(0,8);
+  },[query,users,editU.id,mgrs]);
+
+  // close on outside click
+  React.useEffect(()=>{
+    function handler(e){
+      if(dropRef.current&&!dropRef.current.contains(e.target)&&!inputRef.current.contains(e.target)){
+        setOpen(false);
+      }
+    }
+    document.addEventListener('mousedown',handler);
+    return()=>document.removeEventListener('mousedown',handler);
+  },[]);
+
+  function addManager(u){
+    setEditU(p=>({...p,managers:[...(p.managers||[]),{id:u.id,name:u.name,email:u.email,role:u.role}]}));
+    setQuery('');
+    setOpen(false);
+    inputRef.current&&inputRef.current.focus();
+  }
+
+  return el('div',{className:'fg'},
+    el('label',null,'Reports To (up to 5)'),
+    canAdd&&el('div',{style:{position:'relative'}},
+      el('input',{
+        ref:inputRef,
+        type:'text',
+        value:query,
+        placeholder:'Type 3+ letters to search...',
+        onChange:e=>{setQuery(e.target.value);setOpen(true);},
+        onFocus:()=>query.length>=3&&setOpen(true),
+        style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13,boxSizing:'border-box'}
+      }),
+      open&&filtered.length>0&&el('div',{
+        ref:dropRef,
+        style:{position:'absolute',top:'calc(100% + 4px)',left:0,right:0,background:'var(--surface)',border:'1px solid var(--border)',borderRadius:'var(--rs)',zIndex:999,maxHeight:220,overflowY:'auto',boxShadow:'0 4px 16px rgba(0,0,0,0.4)'}
+      },
+        filtered.map(u=>el('div',{
+          key:u.id,
+          onMouseDown:e=>{e.preventDefault();addManager(u);},
+          style:{padding:'9px 13px',cursor:'pointer',fontSize:13,display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:'1px solid var(--border)'}
+        },
+          el('span',{style:{fontWeight:600}},u.name),
+          el('span',{style:{fontSize:11,color:'var(--text2)',marginLeft:8}},RLABEL[u.role]||u.role)
+        ))
+      ),
+      open&&query.length>=3&&filtered.length===0&&el('div',{
+        style:{position:'absolute',top:'calc(100% + 4px)',left:0,right:0,background:'var(--surface)',border:'1px solid var(--border)',borderRadius:'var(--rs)',zIndex:999,padding:'10px 13px',fontSize:12,color:'var(--text3)'}
+      },'No matching users found')
+    ),
+    !canAdd&&el('div',{style:{fontSize:12,color:'var(--text3)',marginTop:4}},'Max 5 managers reached'),
+    mgrs.length>0&&el('div',{style:{marginTop:8,display:'flex',flexDirection:'column',gap:6}},
+      mgrs.map((m,i)=>el('div',{key:m.id,style:{display:'flex',alignItems:'center',justifyContent:'space-between',background:'var(--surface2)',borderRadius:8,padding:'8px 12px'}},
+        el('div',{style:{display:'flex',alignItems:'center',gap:8}},
+          el('div',{style:{background:'var(--accent)',color:'#ffffff',borderRadius:5,padding:'2px 7px',fontSize:10,fontWeight:800}},'M'+(i+1)),
+          el('div',null,
+            el('div',{style:{fontSize:12,fontWeight:600}},m.name),
+            el('div',{style:{fontSize:11,color:'var(--text2)'}},RLABEL[m.role]||m.role)
+          )
+        ),
+        el('button',{style:{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:18,lineHeight:1},onClick:()=>setEditU(p=>({...p,managers:p.managers.filter(x=>x.id!==m.id)}))},'×')
+      ))
+    ),
+    mgrs.length===0&&el('div',{style:{fontSize:12,color:'var(--text3)',marginTop:6}},'No managers assigned'),
+  );
+}
+
+// ── EMPLOYEE PROFILE MODAL (Training + Corrective Actions combined) ──────────
+function EmployeeProfileModal({employee,cu,users,publishedSOPs,corrective,showCorrectiveSection,targetUsersForSop,onClose,onOpenCA}){
+  const isAdmin=cu.role==='admin';
+  const applicableSOPs=publishedSOPs.filter(s=>targetUsersForSop(s).some(t=>t.id===employee.id));
+  const acked=applicableSOPs.filter(s=>(s.acknowledgements||[]).some(a=>a.id===employee.id));
+  const pending=applicableSOPs.filter(s=>!(s.acknowledgements||[]).some(a=>a.id===employee.id));
+  const rate=applicableSOPs.length>0?Math.round(acked.length/applicableSOPs.length*100):0;
+
+  const caPending=corrective.filter(c=>c.status!=='acknowledged');
+  const caAcked=corrective.filter(c=>c.status==='acknowledged');
+
+  return el('div',{className:'mo',style:{zIndex:1100},onClick:ev=>ev.target===ev.currentTarget&&onClose()},
+    el('div',{className:'md',style:{width:760,maxHeight:'92vh',overflowY:'auto'}},
+      el('div',{className:'mh'},
+        el('div',{style:{display:'flex',alignItems:'center',gap:10}},
+          el('div',{className:'avatar',style:{background:avatarColor(employee.name),width:38,height:38,fontSize:15}},employee.name.charAt(0).toUpperCase()),
+          el('div',null,
+            el('div',{className:'mt2'},employee.name),
+            el('div',{style:{fontSize:11,color:'var(--text3)'}},(RLABEL[employee.role]||employee.role)+(employee.dept?' · '+employee.dept:'')+(employee.email?' · '+employee.email:'')),
+          ),
+        ),
+        el('button',{className:'mc',onClick:onClose},'×'),
+      ),
+
+      el('div',{className:'mbd'},
+
+        // Summary stat row
+        el('div',{style:{display:'grid',gridTemplateColumns:showCorrectiveSection?'repeat(4,1fr)':'repeat(2,1fr)',gap:8,marginBottom:20}},
+          [
+            ['SOPs Signed',acked.length+'/'+applicableSOPs.length,'var(--accent)'],
+            ['Compliance Rate',rate+'%',rate===100?'var(--green)':rate>=80?'var(--accent)':'var(--red)'],
+            ...(showCorrectiveSection?[
+              ['Corrective Actions',corrective.length,corrective.length>0?'var(--red)':'var(--text2)'],
+              ['Pending Signatures',caPending.length+pending.length,(caPending.length+pending.length)>0?'var(--red)':'var(--green)'],
+            ]:[]),
+          ].map(([label,val,color])=>el('div',{key:label,style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:10,padding:'12px 14px',textAlign:'center'}},
+            el('div',{style:{fontSize:20,fontWeight:800,color}},val),
+            el('div',{style:{fontSize:10,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'.5px',marginTop:3}},label),
+          ))
+        ),
+
+        // ── TRAINING SECTION ───────────────────────────────────────────────
+        el('div',{style:{fontSize:12,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:8,display:'flex',alignItems:'center',gap:6}},'🎓 Training & SOP Acknowledgements'),
+        applicableSOPs.length===0?el('div',{style:{fontSize:12,color:'var(--text3)',marginBottom:20}},"No SOPs apply to this employee's license/department."):
+        el('div',{style:{display:'flex',flexDirection:'column',gap:5,marginBottom:20}},
+          acked.map(s=>{
+            const a=(s.acknowledgements||[]).find(a=>a.id===employee.id);
+            return el('div',{key:s.id,style:{display:'flex',justifyContent:'space-between',alignItems:'center',background:'var(--surface2)',border:'1px solid var(--border)',borderLeft:'3px solid var(--green)',borderRadius:8,padding:'8px 12px'}},
+              el('div',null,
+                el('div',{style:{fontSize:12,fontWeight:600}},s.title),
+                el('div',{style:{fontSize:10,color:'var(--text3)'}},'Rev '+(s.version||'1.0')),
+              ),
+              el('div',{style:{fontSize:11,color:'var(--green)',fontWeight:600}},'✓ Signed '+(a?.at?.slice(0,10)||'')),
+            );
+          }),
+          pending.map(s=>el('div',{key:s.id,style:{display:'flex',justifyContent:'space-between',alignItems:'center',background:'var(--surface2)',border:'1px solid var(--border)',borderLeft:'3px solid var(--red)',borderRadius:8,padding:'8px 12px'}},
+            el('div',null,
+              el('div',{style:{fontSize:12,fontWeight:600}},s.title),
+              el('div',{style:{fontSize:10,color:'var(--text3)'}},'Rev '+(s.version||'1.0')),
+            ),
+            el('div',{style:{fontSize:11,color:'var(--red)',fontWeight:600}},'Pending'),
+          )),
+        ),
+
+        // ── CORRECTIVE ACTIONS SECTION (Admin-only) ────────────────────────
+        showCorrectiveSection&&el('div',{style:{fontSize:12,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:8,display:'flex',alignItems:'center',gap:6}},'⚖️ Corrective Action History'),
+        showCorrectiveSection&&(corrective.length===0?el('div',{style:{fontSize:12,color:'var(--text3)'}},'No corrective actions on record for this employee.'):
+        el('div',{style:{display:'flex',flexDirection:'column',gap:6}},
+          corrective.map(c=>el('div',{key:c.id,
+            onClick:()=>onOpenCA(c),
+            style:{background:'var(--surface)',border:'1px solid var(--border)',borderLeft:'3px solid '+(c.status==='acknowledged'?'var(--green)':'var(--red)'),borderRadius:8,padding:'10px 14px',cursor:'pointer',transition:'all .15s'},
+            onMouseEnter:ev=>ev.currentTarget.style.borderColor='rgba(30,58,95,.25)',
+            onMouseLeave:ev=>ev.currentTarget.style.borderColor='var(--border)',
+          },
+            el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},
+              el('div',null,
+                el('div',{style:{display:'flex',gap:6,marginBottom:4,flexWrap:'wrap'}},
+                  el('span',{style:{background:c.status==='acknowledged'?'rgba(16,185,129,.1)':c.status==='draft'?'rgba(100,116,139,.1)':'rgba(245,158,11,.1)',color:c.status==='acknowledged'?'var(--green)':c.status==='draft'?'var(--text2)':'#d97706',border:'1px solid',borderColor:c.status==='acknowledged'?'rgba(16,185,129,.3)':c.status==='draft'?'rgba(100,116,139,.3)':'rgba(245,158,11,.3)',borderRadius:4,padding:'2px 7px',fontSize:10,fontWeight:700}},c.status==='acknowledged'?'✅ Completed':c.status==='draft'?'📝 Draft':'⏳ Pending'),
+                  el('span',{style:{background:'var(--surface2)',color:'var(--text2)',border:'1px solid var(--border)',borderRadius:4,padding:'2px 7px',fontSize:10}},c.ca_number),
+                  el('span',{style:{background:'var(--surface2)',color:'var(--text2)',border:'1px solid var(--border)',borderRadius:4,padding:'2px 7px',fontSize:10}},c.violation_type),
+                ),
+                el('div',{style:{fontSize:13,fontWeight:600}},c.title),
+              ),
+              el('div',{style:{fontSize:10,color:'var(--text3)',flexShrink:0,marginLeft:10}},c.created_at?.slice(0,10)),
+            ),
+          ))
+        )),
+      ),
+    )
+  );
+}
+
+// ── MY DOCUMENTS (personal view — employee sees only their own corrective actions) ──
+function MyDocuments({cu,corrective,setCorrective}){
+  const[sel,setSel]=useState(null);
+  const[showSignModal,setShowSignModal]=useState(false);
+  const[signatureName,setSignatureName]=useState('');
+
+  // Hard scope: only records issued to this specific person, regardless of role.
+  const myRecords=corrective.filter(c=>c.employee_id===cu.id);
+
+  if(!sel){
+    return el('div',null,
+      el('div',{className:'ph'},
+        el('div',null,
+          el('div',{className:'pt'},'My Documents'),
+          el('div',{className:'ps'},'Personnel records issued to you — only visible to you and Admin'),
+        ),
+      ),
+      myRecords.length===0?el('div',{className:'empty'},el('div',{className:'eico'},'📁'),el('div',{className:'etxt'},'No documents on file')):
+      el('div',{style:{display:'flex',flexDirection:'column',gap:6}},
+        myRecords.map(c=>el('div',{key:c.id,onClick:()=>setSel(c),style:{background:'var(--surface)',border:'1px solid var(--border)',borderLeft:'3px solid '+(c.status==='acknowledged'?'var(--green)':'var(--red)'),borderRadius:10,padding:'14px 16px',cursor:'pointer',transition:'all .15s'},onMouseEnter:ev=>ev.currentTarget.style.borderColor='rgba(30,58,95,.25)',onMouseLeave:ev=>ev.currentTarget.style.borderColor='var(--border)'},
+          el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},
+            el('div',{style:{flex:1}},
+              el('div',{style:{display:'flex',gap:6,marginBottom:5,flexWrap:'wrap'}},
+                el('span',{style:{background:c.status==='acknowledged'?'rgba(16,185,129,.1)':c.status==='draft'?'rgba(100,116,139,.1)':'rgba(245,158,11,.1)',color:c.status==='acknowledged'?'var(--green)':c.status==='draft'?'var(--text2)':'#d97706',border:'1px solid',borderColor:c.status==='acknowledged'?'rgba(16,185,129,.3)':c.status==='draft'?'rgba(100,116,139,.3)':'rgba(245,158,11,.3)',borderRadius:4,padding:'2px 7px',fontSize:11,fontWeight:700}},c.status==='acknowledged'?'✅ Completed':c.status==='draft'?'📝 Draft':'⚠️ Action Required'),
+                el('span',{style:{background:'var(--surface2)',color:'var(--text2)',border:'1px solid var(--border)',borderRadius:4,padding:'2px 7px',fontSize:11}},c.ca_number),
+              ),
+              el('div',{style:{fontSize:14,fontWeight:700,marginBottom:3}},c.title),
+            ),
+            el('div',{style:{fontSize:11,color:'var(--text3)',flexShrink:0,marginLeft:12}},c.created_at?.slice(0,10)),
+          ),
+        ))
+      ),
+    );
+  }
+
+  // ── DETAIL VIEW ───────────────────────────────────────────────────────────
+  const gen=sel.generated_content?JSON.parse(sel.generated_content):{};
+  const canAck=sel.status!=='acknowledged';
+
+  return el('div',null,
+    el('button',{className:'btn b-ghost btn-sm',onClick:()=>setSel(null),style:{marginBottom:14}},'← Back to My Documents'),
+
+    el('div',{style:{background:'rgba(239,68,68,.06)',border:'1px solid rgba(239,68,68,.2)',borderRadius:10,padding:'16px 18px',marginBottom:16}},
+      el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:8}},
+        el('div',null,
+          el('div',{style:{fontSize:11,fontWeight:700,color:'var(--red)',textTransform:'uppercase',letterSpacing:'.8px',marginBottom:4}},sel.ca_number),
+          el('div',{style:{fontSize:18,fontWeight:800}},sel.title),
+          el('div',{style:{display:'flex',gap:10,flexWrap:'wrap',marginTop:6}},
+            el('span',{style:{fontSize:12,color:'var(--text2)'}},'Issued: '+sel.created_at?.slice(0,10)),
+          ),
+        ),
+        el('span',{style:{background:sel.status==='acknowledged'?'rgba(16,185,129,.1)':sel.status==='draft'?'rgba(100,116,139,.1)':'rgba(245,158,11,.1)',color:sel.status==='acknowledged'?'var(--green)':sel.status==='draft'?'var(--text2)':'#d97706',border:'1px solid',borderColor:sel.status==='acknowledged'?'rgba(16,185,129,.3)':sel.status==='draft'?'rgba(100,116,139,.3)':'rgba(245,158,11,.3)',borderRadius:6,padding:'5px 12px',fontSize:12,fontWeight:700}},sel.status==='acknowledged'?'✅ Completed — '+sel.acknowledged_at?.slice(0,10):sel.status==='draft'?'📝 Draft':'⏳ Pending Acknowledgement'),
+      ),
+    ),
+
+    sel.status==='acknowledged'&&el('div',{style:{background:'rgba(16,185,129,.06)',border:'1px solid rgba(16,185,129,.25)',borderRadius:10,padding:'14px 18px',marginBottom:16}},
+      el('div',{style:{fontSize:11,fontWeight:700,color:'var(--green)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:8}},'Signed Acknowledgement'),
+      el('div',{style:{display:'flex',alignItems:'baseline',gap:16,flexWrap:'wrap'}},
+        el('div',null,
+          el('div',{style:{fontFamily:'cursive',fontSize:22,color:'var(--text)',borderBottom:'1px solid var(--border2)',paddingBottom:4,marginBottom:3}},sel.signature_name||sel.employee_name),
+          el('div',{style:{fontSize:10,color:'var(--text3)'}},'Employee Signature'),
+        ),
+        el('div',null,
+          el('div',{style:{fontFamily:'cursive',fontSize:18,color:'var(--text)',borderBottom:'1px solid var(--border2)',paddingBottom:4,marginBottom:3}},sel.acknowledged_at?.slice(0,10)),
+          el('div',{style:{fontSize:10,color:'var(--text3)'}},'Date'),
+        ),
+      ),
+    ),
+
+    [['Incident Summary',gen.incident_summary],['Policy/SOP Violated',gen.policy_reference],['Expected Standard',gen.expected_standard]].filter(([,v])=>v).map(([label,val])=>
+      el('div',{key:label,style:{marginBottom:12}},
+        el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:5}},label),
+        el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:'10px 14px',fontSize:13,lineHeight:1.6,color:'var(--text2)'}},val),
+      )
+    ),
+
+    (gen.corrective_steps||[]).length>0&&el('div',{style:{marginBottom:12}},
+      el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:6}},'Corrective Steps Required'),
+      gen.corrective_steps.map((s,i)=>el('div',{key:i,style:{display:'flex',gap:8,marginBottom:6,alignItems:'flex-start'}},
+        el('div',{style:{width:20,height:20,borderRadius:'50%',background:'var(--accent)',color:'#000',display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:800,flexShrink:0,marginTop:1}},i+1),
+        el('div',{style:{fontSize:13,color:'var(--text2)',lineHeight:1.5}},s),
+      )),
+    ),
+
+    [['Consequences if Repeated',gen.consequences_of_recurrence],['Support Offered',gen.support_offered]].filter(([,v])=>v).map(([label,val])=>
+      el('div',{key:label,style:{marginBottom:12}},
+        el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:5}},label),
+        el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:'10px 14px',fontSize:13,lineHeight:1.6,color:'var(--text2)'}},val),
+      )
+    ),
+
+    gen.employee_acknowledgement_text&&el('div',{style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:10,padding:'14px 16px',marginTop:16,marginBottom:16}},
+      el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:6}},'Acknowledgement Statement'),
+      el('div',{style:{fontSize:12,color:'var(--text2)',lineHeight:1.6,fontStyle:'italic'}},gen.employee_acknowledgement_text),
+    ),
+
+    el('div',{style:{display:'flex',gap:8,marginTop:16}},
+      el('button',{className:'btn b-ghost',onClick:()=>exportCorrectiveActionPdf(sel)},'📄 Download PDF'),
+      canAck&&el('button',{
+        onClick:()=>{setSignatureName(cu.name);setShowSignModal(true);},
+        style:{background:'var(--green)',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'10px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer'}
+      },'I Have Read and Understood This Notice'),
+      !canAck&&el('div',{style:{fontSize:12,color:'var(--green)',fontWeight:600,display:'flex',alignItems:'center'}},'This document has been signed and is locked'),
+    ),
+
+    showSignModal&&el('div',{className:'mo',style:{zIndex:1200},onClick:ev=>ev.target===ev.currentTarget&&setShowSignModal(false)},
+      el('div',{className:'md',style:{width:480}},
+        el('div',{className:'mh'},
+          el('div',{className:'mt2'},'Sign & Acknowledge'),
+          el('button',{className:'mc',onClick:()=>setShowSignModal(false)},'×'),
+        ),
+        el('div',{className:'mbd'},
+          el('div',{style:{fontSize:13,color:'var(--text2)',marginBottom:16,lineHeight:1.6}},
+            gen.employee_acknowledgement_text||'I acknowledge that I have read and understand this Corrective Action Notice.'
+          ),
+          el('div',{className:'fg'},
+            el('label',null,'Sign below to acknowledge *'),
+            el(SignaturePad,{
+              label:'Draw your signature to confirm you have read and understand this notice',
+              onSave:dataUrl=>{setSignatureName(cu.name);window._caSigData=dataUrl;},
+              onClear:()=>{setSignatureName('');window._caSigData=null;},
+            }),
+            el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:6}},'Signing as: '+cu.name+' · Date: '+new Date().toISOString().slice(0,10)),
+          ),
+          el('div',{className:'mf'},
+            el('button',{className:'btn b-ghost',onClick:()=>{setShowSignModal(false);setSignatureName('');window._caSigData=null;}},'Cancel'),
+            el('button',{
+              disabled:!signatureName,
+              onClick:async()=>{
+                const update={status:'acknowledged',acknowledged_at:new Date().toISOString(),signature_name:signatureName.trim(),signature_image:window._caSigData||null,updated_at:new Date().toISOString(),updated_by:cu.name};
+                try{
+                  await db.update('pf_qms_corrective',sel.id,update);
+                  setCorrective(p=>p.map(c=>c.id===sel.id?{...c,...update}:c));
+                  setSel(p=>({...p,...update}));
+                  setShowSignModal(false);
+                  window._caSigData=null;
+                }catch(e){console.error(e);alert('Failed to save acknowledgement: '+e.message);}
+              },
+              style:{background:signatureName?'var(--green)':'rgba(16,185,129,.3)',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'10px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:signatureName?'pointer':'not-allowed'}
+            },'Sign & Submit'),
+          ),
+        ),
+      )
+    ),
+  );
+}
+
+// ── LICENSE-WIDE COMPLIANCE SNAPSHOT PDF ──────────────────────────────────────
+// One-click audit-ready report: every active SOP for a license, every employee
+// who's required to have signed it, and who has/hasn't — with timestamps.
+// This is the document you hand an inspector who walks in unannounced.
+function exportComplianceSnapshotPdf(license,publishedSOPs,scopeUsers,targetUsersForSop){
+  const{jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:'pt',format:'letter'});
+  const W=612,H=792;
+  const margin=50;
+  let y=0;
+
+  const DARK=[18,18,18],GOLD=[245,166,35],GREEN=[16,150,90],RED=[200,60,60],TEXT=[20,20,20],TEXT2=[90,90,90],BORDER=[210,210,215];
+
+  function header(){
+    doc.setFillColor(...DARK);
+    doc.rect(0,0,W,70,'F');
+    doc.setFillColor(...GOLD);
+    doc.rect(0,68,W,2,'F');
+    doc.setTextColor(...GOLD);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(16);
+    doc.text('Black Fox QMS',margin,32);
+    doc.setTextColor(230,230,230);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(9);
+    doc.text('Compliance Snapshot — SOP Training Status',margin,48);
+    doc.setTextColor(...GOLD);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(10);
+    doc.text(new Date().toISOString().slice(0,10),W-margin,32,{align:'right'});
+    y=95;
+  }
+
+  function footer(pageNum){
+    doc.setDrawColor(...BORDER);
+    doc.line(margin,H-50,W-margin,H-50);
+    doc.setTextColor(...TEXT2);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(7);
+    doc.text('CONFIDENTIAL — Generated for regulatory/audit purposes — '+license.name,margin,H-35);
+    doc.text('Page '+pageNum,W-margin,H-35,{align:'right'});
+  }
+
+  function checkPageBreak(neededHeight){
+    if(y+neededHeight>H-70){
+      doc.addPage();
+      header();
+    }
+  }
+
+  header();
+
+  doc.setTextColor(...DARK);
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(18);
+  doc.text(license.name,margin,y);
+  y+=20;
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(11);
+  doc.setTextColor(...TEXT2);
+  doc.text(license.state+' — '+(license.license_type||''),margin,y);
+  y+=22;
+
+  doc.setDrawColor(...BORDER);
+  doc.setLineWidth(0.5);
+  doc.line(margin,y,W-margin,y);
+  y+=16;
+
+  // Overall summary stats across all SOPs for this license
+  let totalRequired=0,totalSigned=0;
+  const sopStats=publishedSOPs.map(s=>{
+    const targets=targetUsersForSop(s).filter(t=>scopeUsers.some(u=>u.id===t.id));
+    const signed=targets.filter(t=>(s.acknowledgements||[]).some(a=>a.id===t.id));
+    totalRequired+=targets.length;
+    totalSigned+=signed.length;
+    return{sop:s,targets,signed};
+  });
+  const overallRate=totalRequired>0?Math.round(totalSigned/totalRequired*100):100;
+
+  const boxW=(W-margin*2-16)/3;
+  function statBox(x,label,value,color){
+    doc.setFillColor(245,246,250);
+    doc.rect(x,y,boxW,54,'F');
+    doc.setTextColor(...color);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(20);
+    doc.text(String(value),x+12,y+30);
+    doc.setTextColor(...TEXT2);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(8.5);
+    doc.text(label.toUpperCase(),x+12,y+44);
+  }
+  statBox(margin,'Active SOPs',publishedSOPs.length,DARK);
+  statBox(margin+boxW+8,'Team Members in Scope',scopeUsers.length,DARK);
+  statBox(margin+(boxW+8)*2,'Overall Sign-Off Rate',overallRate+'%',overallRate===100?GREEN:overallRate>=90?GOLD:RED);
+  y+=72;
+
+  // Per-SOP breakdown
+  sopStats.forEach(({sop,targets,signed})=>{
+    checkPageBreak(50);
+    const rate=targets.length>0?Math.round(signed.length/targets.length*100):100;
+    doc.setFillColor(245,246,250);
+    doc.rect(margin,y,W-margin*2,28,'F');
+    doc.setDrawColor(...(rate===100?GREEN:rate>=80?GOLD:RED));
+    doc.setLineWidth(2.5);
+    doc.line(margin,y,margin,y+28);
+    doc.setTextColor(...DARK);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(11);
+    doc.text(sop.title,margin+12,y+13);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(...TEXT2);
+    doc.text('Rev '+(sop.version||'1.0')+' — Published '+(sop.published_at?.slice(0,10)||sop.created_at?.slice(0,10)||''),margin+12,y+24);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(11);
+    doc.setTextColor(...(rate===100?GREEN:rate>=80?GOLD:RED));
+    doc.text(signed.length+'/'+targets.length+' signed ('+rate+'%)',W-margin-12,y+17,{align:'right'});
+    y+=34;
+
+    // List the people who have NOT signed — this is the actionable part of the report
+    const unsigned=targets.filter(t=>!signed.some(s2=>s2.id===t.id));
+    if(unsigned.length>0){
+      checkPageBreak(unsigned.length*13+10);
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(8);
+      doc.setTextColor(...RED);
+      doc.text('PENDING SIGNATURE:',margin+12,y);
+      y+=12;
+      doc.setFont('helvetica','normal');
+      doc.setFontSize(8.5);
+      doc.setTextColor(...TEXT);
+      unsigned.forEach(u=>{
+        checkPageBreak(13);
+        doc.text('• '+u.name+(u.dept?' ('+u.dept+')':''),margin+18,y);
+        y+=12.5;
+      });
+    }
+    y+=10;
+  });
+
+  if(publishedSOPs.length===0){
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(11);
+    doc.setTextColor(...TEXT2);
+    doc.text('No published SOPs apply to this license.',margin,y);
+  }
+
+  const pageCount=doc.internal.getNumberOfPages();
+  for(let i=1;i<=pageCount;i++){
+    doc.setPage(i);
+    footer(i);
+  }
+
+  doc.save('Compliance_Snapshot_'+license.name.replace(/[^a-z0-9]/gi,'_')+'_'+new Date().toISOString().slice(0,10)+'.pdf');
+}
+
+// ── SOP REVISION MODAL ────────────────────────────────────────────────────────
+function SOPReviseModal({sop,cu,onClose,onSave}){
+  const[step,setStep]=useState(1); // 1=describe changes, 2=generating, 3=review
+  const[changeRequest,setChangeRequest]=useState('');
+  const[generating,setGenerating]=useState(false);
+  const[error,setError]=useState('');
+  const[revisedSOP,setRevisedSOP]=useState(null);
+  const[editedSOP,setEditedSOP]=useState(null);
+  const[editMode,setEditMode]=useState(false);
+  const[saving,setSaving]=useState(false);
+
+  let original=null;
+  try{ original=sop.generated_content?JSON.parse(sop.generated_content):null; }catch(e){ original=null; }
+  const license=LICENSES.find(l=>l.id===sop.license_id)||LICENSES.find(l=>l.name===sop.license_name)||LICENSES[0];
+  const state=sop.state||license.state;
+  const nextRevision=(()=>{
+    const cur=parseFloat(sop.version||'1.0');
+    return (cur+0.1).toFixed(1);
+  })();
+
+  async function generateRevision(){
+    if(!changeRequest.trim()){setError('Please describe what needs to change.');return;}
+    setGenerating(true);setError('');setStep(2);
+
+    const _origData=original||{title:sop.title,steps:sop.steps||[],description:sop.description||''};
+    const prompt=`You are revising an existing cannabis SOP. Current SOP (JSON): ${JSON.stringify(_origData)}
+
+LICENSE: ${license.name} (${state})
+REGULATORY CONTEXT: ${STATE_REGS[state].agency} — ${STATE_REGS[state].code}
+
+REQUESTED CHANGES: ${changeRequest}
+
+Return a REVISED version as JSON only (no markdown). Increment revision to "${nextRevision}". Add entry to revision_history dated ${new Date().toISOString().slice(0,10)}. Keep all unchanged fields identical. Fields: sop_number, title, revision, effective_date, review_frequency, department, license_name, state, regulatory_references, purpose, scope, responsibilities, definitions, required_materials, steps (each: step_number,title,instruction,regulatory_note,critical), quality_checks, documentation_required, deviation_procedure, training_requirements, revision_history.`;
+
+    try{
+      const res=await fetch(`${SUPA_URL}/functions/v1/claude-proxy`,{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPA_KEY},
+        body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:4000,messages:[{role:'user',content:prompt}]}),
+      });
+      const data=await res.json();
+      if(!res.ok||data.error){const msg=data.error?.message||data.message||(typeof data.error==='string'?data.error:null)||('HTTP '+res.status);throw new Error(msg);}
+      const raw=data.content?.[0]?.text||'';
+      let clean=raw.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+      if(!clean.endsWith('}')){
+        const lastBrace=clean.lastIndexOf('}');
+        if(lastBrace>0){
+          clean=clean.slice(0,lastBrace+1);
+          let depth=0;
+          for(const ch of clean){if(ch==='{')depth++;else if(ch==='}')depth--;}
+          while(depth>0){clean+='}';depth--;}
+        }
+      }
+      let parsed;
+      try{parsed=JSON.parse(clean);}catch(pe){throw new Error('Could not parse Claude response as JSON. Try again.');}
+      setRevisedSOP(parsed);
+      setEditedSOP(parsed);
+      setStep(3);
+    }catch(e){
+      console.error('SOP revision error:',e);
+      setError('Revision failed: '+e.message);
+      setStep(1);
+    }
+    setGenerating(false);
+  }
+
+  async function approveAndPublish(){
+    if(!editedSOP) return;
+    setSaving(true);
+    const update={
+      title:editedSOP.title||sop.title,
+      description:editedSOP.purpose||sop.description,
+      steps:(editedSOP.steps||[]).map((s,i)=>({id:'s'+i,text:typeof s==='string'?s:`[${s.step_number||i+1}] ${s.title}: ${s.instruction}`})),
+      version:editedSOP.revision||nextRevision,
+      status:'published', // auto-publish on approval
+      generated_content:JSON.stringify(editedSOP),
+      regulatory_references:editedSOP.regulatory_references||[],
+      // Reset acknowledgements — everyone must re-read and re-sign the revised SOP
+      acknowledgements:[],
+      published_at:new Date().toISOString(),
+      updated_at:new Date().toISOString(),
+      updated_by:cu.name,
+      revised_by:cu.name,
+      revised_at:new Date().toISOString(),
+      revision_note:changeRequest,
+    };
+    try{
+      await db.update('pf_sops',sop.id,update);
+      onSave({...sop,...update});
+    }catch(e){
+      console.error(e);
+      alert('Save failed: '+e.message);
+    }
+    setSaving(false);
+  }
+
+  return el('div',{className:'mo',style:{zIndex:1100},onClick:ev=>ev.target===ev.currentTarget&&onClose()},
+    el('div',{className:'md',style:{width:750,maxHeight:'94vh'}},
+      el('div',{className:'mh'},
+        el('div',{style:{flex:1}},
+          el('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:4}},
+            el('span',{style:{fontSize:20}},'🔄'),
+            el('div',{className:'mt2'},'Revise SOP — '+sop.title),
+          ),
+          el('div',{style:{display:'flex',gap:8}},
+            [{n:1,l:'Describe Changes'},{n:2,l:'AI Revising'},{n:3,l:'Review & Approve'}].map(({n,l})=>
+              el('div',{key:n,style:{display:'flex',alignItems:'center',gap:4,fontSize:11,color:step>=n?'var(--accent)':'var(--text3)',fontWeight:step===n?700:400}},
+                el('div',{style:{width:18,height:18,borderRadius:'50%',background:step>=n?'var(--accent)':'var(--surface2)',border:'1px solid',borderColor:step>=n?'var(--accent)':'var(--border)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,fontWeight:700,color:step>=n?'#000000':'var(--text3)'}},n),
+                l,n<3&&el('span',{style:{color:'var(--border)'}},'→'),
+              )
+            )
+          ),
+        ),
+        el('button',{className:'mc',onClick:onClose},'×'),
+      ),
+
+      el('div',{className:'mbd'},
+
+        // STEP 1
+        step===1&&el('div',null,
+          el('div',{style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:10,padding:'12px 16px',marginBottom:16}},
+            el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:4}},'Current Version'),
+            el('div',{style:{fontSize:14,fontWeight:700}},sop.title+' — v'+sop.version),
+            el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:2}},sop.license_name+' · '+state),
+          ),
+          el('div',{style:{background:'rgba(30,58,95,.05)',border:'1px solid rgba(30,58,95,.15)',borderRadius:8,padding:'10px 14px',marginBottom:16,fontSize:12,color:'var(--text2)'}},
+            'Next version will be: ',el('strong',{style:{color:'var(--accent)'}},'v'+nextRevision),
+            ' — published immediately upon your approval. All employees will be required to re-acknowledge.',
+          ),
+          el('div',{className:'fg'},
+            el('label',null,'What needs to be updated? *'),
+            el('textarea',{
+              value:changeRequest,onChange:ev=>setChangeRequest(ev.target.value),
+              placeholder:'e.g. "Add a step requiring double-check of weight before sealing" or "Update PPE requirements to include face shields" or "Change cleaning frequency from daily to twice daily"',
+              autoFocus:true,
+              style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'10px 14px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',minHeight:120,resize:'vertical'},
+            }),
+          ),
+          error&&el('div',{style:{background:'rgba(239,68,68,.1)',border:'1px solid rgba(239,68,68,.3)',borderRadius:8,padding:'10px 14px',fontSize:13,color:'var(--red)',marginBottom:8}},error),
+          el('div',{className:'mf'},
+            el('button',{className:'btn b-ghost',onClick:onClose},'Cancel'),
+            el('button',{
+              onClick:generateRevision,disabled:!changeRequest.trim(),
+              style:{background:changeRequest.trim()?'var(--accent)':'rgba(30,58,95,.15)',color:changeRequest.trim()?'#000000':'var(--text3)',border:'none',borderRadius:'var(--rs)',padding:'10px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:changeRequest.trim()?'pointer':'not-allowed',display:'flex',alignItems:'center',gap:8}
+            },el('span',null,'🤖'),'Generate Revised SOP'),
+          ),
+        ),
+
+        // STEP 2
+        step===2&&el('div',{style:{textAlign:'center',padding:'60px 20px'}},
+          el('div',{style:{width:60,height:60,border:'4px solid var(--border)',borderTopColor:'var(--accent)',borderRadius:'50%',animation:'spin .8s linear infinite',margin:'0 auto 20px'}}),
+          el('div',{style:{fontSize:18,fontWeight:700,marginBottom:8}},'AI is revising the SOP...'),
+          el('div',{style:{fontSize:13,color:'var(--text2)'}},'Applying your changes while preserving regulatory compliance'),
+        ),
+
+        // STEP 3
+        step===3&&revisedSOP&&el('div',null,
+          el('div',{style:{background:'rgba(16,185,129,.06)',border:'1px solid rgba(16,185,129,.2)',borderRadius:10,padding:'14px 16px',marginBottom:16}},
+            el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:8}},
+              el('div',null,
+                el('div',{style:{fontSize:11,fontWeight:700,color:'var(--green)',textTransform:'uppercase',letterSpacing:'.8px',marginBottom:4}},'v'+sop.version+' → v'+(editedSOP.revision||nextRevision)),
+                el('div',{style:{fontSize:17,fontWeight:800}},editedSOP.title),
+                el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:4}},'Effective: '+editedSOP.effective_date),
+              ),
+              el('button',{onClick:()=>setEditMode(!editMode),className:'btn b-ghost btn-sm'},editMode?'👁 Preview':'✏️ Edit JSON'),
+            ),
+          ),
+
+          el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:'10px 14px',marginBottom:16,fontSize:12,color:'var(--text2)'}},
+            el('div',{style:{fontWeight:700,color:'var(--text)',marginBottom:4}},'What changed:'),
+            changeRequest,
+          ),
+
+          !editMode&&el('div',null,
+            (editedSOP.steps||[]).length>0&&el('div',{style:{marginBottom:14}},
+              el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:8}},'Procedure Steps ('+(editedSOP.steps||[]).length+')'),
+              (editedSOP.steps||[]).map((s,i)=>el('div',{key:i,style:{display:'flex',gap:10,marginBottom:8,background:s.critical?'rgba(239,68,68,.04)':'var(--surface2)',border:'1px solid',borderColor:s.critical?'rgba(239,68,68,.2)':'var(--border)',borderLeft:'3px solid',borderLeftColor:s.critical?'var(--red)':'var(--accent)',borderRadius:8,padding:'10px 14px'}},
+                el('div',{style:{width:24,height:24,borderRadius:'50%',background:s.critical?'var(--red)':'var(--accent)',color:'#ffffff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:800,flexShrink:0}},s.step_number||i+1),
+                el('div',{style:{flex:1}},
+                  el('div',{style:{fontWeight:600,fontSize:12,marginBottom:3}},s.title),
+                  el('div',{style:{fontSize:12,color:'var(--text2)',lineHeight:1.5}},s.instruction),
+                ),
+              )),
+            ),
+          ),
+
+          editMode&&el('div',{className:'fg'},
+            el('textarea',{value:JSON.stringify(editedSOP,null,2),onChange:ev=>{try{setEditedSOP(JSON.parse(ev.target.value));}catch(e){}},style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:10,color:'var(--text)',fontFamily:'DM Mono, monospace',fontSize:11,outline:'none',minHeight:300,resize:'vertical'}}),
+          ),
+
+          el('div',{className:'mf',style:{justifyContent:'space-between'}},
+            el('div',{style:{fontSize:12,color:'var(--text3)'}},'Approving will publish immediately and notify all assigned staff to re-acknowledge'),
+            el('div',{style:{display:'flex',gap:8}},
+              el('button',{className:'btn b-ghost',onClick:()=>setStep(1)},'← Back'),
+              el('button',{
+                onClick:approveAndPublish,disabled:saving,
+                style:{background:'var(--green)',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'10px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer'}
+              },saving?'Publishing...':'✅ Approve & Publish v'+(editedSOP.revision||nextRevision)),
+            ),
+          ),
+        ),
+      ),
+    )
+  );
+}
+
+// ── SOP GENERATOR MODAL ───────────────────────────────────────────────────────
+function SOPGenerator({cu,onClose,onSave}){
+  const[step,setStep]=useState(1); // 1=setup, 2=generating, 3=review
+  const[license,setLicense]=useState(LICENSES[0]);
+  const[state,setState]=useState(LICENSES[0].state);
+  const[title,setTitle]=useState('');
+  const[category,setCategory]=useState('Production — Cart Department');
+  const[uploadedText,setUploadedText]=useState('');
+  const[uploadedFileName,setUploadedFileName]=useState('');
+  const[generating,setGenerating]=useState(false);
+  const[generatedSOP,setGeneratedSOP]=useState(null);
+  const[error,setError]=useState('');
+  const[saving,setSaving]=useState(false);
+  const[editMode,setEditMode]=useState(false);
+  const[editedSOP,setEditedSOP]=useState(null);
+
+  function handleLicenseChange(id){
+    const l=LICENSES.find(x=>x.id===id);
+    setLicense(l);
+    setState(l.state);
+  }
+
+  async function handleFileUpload(ev){
+    const file=ev.target.files[0];
+    if(!file) return;
+    setUploadedFileName(file.name);
+    if(file.name.endsWith('.txt')||file.name.endsWith('.md')){
+      const text=await file.text();
+      setUploadedText(text);
+    } else if(file.name.endsWith('.pdf')){
+      // Read as base64 and send to Claude API with document type
+      const reader=new FileReader();
+      reader.onload=re=>{
+        // Store base64 for API call
+        setUploadedText('__PDF__:'+re.target.result.split(',')[1]);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      // Try reading as text
+      try{
+        const text=await file.text();
+        setUploadedText(text.slice(0,5000));
+      }catch(e){
+        setUploadedText('');
+      }
+    }
+  }
+
+  async function generateSOP(){
+    if(!title.trim()){setError('Please enter an SOP title.');return;}
+    setGenerating(true);setError('');setStep(2);
+
+    try{
+      const isPDF=uploadedText.startsWith('__PDF__:');
+      let refText=uploadedText;
+
+      // ── STEP 0 (only if PDF): extract a short plain-text summary ONCE so the
+      // two main calls below never need to re-send the binary PDF (which is what was slow). ──
+      if(isPDF){
+        const extractRes=await fetch(`${SUPA_URL}/functions/v1/claude-proxy`,{
+          method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPA_KEY},
+          body:JSON.stringify({
+            model:'claude-sonnet-4-6',max_tokens:1000,
+            messages:[{role:'user',content:[
+              {type:'document',source:{type:'base64',media_type:'application/pdf',data:uploadedText.replace('__PDF__:','')}},
+              {type:'text',text:'Summarize the key procedural and regulatory content of this document relevant to "'+title+'" in under 600 words, plain text, no markdown. Focus on facts useful for writing an SOP.'},
+            ]}],
+          }),
+        });
+        const extractData=await extractRes.json();
+        if(!extractRes.ok||extractData.error){throw new Error(extractData.error?.message||'PDF extraction failed');}
+        refText=(extractData.content?.[0]?.text||'').slice(0,3000);
+      }
+
+      // ── CALL 1: Metadata, purpose, scope, responsibilities, materials (fast, small, text-only) ──
+      const metaPrompt=`You are a cannabis compliance officer writing an SOP for ${state} (license: ${license.name}, ${license.license_type}).
+Regulatory agency: ${STATE_REGS[state].agency} — ${STATE_REGS[state].code}
+Key regulations: ${STATE_REGS[state].key_rules.slice(0,6).join('; ')}
+
+SOP Title: ${title}
+Category: ${category}
+${refText?'Reference material: '+refText:''}
+
+Respond with ONLY this JSON (no markdown, be concise):
+{
+  "sop_number": "SOP-[DEPT]-[3digit]",
+  "title": "${title}",
+  "revision": "1.0",
+  "effective_date": "${new Date().toISOString().slice(0,10)}",
+  "review_frequency": "Annual",
+  "department": "...",
+  "purpose": "2-3 sentences",
+  "scope": "1-2 sentences",
+  "regulatory_references": ["3-5 specific citations"],
+  "responsibilities": [{"role":"...","responsibility":"..."}],
+  "required_materials": ["..."],
+  "deviation_procedure": "1-2 sentences",
+  "training_requirements": "1-2 sentences"
+}`;
+
+      const metaRes=await fetch(`${SUPA_URL}/functions/v1/claude-proxy`,{
+        method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPA_KEY},
+        body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1200,messages:[{role:'user',content:metaPrompt}]}),
+      });
+      const metaData=await metaRes.json();
+      if(!metaRes.ok||metaData.error){throw new Error(metaData.error?.message||'Metadata generation failed');}
+      let metaClean=(metaData.content?.[0]?.text||'').replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+      const metaParsed=JSON.parse(metaClean);
+
+      // ── CALL 2: Procedure steps + quality checks + docs (text-only, no PDF re-attach) ──
+      const stepsPrompt=`You are writing the procedure steps for this cannabis SOP:
+Title: ${title}
+Purpose: ${metaParsed.purpose}
+Department: ${metaParsed.department}
+${refText?'Reference material: '+refText:''}
+
+Write 6-10 clear procedure steps. Keep each instruction to 1-2 sentences. Flag CRITICAL steps where a regulatory violation or product risk exists.
+
+Respond with ONLY this JSON (no markdown, be concise, this must NOT be truncated so keep instructions short):
+{
+  "steps": [{"step_number":1,"title":"short title","instruction":"1-2 sentences","regulatory_note":"optional, brief","critical":false}],
+  "quality_checks": ["5-8 short checkpoints"],
+  "documentation_required": ["3-6 short items"]
+}`;
+
+      const stepsRes=await fetch(`${SUPA_URL}/functions/v1/claude-proxy`,{
+        method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPA_KEY},
+        body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:3000,messages:[{role:'user',content:stepsPrompt}]}),
+      });
+      const stepsData=await stepsRes.json();
+      if(!stepsRes.ok||stepsData.error){throw new Error(stepsData.error?.message||'Steps generation failed');}
+      let stepsClean=(stepsData.content?.[0]?.text||'').replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+      let stepsParsed;
+      try{stepsParsed=JSON.parse(stepsClean);}
+      catch(e){
+        const lastBrace=stepsClean.lastIndexOf('}');
+        if(lastBrace>0){
+          let repaired=stepsClean.slice(0,lastBrace+1);
+          let depth=0;
+          for(const ch of repaired){if(ch==='{')depth++;else if(ch==='}')depth--;}
+          while(depth>0){repaired+='}';depth--;}
+          try{stepsParsed=JSON.parse(repaired);}catch(e2){stepsParsed={steps:[],quality_checks:[],documentation_required:[]};}
+        }else{stepsParsed={steps:[],quality_checks:[],documentation_required:[]};}
+      }
+
+      // ── MERGE ──────────────────────────────────────────────────────────────
+      const parsed={
+        ...metaParsed,
+        license_name:license.name,
+        state,
+        steps:stepsParsed.steps||[],
+        quality_checks:stepsParsed.quality_checks||[],
+        documentation_required:stepsParsed.documentation_required||[],
+        definitions:metaParsed.definitions||[],
+        revision_history:[{revision:'1.0',date:new Date().toISOString().slice(0,10),description:'Initial release',approved_by:''}],
+      };
+
+      setGeneratedSOP(parsed);
+      setEditedSOP(parsed);
+      setStep(3);
+    }catch(e){
+      console.error(e);
+      setError('Generation failed: '+e.message);
+      setStep(1);
+    }
+    setGenerating(false);
+  }
+
+
+  async function saveSOP(){
+    if(!generatedSOP) return;
+    setSaving(true);
+    // Map category (e.g. "Production — Cart Department") to actual dept tree names
+    const catParts=category.split(' — ');
+    const targetDept=catParts[1]||catParts[0]||'Production';
+    // Find which grandmother this belongs to based on state/license -> Michigan/Missouri Production
+    const grandmother=state==='Michigan'?'Michigan Production':'Missouri Production';
+    const sop={
+      id:'sop-'+Date.now(),
+      title:editedSOP.title||title,
+      depts:[targetDept],
+      license_id:license.id,
+      description:editedSOP.purpose||'',
+      steps:(editedSOP.steps||[]).map((s,i)=>({id:'s'+i,text:typeof s==='string'?s:`[${s.step_number||i+1}] ${s.title}: ${s.instruction}`})),
+      version:editedSOP.revision||'1.0',
+      status:'draft',
+      attachments:[],
+      visible_to_roles:[],
+      // Restrict to the specific department this SOP is for (e.g. "Cart Department")
+      // plus the grandmother dept so managers overseeing the whole area also see it.
+      visible_to_depts:[targetDept,grandmother],
+      acknowledgements:[],
+      // Store full generated content
+      generated_content:JSON.stringify(editedSOP),
+      sop_number:editedSOP.sop_number||'',
+      license_name:editedSOP.license_name||license.name,
+      state:editedSOP.state||state,
+      regulatory_references:editedSOP.regulatory_references||[],
+      created_by:cu.name,created_by_id:cu.id,
+      created_at:new Date().toISOString(),
+      updated_at:new Date().toISOString(),updated_by:cu.name,
+    };
+    try{
+      await db.insert('pf_sops',sop);
+      onSave(sop);
+    }catch(e){
+      console.error(e);
+      alert('Save failed: '+e.message);
+    }
+    setSaving(false);
+  }
+
+  const regs=STATE_REGS[state];
+
+  return el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&onClose()},
+    el('div',{className:'md',style:{width:750,maxHeight:'94vh'}},
+
+      // Header
+      el('div',{className:'mh'},
+        el('div',{style:{flex:1}},
+          el('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:4}},
+            el('span',{style:{fontSize:20}},'🤖'),
+            el('div',{className:'mt2'},'AI SOP Generator'),
+          ),
+          el('div',{style:{display:'flex',gap:8}},
+            [{n:1,l:'Setup'},{n:2,l:'Generating'},{n:3,l:'Review & Save'}].map(({n,l})=>
+              el('div',{key:n,style:{display:'flex',alignItems:'center',gap:4,fontSize:11,color:step>=n?'var(--accent)':'var(--text3)',fontWeight:step===n?700:400}},
+                el('div',{style:{width:18,height:18,borderRadius:'50%',background:step>=n?'var(--accent)':'var(--surface2)',border:'1px solid',borderColor:step>=n?'var(--accent)':'var(--border)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,fontWeight:700,color:step>=n?'#000000':'var(--text3)'}},n),
+                l,
+                n<3&&el('span',{style:{color:'var(--border)'}},'→'),
+              )
+            )
+          ),
+        ),
+        el('button',{className:'mc',onClick:onClose},'×'),
+      ),
+
+      el('div',{className:'mbd'},
+
+        // ── STEP 1: SETUP ─────────────────────────────────────────────────────
+        step===1&&el('div',null,
+
+          // License & State
+          el('div',{style:{background:'rgba(30,58,95,.05)',border:'1px solid rgba(30,58,95,.15)',borderRadius:10,padding:'14px 16px',marginBottom:16}},
+            el('div',{style:{fontSize:11,fontWeight:700,color:'var(--accent)',textTransform:'uppercase',letterSpacing:'.8px',marginBottom:10}},'License & Jurisdiction'),
+            el('div',{className:'g2'},
+              el('div',{className:'fg',style:{marginBottom:0}},
+                el('label',null,'License Holder'),
+                el('select',{value:license.id,onChange:ev=>handleLicenseChange(ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+                  LICENSES.map(l=>el('option',{key:l.id,value:l.id},l.name+' ('+l.state+')'))
+                ),
+                el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:4}},license.license_type),
+              ),
+              el('div',{className:'fg',style:{marginBottom:0}},
+                el('label',null,'State'),
+                el('div',{style:{display:'flex',gap:8,marginTop:4}},
+                  ['Michigan','Missouri'].map(s=>el('button',{key:s,
+                    onClick:()=>setState(s),
+                    style:{flex:1,padding:'9px',borderRadius:'var(--rs)',border:'2px solid',borderColor:state===s?'var(--accent)':'var(--border)',background:state===s?'rgba(30,58,95,.08)':'transparent',color:state===s?'var(--accent)':'var(--text2)',fontFamily:'inherit',fontWeight:600,fontSize:13,cursor:'pointer',transition:'all .15s'}
+                  },'🗺 '+s))
+                ),
+                el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:4}},regs.agency),
+              ),
+            ),
+          ),
+
+          // Regulatory preview
+          el('div',{style:{background:'rgba(59,130,246,.04)',border:'1px solid rgba(59,130,246,.15)',borderRadius:8,padding:'10px 14px',marginBottom:16}},
+            el('div',{style:{fontSize:11,fontWeight:700,color:'#93c5fd',marginBottom:6,textTransform:'uppercase',letterSpacing:'.5px'}},'AI will incorporate '+state+' regulations:'),
+            el('div',{style:{display:'flex',flexWrap:'wrap',gap:4}},
+              regs.key_rules.slice(0,4).map((r,i)=>el('div',{key:i,style:{background:'rgba(59,130,246,.08)',borderRadius:4,padding:'2px 8px',fontSize:10,color:'#93c5fd'}},r.slice(0,60)+(r.length>60?'...':''))),
+              el('div',{style:{background:'rgba(59,130,246,.08)',borderRadius:4,padding:'2px 8px',fontSize:10,color:'#93c5fd'}},`+${regs.key_rules.length-4} more regulations`),
+            ),
+          ),
+
+          // SOP Details
+          el('div',{className:'fg'},
+            el('label',null,'SOP Title *'),
+            el('input',{value:title,onChange:ev=>setTitle(ev.target.value),placeholder:'e.g. Cart Filling Standard Operating Procedure',autoFocus:true,style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'10px 14px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none'}}),
+          ),
+          el('div',{className:'fg'},
+            el('label',null,'Category / Department'),
+            el('select',{value:category,onChange:ev=>setCategory(ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+              SOP_CATEGORIES.map(c=>el('option',{key:c,value:c},c))
+            ),
+          ),
+
+          // Upload reference
+          el('div',{className:'fg'},
+            el('label',null,'Upload Reference Document (optional)'),
+            el('div',{style:{fontSize:11,color:'var(--text3)',marginBottom:6}},'Upload an existing SOP, procedure notes, or any document. AI will use it as a reference to generate the formal SOP.'),
+            el('label',{style:{display:'flex',alignItems:'center',gap:8,padding:'10px 14px',background:'var(--surface2)',border:'1px dashed var(--border)',borderRadius:'var(--rs)',cursor:'pointer',transition:'all .15s'},
+              onMouseEnter:ev=>{ev.currentTarget.style.borderColor='var(--accent)';},
+              onMouseLeave:ev=>{ev.currentTarget.style.borderColor='var(--border)';}},
+              el('input',{type:'file',accept:'.pdf,.txt,.doc,.docx,.md',onChange:handleFileUpload,style:{display:'none'}}),
+              el('span',{style:{fontSize:18}},'📄'),
+              el('div',null,
+                el('div',{style:{fontSize:13,fontWeight:600,color:'var(--text)'}},'Click to upload (PDF, TXT, DOC)'),
+                el('div',{style:{fontSize:11,color:'var(--text3)'}},uploadedFileName||'No file selected — AI will create SOP from title and category'),
+              ),
+              uploadedFileName&&el('span',{style:{marginLeft:'auto',color:'var(--green)',fontWeight:700,fontSize:12}},'✓ Ready'),
+            ),
+          ),
+
+          error&&el('div',{style:{background:'rgba(239,68,68,.1)',border:'1px solid rgba(239,68,68,.3)',borderRadius:8,padding:'10px 14px',fontSize:13,color:'var(--red)',marginBottom:8}},error),
+
+          el('div',{className:'mf'},
+            el('button',{className:'btn b-ghost',onClick:onClose},'Cancel'),
+            el('button',{
+              onClick:generateSOP,
+              disabled:!title.trim(),
+              style:{background:title.trim()?'var(--accent)':'rgba(30,58,95,.15)',color:title.trim()?'#000000':'var(--text3)',border:'none',borderRadius:'var(--rs)',padding:'10px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:title.trim()?'pointer':'not-allowed',display:'flex',alignItems:'center',gap:8,transition:'all .2s'}
+            },
+              el('span',{style:{fontSize:16}},'🤖'),
+              'Generate SOP with AI',
+            ),
+          ),
+        ),
+
+        // ── STEP 2: GENERATING ────────────────────────────────────────────────
+        step===2&&el('div',{style:{textAlign:'center',padding:'60px 20px'}},
+          el('div',{style:{width:60,height:60,border:'4px solid var(--border)',borderTopColor:'var(--accent)',borderRadius:'50%',animation:'spin .8s linear infinite',margin:'0 auto 20px'}}),
+          el('div',{style:{fontSize:18,fontWeight:700,color:'var(--text)',marginBottom:8}},'AI is generating your SOP...'),
+          el('div',{style:{fontSize:13,color:'var(--text2)',lineHeight:1.6}},
+            'Analyzing '+state+' cannabis regulations,',el('br',null),
+            'applying '+regs.agency+' requirements,',el('br',null),
+            uploadedFileName?'processing your uploaded document, ':null,
+            'and writing your SOP...',
+          ),
+          el('div',{style:{marginTop:20,fontSize:11,color:'var(--text3)'}},'This usually takes 10-20 seconds'),
+        ),
+
+        // ── STEP 3: REVIEW ────────────────────────────────────────────────────
+        step===3&&generatedSOP&&el('div',null,
+
+          // VISIBILITY OVERRIDE — explicit control before saving
+          el('div',{style:{background:'rgba(139,92,246,.06)',border:'1px solid rgba(139,92,246,.25)',borderRadius:10,padding:'14px 16px',marginBottom:16}},
+            el('div',{style:{fontSize:11,fontWeight:700,color:'#c4b5fd',textTransform:'uppercase',letterSpacing:'.8px',marginBottom:10}},'🔒 Who Can See & Acknowledge This SOP'),
+            el('div',{className:'g2'},
+              el('div',{className:'fg',style:{marginBottom:0}},
+                el('label',null,'License (locked from Setup)'),
+                el('div',{style:{padding:'9px 13px',background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:'var(--rs)',fontSize:13,color:'var(--text)',fontWeight:600}},license.name),
+              ),
+              el('div',{className:'fg',style:{marginBottom:0}},
+                el('label',null,'Department(s) — applied to this SOP'),
+                el('div',{style:{display:'flex',flexWrap:'wrap',gap:5}},
+                  [...new Set([category.split(' — ')[1]||category.split(' — ')[0],state==='Michigan'?'Michigan Production':'Missouri Production'])].map(d=>
+                    el('div',{key:d,style:{padding:'4px 10px',borderRadius:16,background:'rgba(139,92,246,.15)',color:'#c4b5fd',border:'1px solid rgba(139,92,246,.3)',fontSize:11,fontWeight:600}},d)
+                  )
+                ),
+              ),
+            ),
+            el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:8}},
+              '⚠️ Only people with ',el('strong',{style:{color:'#c4b5fd'}},license.name),' assigned AND working in the department(s) above will see and be required to acknowledge this SOP.'
+            ),
+          ),
+
+          // SOP Header card
+          el('div',{style:{background:'rgba(30,58,95,.05)',border:'1px solid rgba(30,58,95,.15)',borderRadius:10,padding:'14px 16px',marginBottom:16}},
+            el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:8}},
+              el('div',null,
+                el('div',{style:{fontSize:11,fontWeight:700,color:'var(--accent)',textTransform:'uppercase',letterSpacing:'.8px',marginBottom:4}},editedSOP.sop_number||'SOP-XXX-001'),
+                el('div',{style:{fontSize:17,fontWeight:800,color:'var(--text)',marginBottom:4}},editedSOP.title),
+                el('div',{style:{display:'flex',gap:10,flexWrap:'wrap',marginTop:4}},
+                  el('span',{style:{fontSize:11,color:'var(--text3)'}},'Rev '+editedSOP.revision),
+                  el('span',{style:{fontSize:11,color:'var(--text3)'}},'Effective: '+editedSOP.effective_date),
+                  el('span',{style:{fontSize:11,color:'#93c5fd'}},'📍 '+editedSOP.state),
+                  el('span',{style:{fontSize:11,color:'var(--text2)'}},'🏭 '+editedSOP.license_name),
+                ),
+              ),
+              el('div',{style:{display:'flex',gap:6}},
+                el('button',{onClick:()=>setEditMode(!editMode),className:'btn b-ghost btn-sm'},editMode?'👁 Preview':'✏️ Edit JSON'),
+                el('button',{onClick:generateSOP,className:'btn b-ghost btn-sm'},'🔄 Regenerate'),
+              ),
+            ),
+          ),
+
+          !editMode&&el('div',null,
+            // Regulatory references
+            (editedSOP.regulatory_references||[]).length>0&&el('div',{style:{marginBottom:14}},
+              el('div',{style:{fontSize:11,fontWeight:700,color:'#93c5fd',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:6}},'📚 Regulatory References'),
+              el('div',{style:{display:'flex',flexWrap:'wrap',gap:4}},
+                (editedSOP.regulatory_references||[]).map((r,i)=>el('div',{key:i,style:{background:'rgba(59,130,246,.08)',border:'1px solid rgba(59,130,246,.2)',borderRadius:4,padding:'2px 8px',fontSize:10,color:'#93c5fd'}},r))
+              ),
+            ),
+
+            // Purpose & Scope
+            [['Purpose',editedSOP.purpose],['Scope',editedSOP.scope],['Training Requirements',editedSOP.training_requirements],['Deviation Procedure',editedSOP.deviation_procedure]].filter(([,v])=>v).map(([label,val])=>
+              el('div',{key:label,style:{marginBottom:12}},
+                el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:5}},label),
+                el('div',{style:{background:'var(--surface2)',borderRadius:8,padding:'10px 14px',fontSize:12,lineHeight:1.6,color:'var(--text2)'}},val),
+              )
+            ),
+
+            // Responsibilities
+            (editedSOP.responsibilities||[]).length>0&&el('div',{style:{marginBottom:12}},
+              el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:6}},'Responsibilities'),
+              (editedSOP.responsibilities||[]).map((r,i)=>el('div',{key:i,style:{display:'flex',gap:8,background:'var(--surface2)',borderRadius:6,padding:'8px 12px',marginBottom:4}},
+                el('div',{style:{fontWeight:600,fontSize:12,color:'var(--accent)',minWidth:150}},r.role),
+                el('div',{style:{fontSize:12,color:'var(--text2)',lineHeight:1.5}},r.responsibility),
+              )),
+            ),
+
+            // Required Materials
+            (editedSOP.required_materials||[]).length>0&&el('div',{style:{marginBottom:12}},
+              el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:6}},'Required Materials / PPE'),
+              el('div',{style:{display:'flex',flexWrap:'wrap',gap:4}},
+                (editedSOP.required_materials||[]).map((m,i)=>el('div',{key:i,style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:4,padding:'3px 10px',fontSize:11,color:'var(--text2)'}},m))
+              ),
+            ),
+
+            // Steps
+            (editedSOP.steps||[]).length>0&&el('div',{style:{marginBottom:12}},
+              el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:8}},'Procedure Steps ('+( editedSOP.steps||[]).length+')'),
+              (editedSOP.steps||[]).map((step,i)=>el('div',{key:i,style:{display:'flex',gap:10,marginBottom:8,background:step.critical?'rgba(239,68,68,.04)':'var(--surface2)',border:'1px solid',borderColor:step.critical?'rgba(239,68,68,.2)':'var(--border)',borderLeft:'3px solid',borderLeftColor:step.critical?'var(--red)':'var(--accent)',borderRadius:8,padding:'10px 14px'}},
+                el('div',{style:{width:24,height:24,borderRadius:'50%',background:step.critical?'var(--red)':'var(--accent)',color:'#ffffff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:800,flexShrink:0}},step.step_number||i+1),
+                el('div',{style:{flex:1}},
+                  el('div',{style:{fontWeight:600,fontSize:12,marginBottom:3,color:'var(--text)'}},step.title||('Step '+(i+1))),
+                  el('div',{style:{fontSize:12,color:'var(--text2)',lineHeight:1.5,marginBottom:step.regulatory_note?4:0}},step.instruction||step),
+                  step.regulatory_note&&el('div',{style:{fontSize:10,color:'#93c5fd',fontStyle:'italic',marginTop:3}},'📋 '+step.regulatory_note),
+                  step.critical&&el('div',{style:{fontSize:10,color:'var(--red)',fontWeight:700,marginTop:3}},'⚠️ CRITICAL STEP'),
+                ),
+              )),
+            ),
+
+            // Quality checks & Documentation
+            el('div',{className:'g2',style:{marginBottom:12}},
+              (editedSOP.quality_checks||[]).length>0&&el('div',null,
+                el('div',{style:{fontSize:11,fontWeight:700,color:'var(--green)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:6}},'Quality Checks'),
+                (editedSOP.quality_checks||[]).map((q,i)=>el('div',{key:i,style:{fontSize:11,color:'var(--text2)',marginBottom:3}},'✓ '+q)),
+              ),
+              (editedSOP.documentation_required||[]).length>0&&el('div',null,
+                el('div',{style:{fontSize:11,fontWeight:700,color:'var(--blue)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:6}},'Documentation Required'),
+                (editedSOP.documentation_required||[]).map((d,i)=>el('div',{key:i,style:{fontSize:11,color:'var(--text2)',marginBottom:3}},'📋 '+d)),
+              ),
+            ),
+          ),
+
+          // Edit mode - JSON editor
+          editMode&&el('div',{className:'fg'},
+            el('label',null,'Edit Generated SOP (JSON)'),
+            el('textarea',{value:JSON.stringify(editedSOP,null,2),onChange:ev=>{try{setEditedSOP(JSON.parse(ev.target.value));}catch(e){}},style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'10px',color:'var(--text)',fontFamily:'DM Mono, monospace',fontSize:11,outline:'none',minHeight:300,resize:'vertical'}}),
+          ),
+
+          el('div',{className:'mf',style:{justifyContent:'space-between'}},
+            el('div',{style:{fontSize:12,color:'var(--text3)'}},'Will be saved as Draft — you can edit and publish from SOPs'),
+            el('div',{style:{display:'flex',gap:8}},
+              el('button',{className:'btn b-ghost',onClick:()=>setStep(1)},'← Back'),
+              el('button',{
+                className:'btn b-ghost',
+                onClick:()=>exportSopPdf({...editedSOP,generated_content:JSON.stringify(editedSOP),title:editedSOP.title,version:editedSOP.revision,license_name:editedSOP.license_name,state:editedSOP.state,sop_number:editedSOP.sop_number,created_by:cu.name}),
+              },'📄 Preview PDF'),
+              el('button',{
+                onClick:saveSOP,
+                disabled:saving,
+                style:{background:'var(--accent)',color:'#ffffff',border:'none',borderRadius:'var(--rs)',padding:'10px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:8}
+              },
+                saving?'Saving...':'💾 Save to SOP Library',
+              ),
+            ),
+          ),
+        ),
+      ),
+    )
+  );
+}
+
+function SOPs({sops,setSops,cu,users}){
+  const[view,setView]=useState('list'); // list | detail
+  const[sel,setSel]=useState(null);
+  const[showNew,setNew]=useState(false);
+  const[showGenerator,setShowGenerator]=useState(false);
+  const[showRevise,setShowRevise]=useState(false);
+  const[showEditSop,setShowEditSop]=useState(false);
+  const[editSopData,setEditSopData]=useState(null);
+  const[search,setSearch]=useState('');
+  const[deptFilter,setDeptFilter]=useState('All');
+  const[licFilter,setLicFilter]=useState(()=>{
+    const ul=cu.licenses||[];
+    const elevated=cu.role==='admin'||['coo','director_production','director_operations','director_sales_marketing','general_manager','assistant_general_manager','facility_manager','production_manager','compliance_manager','warehouse_manager','distribution_manager','extraction_manager','maintenance_manager','sales_marketing_manager'].includes(cu.role);
+    if(elevated||ul.length===0) return 'all';
+    return ul.length===1?ul[0]:'all';
+  });
+  const[saving,setSaving]=useState(false);
+  const[ackMsg,setAckMsg]=useState('');
+  const[f,setF]=useState({
+    title:'',depts:[],description:'',
+    steps:[{id:'s1',text:''}],
+    version:'1.0',status:'draft',
+    attachments:[],
+    visible_to_roles:[],
+    visible_to_depts:[],
+    license_id:'',
+  });
+
+  const isAdmin=cu.role==='admin';
+  const isElevated=isAdmin||['coo','director_production','director_operations','director_sales_marketing','general_manager'].includes(cu.role);
+  const canCreate=isElevated||['facility_manager','production_manager','compliance_manager','warehouse_manager','distribution_manager','extraction_manager','maintenance_manager','sales_marketing_manager'].includes(cu.role);
+  const canAiSop=isAdmin||['coo','director_production','director_operations','director_sales_marketing','general_manager','assistant_general_manager'].includes(cu.role);
+  // Non-elevated users are locked to their assigned licenses only
+  const userLicenses=cu.licenses||[];
+  const allowedLicenses=isElevated?LICENSES:LICENSES.filter(l=>userLicenses.includes(l.id));
+  const canSeeAllLicenses=isElevated;
+
+  // Filter SOPs visible to this user
+  const isElevatedForSops=isElevated||cu.role==='assistant_general_manager';
+  const canSeeArchivedSops=cu.role==='admin'||cu.role==='general_manager'||cu.role==='assistant_general_manager';
+  const visibleSops=sops.filter(s=>{
+    if(s.status==='archived'&&!canSeeArchivedSops) return false;
+    // Non-elevated users can ONLY see SOPs for their assigned licenses
+    if(!isElevatedForSops&&userLicenses.length>0){
+      const sopLicIds2=s.license_ids&&s.license_ids.length>0?s.license_ids:(s.license_id?[s.license_id]:[]);
+      if(sopLicIds2.length>0&&!sopLicIds2.some(id=>userLicenses.includes(id))) return false;
+    }
+    if(isElevatedForSops) return true;
+    if(s.status==='draft'&&s.created_by_id!==cu.id) return false;
+    // License check: if SOP is tied to a license AND the current user already has at
+    // least one license assigned, they must be on this SOP's license. If the user has
+    // not been assigned any license yet, fall through to the department check below
+    // instead of hard-blocking them — prevents new/un-migrated accounts from losing
+    // all SOP visibility during rollout.
+    const sopLicIds=s.license_ids&&s.license_ids.length>0?s.license_ids:(s.license_id?[s.license_id]:(s.license_name?[LICENSES.find(l=>l.name===s.license_name)?.id].filter(Boolean):[]));
+    if(sopLicIds.length>0){
+      // Nationwide users bypass license check — scoped by dept only
+      if(cu.loc!=='Nationwide'){
+        if((cu.licenses||[]).length>0){
+          const hasMatch=sopLicIds.some(id=>cu.licenses.includes(id));
+          if(!hasMatch) return false;
+        }
+      }
+    }
+    // Dept check: if SOP has visible_to_depts, user MUST be in one of them.
+    if((s.visible_to_depts||[]).length>0){
+      const userDepts=[...(cu.depts||[]),cu.dept].filter(Boolean);
+      const sopDepts=expandDepts(s.visible_to_depts);
+      const hasAccess=userDepts.some(d=>sopDepts.includes(d)||s.visible_to_depts.includes(d));
+      if(!hasAccess) return false;
+    }
+    return true;
+  });
+
+  // Returns exactly which approved users are in-scope for a given SOP
+  // (same license_id + dept logic as visibleSops, but applied to any arbitrary user record).
+  function targetUsersForSop(sop){
+    return users.filter(u=>{
+      if(!u.approved) return false;
+      // Step 1: License check — if the SOP is tied to specific licenses,
+      // only include users who are assigned to at least one of those licenses.
+      // Users with no licenses assigned are excluded (not counted as required signers)
+      // unless they are the admin, who is always counted for oversight tracking only.
+      const sopLicIds=sop.license_ids&&sop.license_ids.length>0?sop.license_ids:(sop.license_id?[sop.license_id]:(sop.license_name?[LICENSES.find(l=>l.name===sop.license_name)?.id].filter(Boolean):[]));
+      if(sopLicIds.length>0){
+        // Admin is counted but only if they have this license assigned OR if they
+        // have no licenses at all (legacy admin setup). This prevents admin from
+        // inflating the count on licenses they don't belong to.
+        if(u.role==='admin'){
+          const adminLics=u.licenses||[];
+          if(adminLics.length>0&&!sopLicIds.some(id=>adminLics.includes(id))) return false;
+        } else if(u.loc==='Nationwide'){
+          // Nationwide users work across all states — they bypass the license check
+          // entirely and are scoped only by department below.
+          // e.g. Cart Cleaning Supervisor Nationwide sees Cart SOPs in both MI and MO.
+        } else {
+          const userLicenses=u.licenses||[];
+          // Strictly require license match — empty licenses = excluded
+          if(!sopLicIds.some(id=>userLicenses.includes(id))) return false;
+        }
+      }
+      if((sop.visible_to_depts||[]).length>0){
+        const userDepts=[...(u.depts||[]),u.dept].filter(Boolean);
+        const sopDepts=expandDepts(sop.visible_to_depts);
+        const hasAccess=userDepts.some(d=>sopDepts.includes(d)||sop.visible_to_depts.includes(d));
+        if(!hasAccess) return false;
+      }
+      return true;
+    });
+  }
+
+  const filtered=visibleSops.filter(s=>{
+    if(licFilter!=='all'){
+      const sopLicId=s.license_id||LICENSES.find(l=>l.name===s.license_name)?.id;
+      if(sopLicId!==licFilter) return false;
+    }
+    if(deptFilter!=='All'&&!(s.depts||[s.dept]).includes(deptFilter)) return false;
+    if(search&&!s.title.toLowerCase().includes(search.toLowerCase())&&!s.dept.toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
+
+  const depts=['All',...Object.keys(DEPT_TREE)];
+
+  // Stats
+  const myAcks=sops.filter(s=>(s.acknowledgements||[]).some(a=>a.id===cu.id));
+  const needsAck=visibleSops.filter(s=>s.status==='published'&&!(s.acknowledgements||[]).some(a=>a.id===cu.id));
+
+  async function createSOP(){
+    if(!f.title) return;
+    if(!f.license_id){alert('Please select a License before saving. This determines who can see and acknowledge this SOP.');return;}
+    setSaving(true);
+    const selectedLic=LICENSES.find(l=>l.id===f.license_id);
+    const sop={
+      id:'sop-'+Date.now(),
+      ...f,
+      // visible_to_depts mirrors the selected departments so visibility filtering works correctly
+      visible_to_depts:f.depts||[],
+      license_name:selectedLic?.name||'',
+      state:selectedLic?.state||'',
+      steps:f.steps.filter(s=>s.text.trim()),
+      acknowledgements:[],
+      created_by:cu.name,created_by_id:cu.id,
+      created_at:new Date().toISOString(),
+      updated_at:new Date().toISOString(),
+      updated_by:cu.name,
+    };
+    try{
+      await db.insert('pf_sops',sop);
+      setSops(p=>[sop,...p]);
+      setNew(false);
+      setF({title:'',depts:[],description:'',steps:[{id:'s1',text:''}],version:'1.0',status:'draft',attachments:[],visible_to_roles:[],visible_to_depts:[],license_id:''});
+    }catch(e){
+      console.error(e);
+      alert('Failed to create SOP. Run SQL migration:\n\nCREATE TABLE IF NOT EXISTS pf_sops (\n  id text primary key, title text, dept text,\n  description text default \'\', steps jsonb default \'[]\',\n  version text default \'1.0\', status text default \'draft\',\n  attachments jsonb default \'[]\',\n  visible_to_roles jsonb default \'[]\',\n  visible_to_depts jsonb default \'[]\',\n  acknowledgements jsonb default \'[]\',\n  created_by text, created_by_id text,\n  created_at text, updated_at text, updated_by text\n);\nALTER TABLE pf_sops DISABLE ROW LEVEL SECURITY;');
+      navigator.clipboard.writeText("CREATE TABLE IF NOT EXISTS pf_sops (\n  id text primary key, title text, dept text,\n  description text default '', steps jsonb default '[]',\n  version text default '1.0', status text default 'draft',\n  attachments jsonb default '[]',\n  visible_to_roles jsonb default '[]',\n  visible_to_depts jsonb default '[]',\n  acknowledgements jsonb default '[]',\n  created_by text, created_by_id text,\n  created_at text, updated_at text, updated_by text\n);\nALTER TABLE pf_sops DISABLE ROW LEVEL SECURITY;").catch(()=>{});
+    }
+    setSaving(false);
+  }
+
+  async function publishSOP(sop){
+    const update={status:'published',updated_at:new Date().toISOString(),updated_by:cu.name};
+    try{
+      await db.update('pf_sops',sop.id,update);
+      setSops(p=>p.map(s=>s.id===sop.id?{...s,...update}:s));
+      setSel(s=>s?{...s,...update}:null);
+      // Notify all users
+      sendLocalNotification('📋 New SOP Published',sop.title+' — '+sop.dept).catch(()=>{});
+      users.filter(u=>u.approved&&u.email).forEach(u=>{
+        sendEmail({to:u.email,subject:`📋 New SOP Published: "${sop.title}"`,
+          html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
+            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:4px">📋 Black Fox QMS</div>
+            <div style="font-size:18px;font-weight:700;margin-bottom:12px">${sop.title}</div>
+            <div style="background:rgba(30,58,95,.06);border:1px solid rgba(30,58,95,.15);border-radius:10px;padding:14px;margin-bottom:20px">
+              <div style="margin-bottom:6px">📂 Department: <strong>${sop.dept}</strong></div>
+              <div style="margin-bottom:6px">📝 Version: <strong>${sop.version}</strong></div>
+              <div>👤 Published by: <strong>${cu.name}</strong></div>
+            </div>
+            <p style="color:#7b8db8;margin-bottom:20px">Please review and acknowledge this SOP in the Black Fox QMS app.</p>
+            <a href="${APP_URL}" style="background:#f5a623;color:#000000;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">Review SOP →</a>
+          </div>`
+        });
+      });
+    }catch(e){console.error(e);}
+  }
+
+  async function archiveSOP(sop){
+    if(!window.confirm('Archive this SOP?')) return;
+    const update={status:'archived',updated_at:new Date().toISOString(),updated_by:cu.name};
+    try{
+      await db.update('pf_sops',sop.id,update);
+      setSops(p=>p.map(s=>s.id===sop.id?{...s,...update}:s));
+      setSel(null);
+    }catch(e){console.error(e);}
+  }
+
+  const[showSopSigModal,setShowSopSigModal]=useState(false);
+  const[sopToSign,setSopToSign]=useState(null);
+  const[sopSigName,setSopSigName]=useState('');
+
+  function acknowledgeSOP(sop){
+    const already=(sop.acknowledgements||[]).some(a=>a.id===cu.id);
+    if(already) return;
+    setSopToSign(sop);
+    setSopSigName('');
+    window._sopSigData=null;
+    setShowSopSigModal(true);
+  }
+
+  async function submitSopAck(){
+    if(!sopToSign) return;
+    const ack={id:cu.id,name:cu.name,role:cu.role,at:new Date().toISOString(),signature_name:sopSigName,signature_image:window._sopSigData||null};
+    const acknowledgements=[...(sopToSign.acknowledgements||[]),ack];
+    try{
+      await db.update('pf_sops',sopToSign.id,{acknowledgements,updated_at:new Date().toISOString(),updated_by:cu.name});
+      setSops(p=>p.map(s=>s.id===sopToSign.id?{...s,acknowledgements}:s));
+      setSel(s=>s?{...s,acknowledgements}:null);
+      setShowSopSigModal(false);
+      setSopToSign(null);
+      setSopSigName('');
+      window._sopSigData=null;
+      setAckMsg('✓ Signed & Acknowledged!');
+      setTimeout(()=>setAckMsg(''),3000);
+    }catch(e){console.error(e);alert('Failed: '+e.message);}
+  }
+
+  async function deleteSOP(id){
+    if(!window.confirm('Delete this SOP permanently?')) return;
+    try{
+      await db.remove('pf_sops',id);
+      setSops(p=>p.filter(s=>s.id!==id));
+      setSel(null);
+    }catch(e){console.error(e);}
+  }
+
+  function addStep(){
+    setF(p=>({...p,steps:[...p.steps,{id:'s'+Date.now(),text:''}]}));
+  }
+  function updateStep(id,text){
+    setF(p=>({...p,steps:p.steps.map(s=>s.id===id?{...s,text}:s)}));
+  }
+  function removeStep(id){
+    setF(p=>({...p,steps:p.steps.filter(s=>s.id!==id)}));
+  }
+
+  const statusColor={draft:'var(--text3)',published:'var(--green)',archived:'var(--text3)'};
+  const statusBg={draft:'bb-gray',published:'bb-green',archived:'bb-gray'};
+
+  return el('div',null,
+    el('div',{className:'ph'},
+      el('div',null,
+        el('div',{className:'pt'},'SOPs'),
+        el('div',{className:'ps'},'Standard Operating Procedures'),
+      ),
+      el('div',{style:{display:'flex',gap:8,alignItems:'center'}},
+        el('input',{placeholder:'Search SOPs...',value:search,onChange:ev=>setSearch(ev.target.value),style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px 14px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',width:200}}),
+        canAiSop&&el('button',{
+            onClick:()=>setShowGenerator(true),
+            style:{background:'linear-gradient(135deg,#667eea,#764ba2)',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'9px 16px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:6,transition:'all .15s'}
+          },'🤖 AI Generate SOP'),
+        canCreate&&el('button',{className:'btn b-blue',onClick:()=>setNew(true)},'+ Manual SOP'),
+      ),
+    ),
+
+    // Stats row
+    el('div',{className:'g4',style:{marginBottom:20}},
+      [{l:'Total SOPs',v:visibleSops.length,c:'var(--text)',ico:'📋'},
+       {l:'Published',v:visibleSops.filter(s=>s.status==='published').length,c:'var(--green)',ico:'✅'},
+       {l:'Needs My Ack',v:needsAck.length,c:needsAck.length>0?'var(--red)':'var(--text3)',ico:'⚠️'},
+       {l:'I\'ve Acknowledged',v:myAcks.length,c:'var(--accent)',ico:'👍'},
+      ].map(({l,v,c,ico})=>el('div',{key:l,className:'stat',style:{display:'flex',alignItems:'center',gap:14}},
+        el('div',{style:{fontSize:28}},ico),
+        el('div',null,el('div',{className:'sl'},l),el('div',{className:'sv',style:{color:c,fontSize:24}},v)),
+      ))
+    ),
+
+    // License filter tabs — non-elevated users restricted to their assigned licenses
+    el('div',{style:{display:'flex',gap:6,flexWrap:'wrap',marginBottom:10,alignItems:'center'}},
+      el('span',{style:{fontSize:11,fontWeight:700,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'.5px'}},'License:'),
+      canSeeAllLicenses&&el('button',{onClick:()=>setLicFilter('all'),style:{padding:'5px 14px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:500,cursor:'pointer',background:licFilter==='all'?'var(--accent)':'transparent',color:licFilter==='all'?'#ffffff':'var(--text2)',borderColor:licFilter==='all'?'var(--accent)':'var(--border)',transition:'all .15s'}},'All Licenses'),
+      ...allowedLicenses.map(lic=>el('button',{key:lic.id,onClick:()=>setLicFilter(lic.id),style:{padding:'5px 14px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:500,cursor:'pointer',background:licFilter===lic.id?'var(--accent)':'transparent',color:licFilter===lic.id?'#ffffff':'var(--text2)',borderColor:licFilter===lic.id?'var(--accent)':'var(--border)',transition:'all .15s'}},lic.name)),
+    ),
+
+    // Dept filter tabs
+    el('div',{style:{display:'flex',gap:6,flexWrap:'wrap',marginBottom:16}},
+      depts.map(d=>el('button',{key:d,onClick:()=>setDeptFilter(d),style:{padding:'5px 14px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:500,cursor:'pointer',background:deptFilter===d?'var(--accent)':'transparent',color:deptFilter===d?'#000000':'var(--text2)',borderColor:deptFilter===d?'var(--accent)':'var(--border)',transition:'all .15s'}},d))
+    ),
+
+    // Needs acknowledgement alert
+    needsAck.length>0&&el('div',{className:'alert al-yellow',style:{marginBottom:16}},
+      el('span',{style:{fontSize:18}},'⚠️'),
+      el('div',null,
+        el('div',{style:{fontWeight:700,marginBottom:4}},'Action Required'),
+        el('div',{style:{fontSize:13}},`You have ${needsAck.length} SOP${needsAck.length>1?'s':''} waiting for your acknowledgement.`),
+      ),
+    ),
+
+    // SOP list
+    filtered.length===0?el('div',{className:'empty'},el('div',{className:'eico'},'📋'),el('div',{className:'etxt'},'No SOPs found')):
+    el('div',{style:{display:'flex',flexDirection:'column',gap:8}},
+      filtered.map(sop=>{
+        const acked=(sop.acknowledgements||[]).some(a=>a.id===cu.id);
+        const ackPct=users.filter(u=>u.approved).length>0?Math.round(((sop.acknowledgements||[]).length/users.filter(u=>u.approved).length)*100):0;
+        return el('div',{key:sop.id,
+          onClick:()=>setSel(sop),
+          style:{background:'var(--surface)',border:'1px solid var(--border)',borderLeft:`3px solid ${sop.status==='published'?'var(--green)':sop.status==='archived'?'var(--text3)':'var(--accent)'}`,borderRadius:10,padding:'14px 18px',cursor:'pointer',transition:'all .15s'},
+          onMouseEnter:ev=>ev.currentTarget.style.borderColor='rgba(30,58,95,.25)',
+          onMouseLeave:ev=>ev.currentTarget.style.borderColor='var(--border)',
+        },
+          el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12}},
+            el('div',{style:{flex:1}},
+              el('div',{style:{display:'flex',gap:6,marginBottom:6,flexWrap:'wrap',alignItems:'center'}},
+                el('span',{className:`badge ${statusBg[sop.status]}`},sop.status==='published'?'✅ Published':sop.status==='draft'?'📝 Draft':'🗄 Archived'),
+                ...((sop.depts||[sop.dept]).filter(Boolean).map(d=>el('span',{key:d,style:{background:'rgba(59,130,246,.1)',color:'#93c5fd',border:'1px solid rgba(59,130,246,.2)',borderRadius:4,padding:'2px 8px',fontSize:11,fontWeight:600}},d))),
+                el('span',{style:{background:'var(--surface2)',color:'var(--text2)',border:'1px solid var(--border)',borderRadius:4,padding:'2px 8px',fontSize:11}},`v${sop.version}`),
+                !acked&&sop.status==='published'&&el('span',{style:{background:'rgba(239,68,68,.1)',color:'var(--red)',border:'1px solid rgba(239,68,68,.2)',borderRadius:4,padding:'2px 8px',fontSize:11,fontWeight:700}},'⚠ Needs Ack'),
+                acked&&el('span',{style:{background:'rgba(16,185,129,.1)',color:'var(--green)',border:'1px solid rgba(16,185,129,.2)',borderRadius:4,padding:'2px 8px',fontSize:11,fontWeight:700}},'✓ Acknowledged'),
+              ),
+              el('div',{style:{fontSize:15,fontWeight:700,marginBottom:4}},sop.title),
+              sop.description&&el('div',{style:{fontSize:12,color:'var(--text2)',lineHeight:1.5}},sop.description.slice(0,120)+(sop.description.length>120?'...':'')),
+            ),
+            el('div',{style:{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:6,flexShrink:0}},
+              el('div',{style:{fontSize:11,color:'var(--text3)'}},`${(sop.steps||[]).length} steps`),
+              sop.status==='published'&&el('div',{style:{textAlign:'right'}},
+                el('div',{style:{fontSize:11,color:'var(--text3)',marginBottom:3}},`${(sop.acknowledgements||[]).length}/${users.filter(u=>u.approved).length} acked`),
+                el('div',{style:{width:80,height:4,background:'var(--surface2)',borderRadius:4}},
+                  el('div',{style:{width:ackPct+'%',height:'100%',background:'var(--green)',borderRadius:4,transition:'width .3s'}}),
+                ),
+              ),
+              el('div',{style:{fontSize:11,color:'var(--text3)'}},sop.created_by),
+            ),
+          ),
+        );
+      })
+    ),
+
+    // ── NEW SOP MODAL ───────────────────────────────────────────────────────
+    showNew&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setNew(false)},
+      el('div',{className:'md',style:{width:680,maxHeight:'92vh'}},
+        el('div',{className:'mh'},el('div',{className:'mt2'},'New SOP'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
+        el('div',{className:'mbd'},
+          el('div',{className:'fg'},el('label',null,'Title *'),el('input',{placeholder:'e.g. Cart Filling Standard Procedure',value:f.title,onChange:ev=>setF(p=>({...p,title:ev.target.value})),autoFocus:true})),
+          el('div',{className:'fg'},
+            el('label',null,'License — who this SOP applies to *'),
+            el('select',{
+              value:f.license_id,
+              onChange:ev=>setF(p=>({...p,license_id:ev.target.value})),
+              style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13},
+            },
+              el('option',{value:''},'— Select License (required) —'),
+              LICENSES.map(lic=>el('option',{key:lic.id,value:lic.id},lic.name+' ('+lic.state+')'))
+            ),
+            !f.license_id&&el('div',{style:{fontSize:11,color:'var(--red)',marginTop:4}},'Required — without this, the SOP cannot be scoped to a facility'),
+          ),
+          el('div',{className:'g2'},
+            el('div',{className:'fg',style:{marginBottom:0}},
+              el('label',null,'Departments'),
+              el('div',{style:{position:'relative'}},
+                // Custom multi-select dropdown
+                el('div',{
+                  style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontSize:13,cursor:'pointer',minHeight:42,display:'flex',alignItems:'center',justifyContent:'space-between',userSelect:'none'},
+                  onClick:()=>setF(p=>({...p,_deptOpen:!p._deptOpen})),
+                },
+                  el('div',{style:{flex:1,display:'flex',flexWrap:'wrap',gap:4}},
+                    (f.depts||[]).length===0
+                      ?el('span',{style:{color:'var(--text3)'}},'Select departments...')
+                      :(f.depts||[]).map(d=>el('span',{key:d,style:{background:'var(--accent)',color:'#ffffff',borderRadius:4,padding:'2px 8px',fontSize:11,fontWeight:700,display:'flex',alignItems:'center',gap:4}},
+                          d,
+                          el('span',{style:{cursor:'pointer',fontWeight:900,marginLeft:2},onClick:ev=>{ev.stopPropagation();setF(p=>{const cur=new Set(p.depts);cur.delete(d);return{...p,depts:[...cur]};})}},'×')
+                        ))
+                  ),
+                  el('span',{style:{color:'var(--text3)',fontSize:10,marginLeft:8}},f._deptOpen?'▲':'▼'),
+                ),
+                f._deptOpen&&el('div',{style:{position:'absolute',top:'100%',left:0,right:0,background:'var(--surface)',border:'1px solid var(--border)',borderRadius:'var(--rs)',zIndex:999,maxHeight:320,overflowY:'auto',boxShadow:'0 8px 24px rgba(0,0,0,.4)',marginTop:2}},
+                  // Render full tree: grandmother → mother → child
+                  Object.entries(DEPT_TREE).map(([gm,mothers])=>[
+                    // Grandmother row
+                    el('div',{key:gm,
+                      onClick:()=>setF(p=>{const cur=new Set(p.depts);cur.has(gm)?cur.delete(gm):cur.add(gm);return{...p,depts:[...cur]};}),
+                      style:{display:'flex',alignItems:'center',gap:8,padding:'9px 14px',cursor:'pointer',background:(f.depts||[]).includes(gm)?'rgba(30,58,95,.08)':'transparent',borderBottom:'1px solid var(--border)',transition:'background .1s'},
+                      onMouseEnter:ev=>ev.currentTarget.style.background=(f.depts||[]).includes(gm)?'rgba(30,58,95,.12)':'var(--surface2)',
+                      onMouseLeave:ev=>ev.currentTarget.style.background=(f.depts||[]).includes(gm)?'rgba(30,58,95,.08)':'transparent',
+                    },
+                      el('div',{style:{width:16,height:16,borderRadius:3,border:'2px solid',borderColor:(f.depts||[]).includes(gm)?'var(--accent)':'var(--text3)',background:(f.depts||[]).includes(gm)?'var(--accent)':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}},
+                        (f.depts||[]).includes(gm)&&el('span',{style:{color:'#ffffff',fontSize:9,fontWeight:900}},'✓')
+                      ),
+                      el('span',{style:{fontWeight:700,fontSize:13,color:(f.depts||[]).includes(gm)?'var(--accent)':'var(--text)'}},'🏭 '+gm),
+                    ),
+                    // Mother rows
+                    ...Object.entries(mothers).map(([mother,children])=>[
+                      el('div',{key:mother,
+                        onClick:()=>setF(p=>{const cur=new Set(p.depts);cur.has(mother)?cur.delete(mother):cur.add(mother);return{...p,depts:[...cur]};}),
+                        style:{display:'flex',alignItems:'center',gap:8,padding:'7px 14px 7px 28px',cursor:'pointer',background:(f.depts||[]).includes(mother)?'rgba(59,130,246,.08)':'transparent',transition:'background .1s'},
+                        onMouseEnter:ev=>ev.currentTarget.style.background=(f.depts||[]).includes(mother)?'rgba(59,130,246,.12)':'var(--surface2)',
+                        onMouseLeave:ev=>ev.currentTarget.style.background=(f.depts||[]).includes(mother)?'rgba(59,130,246,.08)':'transparent',
+                      },
+                        el('div',{style:{width:14,height:14,borderRadius:3,border:'1.5px solid',borderColor:(f.depts||[]).includes(mother)?'#93c5fd':'var(--text3)',background:(f.depts||[]).includes(mother)?'rgba(59,130,246,.3)':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}},
+                          (f.depts||[]).includes(mother)&&el('span',{style:{color:'#93c5fd',fontSize:8,fontWeight:900}},'✓')
+                        ),
+                        el('span',{style:{fontSize:12,fontWeight:600,color:(f.depts||[]).includes(mother)?'#93c5fd':'var(--text2)'}},'↳ '+mother),
+                      ),
+                      // Child rows
+                      ...children.map(child=>
+                        el('div',{key:child,
+                          onClick:()=>setF(p=>{const cur=new Set(p.depts);cur.has(child)?cur.delete(child):cur.add(child);return{...p,depts:[...cur]};}),
+                          style:{display:'flex',alignItems:'center',gap:8,padding:'6px 14px 6px 44px',cursor:'pointer',background:(f.depts||[]).includes(child)?'rgba(16,185,129,.06)':'transparent',transition:'background .1s'},
+                          onMouseEnter:ev=>ev.currentTarget.style.background=(f.depts||[]).includes(child)?'rgba(16,185,129,.1)':'var(--surface2)',
+                          onMouseLeave:ev=>ev.currentTarget.style.background=(f.depts||[]).includes(child)?'rgba(16,185,129,.06)':'transparent',
+                        },
+                          el('div',{style:{width:10,height:10,borderRadius:'50%',background:(f.depts||[]).includes(child)?'var(--green)':'var(--text3)',flexShrink:0}}),
+                          el('span',{style:{fontSize:11,color:(f.depts||[]).includes(child)?'var(--green)':'var(--text3)'}},'↳ '+child),
+                        )
+                      ),
+                    ]).flat(),
+                  ]).flat(),
+                  // Close button
+                  el('div',{style:{padding:'8px 14px',borderTop:'1px solid var(--border)',display:'flex',justifyContent:'space-between',alignItems:'center'}},
+                    el('span',{style:{fontSize:11,color:'var(--text3)'}},(f.depts||[]).length+' selected'),
+                    el('button',{onClick:ev=>{ev.stopPropagation();setF(p=>({...p,_deptOpen:false}));},style:{background:'var(--accent)',color:'#ffffff',border:'none',borderRadius:6,padding:'4px 12px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}},'Done'),
+                  ),
+                ),
+              ),
+              (f.depts||[]).length===0&&el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:4}},'Select at least one department'),
+            ),
+            el('div',{className:'g2',style:{marginBottom:0}},
+              el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Version'),el('input',{value:f.version,onChange:ev=>setF(p=>({...p,version:ev.target.value})),placeholder:'1.0'})),
+              el('div',{className:'fg',style:{marginBottom:0}},
+                el('label',null,'Status'),
+                el('select',{value:f.status,onChange:ev=>setF(p=>({...p,status:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+                  el('option',{value:'draft'},'Draft'),
+                  el('option',{value:'published'},'Published'),
+                )
+              ),
+            ),
+          ),
+          el('div',{className:'fg',style:{marginTop:13}},el('label',null,'Description / Purpose'),el('textarea',{placeholder:'What is this SOP for?',value:f.description,onChange:ev=>setF(p=>({...p,description:ev.target.value}))})),
+
+          el('div',{className:'divider'}),
+          el('div',{style:{fontWeight:700,fontSize:14,marginBottom:10}},'Steps'),
+          f.steps.map((step,i)=>el('div',{key:step.id,style:{display:'flex',gap:8,marginBottom:8,alignItems:'flex-start'}},
+            el('div',{style:{width:24,height:24,borderRadius:'50%',background:'var(--accent)',color:'#ffffff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:800,flexShrink:0,marginTop:8}},i+1),
+            el('textarea',{value:step.text,onChange:ev=>updateStep(step.id,ev.target.value),placeholder:`Step ${i+1}...`,style:{flex:1,background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px 12px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',resize:'vertical',minHeight:60}}),
+            f.steps.length>1&&el('button',{onClick:()=>removeStep(step.id),style:{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:18,marginTop:6,padding:'2px 4px'}},'×'),
+          )),
+          el('button',{className:'btn b-ghost btn-sm',onClick:addStep,style:{marginBottom:14}},'+ Add Step'),
+
+          el('div',{className:'divider'}),
+          el('div',{className:'fg'},
+            el('label',null,'Attach File (PDF, image, doc)'),
+            el('input',{type:'file',accept:'.pdf,.doc,.docx,.png,.jpg,.xlsx',onChange:async ev=>{
+              const file=ev.target.files[0];if(!file)return;
+              const att=await uploadFile(file,'sops');
+              setF(p=>({...p,attachments:[...p.attachments,att]}));
+            },style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'8px',color:'var(--text)',fontFamily:'inherit',fontSize:13}}),
+          ),
+          f.attachments.length>0&&el('div',{style:{marginBottom:10}},
+            f.attachments.map(att=>el('div',{key:att.id,style:{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'6px 10px',background:'var(--surface2)',borderRadius:6,marginBottom:4,fontSize:12}},
+              `📎 ${att.name}`,
+              el('span',{style:{cursor:'pointer',color:'var(--red)'},onClick:()=>setF(p=>({...p,attachments:p.attachments.filter(a=>a.id!==att.id)}))},'×'),
+            ))
+          ),
+        ),
+        el('div',{className:'mf'},
+          el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),
+          el('button',{className:'btn b-blue',onClick:createSOP,disabled:saving||!f.title},saving?'Saving...':'Create SOP'),
+        ),
+      )
+    ),
+
+    showGenerator&&canAiSop&&el(SOPGenerator,{
+      cu,
+      onClose:()=>setShowGenerator(false),
+      onSave:(sop)=>{setSops(p=>[sop,...p]);setShowGenerator(false);setSel(sop);},
+    }),
+    showEditSop&&sel&&el(SOPEditModal,{
+      sop:sel,cu,
+      onClose:()=>setShowEditSop(false),
+      onSave:(updated)=>{
+        setSops(p=>p.map(s=>s.id===updated.id?updated:s));
+        setShowEditSop(false);
+        setSel(updated);
+      },
+    }),
+    showRevise&&sel&&canAiSop&&el(SOPReviseModal,{
+      sop:sel,cu,
+      onClose:()=>setShowRevise(false),
+      onSave:(updated)=>{
+        setSops(p=>p.map(s=>s.id===updated.id?updated:s));
+        setShowRevise(false);
+        setSel(updated);
+        // Notify all users with access to this SOP to re-acknowledge
+        const targetDepts=updated.visible_to_depts||updated.depts||[];
+        const targetLicId=updated.license_id;
+        const notifyUsers=users.filter(u=>{
+          if(!u.approved) return false;
+          if(targetLicId&&!(u.licenses||[]).includes(targetLicId)) return false;
+          if(targetDepts.length>0){
+            const userDepts=[...(u.depts||[]),u.dept].filter(Boolean);
+            if(!userDepts.some(d=>targetDepts.includes(d))) return false;
+          }
+          return true;
+        });
+        notifyUsers.forEach(u=>{
+          if(u.email) sendEmail({to:u.email,
+            subject:`📋 SOP Updated — Re-acknowledgement Required: "${updated.title}"`,
+            html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
+              <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">📋 Black Fox QMS</div>
+              <div style="background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.25);border-radius:10px;padding:20px;margin-bottom:20px;text-align:center">
+                <div style="font-size:36px;margin-bottom:10px">🔄</div>
+                <div style="font-size:17px;font-weight:700;margin-bottom:6px">SOP Revised — v${updated.version}</div>
+                <div style="font-size:14px;color:#c4b5fd">"${updated.title}"</div>
+              </div>
+              <p style="font-size:13px;color:#7b8db8;margin-bottom:20px">This SOP has been updated and requires your re-acknowledgement. Please review the changes and sign off.</p>
+              <a href="${APP_URL}" style="display:inline-block;background:#8b5cf6;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700">Review & Acknowledge →</a>
+            </div>`
+          });
+        });
+      },
+    }),
+    // ── SOP SIGNATURE MODAL ────────────────────────────────────────────────
+    showSopSigModal&&sopToSign&&el('div',{className:'mo',style:{zIndex:1200}},
+      el('div',{className:'md',style:{width:540,maxHeight:'90vh',overflowY:'auto'}},
+        el('div',{className:'mh'},
+          el('div',{className:'mt2'},'Sign & Acknowledge SOP'),
+          el('button',{className:'mc',onClick:()=>{setShowSopSigModal(false);setSopToSign(null);setSopSigName('');window._sopSigData=null;}},'×'),
+        ),
+        el('div',{className:'mbd'},
+          el('div',{style:{background:'rgba(30,58,95,.05)',border:'1px solid rgba(30,58,95,.12)',borderRadius:10,padding:'14px 16px',marginBottom:16}},
+            el('div',{style:{fontSize:11,fontWeight:700,color:'var(--accent)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:6}},'SOP Being Acknowledged'),
+            el('div',{style:{fontSize:15,fontWeight:700}},sopToSign.title),
+            el('div',{style:{fontSize:12,color:'var(--text2)',marginTop:4}},'Version '+sopToSign.version+' · '+sopToSign.sop_number),
+          ),
+          el('div',{style:{fontSize:13,color:'var(--text2)',marginBottom:16,lineHeight:1.6}},
+            'By signing below, you confirm that you have READ, UNDERSTOOD, and will COMPLY with this Standard Operating Procedure. This signature will be permanently recorded.'
+          ),
+          el('div',{className:'fg'},
+            el('label',null,'Draw your signature *'),
+            el(SignaturePad,{
+              label:'Draw your signature to acknowledge this SOP',
+              onSave:dataUrl=>{setSopSigName(cu.name);window._sopSigData=dataUrl;},
+              onClear:()=>{setSopSigName('');window._sopSigData=null;},
+            }),
+            el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:6}},'Acknowledging as: '+cu.name+' · '+cu.dept+' · '+new Date().toISOString().slice(0,10)),
+          ),
+          el('div',{className:'mf'},
+            el('button',{className:'btn b-ghost',onClick:()=>{setShowSopSigModal(false);setSopToSign(null);setSopSigName('');window._sopSigData=null;}},'Cancel'),
+            el('button',{
+              disabled:!sopSigName,
+              onClick:submitSopAck,
+              style:{background:sopSigName?'var(--green)':'rgba(16,185,129,.3)',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'10px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:sopSigName?'pointer':'not-allowed'}
+            },'✓ Sign & Acknowledge'),
+          ),
+        ),
+      ),
+    ),
+
+    // ── SOP DETAIL MODAL ────────────────────────────────────────────────────
+    sel&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setSel(null)},
+      el('div',{className:'md',style:{width:700,maxHeight:'92vh'}},
+        el('div',{className:'mh'},
+          el('div',{style:{flex:1}},
+            el('div',{style:{display:'flex',gap:6,marginBottom:8,flexWrap:'wrap'}},
+              el('span',{className:`badge ${statusBg[sel.status]}`},sel.status==='published'?'✅ Published':sel.status==='draft'?'📝 Draft':'🗄 Archived'),
+              ...((sel.depts||[sel.dept]).filter(Boolean).map(d=>el('span',{key:d,style:{background:'rgba(59,130,246,.1)',color:'#93c5fd',border:'1px solid rgba(59,130,246,.2)',borderRadius:4,padding:'2px 8px',fontSize:11,fontWeight:600}},d))),
+              el('span',{style:{background:'var(--surface2)',color:'var(--text2)',border:'1px solid var(--border)',borderRadius:4,padding:'2px 8px',fontSize:11}},`v${sel.version}`),
+            ),
+            el('div',{style:{fontSize:17,fontWeight:700}},sel.title),
+          ),
+          el('button',{className:'mc',onClick:()=>setSel(null)},'×'),
+        ),
+        el('div',{className:'mbd'},
+          sel.description&&el('div',{style:{background:'rgba(30,58,95,.05)',border:'1px solid rgba(30,58,95,.12)',borderRadius:10,padding:'12px 16px',marginBottom:16,fontSize:13,lineHeight:1.6,color:'var(--text2)'}},sel.description),
+
+          // Steps
+          (sel.steps||[]).length>0&&el('div',{style:{marginBottom:20}},
+            el('div',{style:{fontWeight:700,fontSize:14,marginBottom:12}},'Procedure'),
+            (sel.steps||[]).map((step,i)=>el('div',{key:step.id||i,style:{display:'flex',gap:12,marginBottom:12,alignItems:'flex-start'}},
+              el('div',{style:{width:28,height:28,borderRadius:'50%',background:'var(--accent)',color:'#ffffff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:800,flexShrink:0}},i+1),
+              el('div',{style:{flex:1,background:'var(--surface2)',borderRadius:10,padding:'10px 14px',fontSize:13,lineHeight:1.6}},step.text||step),
+            ))
+          ),
+
+          // Attachments
+          (sel.attachments||[]).length>0&&el('div',{style:{marginBottom:16}},
+            el('div',{style:{fontWeight:600,marginBottom:8,fontSize:13}},'Attachments'),
+            (sel.attachments||[]).map(att=>el('div',{key:att.id,style:{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 12px',background:'var(--surface2)',borderRadius:8,marginBottom:5}},
+              el('span',{style:{fontSize:12}},`📎 ${att.name}`),
+              el('button',{className:'btn b-ghost btn-sm',onClick:()=>{const a=document.createElement('a');a.href=renderFileUrl(att);a.download=att.name;a.target='_blank';a.click();}},'Download'),
+            ))
+          ),
+
+          el('div',{className:'divider'}),
+
+          // Acknowledgement section
+          el('div',{style:{marginBottom:16}},
+            el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}},
+              el('div',{style:{fontWeight:700,fontSize:14}},'Acknowledgements'),
+              el('div',{style:{fontSize:12,color:'var(--text2)'}},`${(sel.acknowledgements||[]).length} of ${targetUsersForSop(sel).length} team members`),
+            ),
+            // Ack progress bar
+            el('div',{style:{height:6,background:'var(--surface2)',borderRadius:4,marginBottom:12}},
+              el('div',{style:{
+                width:targetUsersForSop(sel).length>0?Math.round(((sel.acknowledgements||[]).length/targetUsersForSop(sel).length)*100)+'%':'0%',
+                height:'100%',background:'var(--green)',borderRadius:4,transition:'width .3s'
+              }}),
+            ),
+            // Who has/hasn't acked (admin view)
+            isAdmin&&el('div',{style:{display:'flex',gap:16,marginBottom:12}},
+              el('div',{style:{flex:1}},
+                el('div',{style:{fontSize:11,fontWeight:700,color:'var(--green)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:6}},'✓ Acknowledged'),
+                (sel.acknowledgements||[]).length===0?el('div',{style:{fontSize:12,color:'var(--text3)'}},'None yet'):
+                (sel.acknowledgements||[]).map(a=>el('div',{key:a.id,style:{display:'flex',alignItems:'center',gap:6,marginBottom:4}},
+                  el('div',{className:'avatar',style:{background:avatarColor(a.name),width:20,height:20,fontSize:9}},a.name.charAt(0).toUpperCase()),
+                  el('div',null,el('div',{style:{fontSize:12,fontWeight:600}},a.name),el('div',{style:{fontSize:10,color:'var(--text3)'}},a.at?.slice(0,10))),
+                )),
+              ),
+              el('div',{style:{flex:1}},
+                el('div',{style:{fontSize:11,fontWeight:700,color:'var(--red)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:6}},'✗ Pending'),
+                targetUsersForSop(sel).filter(u=>!(sel.acknowledgements||[]).some(a=>a.id===u.id)).length===0
+                  ?el('div',{style:{fontSize:12,color:'var(--green)',fontWeight:600}},'Everyone acknowledged ✓')
+                  :targetUsersForSop(sel).filter(u=>!(sel.acknowledgements||[]).some(a=>a.id===u.id)).map(u=>el('div',{key:u.id,style:{display:'flex',alignItems:'center',gap:6,marginBottom:4}},
+                    el('div',{className:'avatar',style:{background:avatarColor(u.name),width:20,height:20,fontSize:9,opacity:.5}},u.name.charAt(0).toUpperCase()),
+                    el('div',{style:{fontSize:12,color:'var(--text3)'}},u.name),
+                  )),
+              ),
+            ),
+            // My ack button
+            sel.status==='published'&&el('div',null,
+              !(sel.acknowledgements||[]).some(a=>a.id===cu.id)?
+                el('button',{
+                  onClick:()=>acknowledgeSOP(sel),
+                  style:{width:'100%',background:'var(--green)',color:'#fff',border:'none',borderRadius:10,padding:'13px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8,transition:'all .15s'}
+                },'👍 I Have Read and Understood This SOP'):
+                el('div',{style:{background:'rgba(16,185,129,.08)',border:'1px solid rgba(16,185,129,.25)',borderRadius:10,padding:'12px 16px',textAlign:'center',fontSize:13,fontWeight:700,color:'var(--green)'}},
+                  '✓ You acknowledged this on '+((sel.acknowledgements||[]).find(a=>a.id===cu.id)?.at||'').slice(0,10)
+                ),
+              ackMsg&&el('div',{style:{marginTop:8,textAlign:'center',fontSize:13,fontWeight:700,color:'var(--green)'}},ackMsg),
+            ),
+          ),
+
+          el('div',{style:{fontSize:11,color:'var(--text3)'}},
+            `Created by ${sel.created_by} · ${sel.created_at?.slice(0,10)}`,
+            sel.updated_by&&` · Updated by ${sel.updated_by} ${sel.updated_at?.slice(0,10)}`,
+          ),
+        ),
+        el('div',{className:'mf',style:{justifyContent:'space-between'}},
+          el('div',{style:{display:'flex',gap:8}},
+            el('button',{className:'btn b-ghost',onClick:()=>exportSopPdf(sel)},'📄 Download PDF'),
+            isAdmin&&el('button',{className:'btn b-ghost',onClick:()=>setShowEditSop(true)},'✏️ Edit'),
+            canCreate&&sel.status==='draft'&&el('button',{className:'btn b-green',onClick:()=>publishSOP(sel)},'📢 Publish & Notify'),
+            canAiSop&&sel.status==='published'&&el('button',{
+              onClick:()=>setShowRevise(true),
+              style:{background:'linear-gradient(135deg,#667eea,#764ba2)',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'9px 16px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:6}
+            },'🔄 Revise SOP'),
+            canCreate&&sel.status==='published'&&el('button',{className:'btn b-ghost',onClick:()=>archiveSOP(sel)},'🗄 Archive'),
+            isAdmin&&el('button',{className:'btn b-red',onClick:()=>deleteSOP(sel.id)},'Delete'),
+          ),
+          el('button',{className:'btn b-ghost',onClick:()=>setSel(null)},'Close'),
+        ),
+      )
+    ),
+  );
+}
+
+// ── CALENDAR ──────────────────────────────────────────────────────────────────
+const EVENT_COLORS=['#f5a623','#3b82f6','#10b981','#ef4444','#8b5cf6','#f97316','#06b6d4','#ec4899'];
+
+// ── ROLE-BASED VISIBILITY HIERARCHY ──────────────────────────────────────────
+// Determines which users a given person (viewer) can see in training matrix,
+// employee profiles, and other HR/compliance views.
+//
+// Rules:
+// Employee        → themselves only
+// Lead            → self + employees under them (managers field)
+// Supervisor      → self + leads + employees under them
+// Manager         → self + supervisors + leads + employees under them
+//                   scoped to their assigned licenses
+// General Manager / Assistant General Manager
+//                 → everyone assigned to their license(s)
+// Director        → everyone in their department (production/operations/compliance)
+//                   across ALL licenses
+// COO / Admin     → everyone everywhere
+
+// Director department mapping — which roles fall under each director's scope
+const DIRECTOR_DEPT_ROLES = {
+  director_production: [
+    'production_manager','extraction_manager','maintenance_manager','warehouse_manager',
+    'cart_filling_supervisor','cart_cleaning_supervisor','cart_packaging_supervisor',
+    'pre_roll_supervisor','edible_supervisor','qc_supervisor',
+    'cart_priming_lead','cart_filling_lead','cart_cleaning_lead','cart_packaging_lead',
+    'pre_roll_lead','edible_lead','qc_lead','biomass_lead','concentrate_lead',
+    'employee','brand_ambassador',
+  ],
+  director_operations: [
+    'facility_manager','distribution_manager','compliance_manager',
+    'facility_supervisor','qc_supervisor',
+    'qc_lead',
+    'employee','brand_ambassador',
+  ],
+  director_sales_marketing: [
+    'sales_marketing_manager',
+    'marketing_lead',
+    'brand_ambassador','employee',
+  ],
+};
+
+// Department keyword matching for director scope — used to filter by dept too
+const DIRECTOR_DEPT_KEYWORDS = {
+  director_production: ['cart','pre-roll','pre roll','edible','extraction','biomass','concentrate','production','warehouse','maintenance'],
+  director_operations: ['facility','distribution','compliance','operations','qc','quality'],
+  director_sales_marketing: ['sales','marketing'],
+};
+
+function getVisibleUsers(viewer, allUsers){
+  const role = viewer.role;
+  const viewerLics = viewer.licenses || [];
+  const rg = ROLE_GROUPS.find(g=>g.roles.includes(role))?.label;
+
+  // Admin and COO see everyone
+  if(role==='admin'||role==='coo') return allUsers.filter(u=>u.approved);
+
+  // Directors see everyone in their department across all licenses
+  if(role==='director_production'||role==='director_operations'||role==='director_sales_marketing'){
+    const deptRoles = DIRECTOR_DEPT_ROLES[role]||[];
+    const keywords = DIRECTOR_DEPT_KEYWORDS[role]||[];
+    return allUsers.filter(u=>{
+      if(!u.approved) return false;
+      if(u.id===viewer.id) return true;
+      // Include roles that fall under this director's scope
+      if(deptRoles.includes(u.role)) return true;
+      // Also match by department keyword for employees without specific roles
+      const dept = (u.dept||'').toLowerCase();
+      if(keywords.some(k=>dept.includes(k))) return true;
+      return false;
+    });
+  }
+
+  // General Manager and Assistant General Manager see everyone in their license(s)
+  if(role==='general_manager'||role==='assistant_general_manager'){
+    return allUsers.filter(u=>{
+      if(!u.approved) return false;
+      if(u.id===viewer.id) return true;
+      // Same license(s) as this GM
+      const uLics = u.licenses||[];
+      if(viewerLics.length>0&&uLics.length>0){
+        return viewerLics.some(l=>uLics.includes(l));
+      }
+      // Nationwide GM sees everyone (across all facilities)
+      if(viewer.loc==='Nationwide') return true;
+      return false;
+    });
+  }
+
+  // Other managers — see themselves + supervisors + leads + employees under them
+  // scoped to their license(s)
+  if(rg==='Managers'){
+    // Build the set of people who report (directly or indirectly) to this manager
+    // by walking the managers[] field on each user
+    const directReports = allUsers.filter(u=>
+      u.approved && u.id!==viewer.id &&
+      (u.managers||[]).some(m=>(m.id||m)===viewer.id)
+    );
+    const reportIds = new Set(directReports.map(u=>u.id));
+    reportIds.add(viewer.id);
+    return allUsers.filter(u=>u.approved&&reportIds.has(u.id));
+  }
+
+  // Supervisors — see themselves + leads + employees under them
+  if(rg==='Supervisors'){
+    const directReports = allUsers.filter(u=>
+      u.approved && u.id!==viewer.id &&
+      (u.managers||[]).some(m=>(m.id||m)===viewer.id)
+    );
+    const reportIds = new Set(directReports.map(u=>u.id));
+    reportIds.add(viewer.id);
+    return allUsers.filter(u=>u.approved&&reportIds.has(u.id));
+  }
+
+  // Leads — see themselves + employees under them
+  if(rg==='Leads'){
+    const directReports = allUsers.filter(u=>
+      u.approved && u.id!==viewer.id &&
+      (u.managers||[]).some(m=>(m.id||m)===viewer.id)
+    );
+    const reportIds = new Set(directReports.map(u=>u.id));
+    reportIds.add(viewer.id);
+    return allUsers.filter(u=>u.approved&&reportIds.has(u.id));
+  }
+
+  // Staff/Employee — see only themselves
+  return allUsers.filter(u=>u.approved&&u.id===viewer.id);
+}
+
+function getMeetLink(){return'https://meet.jit.si/hendrix-'+Math.random().toString(36).slice(2,12);}
+
+function Calendar({events,setEvents,tasks,cu,users,locFilter,meetingNotes,setMeetingNotes,onJoinCall}){
+  const[view,setView]=useState('month');
+  const[notesEvent,setNotesEvent]=useState(null);
+  const[cur,setCur]=useState(new Date());
+  const[showNew,setNew]=useState(false);
+  const[sel,setSel]=useState(null);
+  const[saving,setSaving]=useState(false);
+  const[f,setF]=useState({title:'',type:'event',date:'',start_time:'09:00',end_time:'10:00',all_day:false,description:'',location:'',attendees:[],color:'#f5a623',personal:false,loc:'Nationwide',meet_link:''});
+  const today=new Date().toISOString().slice(0,10);
+
+  const allEvents=useMemo(()=>{
+    const evts=[...(events||[])];
+    (tasks||[]).forEach(t=>{
+      if(t.due_date&&((t.assignees||[]).some(a=>a.id===cu.id)||cu.role==='admin'||cu.role==='manager')){
+        evts.push({id:'task-'+t.id,title:t.title,date:t.due_date,type:'task',color:'#ef4444',_task:true,status:t.status});
+      }
+    });
+    return evts.filter(e=>{
+      if(e._task) return true;
+      // Creator always sees their own event. Admin sees everything for oversight.
+      if(e.created_by_id===cu.id||cu.role==='admin') return true;
+      // Invitees only see it once they've accepted — pending or rejected invites stay hidden.
+      const myStatus=(e.attendee_status||{})[cu.id];
+      if(myStatus) return myStatus==='accepted';
+      // No attendee_status entry and not the creator means this is someone else's personal item.
+      return false;
+    }).filter(e=>{
+      if(e._task) return true;
+      if(locFilter&&locFilter!=='Nationwide'&&e.loc&&e.loc!=='Nationwide'&&e.loc!==locFilter) return false;
+      return true;
+    });
+  },[events,tasks,cu,locFilter]);
+
+  function getDaysInMonth(date){
+    const year=date.getFullYear(),month=date.getMonth();
+    const first=new Date(year,month,1),last=new Date(year,month+1,0);
+    const days=[];
+    for(let i=0;i<first.getDay();i++) days.push(null);
+    for(let d=1;d<=last.getDate();d++) days.push(new Date(year,month,d));
+    return days;
+  }
+
+  function getEventsForDate(date){
+    if(!date) return[];
+    const ds=date.toISOString().slice(0,10);
+    return allEvents.filter(e=>e.date===ds);
+  }
+
+  function formatDate(d){return new Date(d+'T00:00:00').toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});}
+
+  async function createEvent(){
+    if(!f.title||!f.date)return;
+    setSaving(true);
+    const meetLink=f.type==='meeting'?getMeetLink():f.meet_link||'';
+    // Every invited attendee starts as 'pending' until they accept or reject — the event
+    // only appears on their calendar once they accept. The creator always sees their own event.
+    const attendee_status={};
+    f.attendees.filter(a=>a.id!==cu.id).forEach(a=>{attendee_status[a.id]='pending';});
+    const ev={id:'ev-'+Date.now(),...f,meet_link:meetLink,attendee_status,created_by:cu.name,created_by_id:cu.id,created_at:new Date().toISOString(),updated_at:new Date().toISOString()};
+    try{await db.insert('pf_events',ev);}catch(e){console.error(e);}
+    setEvents(p=>[...p,ev]);
+    if(f.attendees.length>0){
+      f.attendees.filter(a=>a.email&&a.id!==cu.id).forEach(a=>{
+        sendEmail({to:a.email,subject:`📅 Invite: "${f.title}"`,
+          html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
+            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:4px">📅 Black Fox QMS</div>
+            <div style="font-size:18px;font-weight:700;margin-bottom:16px">${f.title}</div>
+            <div style="background:rgba(30,58,95,.06);border:1px solid rgba(30,58,95,.15);border-radius:10px;padding:16px;margin-bottom:20px">
+              <div style="margin-bottom:8px">📅 ${f.date}${f.start_time?' at '+f.start_time:''}</div>
+              ${f.location?`<div style="margin-bottom:8px">📍 ${f.location}</div>`:''}
+              ${meetLink?`<div>🎥 <a href="${meetLink}" style="color:#f5a623">${meetLink}</a></div>`:''}
+            </div>
+            <p style="font-size:13px;color:#7b8db8">${cu.name} invited you. Log in to Black Fox QMS to accept or decline.</p>
+            <a href="${APP_URL}" style="display:inline-block;background:#f5a623;color:#000000;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:700;margin-top:8px">Review Invite →</a>
+          </div>`
+        });
+      });
+    }
+    sendLocalNotification('📅 Event Created',f.title+' on '+f.date);
+    if(meetLink){
+      setTimeout(()=>{if(window.confirm('Meeting created!\n\nLink:\n'+meetLink+'\n\nCopy to clipboard?')){navigator.clipboard.writeText(meetLink).catch(()=>{}); }},300);
+    }
+    setF({title:'',type:'event',date:'',start_time:'09:00',end_time:'10:00',all_day:false,description:'',location:'',attendees:[],color:'#f5a623',personal:false,loc:'Nationwide',meet_link:''});
+    setNew(false);setSaving(false);
+  }
+
+  async function deleteEvent(id){
+    if(!window.confirm('Delete this event?'))return;
+    try{await db.remove('pf_events',id);}catch(e){console.error(e);}
+    setEvents(p=>p.filter(e=>e.id!==id));setSel(null);
+  }
+
+  const days=getDaysInMonth(cur);
+  const monthLabel=cur.toLocaleDateString('en-US',{month:'long',year:'numeric'});
+  const WEEKDAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const upcoming=allEvents.filter(e=>e.date>=today).sort((a,b)=>a.date.localeCompare(b.date));
+
+  return el('div',null,
+    el('div',{className:'ph'},
+      el('div',null,el('div',{className:'pt'},'Calendar'),el('div',{className:'ps'},'Tasks, meetings, events and schedules')),
+      el('div',{style:{display:'flex',gap:8,alignItems:'center'}},
+        el('div',{className:'view-toggle'},
+          [{id:'month',l:'Month'},{id:'week',l:'Week'},{id:'list',l:'List'}].map(v=>el('button',{key:v.id,className:`vbtn${view===v.id?' on':''}`,onClick:()=>setView(v.id)},v.l))
+        ),
+        el('button',{onClick:()=>{const room='hendrix-'+Math.random().toString(36).slice(2,10);const link='https://meet.jit.si/'+room;onJoinCall(room,'Instant Meeting',link);},style:{background:'#10b981',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'9px 16px',fontFamily:'inherit',fontSize:13,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',gap:6}},'🎥 Instant Meeting'),
+        el('button',{className:'btn b-blue',onClick:()=>setNew(true)},'+ New Event'),
+      ),
+    ),
+    view==='month'&&el('div',null,
+      el('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}},
+        el('button',{className:'btn b-ghost',onClick:()=>setCur(d=>new Date(d.getFullYear(),d.getMonth()-1,1))},'←'),
+        el('div',{style:{fontSize:18,fontWeight:700}},monthLabel),
+        el('div',{style:{display:'flex',gap:8}},
+          el('button',{className:'btn b-ghost btn-sm',onClick:()=>setCur(new Date())},'Today'),
+          el('button',{className:'btn b-ghost',onClick:()=>setCur(d=>new Date(d.getFullYear(),d.getMonth()+1,1))},'→'),
+        ),
+      ),
+      el('div',{style:{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:2,marginBottom:4}},
+        WEEKDAYS.map(d=>el('div',{key:d,style:{textAlign:'center',fontSize:11,fontWeight:700,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'.8px',padding:'6px 0'}},d))
+      ),
+      el('div',{style:{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:2}},
+        days.map((day,i)=>{
+          if(!day) return el('div',{key:'empty-'+i,style:{minHeight:80,background:'var(--surface2)',borderRadius:6,opacity:.3}});
+          const ds=day.toISOString().slice(0,10);
+          const dayEvts=getEventsForDate(day);
+          const isToday=ds===today;
+          const isPast=ds<today;
+          return el('div',{key:ds,
+            onClick:()=>{setF(p=>({...p,date:ds}));setNew(true);},
+            style:{minHeight:80,background:isToday?'rgba(30,58,95,.07)':'var(--surface)',border:`1px solid ${isToday?'var(--accent)':'var(--border)'}`,borderRadius:8,padding:'6px',cursor:'pointer',opacity:isPast?.7:1,transition:'all .15s'},
+            onMouseEnter:ev=>ev.currentTarget.style.borderColor='rgba(30,58,95,.25)',
+            onMouseLeave:ev=>ev.currentTarget.style.borderColor=isToday?'var(--accent)':'var(--border)',
+          },
+            el('div',{style:{fontWeight:isToday?700:500,fontSize:13,width:22,height:22,borderRadius:'50%',background:isToday?'var(--accent)':'transparent',display:'flex',alignItems:'center',justifyContent:'center',color:isToday?'#000000':'var(--text)',marginBottom:4}},day.getDate()),
+            dayEvts.slice(0,3).map(ev=>el('div',{key:ev.id,onClick:e=>{e.stopPropagation();setSel(ev);},style:{fontSize:10,fontWeight:600,color:'#fff',background:ev.color||'#f5a623',borderRadius:4,padding:'1px 5px',marginBottom:2,overflow:'hidden',whiteSpace:'nowrap',textOverflow:'ellipsis'}},ev.title)),
+            dayEvts.length>3&&el('div',{style:{fontSize:10,color:'var(--text2)'}},`+${dayEvts.length-3} more`),
+          );
+        })
+      ),
+    ),
+    view==='week'&&el('div',null,
+      el('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}},
+        el('button',{className:'btn b-ghost',onClick:()=>setCur(d=>{const n=new Date(d);n.setDate(n.getDate()-7);return n;})},'←'),
+        el('div',{style:{fontSize:16,fontWeight:700}},(()=>{
+          const start=new Date(cur);start.setDate(start.getDate()-start.getDay());
+          const end=new Date(start);end.setDate(end.getDate()+6);
+          return start.toLocaleDateString('en-US',{month:'short',day:'numeric'})+' — '+end.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+        })()),
+        el('button',{className:'btn b-ghost',onClick:()=>setCur(d=>{const n=new Date(d);n.setDate(n.getDate()+7);return n;})},'→'),
+      ),
+      el('div',{style:{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:8}},
+        Array.from({length:7},(_,i)=>{
+          const d=new Date(cur);d.setDate(d.getDate()-d.getDay()+i);
+          const ds=d.toISOString().slice(0,10);
+          const dayEvts=allEvents.filter(e=>e.date===ds);
+          const isToday=ds===today;
+          return el('div',{key:ds,style:{background:isToday?'rgba(30,58,95,.05)':'var(--surface)',border:`1px solid ${isToday?'rgba(30,58,95,.25)':'var(--border)'}`,borderRadius:10,padding:10,minHeight:120}},
+            el('div',{style:{fontSize:12,fontWeight:700,color:isToday?'var(--accent)':'var(--text2)',marginBottom:8}},d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})),
+            dayEvts.map(ev=>el('div',{key:ev.id,onClick:()=>setSel(ev),style:{fontSize:11,fontWeight:600,color:'#fff',background:ev.color||'var(--accent)',borderRadius:5,padding:'4px 7px',marginBottom:4,cursor:'pointer'}},(ev.start_time?ev.start_time+' ':'')+ev.title)),
+            el('button',{onClick:()=>{setF(p=>({...p,date:ds}));setNew(true);},style:{width:'100%',background:'none',border:'1px dashed var(--border)',borderRadius:6,padding:'4px',color:'var(--text3)',cursor:'pointer',fontSize:11,marginTop:4}},'+ Add'),
+          );
+        })
+      ),
+    ),
+    view==='list'&&el('div',null,
+      el('div',{style:{fontWeight:700,marginBottom:14,fontSize:14}},'Upcoming Events & Meetings'),
+      upcoming.length===0?el('div',{className:'empty'},el('div',{className:'eico'},'📅'),el('div',{className:'etxt'},'No upcoming events')):
+      upcoming.map(ev=>el('div',{key:ev.id,
+        onClick:()=>setSel(ev),
+        style:{background:'var(--surface)',border:'1px solid var(--border)',borderLeft:`3px solid ${ev.color||'var(--accent)'}`,borderRadius:10,padding:'14px 16px',marginBottom:8,cursor:'pointer',transition:'all .15s'},
+        onMouseEnter:ev2=>ev2.currentTarget.style.borderColor='rgba(30,58,95,.25)',
+        onMouseLeave:ev2=>ev2.currentTarget.style.borderColor='var(--border)',
+      },
+        el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},
+          el('div',null,
+            el('div',{style:{display:'flex',gap:6,marginBottom:5}},
+              el('span',{style:{fontSize:11,fontWeight:700,color:ev.color||'var(--accent)',background:(ev.color||'#f5a623')+'22',borderRadius:4,padding:'2px 8px'}},(ev._task?'✅ Task Due':ev.type==='meeting'?'🤝 Meeting':ev.type==='personal'?'👤 Personal':'📌 Event')),
+            ),
+            el('div',{style:{fontWeight:700,fontSize:14}},ev.title),
+            el('div',{style:{fontSize:12,color:'var(--text2)',marginTop:4}},formatDate(ev.date)+(ev.start_time?' · '+ev.start_time+(ev.end_time?' - '+ev.end_time:''):'')),
+            ev.location&&el('div',{style:{fontSize:12,color:'var(--text2)',marginTop:2}},'📍 '+ev.location),
+          ),
+          el('div',{style:{display:'flex',gap:6,flexShrink:0},onClick:e=>e.stopPropagation()},
+            ev.meet_link&&!ev._task&&el('button',{onClick:e=>{e.stopPropagation();onJoinCall(ev.meet_link.split('/').pop(),ev.title,ev.meet_link);},style:{background:'#10b981',color:'#fff',padding:'7px 14px',borderRadius:8,border:'none',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}},'🎥 Join'),
+            !ev._task&&el('button',{onClick:e=>{e.stopPropagation();setNotesEvent(ev);},style:{background:'rgba(30,58,95,.08)',color:'var(--accent)',border:'1px solid rgba(30,58,95,.15)',padding:'7px 12px',borderRadius:8,fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}},'🤖'),
+          ),
+        ),
+        (ev.attendees||[]).length>0&&el('div',{style:{display:'flex',gap:4,marginTop:8}},
+          (ev.attendees||[]).slice(0,5).map((a,i)=>el('div',{key:a.id,className:'avatar',title:a.name,style:{background:`hsl(${(a.name.charCodeAt(0)*47)%360},50%,35%)`,width:22,height:22,fontSize:9,marginLeft:i>0?-4:0}},a.name.charAt(0).toUpperCase())),
+          (ev.attendees||[]).length>5&&el('span',{style:{fontSize:11,color:'var(--text2)',marginLeft:6}},`+${(ev.attendees||[]).length-5} more`),
+        ),
+      ))
+    ),
+    showNew&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setNew(false)},
+      el('div',{className:'md',style:{width:600}},
+        el('div',{className:'mh'},el('div',{className:'mt2'},'New Event'),el('button',{className:'mc',onClick:()=>setNew(false)},'×')),
+        el('div',{className:'mbd'},
+          el('div',{className:'fg'},el('label',null,'Title *'),el('input',{placeholder:'Event title...',value:f.title,onChange:ev=>setF(p=>({...p,title:ev.target.value})),autoFocus:true})),
+          el('div',{className:'g2'},
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Type'),el('select',{value:f.type,onChange:ev=>setF(p=>({...p,type:ev.target.value,meet_link:ev.target.value==='meeting'?getMeetLink():''}))},
+              [{v:'event',l:'📌 Event'},{v:'meeting',l:'🤝 Meeting'},{v:'personal',l:'👤 Personal'},{v:'schedule',l:'🏭 Work Schedule'}].map(t=>el('option',{key:t.v,value:t.v},t.l))
+            )),
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Color'),el('div',{style:{display:'flex',gap:6,flexWrap:'wrap',marginTop:4}},
+              EVENT_COLORS.map(c=>el('div',{key:c,onClick:()=>setF(p=>({...p,color:c})),style:{width:24,height:24,borderRadius:'50%',background:c,cursor:'pointer',border:f.color===c?'3px solid #fff':'2px solid transparent',transition:'all .15s'}}))
+            )),
+          ),
+          el('div',{className:'g2',style:{marginTop:13}},
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Date *'),el('input',{type:'date',value:f.date,onChange:ev=>setF(p=>({...p,date:ev.target.value}))})),
+            el('div',{className:'fg',style:{marginBottom:0}},
+              el('label',null,'All Day'),
+              el('div',{style:{display:'flex',alignItems:'center',gap:10,marginTop:10}},
+                el('label',{className:'toggle'},el('input',{type:'checkbox',checked:f.all_day,onChange:ev=>setF(p=>({...p,all_day:ev.target.checked}))}),el('span',{className:'tslider'})),
+                el('span',{style:{fontSize:13,color:'var(--text2)'}},f.all_day?'All day event':'Set times'),
+              ),
+            ),
+          ),
+          !f.all_day&&el('div',{className:'g2',style:{marginTop:13}},
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Start Time'),el('input',{type:'time',value:f.start_time,onChange:ev=>setF(p=>({...p,start_time:ev.target.value}))})),
+            el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'End Time'),el('input',{type:'time',value:f.end_time,onChange:ev=>setF(p=>({...p,end_time:ev.target.value}))})),
+          ),
+          el('div',{className:'fg',style:{marginTop:13}},el('label',null,'Location / Address'),el('input',{placeholder:'Office, Zoom, or address...',value:f.location,onChange:ev=>setF(p=>({...p,location:ev.target.value}))})),
+          f.type==='meeting'&&el('div',{className:'fg'},
+            el('label',null,'Video Meeting Link'),
+            el('div',{style:{display:'flex',gap:8}},
+              el('input',{value:f.meet_link,onChange:ev=>setF(p=>({...p,meet_link:ev.target.value})),placeholder:'Auto-generated Jitsi link'}),
+              el('button',{className:'btn b-ghost btn-sm',onClick:()=>setF(p=>({...p,meet_link:getMeetLink()}))},'New Link'),
+            ),
+            f.meet_link&&el('a',{href:f.meet_link,target:'_blank',style:{fontSize:11,color:'var(--green)',marginTop:4,display:'block'}},'🎥 Test link: '+f.meet_link),
+          ),
+          el('div',{className:'fg'},el('label',null,'Description'),el('textarea',{placeholder:'More details...',value:f.description,onChange:ev=>setF(p=>({...p,description:ev.target.value}))})),
+          el('div',{className:'fg'},
+            el('label',null,'Invite People'),
+            el('select',{value:'',onChange:ev=>{const u=users.find(x=>x.id===ev.target.value);if(u&&!f.attendees.find(a=>a.id===u.id))setF(p=>({...p,attendees:[...p.attendees,{id:u.id,name:u.name,email:u.email}]}));ev.target.value='';},style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
+              el('option',{value:''},'+ Invite person...'),
+              ...users.filter(u=>u.approved&&!f.attendees.find(a=>a.id===u.id)).map(u=>el('option',{key:u.id,value:u.id},u.name+' — '+u.dept))
+            ),
+            f.attendees.length>0&&el('div',{style:{display:'flex',flexWrap:'wrap',gap:6,marginTop:8}},
+              f.attendees.map(a=>el('div',{key:a.id,style:{display:'flex',alignItems:'center',gap:6,background:'var(--surface2)',borderRadius:20,padding:'4px 12px',fontSize:12}},
+                el('div',{className:'avatar',style:{background:`hsl(${(a.name.charCodeAt(0)*47)%360},50%,35%)`,width:18,height:18,fontSize:9}},a.name.charAt(0).toUpperCase()),
+                a.name,
+                el('span',{style:{cursor:'pointer',color:'var(--text3)',marginLeft:4},onClick:()=>setF(p=>({...p,attendees:p.attendees.filter(x=>x.id!==a.id)}))},'×'),
+              ))
+            ),
+          ),
+          el('div',{className:'fg'},el('label',null,'Location Filter'),el('select',{value:f.loc,onChange:ev=>setF(p=>({...p,loc:ev.target.value}))},['Nationwide','Michigan','Missouri'].map(l=>el('option',{key:l,value:l},l)))),
+        ),
+        el('div',{className:'mf'},
+          el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),
+          el('button',{className:'btn b-blue',onClick:createEvent,disabled:saving||!f.title||!f.date},saving?'Saving...':f.type==='meeting'?'Create & Send Invites':'Create Event'),
+        ),
+      )
+    ),
+    sel&&el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&setSel(null)},
+      el('div',{className:'md',style:{width:560}},
+        el('div',{className:'mh',style:{borderLeft:`4px solid ${sel.color||'var(--accent)'}`,paddingLeft:20}},
+          el('div',{style:{flex:1}},
+            el('div',{style:{display:'flex',gap:6,marginBottom:6}},
+              el('span',{style:{fontSize:11,fontWeight:700,color:sel.color||'var(--accent)',background:(sel.color||'#f5a623')+'22',borderRadius:4,padding:'2px 8px'}},(sel._task?'✅ Task':sel.type==='meeting'?'🤝 Meeting':sel.type==='personal'?'👤 Personal':'📌 Event')),
+            ),
+            el('div',{style:{fontSize:16,fontWeight:700}},sel.title),
+          ),
+          el('button',{className:'mc',onClick:()=>setSel(null)},'×'),
+        ),
+        el('div',{className:'mbd'},
+          el('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:16}},
+            el('div',null,el('div',{style:{fontSize:11,color:'var(--text3)',marginBottom:4,fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px'}},'Date'),el('div',{style:{fontSize:14,fontWeight:600}},formatDate(sel.date))),
+            !sel.all_day&&(sel.start_time||sel.end_time)&&el('div',null,el('div',{style:{fontSize:11,color:'var(--text3)',marginBottom:4,fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px'}},'Time'),el('div',{style:{fontSize:14,fontWeight:600}},(sel.start_time||'')+(sel.end_time?' — '+sel.end_time:''))),
+          ),
+          sel.location&&el('div',{style:{marginBottom:12}},el('div',{style:{fontSize:11,color:'var(--text3)',marginBottom:4,fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px'}},'Location'),el('div',{style:{fontSize:14}},sel.location)),
+          sel.description&&el('div',{style:{marginBottom:12,background:'var(--surface2)',borderRadius:8,padding:12}},el('div',{style:{fontSize:13,lineHeight:1.6,color:'var(--text2)'}},sel.description)),
+          sel.meet_link&&!sel._task&&el('div',{style:{marginBottom:16}},
+            el('div',{style:{fontSize:11,color:'var(--text3)',marginBottom:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px'}},'Video Meeting'),
+            el('div',{style:{background:'rgba(16,185,129,.06)',border:'1px solid rgba(16,185,129,.25)',borderRadius:12,padding:'14px 16px',marginBottom:12}},
+              el('div',{style:{fontSize:11,color:'#10b981',fontWeight:700,marginBottom:8,textTransform:'uppercase',letterSpacing:'.5px'}},'🔗 Meeting Link'),
+              el('div',{style:{display:'flex',gap:8,alignItems:'center'}},
+                el('div',{style:{flex:1,background:'var(--bg)',border:'1px solid var(--border)',borderRadius:8,padding:'9px 12px',fontSize:12,color:'var(--text2)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',fontFamily:'DM Mono,monospace'}},sel.meet_link),
+                el('button',{onClick:()=>{navigator.clipboard.writeText(sel.meet_link);alert('Link copied!');},style:{background:'rgba(16,185,129,.15)',color:'#10b981',border:'1px solid rgba(16,185,129,.3)',borderRadius:8,padding:'9px 14px',cursor:'pointer',fontFamily:'inherit',fontSize:12,fontWeight:700,whiteSpace:'nowrap'}},'📋 Copy'),
+              ),
+            ),
+            el('div',{style:{display:'flex',gap:8}},
+              el('button',{onClick:()=>{setSel(null);onJoinCall(sel.meet_link.split('/').pop(),sel.title,sel.meet_link);},style:{flex:1,display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,background:'#10b981',color:'#fff',padding:'12px 20px',borderRadius:10,border:'none',fontWeight:700,fontSize:14,cursor:'pointer',fontFamily:'inherit'}},'🎥 Join Now'),
+              el('a',{href:sel.meet_link,target:'_blank',style:{display:'inline-flex',alignItems:'center',gap:8,background:'rgba(16,185,129,.1)',color:'#10b981',border:'1px solid rgba(16,185,129,.3)',padding:'12px 16px',borderRadius:10,textDecoration:'none',fontWeight:700,fontSize:13}},'↗ Browser'),
+            ),
+          ),
+          (sel.attendees||[]).length>0&&el('div',{style:{marginBottom:12}},
+            el('div',{style:{fontSize:11,color:'var(--text3)',marginBottom:8,fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px'}},'Attendees ('+sel.attendees.length+')'),
+            el('div',{style:{display:'flex',flexDirection:'column',gap:6}},
+              (sel.attendees||[]).map(a=>{
+                const status=(sel.attendee_status||{})[a.id];
+                return el('div',{key:a.id,style:{display:'flex',alignItems:'center',gap:8,justifyContent:'space-between'}},
+                  el('div',{style:{display:'flex',alignItems:'center',gap:8}},
+                    el('div',{className:'avatar',style:{background:`hsl(${(a.name.charCodeAt(0)*47)%360},50%,35%)`}},a.name.charAt(0).toUpperCase()),
+                    el('span',{style:{fontSize:13}},a.name),
+                  ),
+                  (sel.created_by_id===cu.id||cu.role==='admin')&&status&&el('span',{style:{fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:4,background:status==='accepted'?'rgba(16,185,129,.1)':status==='rejected'?'rgba(239,68,68,.1)':'rgba(30,58,95,.08)',color:status==='accepted'?'var(--green)':status==='rejected'?'var(--red)':'var(--accent)'}},status),
+                );
+              })
+            ),
+          ),
+        ),
+        el('div',{className:'mf',style:{justifyContent:'space-between'}},
+          el('div',null,!sel._task&&(sel.created_by_id===cu.id||cu.role==='admin')&&el('button',{className:'btn b-red',onClick:()=>deleteEvent(sel.id)},'Delete')),
+          el('div',{style:{display:'flex',gap:8,flexWrap:'wrap'}},
+            !sel._task&&sel.created_by_id!==cu.id&&(sel.attendee_status||{})[cu.id]==='pending'&&el('button',{
+              onClick:async()=>{
+                const update={attendee_status:{...(sel.attendee_status||{}),[cu.id]:'rejected'},updated_at:new Date().toISOString()};
+                try{await db.update('pf_events',sel.id,update);}catch(e){console.error(e);}
+                setEvents(p=>p.map(e=>e.id===sel.id?{...e,...update}:e));
+                setSel(null);
+              },
+              className:'btn b-ghost',
+            },'Decline'),
+            !sel._task&&sel.created_by_id!==cu.id&&(sel.attendee_status||{})[cu.id]==='pending'&&el('button',{
+              onClick:async()=>{
+                const update={attendee_status:{...(sel.attendee_status||{}),[cu.id]:'accepted'},updated_at:new Date().toISOString()};
+                try{await db.update('pf_events',sel.id,update);}catch(e){console.error(e);}
+                setEvents(p=>p.map(e=>e.id===sel.id?{...e,...update}:e));
+                setSel(null);
+              },
+              style:{background:'var(--green)',color:'#fff',border:'none',borderRadius:8,padding:'9px 16px',fontWeight:700,fontSize:13,cursor:'pointer',fontFamily:'inherit'},
+            },'Accept'),
+            sel.meet_link&&!sel._task&&el('button',{onClick:()=>{setSel(null);onJoinCall(sel.meet_link.split('/').pop(),sel.title,sel.meet_link);},style:{background:'#10b981',color:'#fff',padding:'9px 16px',borderRadius:8,border:'none',fontWeight:700,fontSize:13,display:'inline-flex',alignItems:'center',gap:6,cursor:'pointer',fontFamily:'inherit'}},'🎥 Join'),
+            !sel._task&&(sel.type==='meeting'||(sel.attendees||[]).length>0)&&el('button',{onClick:()=>{setSel(null);setNotesEvent(sel);},style:{background:'rgba(30,58,95,.08)',color:'var(--accent)',border:'1px solid rgba(30,58,95,.25)',padding:'9px 16px',borderRadius:8,fontWeight:700,fontSize:13,cursor:'pointer',fontFamily:'inherit',display:'inline-flex',alignItems:'center',gap:6}},'🤖 AI Notes'+(meetingNotes?.find(n=>n.event_id===sel.id)?' ✓':'')),
+            el('button',{className:'btn b-ghost',onClick:()=>setSel(null)},'Close'),
+          ),
+        ),
+      )
+    ),
+    notesEvent&&el(MeetingNotesModal,{event:notesEvent,cu,users,meetingNotes,setMeetingNotes,onClose:()=>setNotesEvent(null)}),
+  );
+}
+
+// ── PULL TO REFRESH ──────────────────────────────────────────────────────────
+function usePullToRefresh(onRefresh){
+  useEffect(()=>{
+    let startY=0,pulling=false;
+    function touchStart(e){if(window.scrollY===0)startY=e.touches[0].clientY;}
+    function touchMove(e){
+      if(!startY)return;
+      const dy=e.touches[0].clientY-startY;
+      const ind=document.getElementById('ptr-indicator');
+      if(dy>10&&dy<100&&ind){pulling=true;ind.style.display='flex';ind.style.opacity=String(Math.min(dy/60,1));ind.style.transform='translateY('+Math.min(dy-10,50)+'px)';}
+    }
+    function touchEnd(){
+      const ind=document.getElementById('ptr-indicator');
+      if(pulling&&ind){
+        const dy=parseInt((ind.style.transform||'').replace('translateY(','').replace('px)',''))||0;
+        if(dy>35){
+          ind.innerHTML='<div style="animation:spin .6s linear infinite;width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%"></div><span style="margin-left:8px">Refreshing...</span>';
+          setTimeout(()=>{onRefresh();ind.style.display='none';ind.style.opacity='0';},600);
+        }else{ind.style.display='none';}
+      }
+      startY=0;pulling=false;
+    }
+    document.addEventListener('touchstart',touchStart,{passive:true});
+    document.addEventListener('touchmove',touchMove,{passive:true});
+    document.addEventListener('touchend',touchEnd);
+    return()=>{document.removeEventListener('touchstart',touchStart);document.removeEventListener('touchmove',touchMove);document.removeEventListener('touchend',touchEnd);};
+  },[onRefresh]);
+}
+
+// ── APP ─── FIX 1+2: Corrected Promise.all destructuring ─────────────────────
+function App(){
+  const[cu,setCu]=useState(()=>{try{const s=localStorage.getItem('pf_session');return s?JSON.parse(s):null;}catch{return null;}});
+  const[tasks,setTasks]=useState([]);
+  const[salesTasks,setSalesTasks]=useState([]);
+  const[events,setEvents]=useState([]);
+  const[meetingNotes,setMeetingNotes]=useState([]);
+  const[users,setUsers]=useState([]);
+  const[sops,setSops]=useState([]);
+  const[qmsDeviations,setQmsDeviations]=useState([]);
+  const[qmsCAPAs,setQmsCAPAs]=useState([]);
+  const[qmsAudits,setQmsAudits]=useState([]);
+  const[qmsChanges,setQmsChanges]=useState([]);
+  const[qmsComplaints,setQmsComplaints]=useState([]);
+  const[qmsSuppliers,setQmsSuppliers]=useState([]);
+  const[qmsCorrective,setQmsCorrective]=useState([]);
+  const[loading,setLoading]=useState(false);
+  const[dbReady,setDbReady]=useState(null);
+  const[page,setPage]=useState('board');
+  const[holdAlert,setHoldAlert]=useState(null);
+  const[inviteAlert,setInviteAlert]=useState(null);
+  const[activeCall,setActiveCall]=useState(null);
+  const[installPrompt,setInstallPrompt]=useState(null);
+  const[showInstallBanner,setShowInstallBanner]=useState(false);
+
+  // Capture the beforeinstallprompt event for PWA install
+  React.useEffect(()=>{
+    const handler=e=>{e.preventDefault();setInstallPrompt(e);};
+    window.addEventListener('beforeinstallprompt',handler);
+    window.addEventListener('appinstalled',()=>{setShowInstallBanner(false);setInstallPrompt(null);});
+    return()=>window.removeEventListener('beforeinstallprompt',handler);
+  },[]);
+
+  // Show install banner 2s after login if not already installed/dismissed
+  React.useEffect(()=>{
+    if(!cu)return;
+    const dismissed=localStorage.getItem('bfm_install_dismissed');
+    const isStandalone=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone;
+    if(!isStandalone&&!dismissed&&installPrompt){
+      setTimeout(()=>setShowInstallBanner(true),2000);
+    }
+  },[cu,installPrompt]);
+  const[locFilter,setLocFilter]=useState(()=>{try{const s=localStorage.getItem('pf_session');const u=s?JSON.parse(s):null;return u?.loc||'Nationwide';}catch{return 'Nationwide';}});
+
+  // FIX 2: doRefresh with correct destructuring
+  const doRefresh=useCallback(()=>{
+    if(!cu||!dbReady)return;
+    Promise.all([
+      db.get('pf_tasks','order=created_at.desc').catch(()=>[]),
+      db.get('pf_sales_tasks','order=created_at.desc').catch(()=>[]),
+      db.get('pf_users').catch(()=>[]),
+      db.get('pf_events','order=date.asc').catch(()=>[]),
+      db.get('pf_meeting_notes','order=created_at.desc').catch(()=>[]),
+      db.get('pf_sops','order=created_at.desc').catch(()=>[]),
+      db.get('pf_qms_deviations','order=created_at.desc').catch(()=>[]),
+      db.get('pf_qms_capas','order=created_at.desc').catch(()=>[]),
+      db.get('pf_qms_audits','order=created_at.desc').catch(()=>[]),
+      db.get('pf_qms_changes','order=created_at.desc').catch(()=>[]),
+      db.get('pf_qms_complaints','order=created_at.desc').catch(()=>[]),
+      db.get('pf_qms_suppliers','order=created_at.desc').catch(()=>[]),
+      db.get('pf_qms_corrective','order=created_at.desc').catch(()=>[]),
+    ]).then(([_tasks,_sales,_users,_events,_notes,_sops,_dev,_cap,_aud,_chg,_comp,_sup,_corr])=>{
+      setTasks(_tasks||[]);
+      setSalesTasks(_sales||[]);
+      setUsers(_users||[]);
+      setEvents(_events||[]);
+      setMeetingNotes(_notes||[]);
+      setSops(_sops||[]);
+      setQmsDeviations(_dev||[]);
+      setQmsCAPAs(_cap||[]);
+      setQmsAudits(_aud||[]);
+      setQmsChanges(_chg||[]);
+      setQmsComplaints(_comp||[]);
+      setQmsSuppliers(_sup||[]);
+      setQmsCorrective(_corr||[]);
+    });
+  },[cu,dbReady]);
+
+  usePullToRefresh(doRefresh);
+
+  // Auto-refresh every 30 seconds
+  useEffect(()=>{
+    if(!cu||!dbReady) return;
+    const interval=setInterval(()=>doRefresh(),2*60*1000);
+    return()=>clearInterval(interval);
+  },[cu,dbReady,doRefresh]);
+
+  useEffect(()=>{
+    db.get('pf_users','limit=1').then(()=>setDbReady(true)).catch(()=>setDbReady(false));
+  },[]);
+
+  useEffect(()=>{
+    if(!cu)return;
+    let timer;
+    const reset=()=>{
+      clearTimeout(timer);
+      timer=setTimeout(()=>{localStorage.removeItem('pf_session');setCu(null);alert('You have been signed out due to inactivity.');},30*60*1000);
+    };
+    const evts=['mousemove','keydown','click','touchstart','scroll'];
+    evts.forEach(e=>window.addEventListener(e,reset,{passive:true}));
+    reset();
+    return()=>{clearTimeout(timer);evts.forEach(e=>window.removeEventListener(e,reset));};
+  },[cu]);
+
+  // FIX 1: main data load with correct destructuring
+  useEffect(()=>{
+    if(!cu||!dbReady)return;
+    // Ask for notification permission immediately on login
+    if('Notification' in window&&Notification.permission==='default'){
+      Notification.requestPermission().then(p=>{
+        if(p==='granted'){
+          new Notification('🔔 Black Fox QMS',{body:'Black Fox QMS notifications enabled!',icon:'/BFM/icon-192.png'});
+        }
+      });
+    }
+    setTimeout(()=>requestPushPermission(cu.id),2000);
+    setLoading(true);
+    Promise.all([
+      db.get('pf_tasks','order=created_at.desc').catch(()=>[]),
+      db.get('pf_sales_tasks','order=created_at.desc').catch(()=>[]),
+      db.get('pf_users').catch(()=>[]),
+      db.get('pf_events','order=date.asc').catch(()=>[]),
+      db.get('pf_meeting_notes','order=created_at.desc').catch(()=>[]),
+      db.get('pf_sops','order=created_at.desc').catch(()=>[]),
+    ]).then(([_tasks,_sales,_users,_events,_notes,_sops])=>{
+      setTasks(_tasks||[]);
+      setSalesTasks(_sales||[]);
+      setUsers(_users||[]);
+      setEvents(_events||[]);
+      setMeetingNotes(_notes||[]);
+      setSops(_sops||[]);
+    }).catch(console.error).finally(()=>setLoading(false));
+    db.get('pf_tasks','status=eq.on_hold&order=updated_at.desc').then(held=>{
+      const myHeld=(held||[]).filter(t=>(t.assignees||[]).some(a=>a.id===cu?.id)&&!sessionStorage.getItem('hold-dismissed-'+t.id));
+      if(myHeld.length>0) setHoldAlert(myHeld[0]);
+    }).catch(()=>{});
+  },[cu,dbReady]);
+
+  // Detect pending calendar/meeting invites for this user and surface a one-time popup,
+  // same pattern as the on-hold task alert.
+  useEffect(()=>{
+    if(!cu||!events||events.length===0) return;
+    const myPending=events.filter(e=>
+      e.created_by_id!==cu.id&&
+      (e.attendee_status||{})[cu.id]==='pending'&&
+      !sessionStorage.getItem('invite-dismissed-'+e.id)
+    );
+    if(myPending.length>0) setInviteAlert(myPending[0]);
+  },[events,cu]);
+
+  if(dbReady===null) return el('div',{className:'loading'},el('div',{className:'spinner'}),el('div',null,'Connecting...'));
+  if(dbReady===false) return el(SetupScreen,{onDone:()=>setDbReady(true)});
+  if(!cu) return el(Auth,{onLogin:u=>{setCu(u);setLocFilter(u.loc||'Nationwide');}});
+  if(loading) return el('div',{className:'loading'},el('div',{className:'spinner'}),el('div',null,'Loading...'));
+
+  const pending=users.filter(u=>!u.approved).length;
+  const isAdmin=cu.role==='admin';
+  const isElevated=isAdmin||['coo','director_production','director_operations','director_sales_marketing','general_manager','compliance_manager'].includes(cu.role);
+  // QMS access: Admin, Managers, and Supervisors. Employees, Leads, and Staff
+  // get SOPs only (per Black Fox QMS QMS RBAC policy).
+  const qmsRoleGroup=ROLE_GROUPS.find(g=>g.roles.includes(cu.role))?.label;
+  const canAccessQms=isAdmin||['Executive','Directors','Managers'].includes(qmsRoleGroup);
+  const today=new Date().toISOString().slice(0,10);
+  const myTasks=tasks.filter(t=>(t.assignees||[]).some(a=>a.id===cu.id)&&!['archived'].includes(t.status));
+  const overdueCt=tasks.filter(t=>!['done','archived'].includes(t.status)&&t.due_date&&t.due_date<today).length;
+
+  const nav=[
+    {id:'board',ico:'⬛',label:'Task Board'},
+    {id:'calendar',ico:'📅',label:'Calendar'},
+    (cu.role==='admin'||cu.dept==='Sales'||cu.dept==='Marketing')&&{id:'sales',ico:'🏪',label:'Sales & Marketing'},
+    {id:'sops',ico:'📋',label:'SOPs'},
+    canAccessQms&&{id:'qms',ico:'🛡️',label:'QMS'},
+    canAccessQms&&{id:'compliance',ico:'✅',label:'Compliance'},
+    canAccessQms&&{id:'risks',ico:'⚠️',label:'Risk Register'},
+    {id:'logs',ico:'📋',label:'Facility Logs'},
+    {id:'mydocs',ico:'📁',label:'My Documents'},
+    {id:'scores',ico:'🏆',label:'Scoreboard'},
+    isAdmin&&{id:'team',ico:'👥',label:'Team & Access',badge:pending||null},
+  ].filter(Boolean);
+
+  return el('div',{className:'app'},
+    el('div',{className:'sb'},
+      el(BFMlogo,{size:28,labelSize:18,className:'sb-logo',textColor:'#ffffff'}),
+      el('div',{style:{marginBottom:16}},
+        el('div',{className:'sb-label',style:{marginBottom:8}},'Location'),
+        LOCS.filter(l=>isAdmin||isElevated||l===cu.loc||cu.loc==='Nationwide').map(l=>
+          el('button',{key:l,className:`nav${locFilter===l?' on':''}`,onClick:()=>setLocFilter(l)},
+            el('span',null,l==='Nationwide'?'🌐':l==='Michigan'?'🏭':'🏗'),l
+          )
+        )
+      ),
+      el('div',{className:'sb-label',style:{marginBottom:8}},'Navigation'),
+      nav.map(item=>el('button',{key:item.id,className:`nav${page===item.id?' on':''}`,onClick:()=>setPage(item.id)},
+        el('span',null,item.ico),item.label,item.badge&&el('span',{className:'dot'},item.badge)
+      )),
+      el('div',{style:{margin:'16px 0',padding:'12px',background:'var(--surface2)',borderRadius:'var(--rs)'}},
+        el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.8px',marginBottom:10}},'Quick Stats'),
+        [{l:'My Tasks',v:myTasks.length,c:'var(--accent)'},{l:'Overdue',v:overdueCt,c:overdueCt>0?'var(--red)':'var(--text3)'}].map(({l,v,c})=>
+          el('div',{key:l,style:{display:'flex',justifyContent:'space-between',marginBottom:6}},
+            el('span',{style:{fontSize:12,color:'var(--text2)'}},l),
+            el('span',{style:{fontSize:13,fontWeight:700,color:c}},v),
+          )
+        )
+      ),
+      el('div',{className:'sb-user'},
+        el('div',{className:'sb-name'},cu.name),
+        el('div',{className:'sb-role'},`${RLABEL[cu.role]||cu.role} · ${cu.dept}`),
+        el('div',{className:'sb-role',style:{marginTop:2}},cu.loc),
+        el('button',{
+          onClick:async()=>{
+            if(!('Notification' in window)){alert('Notifications not supported on this browser.');return;}
+            if(Notification.permission==='granted'){
+              new Notification('🔔 Test Notification',{body:'Notifications are working!',icon:'/BFM/icon-192.png'});
+              return;
+            }
+            const perm=await Notification.requestPermission();
+            if(perm==='granted'){requestPushPermission(cu.id);new Notification('Black Fox QMS',{body:'Notifications enabled!',icon:'/BFM/icon-192.png'});}
+            else if(perm==='denied'){alert('Notifications blocked.\n\nTo fix:\n1. Click the 🔒 lock icon in your browser address bar\n2. Find Notifications\n3. Set to Allow\n4. Refresh the page');}
+          },
+          style:{marginTop:8,width:'100%',background:typeof Notification!=='undefined'&&Notification.permission==='granted'?'rgba(16,185,129,.08)':'rgba(30,58,95,.05)',border:'1px solid',borderColor:typeof Notification!=='undefined'&&Notification.permission==='granted'?'rgba(16,185,129,.2)':'rgba(30,58,95,.15)',borderRadius:'var(--rs)',padding:'8px',color:typeof Notification!=='undefined'&&Notification.permission==='granted'?'var(--green)':'var(--accent)',fontFamily:'inherit',fontSize:12,fontWeight:600,cursor:'pointer',transition:'all .15s',letterSpacing:'.3px'}
+        },typeof Notification!=='undefined'&&Notification.permission==='granted'?'🔔 Notifications On ✓':'🔔 Enable Notifications'),
+        el('button',{
+          onClick:async()=>{
+            // Send a real test email to the logged in user
+            if(!cu.email){alert('No email on your account.');return;}
+            try{
+              await sendEmail({
+                to:cu.email,
+                subject:'✅ Black Fox QMS — Email Test',
+                html:`<div style="font-family:sans-serif;background:#000000;color:#e8edf8;padding:28px;border-radius:12px;max-width:500px;border:1px solid #1a2d4f">
+                  <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">✅ Email Working!</div>
+                  <p>Hi ${cu.name},</p>
+                  <p style="margin:12px 0;color:#7b8db8">This is a test email from Black Fox QMS. If you received this, email notifications are working correctly.</p>
+                  <div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:8px;padding:12px;margin-top:16px;font-size:13px;color:#10b981">
+                    ✅ Resend API connected<br>✅ Email delivery confirmed
+                  </div>
+                </div>`,
+              });
+              alert('✅ Test email sent to '+cu.email+'\n\nCheck your inbox (and spam folder).');
+            }catch(e){
+              alert('❌ Email failed: '+e.message);
+            }
+            // Also send a test push notification
+            if(Notification.permission==='granted'){
+              sendLocalNotification('✅ Test Push','Push notifications are working!');
+            }
+          },
+          style:{marginTop:4,width:'100%',background:'rgba(59,130,246,.08)',border:'1px solid rgba(59,130,246,.2)',borderRadius:'var(--rs)',padding:'8px',color:'#93c5fd',fontFamily:'inherit',fontSize:12,fontWeight:600,cursor:'pointer',transition:'all .15s'}
+        },'📧 Test Email & Push'),
+        el(SidebarChangePw,{cu,SUPA_URL,SUPA_KEY}),
+        el('button',{
+          onClick:()=>{localStorage.removeItem('pf_session');setCu(null);},
+          style:{marginTop:6,width:'100%',background:'rgba(239,68,68,.08)',border:'1px solid rgba(239,68,68,.2)',borderRadius:'var(--rs)',padding:'8px',color:'var(--red)',fontFamily:'inherit',fontSize:12,fontWeight:600,cursor:'pointer',transition:'all .15s',letterSpacing:'.3px'}
+        },'⏻  Sign Out'),
+      )
+    ),
+    activeCall&&el(VideoCall,{room:activeCall.room,meetLink:activeCall.meetLink,displayName:cu.name,onEnd:()=>setActiveCall(null)}),
+    el('div',{id:'ptr-indicator',style:{display:'none',position:'fixed',top:10,left:'50%',transform:'translateX(-50%)',background:'var(--surface)',border:'1px solid var(--border)',borderRadius:20,padding:'8px 16px',zIndex:9998,alignItems:'center',gap:8,fontSize:12,color:'var(--text2)',boxShadow:'0 4px 12px rgba(0,0,0,.3)'}},'↓ Pull to refresh'),
+    el('div',{id:'update-banner',style:{display:'none'},className:'update-banner'},
+      el('span',null,'🆕 New version available!'),
+      el('button',{onClick:()=>window.location.reload(true),style:{background:'rgba(0,0,0,.2)',border:'none',borderRadius:6,padding:'5px 14px',color:'#ffffff',fontFamily:'inherit',fontSize:12,fontWeight:700,cursor:'pointer'}},'Update Now'),
+    ),
+    holdAlert&&el('div',{className:'on-hold-alert',onClick:()=>setHoldAlert(null)},
+      el('div',{className:'on-hold-banner'},
+        el('div',{style:{fontSize:40,marginBottom:12}},'🚨'),
+        el('div',{style:{fontSize:22,fontWeight:800,marginBottom:8,letterSpacing:'-.5px'}},'TASK ON HOLD'),
+        el('div',{style:{fontSize:16,fontWeight:700,marginBottom:12}},holdAlert.title),
+        holdAlert.hold_reason&&el('div',{style:{fontSize:14,opacity:.9,marginBottom:16,lineHeight:1.5}},'"'+holdAlert.hold_reason+'"'),
+        el('div',{style:{fontSize:13,opacity:.8,marginBottom:20}},'Placed on hold by '+holdAlert.hold_by),
+        el('button',{onClick:()=>{sessionStorage.setItem('hold-dismissed-'+holdAlert.id,'1');setHoldAlert(null);},style:{background:'rgba(255,255,255,.2)',border:'2px solid rgba(255,255,255,.5)',borderRadius:10,padding:'10px 28px',color:'#fff',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer'}},'I Understand'),
+      )
+    ),
+    inviteAlert&&el('div',{className:'on-hold-alert',style:{background:'rgba(0,0,0,.85)'}},
+      el('div',{className:'on-hold-banner',style:{background:'linear-gradient(135deg,#1a2d4f,#0f1e38)'}},
+        el('div',{style:{fontSize:40,marginBottom:12}},'📅'),
+        el('div',{style:{fontSize:22,fontWeight:800,marginBottom:8,letterSpacing:'-.5px'}},"YOU'RE INVITED"),
+        el('div',{style:{fontSize:16,fontWeight:700,marginBottom:6}},inviteAlert.title),
+        el('div',{style:{fontSize:13,opacity:.85,marginBottom:4}},inviteAlert.date+(inviteAlert.start_time?' at '+inviteAlert.start_time:'')),
+        inviteAlert.location&&el('div',{style:{fontSize:13,opacity:.85,marginBottom:12}},'📍 '+inviteAlert.location),
+        el('div',{style:{fontSize:13,opacity:.8,marginBottom:20}},'Invited by '+inviteAlert.created_by),
+        el('div',{style:{display:'flex',gap:10,justifyContent:'center'}},
+          el('button',{
+            onClick:async()=>{
+              const update={attendee_status:{...(inviteAlert.attendee_status||{}),[cu.id]:'rejected'},updated_at:new Date().toISOString()};
+              try{await db.update('pf_events',inviteAlert.id,update);}catch(e){console.error(e);}
+              setEvents(p=>p.map(e=>e.id===inviteAlert.id?{...e,...update}:e));
+              sessionStorage.setItem('invite-dismissed-'+inviteAlert.id,'1');
+              setInviteAlert(null);
+            },
+            style:{background:'rgba(239,68,68,.2)',border:'2px solid rgba(239,68,68,.5)',borderRadius:10,padding:'10px 24px',color:'#fff',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer'}
+          },'Decline'),
+          el('button',{
+            onClick:async()=>{
+              const update={attendee_status:{...(inviteAlert.attendee_status||{}),[cu.id]:'accepted'},updated_at:new Date().toISOString()};
+              try{await db.update('pf_events',inviteAlert.id,update);}catch(e){console.error(e);}
+              setEvents(p=>p.map(e=>e.id===inviteAlert.id?{...e,...update}:e));
+              sessionStorage.setItem('invite-dismissed-'+inviteAlert.id,'1');
+              setInviteAlert(null);
+            },
+            style:{background:'rgba(16,185,129,.25)',border:'2px solid rgba(16,185,129,.6)',borderRadius:10,padding:'10px 24px',color:'#fff',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer'}
+          },'Accept'),
+        ),
+      )
+    ),
+    // ── PWA INSTALL BANNER ──────────────────────────────────────────────────────
+    showInstallBanner&&el('div',{style:{
+      position:'fixed',bottom:80,left:'50%',transform:'translateX(-50%)',
+      background:'#1e3a5f',color:'#ffffff',borderRadius:16,
+      padding:'16px 20px',zIndex:9999,
+      boxShadow:'0 8px 32px rgba(15,23,42,.35)',
+      display:'flex',alignItems:'center',gap:14,
+      maxWidth:380,width:'calc(100% - 32px)',
+      border:'1px solid rgba(255,255,255,.15)',
+    }},
+      el('img',{src:'/BFM/icon-192.png',width:48,height:48,style:{borderRadius:10,flexShrink:0},
+        onError:e=>{e.target.style.display='none';}}),
+      el('div',{style:{flex:1,minWidth:0}},
+        el('div',{style:{fontSize:14,fontWeight:700,marginBottom:3}},'Install Black Fox QMS'),
+        el('div',{style:{fontSize:12,opacity:.8,lineHeight:1.4}},'Black Fox QMS — works like a native app on any device'),
+      ),
+      el('div',{style:{display:'flex',flexDirection:'column',gap:6,flexShrink:0}},
+        el('button',{
+          onClick:async()=>{
+            if(installPrompt){
+              installPrompt.prompt();
+              const{outcome}=await installPrompt.userChoice;
+              if(outcome==='accepted'){setShowInstallBanner(false);setInstallPrompt(null);}
+            }else{
+              alert('To install: click the browser menu → Apps → Install this site as an app');
+              setShowInstallBanner(false);
+            }
+          },
+          style:{background:'#ffffff',color:'#1e3a5f',border:'none',borderRadius:8,padding:'7px 16px',fontSize:12,fontWeight:700,cursor:'pointer',whiteSpace:'nowrap'}
+        },'Install App'),
+        el('button',{
+          onClick:()=>{
+            setShowInstallBanner(false);
+            localStorage.setItem('bfm_install_dismissed','1');
+          },
+          style:{background:'transparent',color:'rgba(255,255,255,.6)',border:'none',borderRadius:8,padding:'4px 8px',fontSize:11,cursor:'pointer',whiteSpace:'nowrap'}
+        },"Don't show again"),
+      ),
+    ),
+
+    el('div',{className:'mobile-nav'},
+      el('button',{className:`mnav-btn${page==='board'?' on':''}`,onClick:()=>setPage('board')},el('span',{className:'mnav-ico'},'⬛'),'Board'),
+      el('button',{className:`mnav-btn${page==='sales'?' on':''}`,onClick:()=>setPage('sales')},el('span',{className:'mnav-ico'},'🏪'),'Sales'),
+      el('button',{className:`mnav-btn${page==='calendar'?' on':''}`,onClick:()=>setPage('calendar')},el('span',{className:'mnav-ico'},'📅'),'Calendar'),
+      cu.role==='admin'&&el('button',{className:`mnav-btn${page==='team'?' on':''}`,onClick:()=>setPage('team')},
+        el('div',{style:{position:'relative',display:'inline-block'}},el('span',{className:'mnav-ico'},'👥'),pending>0&&el('span',{className:'mnav-dot'},pending)),'Team'
+      ),
+      el('button',{className:'mnav-btn',onClick:async()=>{
+          if(!('Notification' in window)){alert('Not supported');return;}
+          if(Notification.permission==='granted'){alert('Notifications already enabled ✓');return;}
+          const p=await Notification.requestPermission();
+          if(p==='granted'){requestPushPermission(cu.id);new Notification('Black Fox QMS',{body:'Notifications enabled!',icon:'/BFM/icon-192.png'});}
+          else alert('Blocked — go to browser settings to allow notifications');
+        }},
+        el('span',{className:'mnav-ico'},typeof Notification!=='undefined'&&Notification.permission==='granted'?'🔔':'🔕'),'Alerts'
+      ),
+      el('button',{className:`mnav-btn${page==='sops'?' on':''}`,onClick:()=>setPage('sops')},el('span',{className:'mnav-ico'},'📋'),'SOPs'),
+      canAccessQms&&el('button',{className:`mnav-btn${page==='qms'?' on':''}`,onClick:()=>setPage('qms')},el('span',{className:'mnav-ico'},'🛡️'),'QMS'),
+      el('button',{className:`mnav-btn${page==='logs'?' on':''}`,onClick:()=>setPage('logs')},el('span',{className:'mnav-ico'},'📋'),'Logs'),
+      el('button',{className:`mnav-btn${page==='scores'?' on':''}`,onClick:()=>setPage('scores')},el('span',{className:'mnav-ico'},'🏆'),'Scores'),
+      el('button',{className:'mnav-btn',onClick:()=>{if(window.confirm('Sign out?')){localStorage.removeItem('pf_session');window.location.reload();}}},el('span',{className:'mnav-ico'},'⏻'),'Sign Out'),
+    ),
+    el('div',{className:'main'},
+      page==='board'&&el(Board,{tasks,setTasks,cu,users,locFilter,setLocFilter,canAccessQms,setPage,SUPA_URL,SUPA_KEY,H}),
+      page==='calendar'&&el(Calendar,{events,setEvents,tasks,cu,users,locFilter,meetingNotes,setMeetingNotes,onJoinCall:(room,title,meetLink)=>setActiveCall({room,title,meetLink})}),
+      page==='sales'&&el(SalesMarketing,{salesTasks,setSalesTasks,cu,users,locFilter}),
+      page==='sops'&&el(SOPs,{sops,setSops,cu,users}),
+      page==='compliance'&&canAccessQms&&el(ComplianceModule,{cu,isElevated,isAdmin,LICENSES,SUPA_URL,SUPA_KEY,H,db}),
+      page==='risks'&&canAccessQms&&el(RiskRegister,{cu,isElevated,isAdmin,SUPA_URL,SUPA_KEY,H}),
+      page==='logs'&&el(FacilityLogs,{cu,isElevated,isAdmin,SUPA_URL,SUPA_KEY,H}),
+      page==='qms'&&canAccessQms&&el(QMS,{cu,users,tasks,sops,
+        deviations:qmsDeviations,setDeviations:setQmsDeviations,
+        capas:qmsCAPAs,setCapas:setQmsCAPAs,
+        audits:qmsAudits,setAudits:setQmsAudits,
+        changes:qmsChanges,setChanges:setQmsChanges,
+        complaints:qmsComplaints,setComplaints:setQmsComplaints,
+        suppliers:qmsSuppliers,setSuppliers:setQmsSuppliers,
+        corrective:qmsCorrective,setCorrective:setQmsCorrective,
+      }),
+      page==='mydocs'&&el(MyDocuments,{cu,corrective:qmsCorrective,setCorrective:setQmsCorrective}),
+      page==='scores'&&el(Scoreboard,{tasks,cu,users}),
+      page==='team'&&isAdmin&&el(Team,{users,setUsers,cu}),
+    )
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(el(App));
+</script>
+<script>
+if('serviceWorker' in navigator && window.location.hostname !== 'www.claudeusercontent.com'){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/BFM/sw.js')
+      .then(reg => {
+        console.log('SW registered');
+        setInterval(() => reg.update(), 30 * 60 * 1000);
+        reg.addEventListener('updatefound', () => {
+          const newSW = reg.installing;
+          newSW.addEventListener('statechange', () => {
+            if(newSW.state === 'installed' && navigator.serviceWorker.controller) {
+              const banner = document.getElementById('update-banner');
+              if(banner) banner.style.display = 'flex';
+            }
+          });
+        });
+      })
+      .catch(e => console.log('SW failed:', e));
+    navigator.serviceWorker.addEventListener('message', ev => {
+      if(ev.data?.type === 'SW_UPDATED') {
+        const banner = document.getElementById('update-banner');
+        if(banner) banner.style.display = 'flex';
+      }
+    });
+  });
+}
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  setTimeout(() => {
+    if(deferredPrompt) {
+      const banner = document.createElement('div');
+      banner.id = 'install-banner';
+      banner.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1e3a5f;color:#ffffff;padding:12px 20px;border-radius:12px;font-family:Inter,sans-serif;font-size:13px;font-weight:700;cursor:pointer;z-index:9999;box-shadow:0 8px 24px rgba(30,58,95,.3);display:flex;align-items:center;gap:10px;';
+      banner.innerHTML = '<span>📱</span><span>Add Black Fox QMS to Home Screen</span><span style="margin-left:8px;opacity:.6">×</span>';
+      banner.onclick = (e) => {
+        if(e.target.textContent === '×') { banner.remove(); return; }
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then(() => { deferredPrompt = null; banner.remove(); });
+      };
+      document.body.appendChild(banner);
+    }
+  }, 3000);
 });
+</script>
+</body>
+</html>
