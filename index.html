@@ -1888,7 +1888,92 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
 }
 
 // ── BOARD PAGE ────────────────────────────────────────────────────────────────
-function Board({tasks,setTasks,cu,users,locFilter,setLocFilter}){
+// ── COMPLIANCE SUMMARY WIDGET (shown on Task Board for managers+) ────────────
+function ComplianceSummaryWidget({cu,setPage,SUPA_URL,SUPA_KEY,H}){
+  const[data,setData]=React.useState(null);
+
+  React.useEffect(()=>{
+    fetch(`${SUPA_URL}/rest/v1/pf_compliance_checks?select=*`,{headers:H.headers})
+      .then(r=>r.ok?r.json():[]).then(rows=>{
+        if(!Array.isArray(rows)){setData({});return;}
+        const byFw={};
+        Object.entries(COMPLIANCE_FRAMEWORKS).forEach(([k,fw])=>{
+          const total=fw.clauses.length;
+          const compliant=fw.clauses.filter(c=>rows.find(r=>r.clause_id===c.id&&r.framework===k&&r.status==='compliant')).length;
+          const gap=fw.clauses.filter(c=>rows.find(r=>r.clause_id===c.id&&r.framework===k&&r.status==='gap')).length;
+          byFw[k]={total,compliant,gap,pct:Math.round((compliant/total)*100)};
+        });
+        setData(byFw);
+      }).catch(()=>setData({}));
+  },[]);
+
+  if(!data) return el('div',{style:{padding:'16px',textAlign:'center',color:'var(--text3)',fontSize:13}},'Loading compliance data...');
+
+  const overall=Object.values(data).length?Math.round(Object.values(data).reduce((a,b)=>a+b.pct,0)/Object.values(data).length):0;
+  const totalGaps=Object.values(data).reduce((a,b)=>a+(b.gap||0),0);
+
+  return el('div',{style:{background:'#ffffff',border:'1px solid var(--border)',borderRadius:12,padding:'18px 20px',marginBottom:20,boxShadow:'0 1px 4px rgba(15,23,42,.06)'}},
+    el('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14,flexWrap:'wrap',gap:8}},
+      el('div',{style:{display:'flex',alignItems:'center',gap:10}},
+        el('div',{style:{fontSize:20}},'✅'),
+        el('div',null,
+          el('div',{style:{fontSize:15,fontWeight:800,color:'var(--text)'}},'Compliance Overview'),
+          el('div',{style:{fontSize:12,color:'var(--text2)',marginTop:1}},'ISO 9001 · cGMP · Missouri DCR · FSMA 21 CFR 117'),
+        ),
+      ),
+      el('div',{style:{display:'flex',alignItems:'center',gap:10}},
+        totalGaps>0&&el('div',{style:{background:'rgba(220,38,38,.1)',border:'1px solid rgba(220,38,38,.25)',borderRadius:8,padding:'4px 12px',fontSize:12,fontWeight:700,color:'#dc2626'}},
+          '⚠ '+totalGaps+' gap'+(totalGaps!==1?'s':'')+' require attention'
+        ),
+        el('button',{
+          onClick:()=>setPage('compliance'),
+          style:{background:'var(--accent)',color:'#fff',border:'none',borderRadius:8,padding:'7px 16px',fontFamily:'inherit',fontSize:12,fontWeight:700,cursor:'pointer'}
+        },'View Full Report →'),
+      ),
+    ),
+
+    // Overall bar
+    el('div',{style:{marginBottom:16}},
+      el('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:5,fontSize:12}},
+        el('span',{style:{color:'var(--text2)',fontWeight:600}},'Overall Compliance Score'),
+        el('span',{style:{fontWeight:800,fontSize:16,color:overall>=80?'#16a34a':overall>=50?'#d97706':'#dc2626'}},overall+'%'),
+      ),
+      el('div',{style:{background:'var(--surface2)',borderRadius:20,height:10,overflow:'hidden'}},
+        el('div',{style:{width:overall+'%',height:'100%',background:overall>=80?'#22c55e':overall>=50?'#f59e0b':'#ef4444',borderRadius:20,transition:'width .5s'}}),
+      ),
+    ),
+
+    // Per-framework grid
+    el('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))',gap:10}},
+      Object.entries(COMPLIANCE_FRAMEWORKS).map(([k,fw])=>{
+        const d=data[k]||{total:fw.clauses.length,compliant:0,gap:0,pct:0};
+        const pct=d.pct||0;
+        const col=pct>=80?'#16a34a':pct>=50?'#d97706':'#dc2626';
+        return el('div',{key:k,
+          onClick:()=>setPage('compliance'),
+          style:{background:pct>=80?'rgba(22,163,74,.05)':pct>=50?'rgba(217,119,6,.05)':'rgba(220,38,38,.05)',
+            border:'1px solid',borderColor:pct>=80?'rgba(22,163,74,.2)':pct>=50?'rgba(217,119,6,.2)':'rgba(220,38,38,.2)',
+            borderRadius:10,padding:'12px 14px',cursor:'pointer',transition:'all .15s'},
+          onMouseEnter:ev=>ev.currentTarget.style.transform='translateY(-1px)',
+          onMouseLeave:ev=>ev.currentTarget.style.transform='translateY(0)',
+        },
+          el('div',{style:{fontSize:18,marginBottom:4}},fw.icon),
+          el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text)',marginBottom:6,lineHeight:1.3}},fw.label),
+          el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:5}},
+            el('span',{style:{fontSize:11,color:'var(--text2)'}},d.compliant+'/'+d.total+' clauses'),
+            el('span',{style:{fontSize:14,fontWeight:800,color:col}},pct+'%'),
+          ),
+          el('div',{style:{background:'var(--surface2)',borderRadius:10,height:5,overflow:'hidden'}},
+            el('div',{style:{width:pct+'%',height:'100%',background:col,borderRadius:10,transition:'width .4s'}}),
+          ),
+          d.gap>0&&el('div',{style:{fontSize:10,color:'#dc2626',marginTop:5,fontWeight:600}},'⚠ '+d.gap+' gap'+(d.gap!==1?'s':'')),
+        );
+      }),
+    ),
+  );
+}
+
+function Board({tasks,setTasks,cu,users,locFilter,setLocFilter,canAccessQms,setPage,SUPA_URL,SUPA_KEY,H}){
   const[view,setView]=useState('board');
   const[section,setSection]=useState('All');
   const[showNew,setNew]=useState(false);
@@ -2012,6 +2097,7 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter}){
           el('div',null,el('div',{className:'sl'},l),el('div',{className:'sv',style:{color:c,fontSize:24}},v)),
         ))
     ),
+    canAccessQms&&el(ComplianceSummaryWidget,{cu,setPage,SUPA_URL,SUPA_KEY,H}),
     el('div',{style:{display:'flex',gap:16,marginBottom:16,flexWrap:'wrap',alignItems:'center'}},
       el('div',{style:{display:'flex',gap:6}},
         LOCS.filter(l=>cu.role==='admin'||l===cu.loc||cu.loc==='Nationwide').map(l=>
@@ -3295,6 +3381,236 @@ const QMS_TABS=[
 const QMS_DEPTS=['Cart Department','Pre-Roll Department','Gummy Department','Extraction','QC','Packaging','Compliance','Facility','Distribution','Warehouse'];
 const QMS_PRIORITIES={critical:{label:'Critical',color:'#ef4444'},major:{label:'Major',color:'#f59e0b'},minor:{label:'Minor',color:'#3b82f6'}};
 const QMS_STATUSES={open:{label:'Open',color:'#ef4444'},in_progress:{label:'In Progress',color:'#f5a623'},closed:{label:'Closed',color:'#10b981'},cancelled:{label:'Cancelled',color:'#6b7280'}};
+
+// ── COMPLIANCE MODULE (ISO 9001 + GMP + 21 CFR 117 + Missouri DCR) ──────────
+const COMPLIANCE_FRAMEWORKS={
+  iso9001:{label:'ISO 9001:2015',color:'#1e3a5f',icon:'🏆',clauses:[
+    {id:'4.1',title:'Context of the Organization',req:'Understand internal/external issues affecting the QMS.',actions:['Conduct SWOT analysis annually','Document interested parties and their requirements','Review context at management review meetings']},
+    {id:'5.1',title:'Leadership & Commitment',req:'Top management must demonstrate QMS leadership and commitment.',actions:['Hold quarterly management review meetings','Document and communicate quality policy','Assign QMS roles and responsibilities to leadership']},
+    {id:'5.3',title:'Roles & Responsibilities',req:'Define, assign and communicate QMS roles throughout the organization.',actions:['Maintain current org chart','Document role responsibilities in BFM OMS','Ensure all staff acknowledge their QMS role in writing']},
+    {id:'6.1',title:'Risk & Opportunity Management',req:'Plan actions to address risks and opportunities.',actions:['Complete risk register annually','Review and update CAPA log monthly','Document risk treatment actions and verify effectiveness']},
+    {id:'7.2',title:'Competence & Training',req:'Ensure all personnel are competent based on education, training and experience.',actions:['Maintain training matrix for all employees in BFM OMS','Document competency assessments per role','Record all SOP acknowledgements and training completions']},
+    {id:'7.5',title:'Documented Information',req:'Create, maintain and control all required QMS documents.',actions:['All SOPs must have version number and review date','Ensure SOPs are reviewed at minimum annually','Maintain document control log for external regulations']},
+    {id:'8.1',title:'Operational Planning & Control',req:'Plan, implement and control processes needed to meet requirements.',actions:['Document production processes and batch records','Set measurable quality objectives per product line','Review operational KPIs at management meetings']},
+    {id:'8.4',title:'Control of External Providers',req:'Qualify and monitor suppliers and external service providers.',actions:['Maintain approved supplier list in BFM OMS','Conduct annual supplier audits and document findings','Obtain COAs for all incoming raw materials and packaging']},
+    {id:'8.7',title:'Nonconforming Outputs',req:'Control outputs that do not conform to requirements.',actions:['Document all deviations in QMS Deviations module','Quarantine non-conforming materials immediately','Conduct root cause analysis and issue CAPA within 48 hours']},
+    {id:'9.2',title:'Internal Audit',req:'Conduct internal audits at planned intervals to ensure QMS conformity.',actions:['Complete annual internal audit schedule for all departments','Audit each department at least once per year','Document findings in QMS Audits module and assign CAPAs']},
+    {id:'9.3',title:'Management Review',req:'Top management must review the QMS at planned intervals.',actions:['Hold quarterly management review meetings','Document review minutes including quality objectives progress','Review customer feedback, audit results, and CAPA status']},
+    {id:'10.2',title:'Nonconformity & Corrective Action',req:'React to nonconformities, take corrective action and verify effectiveness.',actions:['Issue corrective actions in BFM OMS within 5 business days','Track and report CAPA closure rate at management review','Verify effectiveness of all corrective actions before closing']},
+  ]},
+  gmp:{label:'cGMP (21 CFR)',color:'#065f46',icon:'🧪',clauses:[
+    {id:'GMP-1',title:'Personnel Hygiene & Training',req:'All personnel must meet hygiene, health and training requirements.',actions:['Enforce glove change protocol per SOP','Document PPE training for all production staff','Conduct monthly hygiene compliance inspections']},
+    {id:'GMP-2',title:'Buildings & Facilities',req:'Facilities must be designed and maintained to prevent contamination.',actions:['Complete daily sanitation logs per facility SOP','Schedule and document quarterly equipment maintenance','Maintain active pest control contract and inspection logs']},
+    {id:'GMP-3',title:'Production & Process Controls',req:'Production must follow documented procedures to ensure product quality.',actions:['Complete batch records for every production run','Document all in-process quality checks and verifications','Maintain weight verification and metering records']},
+    {id:'GMP-4',title:'Laboratory Controls',req:'Testing must verify that product meets all specifications before release.',actions:['Submit samples for R&D Micro test before batch release','Obtain and file COAs for all finished batches in METRC','Document all out-of-spec investigations and dispositions']},
+    {id:'GMP-5',title:'Records & Reports',req:'Maintain complete, accurate and retrievable production records.',actions:['Retain all batch records for minimum 3 years','Document all deviations, corrections and rework activities','Maintain METRC compliance records and reconciliations']},
+    {id:'GMP-6',title:'Returned & Salvaged Products',req:'Control all returned and salvaged cannabis product.',actions:['Document all returns in METRC within 24 hours','Quarantine all returned product pending QA review and disposition','Complete disposition assessment and document outcome']},
+  ]},
+  dcr:{label:'Missouri DCR / 19 CSR 100-1',color:'#7c2d12',icon:'🏛️',clauses:[
+    {id:'DCR-1',title:'License Compliance',req:'Maintain active and current facility license at all times.',actions:['Track license renewal dates and renew 90 days in advance','Display license prominently in facility','Notify DCR of any material changes within 10 calendar days']},
+    {id:'DCR-2',title:'METRC Track & Trace',req:'All cannabis plants and products must be tracked in METRC.',actions:['Tag all plants and packages in METRC at creation','Reconcile METRC inventory daily against physical count','Report any discrepancies to DCR within 24 hours']},
+    {id:'DCR-3',title:'Security Requirements',req:'Maintain all required security measures per DCR regulations.',actions:['Test and document security camera functionality monthly','Maintain visitor log with signatures for all non-staff visitors','Verify all employees have current background check on file']},
+    {id:'DCR-4',title:'Testing Requirements',req:'All product must pass required laboratory testing before transfer or sale.',actions:['Submit representative samples to DCR-approved lab before transfer','File all COAs in METRC against the correct package','Document all failed tests, quarantine product, and report to DCR']},
+    {id:'DCR-5',title:'Employee Registration',req:'All cannabis facility employees must be registered with DCR.',actions:['Maintain current agent authorization cards for all employees','Report terminated employees to DCR within 10 calendar days','Verify all new hires are DCR-registered before their first shift']},
+    {id:'DCR-6',title:'Record Retention',req:'Maintain all facility records for a minimum of 5 years.',actions:['Archive SOPs, batch records, COAs, and training records','Maintain employee personnel files for 5 years post-termination','Backup all digital records monthly and verify backup integrity']},
+    {id:'DCR-7',title:'Cannabis Waste Disposal',req:'Cannabis waste must be rendered unusable and documented.',actions:['Document all waste destruction events with date, amount, and method','Record all waste disposal activities in METRC before disposal','Maintain waste manifests and disposal records for 5 years']},
+  ]},
+  fsma:{label:'21 CFR Part 117 (FSMA)',color:'#4c1d95',icon:'🍃',clauses:[
+    {id:'117.1',title:'Hazard Analysis & Preventive Controls',req:'Identify and implement preventive controls for all significant hazards.',actions:['Complete HACCP-based hazard analysis annually and after any process change','Document preventive control monitoring procedures and frequencies','Review and update process controls after any incident or near-miss']},
+    {id:'117.2',title:'Supply Chain Program',req:'Implement a risk-based supply chain program for raw material hazards.',actions:['Qualify all raw material and ingredient suppliers before use','Obtain supplier verification documentation annually','Document all supply chain program activities and approvals']},
+    {id:'117.3',title:'Sanitation Controls',req:'Implement sanitation controls to prevent contamination of food-grade cannabis.',actions:['Complete and retain daily sanitation logs for all production areas','Conduct environmental monitoring for pathogens monthly','Document all sanitation verification and corrective activities']},
+    {id:'117.4',title:'Allergen Controls',req:'Implement controls to prevent allergen cross-contact.',actions:['Clearly label all allergen-containing materials in storage','Conduct allergen cleaning verification before allergen changeovers','Train all production and QC staff on allergen control procedures']},
+    {id:'117.5',title:'Recall Program',req:'Establish and maintain a written recall plan.',actions:['Maintain current recall contact list including DCR and lab contacts','Conduct mock recall exercise at least annually and document results','Review and update recall SOP annually or after any regulatory change']},
+  ]},
+};
+
+function ComplianceModule({cu,isElevated,isAdmin,LICENSES,SUPA_URL,SUPA_KEY,H,db}){
+  const[framework,setFramework]=React.useState('iso9001');
+  const[checks,setChecks]=React.useState({});
+  const[notes,setNotes]=React.useState({});
+  const[saving,setSaving]=React.useState(false);
+  const[saved,setSaved]=React.useState('');
+  const[expanded,setExpanded]=React.useState({});
+  const[expandAll,setExpandAll]=React.useState(false);
+  const TABLE='pf_compliance_checks';
+  const fw=COMPLIANCE_FRAMEWORKS[framework];
+
+  React.useEffect(()=>{
+    fetch(`${SUPA_URL}/rest/v1/${TABLE}?framework=eq.${framework}&select=*`,{headers:H.headers})
+      .then(r=>r.ok?r.json():[]).then(rows=>{
+        if(!Array.isArray(rows))return;
+        const c={},n={};
+        rows.forEach(r=>{c[r.clause_id]=r.status||'pending';n[r.clause_id]=r.notes||'';});
+        setChecks(c);setNotes(n);
+      }).catch(()=>{});
+  },[framework]);
+
+  async function saveClause(clauseId,status,note){
+    const rec={clause_id:clauseId,framework,status,notes:note||'',updated_by:cu.name,updated_at:new Date().toISOString()};
+    try{
+      await fetch(`${SUPA_URL}/rest/v1/${TABLE}?clause_id=eq.${encodeURIComponent(clauseId)}&framework=eq.${framework}`,{method:'DELETE',headers:H.headers});
+      await fetch(`${SUPA_URL}/rest/v1/${TABLE}`,{method:'POST',headers:{...H.headers,'Prefer':'return=representation'},body:JSON.stringify(rec)});
+      setChecks(p=>({...p,[clauseId]:status}));
+      setNotes(p=>({...p,[clauseId]:note}));
+      setSaved('✓ Saved');setTimeout(()=>setSaved(''),2000);
+    }catch(e){alert('Save failed: '+e.message);}
+  }
+
+  const clauses=fw.clauses;
+  const total=clauses.length;
+  const completed=clauses.filter(c=>checks[c.id]==='compliant').length;
+  const inprog=clauses.filter(c=>checks[c.id]==='in_progress').length;
+  const gaps=clauses.filter(c=>checks[c.id]==='gap').length;
+  const pct=Math.round((completed/total)*100);
+
+  const STATUS=[
+    {v:'pending',label:'Not Started',color:'#64748b',bg:'rgba(100,116,139,.1)'},
+    {v:'in_progress',label:'In Progress',color:'#d97706',bg:'rgba(217,119,6,.1)'},
+    {v:'compliant',label:'Compliant',color:'#16a34a',bg:'rgba(22,163,74,.12)'},
+    {v:'gap',label:'Gap / Action Needed',color:'#dc2626',bg:'rgba(220,38,38,.1)'},
+  ];
+  const sStyle=v=>{const s=STATUS.find(o=>o.v===v)||STATUS[0];return{background:s.bg,color:s.color,border:'1px solid',borderColor:s.color+'55',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:700,whiteSpace:'nowrap'};};
+
+  return el('div',{style:{padding:'0 0 48px'}},
+    // Header card
+    el('div',{style:{background:'linear-gradient(135deg,#1e3a5f 0%,#2d5282 100%)',borderRadius:14,padding:'24px 28px',marginBottom:24,color:'#fff'}},
+      el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:12}},
+        el('div',null,
+          el('div',{style:{fontSize:22,fontWeight:800,marginBottom:3}},'✅ Compliance Center'),
+          el('div',{style:{fontSize:13,opacity:.8,lineHeight:1.5}},'Track ISO 9001:2015 · cGMP · Missouri DCR · FSMA 21 CFR 117'),
+        ),
+        el('div',{style:{display:'flex',gap:8,alignItems:'center'}},
+          saved&&el('div',{style:{background:'rgba(22,163,74,.25)',border:'1px solid rgba(22,163,74,.5)',borderRadius:8,padding:'6px 14px',fontSize:12,fontWeight:700,color:'#6ee7b7'}},saved),
+        ),
+      ),
+      el('div',{style:{marginTop:20}},
+        el('div',{style:{display:'flex',justifyContent:'space-between',fontSize:12,opacity:.85,marginBottom:6}},
+          el('span',null,fw.label+' — '+completed+' of '+total+' clauses compliant'),
+          el('span',{style:{fontWeight:800,fontSize:15}},pct+'%'),
+        ),
+        el('div',{style:{background:'rgba(255,255,255,.15)',borderRadius:20,height:12,overflow:'hidden'}},
+          el('div',{style:{width:pct+'%',height:'100%',background:pct>=80?'#22c55e':pct>=50?'#f59e0b':'#f87171',borderRadius:20,transition:'width .5s'}}),
+        ),
+        el('div',{style:{display:'flex',gap:20,marginTop:10,fontSize:11,opacity:.8}},
+          el('span',null,'✓ '+completed+' Compliant'),
+          el('span',null,'⏳ '+inprog+' In Progress'),
+          el('span',null,'⚠ '+gaps+' Gaps'),
+          el('span',null,'○ '+(total-completed-inprog-gaps)+' Not Started'),
+        ),
+      ),
+    ),
+
+    // Framework tabs
+    el('div',{style:{display:'flex',gap:8,flexWrap:'wrap',marginBottom:20}},
+      Object.entries(COMPLIANCE_FRAMEWORKS).map(([k,f])=>{
+        const tot=f.clauses.length;
+        const comp=f.clauses.filter(c=>checks[c.id]==='compliant').length;
+        const active=k===framework;
+        return el('button',{key:k,onClick:()=>{setFramework(k);setExpanded({});},style:{
+          display:'flex',alignItems:'center',gap:10,padding:'10px 16px',borderRadius:10,
+          border:'2px solid',borderColor:active?f.color:'var(--border)',
+          background:active?f.color:'var(--surface)',
+          color:active?'#fff':'var(--text)',
+          fontFamily:'inherit',fontSize:12,fontWeight:600,cursor:'pointer',transition:'all .15s',
+        }},
+          el('span',{style:{fontSize:20}},f.icon),
+          el('div',{style:{textAlign:'left'}},
+            el('div',{style:{fontWeight:700}},f.label),
+            el('div',{style:{fontSize:10,opacity:.75,marginTop:1}},comp+'/'+tot+' compliant'),
+          ),
+        );
+      }),
+    ),
+
+    // Toolbar
+    el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14,flexWrap:'wrap',gap:8}},
+      el('div',{style:{fontSize:14,fontWeight:700}},fw.icon+' '+fw.label+' — '+total+' Clauses'),
+      el('div',{style:{display:'flex',gap:8}},
+        el('button',{className:'btn b-ghost btn-sm',onClick:()=>setExpandAll(p=>!p)},expandAll?'▲ Collapse All':'▼ Expand All'),
+        isAdmin&&el('button',{className:'btn b-ghost btn-sm',onClick:()=>{
+          const rows=[['Clause','Title','Status','Notes','Updated By'],...clauses.map(c=>[c.id,c.title,checks[c.id]||'pending',notes[c.id]||'',cu.name])];
+          const csv=rows.map(r=>r.map(v=>'"'+(v||'').replace(/"/g,'""')+'"').join(',')).join('\n');
+          const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+          a.download='compliance-'+framework+'-'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+        }},'📥 Export CSV'),
+      ),
+    ),
+
+    // Clause list
+    el('div',{style:{display:'flex',flexDirection:'column',gap:8}},
+      clauses.map(clause=>{
+        const status=checks[clause.id]||'pending';
+        const note=notes[clause.id]||'';
+        const isOpen=expandAll||(expanded[clause.id]||false);
+        const so=STATUS.find(o=>o.v===status)||STATUS[0];
+
+        return el('div',{key:clause.id,style:{background:'#ffffff',border:'1px solid var(--border)',borderRadius:12,overflow:'hidden',boxShadow:isOpen?'0 2px 12px rgba(15,23,42,.08)':'0 1px 3px rgba(15,23,42,.04)',transition:'box-shadow .2s'}},
+          // Header row
+          el('div',{onClick:()=>setExpanded(p=>({...p,[clause.id]:!p[clause.id]})),
+            style:{display:'flex',alignItems:'center',gap:12,padding:'14px 16px',cursor:'pointer',userSelect:'none',background:isOpen?'rgba(30,58,95,.03)':'transparent'},
+          },
+            el('div',{style:{background:fw.color,color:'#fff',borderRadius:6,padding:'4px 8px',fontSize:10,fontWeight:800,flexShrink:0,textAlign:'center',minWidth:56}},clause.id),
+            el('div',{style:{flex:1,minWidth:0}},
+              el('div',{style:{fontSize:14,fontWeight:700,color:'var(--text)'}},clause.title),
+              !isOpen&&el('div',{style:{fontSize:12,color:'var(--text2)',marginTop:2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},clause.req),
+            ),
+            el('span',{style:sStyle(status)},so.label),
+            el('span',{style:{color:'var(--text3)',fontSize:12,marginLeft:6,flexShrink:0}},isOpen?'▲':'▼'),
+          ),
+
+          // Expanded body
+          isOpen&&el('div',{style:{borderTop:'1px solid var(--border)',padding:'18px 16px',background:'#fafcff'}},
+            // Requirement
+            el('div',{style:{background:'rgba(30,58,95,.04)',border:'1px solid rgba(30,58,95,.1)',borderRadius:8,padding:'12px 14px',marginBottom:16}},
+              el('div',{style:{fontSize:10,fontWeight:800,color:'var(--accent)',textTransform:'uppercase',letterSpacing:'.6px',marginBottom:5}},'Requirement'),
+              el('div',{style:{fontSize:13,color:'var(--text)',lineHeight:1.6}},clause.req),
+            ),
+
+            // Actions checklist
+            el('div',{style:{marginBottom:16}},
+              el('div',{style:{fontSize:10,fontWeight:800,color:'var(--accent)',textTransform:'uppercase',letterSpacing:'.6px',marginBottom:8}},'Required Actions'),
+              el('div',{style:{display:'flex',flexDirection:'column',gap:7}},
+                clause.actions.map((action,i)=>el('div',{key:i,style:{display:'flex',alignItems:'flex-start',gap:10,fontSize:13,color:'var(--text)',lineHeight:1.5}},
+                  el('span',{style:{color:status==='compliant'?'#16a34a':'#cbd5e1',fontSize:17,flexShrink:0,marginTop:0}},status==='compliant'?'✓':'○'),
+                  action,
+                ))
+              ),
+            ),
+
+            // Status buttons
+            el('div',{style:{marginBottom:14}},
+              el('div',{style:{fontSize:10,fontWeight:800,color:'var(--accent)',textTransform:'uppercase',letterSpacing:'.6px',marginBottom:8}},'Set Status'),
+              el('div',{style:{display:'flex',gap:6,flexWrap:'wrap'}},
+                STATUS.map(opt=>el('button',{key:opt.v,
+                  onClick:()=>saveClause(clause.id,opt.v,note),
+                  style:{padding:'7px 14px',borderRadius:8,border:'2px solid',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'inherit',transition:'all .15s',
+                    borderColor:status===opt.v?opt.color:'var(--border)',
+                    background:status===opt.v?opt.bg:'transparent',
+                    color:status===opt.v?opt.color:'var(--text2)',
+                  }
+                },opt.label)),
+              ),
+            ),
+
+            // Notes
+            el('div',null,
+              el('div',{style:{fontSize:10,fontWeight:800,color:'var(--accent)',textTransform:'uppercase',letterSpacing:'.6px',marginBottom:6}},'Notes / Evidence'),
+              el('textarea',{
+                value:note,
+                onChange:ev=>setNotes(p=>({...p,[clause.id]:ev.target.value})),
+                onBlur:ev=>saveClause(clause.id,status,ev.target.value),
+                placeholder:'Document evidence, responsible person, target date, or gaps found...',
+                rows:3,
+                style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 12px',color:'var(--text)',fontFamily:'inherit',fontSize:13,resize:'vertical',boxSizing:'border-box'},
+              }),
+              el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:4}},'Notes auto-save on blur · Last saved by '+cu.name),
+            ),
+          ),
+        );
+      }),
+    ),
+  );
+}
 
 function QMSBadge({status,type}){
   const s=QMS_STATUSES[status];
@@ -5647,307 +5963,293 @@ function exportSopPdf(sop){
   const{jsPDF}=window.jspdf;
   const doc=new jsPDF({unit:'pt',format:'letter'});
   const W=612,H=792;
-  const margin=50;
+  const margin=48;
   let y=0;
 
-  const NAVY=[18,18,18],GOLD=[245,166,35],TEXT=[20,20,20],TEXT2=[90,90,90],BORDER=[210,210,215];
+  // All text colors are dark — no light gray on white background
+  const NAVY=[30,58,95],GOLD=[180,120,20],TEXT=[15,15,15],SUBTEXT=[50,60,75],MUTED=[90,100,115],LIGHT=[245,247,252],BORDER=[200,210,220];
   const gen=sop.generated_content?JSON.parse(sop.generated_content):null;
+  const lic=sop.license_name||gen?.license_name||'BFM';
 
   function header(){
     doc.setFillColor(...NAVY);
-    doc.rect(0,0,W,70,'F');
+    doc.rect(0,0,W,78,'F');
     doc.setFillColor(...GOLD);
-    doc.rect(0,68,W,2,'F');
-    doc.setTextColor(...GOLD);
+    doc.rect(0,76,W,3,'F');
+    // Logo text
+    doc.setTextColor(255,255,255);
     doc.setFont('helvetica','bold');
-    doc.setFontSize(16);
+    doc.setFontSize(18);
     doc.text('BFM',margin,32);
-    doc.setTextColor(230,235,250);
     doc.setFont('helvetica','normal');
-    doc.setFontSize(9);
-    doc.text('Standard Operating Procedure',margin,48);
-    doc.setTextColor(...GOLD);
-    doc.setFont('helvetica','bold');
     doc.setFontSize(10);
+    doc.setTextColor(180,200,230);
+    doc.text('Standard Operating Procedure',margin,50);
+    // SOP number & revision
+    doc.setTextColor(255,255,255);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(12);
     doc.text(gen?.sop_number||sop.sop_number||'SOP-DRAFT',W-margin,32,{align:'right'});
-    doc.setTextColor(230,235,250);
     doc.setFont('helvetica','normal');
-    doc.setFontSize(9);
-    doc.text('Rev '+(gen?.revision||sop.version||'1.0'),W-margin,48,{align:'right'});
-    y=95;
+    doc.setFontSize(10);
+    doc.setTextColor(180,200,230);
+    doc.text('Rev '+(gen?.revision||sop.version||'1.0'),W-margin,50,{align:'right'});
+    y=100;
   }
 
   function footer(pageNum){
     doc.setDrawColor(...BORDER);
-    doc.line(margin,H-50,W-margin,H-50);
-    doc.setTextColor(...TEXT2);
+    doc.setLineWidth(0.5);
+    doc.line(margin,H-46,W-margin,H-46);
+    doc.setTextColor(...MUTED);
     doc.setFont('helvetica','normal');
-    doc.setFontSize(7);
-    doc.text('CONFIDENTIAL — '+( gen?.license_name||sop.license_name||'BFM')+' — Internal Use Only',margin,H-35);
-    doc.text('Page '+pageNum,W-margin,H-35,{align:'right'});
+    doc.setFontSize(8);
+    doc.text('CONFIDENTIAL — '+lic+' — Internal Use Only',margin,H-30);
+    doc.text('Page '+pageNum,W-margin,H-30,{align:'right'});
   }
 
-  function checkPageBreak(neededHeight){
-    if(y+neededHeight>H-70){
-      doc.addPage();
-      header();
-    }
+  function checkPageBreak(need){
+    if(y+need>H-62){doc.addPage();header();}
   }
 
   function sectionTitle(txt){
-    checkPageBreak(30);
-    doc.setFillColor(245,246,250);
-    doc.rect(margin,y,W-margin*2,22,'F');
-    doc.setDrawColor(...GOLD);
-    doc.setLineWidth(2);
-    doc.line(margin,y,margin,y+22);
+    checkPageBreak(42);
+    y+=4;
+    doc.setFillColor(...LIGHT);
+    doc.rect(margin,y,W-margin*2,28,'F');
+    doc.setFillColor(...NAVY);
+    doc.rect(margin,y,4,28,'F');
     doc.setTextColor(...NAVY);
     doc.setFont('helvetica','bold');
     doc.setFontSize(11);
-    doc.text(txt.toUpperCase(),margin+10,y+15);
-    y+=32;
+    doc.text(txt.toUpperCase(),margin+12,y+19);
+    y+=36;
   }
 
   function bodyText(txt,opts={}){
-    if(!txt) return;
+    if(!txt||!String(txt).trim()) return;
+    const sz=opts.size||11;
+    const lh=sz*1.6;
     doc.setTextColor(...(opts.color||TEXT));
     doc.setFont('helvetica',opts.bold?'bold':'normal');
-    doc.setFontSize(opts.size||10.5);
-    const lines=doc.splitTextToSize(txt,W-margin*2-(opts.indent||0));
-    checkPageBreak(lines.length*15+12);
-    lines.forEach(line=>{
-      doc.text(line,margin+(opts.indent||0),y);
-      y+=15;
-    });
+    doc.setFontSize(sz);
+    const indent=opts.indent||0;
+    const lines=doc.splitTextToSize(String(txt),W-margin*2-indent);
+    checkPageBreak(lines.length*lh+10);
+    lines.forEach(line=>{doc.text(line,margin+indent,y);y+=lh;});
     y+=opts.spaceAfter!==undefined?opts.spaceAfter:8;
   }
 
   function infoRow(label,value){
-    if(!value) return;
-    checkPageBreak(16);
-    doc.setTextColor(...TEXT2);
+    if(!value||String(value).trim()==='—'||String(value).trim()==='') return;
+    checkPageBreak(22);
     doc.setFont('helvetica','bold');
-    doc.setFontSize(8.5);
-    doc.text(label.toUpperCase()+':',margin,y);
-    doc.setTextColor(...TEXT);
+    doc.setFontSize(9);
+    doc.setTextColor(...SUBTEXT);
+    doc.text(label.toUpperCase(),margin,y);
     doc.setFont('helvetica','normal');
-    doc.setFontSize(9.5);
-    doc.text(String(value),margin+110,y);
-    y+=15;
+    doc.setFontSize(11);
+    doc.setTextColor(...TEXT);
+    const valLines=doc.splitTextToSize(String(value),W-margin-170);
+    valLines.forEach((l,i)=>doc.text(l,margin+155,y+(i*14)));
+    y+=Math.max(20,valLines.length*14+4);
   }
 
-  // ── BUILD DOCUMENT ─────────────────────────────────────────────────────────
+  // ── BUILD DOCUMENT ──────────────────────────────────────────────────────────
   header();
 
-  // Title block
-  doc.setTextColor(...NAVY);
+  // Document title
+  doc.setTextColor(...TEXT);
   doc.setFont('helvetica','bold');
-  doc.setFontSize(17);
-  const titleLines=doc.splitTextToSize(gen?.title||sop.title,W-margin*2);
-  titleLines.forEach(line=>{doc.text(line,margin,y);y+=20;});
-  y+=8;
+  doc.setFontSize(20);
+  const titleLines=doc.splitTextToSize(gen?.title||sop.title||'Standard Operating Procedure',W-margin*2);
+  titleLines.forEach(l=>{doc.text(l,margin,y);y+=26;});
+  y+=6;
 
-  // Header info table
+  // Info block
   doc.setDrawColor(...BORDER);
   doc.setLineWidth(0.5);
   doc.line(margin,y,W-margin,y);
-  y+=14;
-  infoRow('SOP Number',gen?.sop_number||sop.sop_number||'—');
+  y+=12;
+  infoRow('SOP Number',gen?.sop_number||sop.sop_number||'');
   infoRow('Revision',gen?.revision||sop.version||'1.0');
-  infoRow('Effective Date',gen?.effective_date||sop.created_at?.slice(0,10)||'—');
-  infoRow('Department',gen?.department||(sop.depts||[]).join(', ')||sop.dept||'—');
-  infoRow('License / Facility',gen?.license_name||sop.license_name||'—');
-  infoRow('State',gen?.state||sop.state||'—');
-  infoRow('Review Frequency',gen?.review_frequency||'Annual or after regulatory change');
+  infoRow('Effective Date',gen?.effective_date||sop.created_at?.slice(0,10)||'');
+  infoRow('Department',gen?.department||(sop.depts||[]).join(', ')||sop.dept||'');
+  infoRow('License / Facility',gen?.license_name||sop.license_name||'');
+  infoRow('State / Regulation',gen?.state||sop.state||'');
+  infoRow('Review Frequency',gen?.review_frequency||'Annual or upon regulatory change');
   infoRow('Status',(sop.status||'draft').toUpperCase());
+  infoRow('Prepared By',sop.created_by||'');
+  infoRow('Approved / Revised By',sop.revised_by||sop.created_by||'');
   y+=4;
   doc.line(margin,y,W-margin,y);
   y+=18;
-
-  // Approval block
-  if(sop.revised_by||sop.created_by){
-    sectionTitle('Approval');
-    infoRow('Prepared By',sop.created_by||'—');
-    infoRow('Last Revised By',sop.revised_by||sop.created_by||'—');
-    infoRow('Approval Date',sop.published_at?.slice(0,10)||sop.updated_at?.slice(0,10)||'—');
-    y+=6;
-  }
 
   // Regulatory references
   const refs=gen?.regulatory_references||sop.regulatory_references||[];
   if(refs.length>0){
     sectionTitle('Regulatory References');
-    refs.forEach(r=>bodyText('• '+r,{size:8.5,color:TEXT2,spaceAfter:3}));
+    refs.forEach(r=>bodyText('• '+r,{size:10,color:SUBTEXT,spaceAfter:4}));
     y+=4;
   }
 
-  // Purpose
-  if(gen?.purpose||sop.description){
-    sectionTitle('Purpose');
-    bodyText(gen?.purpose||sop.description);
-  }
-
-  // Scope
-  if(gen?.scope){
-    sectionTitle('Scope');
-    bodyText(gen.scope);
-  }
+  if(gen?.purpose||sop.description){sectionTitle('Purpose');bodyText(gen?.purpose||sop.description);}
+  if(gen?.scope){sectionTitle('Scope');bodyText(gen.scope);}
 
   // Responsibilities
   if((gen?.responsibilities||[]).length>0){
     sectionTitle('Responsibilities');
     gen.responsibilities.forEach(r=>{
-      bodyText(r.role+': ',{bold:true,spaceAfter:0});
-      y-=13;
-      doc.setFont('helvetica','normal');
-      doc.setFontSize(9.5);
+      checkPageBreak(30);
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(11);
       doc.setTextColor(...TEXT);
-      const labelWidth=doc.getTextWidth(r.role+': ');
-      const lines=doc.splitTextToSize(r.responsibility,W-margin*2-labelWidth-5);
-      doc.text(lines[0]||'',margin+labelWidth+5,y);
-      y+=13;
-      for(let i=1;i<lines.length;i++){doc.text(lines[i],margin,y);y+=13;}
-      y+=4;
+      doc.text((r.role||'')+':',margin,y);
+      y+=16;
+      bodyText(r.responsibility||'',{indent:16,spaceAfter:6});
     });
+  }
+
+  if((gen?.required_materials||[]).length>0){
+    sectionTitle('Required Materials / PPE');
+    gen.required_materials.forEach(m=>bodyText('• '+m,{size:11,spaceAfter:4}));
     y+=4;
   }
 
-  // Required materials
-  if((gen?.required_materials||[]).length>0){
-    sectionTitle('Required Materials / PPE');
-    bodyText(gen.required_materials.join('  •  '),{size:9});
-  }
-
-  // Steps
-  const steps=gen?.steps||(sop.steps||[]).map((s,i)=>({step_number:i+1,title:'',instruction:s.text||s}));
+  // Steps — ALL dark text
+  const steps=gen?.steps||(sop.steps||[]).map((s,i)=>({step_number:i+1,title:'',instruction:s.text||String(s)}));
   if(steps.length>0){
     sectionTitle('Procedure ('+steps.length+' Steps)');
     steps.forEach((step,i)=>{
-      checkPageBreak(40);
-      // Step number circle
-      doc.setFillColor(...GOLD);
-      doc.circle(margin+8,y+2,8,'F');
-      doc.setTextColor(...NAVY);
-      doc.setFont('helvetica','bold');
-      doc.setFontSize(8.5);
-      doc.text(String(step.step_number||i+1),margin+8,y+4.5,{align:'center'});
+      const stepText=step.instruction||'';
+      const stepTitle=step.title||'';
+      const titleLines2=stepTitle?doc.splitTextToSize(stepTitle,W-margin*2-28):[];
+      const instrLines=doc.splitTextToSize(stepText,W-margin*2-28);
+      checkPageBreak((titleLines2.length+instrLines.length)*16+28);
 
-      doc.setTextColor(...TEXT);
+      // Step badge
+      doc.setFillColor(...NAVY);
+      doc.circle(margin+10,y+5,10,'F');
+      doc.setTextColor(255,255,255);
       doc.setFont('helvetica','bold');
-      doc.setFontSize(9.5);
-      if(step.title) doc.text(step.title,margin+22,y+4);
-      y+=step.title?15:2;
-
-      doc.setFont('helvetica','normal');
-      doc.setTextColor(...TEXT2);
       doc.setFontSize(9);
-      const lines=doc.splitTextToSize(step.instruction||'',W-margin*2-22);
-      checkPageBreak(lines.length*12+10);
-      lines.forEach(line=>{doc.text(line,margin+22,y);y+=12;});
+      doc.text(String(step.step_number||i+1),margin+10,y+8,{align:'center'});
 
+      let sx=margin+28;
+      // Step title — bold dark
+      if(stepTitle){
+        doc.setTextColor(...TEXT);
+        doc.setFont('helvetica','bold');
+        doc.setFontSize(11);
+        titleLines2.forEach((l,li)=>{doc.text(l,sx,y+(li===0?4:4+li*15));});
+        y+=titleLines2.length*15+4;
+      }
+      // Step instruction — normal dark (NOT gray)
+      doc.setTextColor(...TEXT);
+      doc.setFont('helvetica','normal');
+      doc.setFontSize(11);
+      instrLines.forEach((l,li)=>{doc.text(l,sx,y+(li===0?(stepTitle?0:4):li*16+(stepTitle?0:4)));});
+      y+=instrLines.length*16+(stepTitle?2:6);
+
+      // Regulatory note
       if(step.regulatory_note){
         doc.setFont('helvetica','italic');
-        doc.setFontSize(8);
-        doc.setTextColor(70,100,160);
-        const regLines=doc.splitTextToSize('Reg: '+step.regulatory_note,W-margin*2-22);
-        regLines.forEach(line=>{doc.text(line,margin+22,y);y+=11;});
+        doc.setFontSize(9);
+        doc.setTextColor(...SUBTEXT);
+        const regL=doc.splitTextToSize('⚖ '+step.regulatory_note,W-margin*2-28);
+        checkPageBreak(regL.length*13+4);
+        regL.forEach(l=>{doc.text(l,sx,y);y+=13;});
+        y+=2;
       }
+      // Critical flag
       if(step.critical){
+        doc.setFillColor(220,38,38);
+        doc.rect(sx,y,W-margin*2-28,16,'F');
+        doc.setTextColor(255,255,255);
         doc.setFont('helvetica','bold');
-        doc.setFontSize(8);
-        doc.setTextColor(180,40,40);
-        doc.text('CRITICAL STEP',margin+22,y);
-        y+=11;
+        doc.setFontSize(9);
+        doc.text('⚠ CRITICAL STEP — Verify and document before proceeding',sx+6,y+11);
+        y+=22;
       }
-      y+=8;
+      y+=10;
     });
   }
 
-  // Quality checks & documentation
   if((gen?.quality_checks||[]).length>0){
     sectionTitle('Quality Checks');
-    gen.quality_checks.forEach(q=>bodyText('- '+q,{size:9,spaceAfter:3}));
-    y+=4;
+    gen.quality_checks.forEach(q=>bodyText('✓ '+q,{size:11,spaceAfter:5}));
   }
   if((gen?.documentation_required||[]).length>0){
     sectionTitle('Documentation Required');
-    gen.documentation_required.forEach(d=>bodyText('• '+d,{size:9,spaceAfter:3}));
-    y+=4;
+    gen.documentation_required.forEach(d=>bodyText('• '+d,{size:11,spaceAfter:5}));
   }
+  if(gen?.deviation_procedure){sectionTitle('Deviation Procedure');bodyText(gen.deviation_procedure);}
+  if(gen?.training_requirements){sectionTitle('Training Requirements');bodyText(gen.training_requirements);}
 
-  // Deviation & training
-  if(gen?.deviation_procedure){
-    sectionTitle('Deviation Procedure');
-    bodyText(gen.deviation_procedure);
-  }
-  if(gen?.training_requirements){
-    sectionTitle('Training Requirements');
-    bodyText(gen.training_requirements);
-  }
-
-  // Revision history
   if((gen?.revision_history||[]).length>0){
     sectionTitle('Revision History');
     gen.revision_history.forEach(rh=>{
-      bodyText(`Rev ${rh.revision} — ${rh.date} — ${rh.description}${rh.approved_by?' (Approved: '+rh.approved_by+')':''}`,{size:8.5,color:TEXT2,spaceAfter:4});
+      bodyText('Rev '+rh.revision+' — '+rh.date+' — '+rh.description+(rh.approved_by?' (Approved: '+rh.approved_by+')':''),{size:10,color:SUBTEXT,spaceAfter:5});
     });
   }
 
-  // Acknowledgement signature section
+  // Acknowledgements
   const sopAcks=sop.acknowledgements||[];
   if(sopAcks.length>0){
     sectionTitle('Acknowledgement Records');
-    bodyText('The following employees have read, understood, and signed this SOP:',{size:9});
+    bodyText('The following employees have read, understood, and signed this SOP:',{size:11,color:SUBTEXT});
     y+=6;
     sopAcks.forEach((ack,idx)=>{
-      checkPageBreak(60);
+      checkPageBreak(70);
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(11);
+      doc.setTextColor(...TEXT);
+      doc.text((idx+1)+'. '+ack.name,margin,y);
       doc.setFont('helvetica','normal');
       doc.setFontSize(9);
-      doc.setTextColor(...TEXT2);
-      doc.text((idx+1)+'. '+ack.name+' — '+(ack.role||'')+' — Signed: '+(ack.at?.slice(0,10)||''),margin,y);
-      y+=10;
+      doc.setTextColor(...SUBTEXT);
+      doc.text((ack.role||'')+' · Signed: '+(ack.at?.slice(0,10)||''),margin,y+14);
+      y+=22;
       if(ack.signature_image){
         try{
-          doc.addImage(ack.signature_image,'PNG',margin,y,90,24);
-          doc.setDrawColor(...TEXT2);
-          doc.line(margin,y+26,margin+100,y+26);
-          y+=32;
+          doc.addImage(ack.signature_image,'PNG',margin,y,110,30);
+          doc.setDrawColor(...BORDER);
+          doc.line(margin,y+32,margin+120,y+32);
+          y+=40;
         }catch(e){
-          // fallback text sig
           doc.setFont('helvetica','italic');
-          doc.setFontSize(12);
-          doc.setTextColor(30,30,30);
-          doc.text(ack.signature_name||ack.name,margin,y+8);
-          doc.setDrawColor(...TEXT2);
-          doc.line(margin,y+10,margin+100,y+10);
-          y+=18;
+          doc.setFontSize(14);
+          doc.setTextColor(...TEXT);
+          doc.text(ack.signature_name||ack.name,margin,y+14);
+          doc.setDrawColor(...BORDER);
+          doc.line(margin,y+18,margin+120,y+18);
+          y+=28;
         }
       } else {
         doc.setFont('helvetica','italic');
-        doc.setFontSize(12);
-        doc.setTextColor(30,30,30);
-        doc.text(ack.signature_name||ack.name,margin,y+8);
-        doc.setDrawColor(...TEXT2);
-        doc.line(margin,y+10,margin+100,y+10);
-        y+=18;
+        doc.setFontSize(14);
+        doc.setTextColor(...TEXT);
+        doc.text(ack.signature_name||ack.name,margin,y+14);
+        doc.setDrawColor(...BORDER);
+        doc.line(margin,y+18,margin+120,y+18);
+        y+=28;
       }
-      y+=4;
+      y+=8;
     });
     y+=6;
     doc.setFont('helvetica','bold');
-    doc.setFontSize(8);
-    doc.setTextColor(40,140,80);
-    doc.text('Electronically signed via BFM OMS. Records are tamper-evident.',margin,y);
+    doc.setFontSize(9);
+    doc.setTextColor(22,163,74);
+    doc.text('Electronically signed via BFM OMS — Records are tamper-evident.',margin,y);
     y+=10;
   } else {
-    // Blank signature block for printing
-    checkPageBreak(60);
+    checkPageBreak(70);
     sectionTitle('Acknowledgement');
-    bodyText('I have read, understood, and agree to follow this Standard Operating Procedure in full.',{size:9});
+    bodyText('I have read, understood, and agree to follow this Standard Operating Procedure in full.',{size:11});
     y+=10;
-    doc.setDrawColor(...TEXT2);
-    doc.line(margin,y,margin+200,y);
-    doc.line(margin+260,y,margin+360,y);
+    doc.setDrawColor(...BORDER);
+    doc.line(margin,y,margin+210,y);
+    doc.line(margin+270,y,margin+380,y);
     y+=12;
     doc.setFontSize(8);
     doc.setTextColor(...TEXT2);
@@ -9006,6 +9308,7 @@ function App(){
     (cu.role==='admin'||cu.dept==='Sales'||cu.dept==='Marketing')&&{id:'sales',ico:'🏪',label:'Sales & Marketing'},
     {id:'sops',ico:'📋',label:'SOPs'},
     canAccessQms&&{id:'qms',ico:'🛡️',label:'QMS'},
+    canAccessQms&&{id:'compliance',ico:'✅',label:'Compliance'},
     {id:'mydocs',ico:'📁',label:'My Documents'},
     {id:'scores',ico:'🏆',label:'Scoreboard'},
     isAdmin&&{id:'team',ico:'👥',label:'Team & Access',badge:pending||null},
@@ -9197,10 +9500,11 @@ function App(){
       el('button',{className:'mnav-btn',onClick:()=>{if(window.confirm('Sign out?')){localStorage.removeItem('pf_session');window.location.reload();}}},el('span',{className:'mnav-ico'},'⏻'),'Sign Out'),
     ),
     el('div',{className:'main'},
-      page==='board'&&el(Board,{tasks,setTasks,cu,users,locFilter,setLocFilter}),
+      page==='board'&&el(Board,{tasks,setTasks,cu,users,locFilter,setLocFilter,canAccessQms,setPage,SUPA_URL,SUPA_KEY,H}),
       page==='calendar'&&el(Calendar,{events,setEvents,tasks,cu,users,locFilter,meetingNotes,setMeetingNotes,onJoinCall:(room,title,meetLink)=>setActiveCall({room,title,meetLink})}),
       page==='sales'&&el(SalesMarketing,{salesTasks,setSalesTasks,cu,users,locFilter}),
       page==='sops'&&el(SOPs,{sops,setSops,cu,users}),
+      page==='compliance'&&canAccessQms&&el(ComplianceModule,{cu,isElevated,isAdmin,LICENSES,SUPA_URL,SUPA_KEY,H,db}),
       page==='qms'&&canAccessQms&&el(QMS,{cu,users,tasks,sops,
         deviations:qmsDeviations,setDeviations:setQmsDeviations,
         capas:qmsCAPAs,setCapas:setQmsCAPAs,
