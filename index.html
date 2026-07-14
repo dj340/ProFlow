@@ -189,7 +189,7 @@ const el=React.createElement;
 // ── CONFIG ────────────────────────────────────────────────────────────────────
 const SUPA_URL='https://exaluooarsrlvhptvnhu.supabase.co';
 const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV4YWx1b29hcnNybHZocHR2bmh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4MDcxOTksImV4cCI6MjA5NTM4MzE5OX0.mPOc6d1e8pjLNv2enJvFm_ABl96U53PEw64NJ96diIE';
-const RESEND_KEY='re_Nmj7QRRH_7LJh3wXf5rnNfkjJGzYxzhQV';
+// Email handled via Supabase Edge Function (key stored server-side only)
 const APP_URL='https://blfoxman.github.io/BFM';
 const H={headers:{'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}};
 
@@ -215,9 +215,6 @@ async function runMigrations(){
 
 // ── EMAIL via EmailJS ─────────────────────────────────────────────────────────
 // Free: 200 emails/month, works directly from browser, no CORS
-const EMAILJS_SERVICE_ID='service_hendrix';
-const EMAILJS_TEMPLATE_ID='template_hendrix';
-const EMAILJS_PUBLIC_KEY='REPLACE_WITH_EMAILJS_PUBLIC_KEY';
 
 // ── SUPABASE STORAGE UPLOAD ──────────────────────────────────────────────────
 async function uploadFile(file, folder='tasks'){
@@ -263,23 +260,13 @@ function renderFileUrl(att){
 
 async function sendEmail({to,subject,html}){
   try{
-    // EmailJS sends via your connected Gmail/Outlook
+    // Email sent via Supabase Edge Function — API key never exposed in client code
     const recipients=Array.isArray(to)?to:[to];
     for(const recipient of recipients){
-      await fetch('https://api.emailjs.com/api/v1.0/email/send',{
+      await fetch(`${SUPA_URL}/functions/v1/send-email`,{
         method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({
-          service_id:EMAILJS_SERVICE_ID,
-          template_id:EMAILJS_TEMPLATE_ID,
-          user_id:EMAILJS_PUBLIC_KEY,
-          template_params:{
-            to_email:recipient,
-            subject:subject,
-            message_html:html,
-            from_name:'BFM OMS',
-          },
-        }),
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPA_KEY},
+        body:JSON.stringify({to:recipient,subject,html,from_name:'BFM OMS',from_email:'noreply@bfmops.com'}),
       });
     }
   }catch(e){console.error('Email error:',e);}
