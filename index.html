@@ -3516,6 +3516,23 @@ function exportLogPdf(logType,entries,dateFrom,dateTo){
     if(entry.signature_image){checkPage(50);doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(...SUBTEXT);doc.text('SIGNATURE',margin+8,y);try{doc.addImage(entry.signature_image,'PNG',margin+155,y-14,110,30);}catch(e){}y+=36;}
     checkPage(16);doc.setDrawColor(...BORDER);doc.line(margin,y+4,W-margin,y+4);y+=16;
   });
+  // Attachments in PDF
+  entries.forEach(entry=>{
+    if(!(entry.attachments||[]).length) return;
+    checkPage(40);
+    doc.setFillColor(...LIGHT);doc.rect(margin,y,W-margin*2,22,'F');
+    doc.setTextColor(...NAVY);doc.setFont('helvetica','bold');doc.setFontSize(10);
+    doc.text('ATTACHMENTS ('+entry.attachments.length+')',margin+8,y+15);y+=30;
+    entry.attachments.forEach(att=>{
+      checkPage(24);
+      doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(...TEXT);
+      doc.text('📎 '+att.name+' ('+((att.size||0)>1024*1024?((att.size||0)/1024/1024).toFixed(1)+'MB':((att.size||0)/1024).toFixed(0)+'KB')+')',margin+8,y);
+      y+=18;
+      if(att.data&&att.type&&att.type.includes('image')){
+        try{checkPage(120);doc.addImage(att.data,'JPEG',margin+8,y,W-margin*2-16,100);y+=108;}catch(e){}
+      }
+    });
+  });
   doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(22,163,74);
   doc.text('Official record — Black Fox QMS · HMBF Management Inc. · Retain 5+ years per Missouri DCR',margin,H-20);
   doc.save('BlackFox_'+lt.label.replace(/[^a-z0-9]/gi,'_')+'_'+new Date().toISOString().slice(0,10)+'.pdf');
@@ -3526,13 +3543,38 @@ function LogEntryForm({logType,cu,onSave,onClose,SUPA_URL,SUPA_KEY,H}){
   const init=()=>{const f={submitted_by:cu.name,created_at:new Date().toISOString()};lt.fields.forEach(fl=>{if(fl.type==='date')f[fl.key]=new Date().toISOString().slice(0,10);else if(fl.type==='time')f[fl.key]=new Date().toTimeString().slice(0,5);else if(fl.type==='select')f[fl.key]=fl.options[0];else f[fl.key]='';});return f;};
   const[form,setForm]=React.useState(init);
   const[sig,setSig]=React.useState(null);
+  const[attachments,setAttachments]=React.useState([]);
   const[saving,setSaving]=React.useState(false);
   const setF=(k,v)=>setForm(p=>({...p,[k]:v}));
+
+  function handleFiles(files){
+    Array.from(files).forEach(file=>{
+      if(file.size>5*1024*1024){alert(file.name+' exceeds 5MB.');return;}
+      if(file.type.startsWith('image/')){
+        const img=new Image();const url=URL.createObjectURL(file);
+        img.onload=()=>{
+          const canvas=document.createElement('canvas');
+          const MAX=1200;let w=img.width,h=img.height;
+          if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}
+          canvas.width=w;canvas.height=h;
+          canvas.getContext('2d').drawImage(img,0,0,w,h);
+          const data=canvas.toDataURL('image/jpeg',0.75);
+          URL.revokeObjectURL(url);
+          setAttachments(p=>[...p,{id:'att-'+Date.now()+Math.random(),name:file.name,type:'image/jpeg',size:Math.round(data.length*.75),data}]);
+        };img.src=url;
+      } else {
+        const reader=new FileReader();
+        reader.onload=re=>setAttachments(p=>[...p,{id:'att-'+Date.now()+Math.random(),name:file.name,type:file.type,size:file.size,data:re.target.result}]);
+        reader.readAsDataURL(file);
+      }
+    });
+  }
+
   async function save(){
     const req=lt.fields.filter(f=>f.label.includes('*'));
     for(const f of req){if(!form[f.key]?.trim()){alert(f.label.replace(' *','')+' is required.');return;}}
     setSaving(true);
-    const rec={...form,id:'log-'+Date.now(),log_type:logType,signature_image:sig||null,submitted_by:cu.name,submitted_by_id:cu.id,created_at:new Date().toISOString()};
+    const rec={...form,id:'log-'+Date.now(),log_type:logType,signature_image:sig||null,attachments:attachments.map(a=>({id:a.id,name:a.name,type:a.type,size:a.size,data:a.data})),submitted_by:cu.name,submitted_by_id:cu.id,created_at:new Date().toISOString()};
     try{
       const res=await fetch(`${SUPA_URL}/rest/v1/${lt.table}`,{method:'POST',headers:{...H.headers,'Prefer':'return=representation'},body:JSON.stringify(rec)});
       if(!res.ok){const e=await res.json();throw new Error(e.message||'Save failed');}
@@ -3555,6 +3597,30 @@ function LogEntryForm({logType,cu,onSave,onClose,SUPA_URL,SUPA_KEY,H}){
       el('div',{className:'mbd'},
         el('div',{style:{background:'rgba(30,58,95,.04)',border:'1px solid rgba(30,58,95,.1)',borderRadius:8,padding:'10px 14px',marginBottom:16,fontSize:12,color:'var(--text2)'}},'📋 Fields marked * are required. This record is timestamped and signed — legally valid for DCR inspections.'),
         lt.fields.map(f=>INP(f)),
+        // File attachments
+        el('div',{style:{borderTop:'1px solid var(--border)',paddingTop:16,marginTop:8,marginBottom:16}},
+          el('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}},
+            el('div',{style:{fontSize:13,fontWeight:700}},'📎 Attachments'),
+            el('label',{style:{cursor:'pointer'}},
+              el('span',{className:'btn b-ghost btn-sm'},'+ Upload File / Photo'),
+              el('input',{type:'file',accept:'.pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xlsx,.csv',multiple:true,style:{display:'none'},onChange:ev=>{handleFiles(ev.target.files);ev.target.value='';}}),
+            ),
+          ),
+          attachments.length===0
+            ?el('div',{style:{fontSize:12,color:'var(--text3)',padding:'8px 0'}},'Upload photos, PDFs, reports, or any supporting documents')
+            :el('div',{style:{display:'flex',flexDirection:'column',gap:6}},
+                attachments.map((att,i)=>el('div',{key:att.id,style:{display:'flex',alignItems:'center',gap:8,background:'var(--surface2)',borderRadius:8,padding:'8px 12px'}},
+                  el('span',{style:{fontSize:18}},att.type.includes('image')?'🖼️':'📄'),
+                  el('div',{style:{flex:1,minWidth:0}},
+                    el('div',{style:{fontSize:12,fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},att.name),
+                    el('div',{style:{fontSize:10,color:'var(--text3)'}},(att.size>1024*1024?(att.size/1024/1024).toFixed(1)+'MB':(att.size/1024).toFixed(0)+'KB')),
+                  ),
+                  att.type.includes('image')&&el('img',{src:att.data,style:{width:40,height:40,objectFit:'cover',borderRadius:4,flexShrink:0}}),
+                  el('button',{onClick:()=>setAttachments(p=>p.filter((_,j)=>j!==i)),style:{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:16,flexShrink:0}},'×'),
+                ))
+              ),
+          el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:4}},'Max 5MB per file · PDF, PNG, JPG, DOCX, XLSX'),
+        ),
         el('div',{style:{borderTop:'1px solid var(--border)',paddingTop:16,marginTop:8}},
           el('div',{style:{fontSize:13,fontWeight:700,marginBottom:8}},'✍️ Signature'),
           sig?el('div',null,el('img',{src:sig,style:{border:'1px solid var(--border)',borderRadius:8,maxWidth:'100%',height:80}}),el('button',{onClick:()=>setSig(null),className:'btn b-ghost btn-sm',style:{marginLeft:12}},'Clear & Re-sign'))
@@ -3612,15 +3678,40 @@ function FacilityLogs({cu,isElevated,isAdmin,SUPA_URL,SUPA_KEY,H}){
     ),
   );
 
+  const kioskUrl=`${APP_URL}?kiosk=visitor`;
+  const[showQR,setShowQR]=React.useState(false);
+
   return el('div',{style:{padding:'0 0 48px'}},
     el('div',{style:{background:lt.color,borderRadius:14,padding:'20px 24px',marginBottom:20,color:'#fff'}},
       el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:10}},
         el('div',null,el('div',{style:{fontSize:20,fontWeight:800}},lt.icon+' '+lt.label),el('div',{style:{fontSize:12,opacity:.8,marginTop:2}},lt.dcr+' · '+lt.freq)),
         el('div',{style:{display:'flex',gap:8,flexWrap:'wrap'}},
           el('button',{onClick:()=>setShowForm(true),style:{background:'#fff',color:lt.color,border:'none',borderRadius:8,padding:'8px 18px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer'}},'+ New Entry'),
+          activeLog==='visitor'&&el('button',{onClick:()=>setShowQR(p=>!p),style:{background:'rgba(255,255,255,.15)',color:'#fff',border:'1px solid rgba(255,255,255,.4)',borderRadius:8,padding:'8px 18px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer'}},'📱 QR Code / Kiosk'),
           el('button',{onClick:()=>exportLogPdf(activeLog,filtered,dateFrom,dateTo),style:{background:'rgba(255,255,255,.2)',color:'#fff',border:'1px solid rgba(255,255,255,.4)',borderRadius:8,padding:'8px 18px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer'}},'📄 Export PDF'),
           el('button',{onClick:()=>setActiveLog(null),className:'btn b-ghost btn-sm',style:{color:'#fff',borderColor:'rgba(255,255,255,.4)'}},'← All Logs'),
         ),
+      ),
+    ),
+    showQR&&activeLog==='visitor'&&el('div',{style:{background:'#ffffff',border:'1px solid var(--border)',borderRadius:14,padding:'24px',marginBottom:20,display:'flex',gap:24,alignItems:'center',flexWrap:'wrap'}},
+      el('div',{style:{flex:1,minWidth:200}},
+        el('div',{style:{fontSize:16,fontWeight:800,color:'var(--text)',marginBottom:8}},'📱 Visitor Self-Service Kiosk'),
+        el('div',{style:{fontSize:13,color:'var(--text2)',lineHeight:1.7,marginBottom:12}},
+          'Print or display this QR code at your reception area. Visitors scan it with their phone to sign in and out without needing staff help.
+
+Sign-in includes: Name, company, ID, purpose, signature, and optional selfie photo.
+Sign-out: They enter their name, get matched to their sign-in, and sign out.'
+        ),
+        el('div',{style:{display:'flex',gap:8,flexWrap:'wrap'}},
+          el('a',{href:kioskUrl,target:'_blank',style:{background:'#1e3a5f',color:'#fff',borderRadius:8,padding:'8px 16px',fontSize:13,fontWeight:700,textDecoration:'none'}},'🔗 Open Kiosk Page'),
+          el('button',{onClick:()=>navigator.clipboard?.writeText(kioskUrl).then(()=>alert('Link copied!')),style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 16px',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}},'📋 Copy Link'),
+        ),
+        el('div',{style:{fontSize:12,color:'var(--text3)',marginTop:8}},'Kiosk URL: '+kioskUrl),
+      ),
+      el('div',{style:{flexShrink:0,textAlign:'center'}},
+        el('img',{src:`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(kioskUrl)}&bgcolor=ffffff&color=1e3a5f&margin=8`,alt:'QR Code',style:{borderRadius:10,border:'4px solid #1e3a5f',width:180,height:180}}),
+        el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:6}},'Scan to open visitor kiosk'),
+        el('button',{onClick:()=>{const a=document.createElement('a');a.href=`https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(kioskUrl)}&bgcolor=ffffff&color=1e3a5f&margin=10`;a.download='visitor-qr-code.png';a.click();},style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:6,padding:'5px 12px',fontSize:11,cursor:'pointer',fontFamily:'inherit',marginTop:6}},'⬇️ Download QR'),
       ),
     ),
     el('div',{style:{display:'flex',gap:10,marginBottom:16,flexWrap:'wrap',alignItems:'center'}},
@@ -9624,7 +9715,237 @@ function usePullToRefresh(onRefresh){
 }
 
 // ── APP ─── FIX 1+2: Corrected Promise.all destructuring ─────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// VISITOR KIOSK — Standalone QR code page (no login required)
+// URL: blfoxman.github.io/BFM/?kiosk=visitor
+// ══════════════════════════════════════════════════════════════════════════════
+function VisitorKiosk(){
+  const[step,setStep]=React.useState('choice'); // choice | signin | signout | done
+  const[form,setForm]=React.useState({visitor_name:'',visitor_company:'',visitor_id:'',purpose:'Vendor / delivery',escorted_by:'',areas_accessed:'',notes:''});
+  const[sig,setSig]=React.useState(null);
+  const[selfie,setSelfie]=React.useState(null);
+  const[saving,setSaving]=React.useState(false);
+  const[existingVisit,setExistingVisit]=React.useState(null);
+  const[lookupName,setLookupName]=React.useState('');
+  const[lookupResult,setLookupResult]=React.useState(null);
+  const[lookupError,setLookupError]=React.useState('');
+  const videoRef=React.useRef(null);
+  const[cameraActive,setCameraActive]=React.useState(false);
+  const setF=(k,v)=>setForm(p=>({...p,[k]:v}));
+
+  const PURPOSES=['Vendor / delivery','Maintenance / repair','Regulatory inspection (DCR)','Regulatory inspection (other)','Audit','Business meeting','Prospective employee','Other'];
+
+  // Camera for selfie
+  async function startCamera(){
+    try{
+      const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false});
+      if(videoRef.current){videoRef.current.srcObject=stream;videoRef.current.play();}
+      setCameraActive(true);
+    }catch(e){alert('Camera not available. You can skip the selfie.');}
+  }
+  function takeSelfie(){
+    const canvas=document.createElement('canvas');
+    canvas.width=320;canvas.height=240;
+    canvas.getContext('2d').drawImage(videoRef.current,0,0,320,240);
+    setSelfie(canvas.toDataURL('image/jpeg',0.7));
+    if(videoRef.current?.srcObject){videoRef.current.srcObject.getTracks().forEach(t=>t.stop());}
+    setCameraActive(false);
+  }
+  function retakeSelfie(){setSelfie(null);startCamera();}
+
+  // Sign In
+  async function submitSignIn(){
+    if(!form.visitor_name.trim()){alert('Please enter your full name.');return;}
+    if(!sig){alert('Please draw your signature.');return;}
+    setSaving(true);
+    const rec={
+      id:'vis-'+Date.now(),log_type:'visitor',
+      date:new Date().toISOString().slice(0,10),
+      time_in:new Date().toTimeString().slice(0,5),
+      time_out:'',
+      visitor_name:form.visitor_name.trim(),
+      visitor_company:form.visitor_company,
+      visitor_id:form.visitor_id,
+      purpose:form.purpose,
+      escorted_by:form.escorted_by,
+      areas_accessed:form.areas_accessed,
+      notes:form.notes,
+      signature_image:sig,
+      selfie_image:selfie||null,
+      submitted_by:form.visitor_name.trim(),
+      submitted_by_id:'kiosk',
+      created_at:new Date().toISOString(),
+    };
+    try{
+      const res=await fetch(`${SUPA_URL}/rest/v1/pf_log_visitor`,{
+        method:'POST',headers:{'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Prefer':'return=representation'},
+        body:JSON.stringify(rec),
+      });
+      if(!res.ok){const e=await res.json();throw new Error(e.message||'Save failed');}
+      setExistingVisit(rec);
+      setStep('done');
+    }catch(e){alert('Error: '+e.message);}
+    setSaving(false);
+  }
+
+  // Look up visitor for sign out
+  async function lookupVisitor(){
+    if(!lookupName.trim()){return;}
+    setLookupError('');setLookupResult(null);
+    try{
+      const res=await fetch(`${SUPA_URL}/rest/v1/pf_log_visitor?visitor_name=ilike.*${encodeURIComponent(lookupName.trim())}*&time_out=eq.&order=created_at.desc&limit=1`,{
+        headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Accept':'application/json'},
+      });
+      const rows=await res.json();
+      if(!rows||rows.length===0){setLookupError('No active sign-in found for "'+lookupName+'". Please check the spelling.');return;}
+      setLookupResult(rows[0]);
+    }catch(e){setLookupError('Error: '+e.message);}
+  }
+
+  async function submitSignOut(){
+    if(!sig){alert('Please draw your signature to sign out.');return;}
+    if(!lookupResult){return;}
+    setSaving(true);
+    try{
+      await fetch(`${SUPA_URL}/rest/v1/pf_log_visitor?id=eq.${lookupResult.id}`,{
+        method:'PATCH',
+        headers:{'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY},
+        body:JSON.stringify({time_out:new Date().toTimeString().slice(0,5),signout_signature:sig}),
+      });
+      setStep('done');
+    }catch(e){alert('Error: '+e.message);}
+    setSaving(false);
+  }
+
+  const CARD_STYLE={background:'#ffffff',borderRadius:16,padding:'28px 24px',boxShadow:'0 4px 24px rgba(15,23,42,.12)',width:'100%',maxWidth:480,margin:'0 auto'};
+
+  return el('div',{style:{minHeight:'100vh',background:'linear-gradient(135deg,#1e3a5f 0%,#2d5282 100%)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'24px 16px',fontFamily:'Inter,sans-serif'}},
+
+    // Header
+    el('div',{style:{textAlign:'center',marginBottom:28,color:'#fff'}},
+      el('div',{style:{fontSize:36,marginBottom:4}},'🦊'),
+      el('div',{style:{fontSize:22,fontWeight:800,letterSpacing:'-0.5px'}},['BLACK FOX QMS'].join('')),
+      el('div',{style:{fontSize:13,opacity:.75,marginTop:2}},'Visitor Management · Black Fox Manufacturing'),
+    ),
+
+    // CHOICE SCREEN
+    step==='choice'&&el('div',{style:CARD_STYLE},
+      el('div',{style:{fontSize:18,fontWeight:700,color:'#0f172a',marginBottom:6,textAlign:'center'}},'Welcome'),
+      el('div',{style:{fontSize:13,color:'#475569',marginBottom:24,textAlign:'center'}},'Please select an option below'),
+      el('button',{
+        onClick:()=>setStep('signin'),
+        style:{width:'100%',background:'#1e3a5f',color:'#fff',border:'none',borderRadius:12,padding:'18px',fontFamily:'inherit',fontSize:16,fontWeight:700,cursor:'pointer',marginBottom:12,display:'flex',alignItems:'center',justifyContent:'center',gap:10}
+      },el('span',{style:{fontSize:24}},'👋'),'Sign In — I am arriving'),
+      el('button',{
+        onClick:()=>setStep('signout'),
+        style:{width:'100%',background:'#f0f9ff',color:'#1e3a5f',border:'2px solid #1e3a5f',borderRadius:12,padding:'18px',fontFamily:'inherit',fontSize:16,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:10}
+      },el('span',{style:{fontSize:24}},'🚪'),'Sign Out — I am leaving'),
+    ),
+
+    // SIGN IN SCREEN
+    step==='signin'&&el('div',{style:{...CARD_STYLE,maxWidth:520}},
+      el('div',{style:{display:'flex',alignItems:'center',gap:10,marginBottom:20}},
+        el('button',{onClick:()=>setStep('choice'),style:{background:'none',border:'none',fontSize:20,cursor:'pointer',color:'#64748b'}},el('span',null,'←')),
+        el('div',{style:{fontSize:18,fontWeight:700,color:'#0f172a'}},'Visitor Sign In'),
+      ),
+
+      // Selfie
+      el('div',{style:{marginBottom:20,textAlign:'center'}},
+        selfie
+          ?el('div',null,
+              el('img',{src:selfie,style:{width:120,height:90,objectFit:'cover',borderRadius:12,border:'3px solid #1e3a5f',marginBottom:8}}),
+              el('div',null,el('button',{onClick:retakeSelfie,style:{background:'none',border:'1px solid #cbd5e1',borderRadius:8,padding:'4px 12px',fontSize:12,cursor:'pointer',color:'#64748b'}},'Retake Photo')),
+            )
+          :cameraActive
+            ?el('div',null,
+                el('video',{ref:videoRef,autoPlay:true,playsInline:true,style:{width:'100%',maxWidth:320,borderRadius:12,marginBottom:8}}),
+                el('button',{onClick:takeSelfie,style:{background:'#1e3a5f',color:'#fff',border:'none',borderRadius:10,padding:'10px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer'}},'📸 Take Photo'),
+              )
+            :el('button',{onClick:startCamera,style:{background:'#f1f5f9',border:'2px dashed #cbd5e1',borderRadius:12,padding:'16px 32px',fontFamily:'inherit',fontSize:13,color:'#64748b',cursor:'pointer',width:'100%'}},
+                '📸 Take a Selfie (Optional)',
+              ),
+      ),
+
+      // Form fields
+      [
+        {k:'visitor_name',l:'Full Name *',ph:'Your full name',t:'text'},
+        {k:'visitor_company',l:'Company / Organization',ph:'Who do you represent?',t:'text'},
+        {k:'visitor_id',l:'ID Number',ph:'Driver\'s license or ID number',t:'text'},
+        {k:'escorted_by',l:'Escorted By',ph:'Employee meeting you',t:'text'},
+        {k:'areas_accessed',l:'Areas You Will Visit',ph:'e.g. Reception, Production Floor',t:'text'},
+        {k:'notes',l:'Notes',ph:'Reason for visit or additional info',t:'textarea'},
+      ].map(({k,l,ph,t})=>el('div',{key:k,style:{marginBottom:14}},
+        el('label',{style:{fontSize:12,fontWeight:700,color:'#0f172a',display:'block',marginBottom:5}},l),
+        t==='textarea'
+          ?el('textarea',{value:form[k],onChange:ev=>setF(k,ev.target.value),placeholder:ph,rows:2,style:{width:'100%',border:'1px solid #cbd5e1',borderRadius:8,padding:'10px 12px',fontFamily:'inherit',fontSize:14,color:'#0f172a',resize:'vertical',boxSizing:'border-box'}})
+          :el('input',{type:t,value:form[k],onChange:ev=>setF(k,ev.target.value),placeholder:ph,style:{width:'100%',border:'1px solid #cbd5e1',borderRadius:8,padding:'10px 12px',fontFamily:'inherit',fontSize:14,color:'#0f172a',boxSizing:'border-box'}}),
+      )),
+
+      // Purpose
+      el('div',{style:{marginBottom:14}},
+        el('label',{style:{fontSize:12,fontWeight:700,color:'#0f172a',display:'block',marginBottom:5}},'Purpose of Visit *'),
+        el('select',{value:form.purpose,onChange:ev=>setF('purpose',ev.target.value),style:{width:'100%',border:'1px solid #cbd5e1',borderRadius:8,padding:'10px 12px',fontFamily:'inherit',fontSize:14,color:'#0f172a',background:'#fff'}},
+          PURPOSES.map(p=>el('option',{key:p,value:p},p))
+        ),
+      ),
+
+      // Signature
+      el('div',{style:{marginBottom:20}},
+        el('div',{style:{fontSize:13,fontWeight:700,color:'#0f172a',marginBottom:8}},'✍️ Signature *'),
+        sig
+          ?el('div',null,el('img',{src:sig,style:{border:'1px solid #cbd5e1',borderRadius:8,maxWidth:'100%',height:80}}),el('button',{onClick:()=>setSig(null),style:{marginLeft:8,background:'none',border:'1px solid #cbd5e1',borderRadius:6,padding:'4px 10px',fontSize:12,cursor:'pointer'}},'Clear'))
+          :el(SignaturePad,{label:'Sign here to confirm your visit',onSave:dataUrl=>setSig(dataUrl),onClear:()=>setSig(null)}),
+      ),
+
+      el('div',{style:{fontSize:11,color:'#94a3b8',marginBottom:14,lineHeight:1.5}},'By signing, you confirm you have read and will follow all facility safety, security, and compliance rules. This visit is being logged for regulatory compliance.'),
+
+      el('button',{onClick:submitSignIn,disabled:saving,style:{width:'100%',background:saving?'#94a3b8':'#1e3a5f',color:'#fff',border:'none',borderRadius:12,padding:'16px',fontFamily:'inherit',fontSize:16,fontWeight:700,cursor:saving?'not-allowed':'pointer'}},saving?'Saving...':'✅ Sign In'),
+    ),
+
+    // SIGN OUT SCREEN
+    step==='signout'&&el('div',{style:CARD_STYLE},
+      el('div',{style:{display:'flex',alignItems:'center',gap:10,marginBottom:20}},
+        el('button',{onClick:()=>{setStep('choice');setLookupName('');setLookupResult(null);setLookupError('');setSig(null);},style:{background:'none',border:'none',fontSize:20,cursor:'pointer',color:'#64748b'}},'←'),
+        el('div',{style:{fontSize:18,fontWeight:700,color:'#0f172a'}},'Sign Out'),
+      ),
+      !lookupResult?el('div',null,
+        el('div',{style:{fontSize:14,color:'#475569',marginBottom:16}},'Enter your name to find your sign-in record:'),
+        el('input',{type:'text',value:lookupName,onChange:ev=>setLookupName(ev.target.value),onKeyDown:ev=>ev.key==='Enter'&&lookupVisitor(),placeholder:'Your full name',autoFocus:true,style:{width:'100%',border:'1px solid #cbd5e1',borderRadius:8,padding:'12px',fontFamily:'inherit',fontSize:16,color:'#0f172a',boxSizing:'border-box',marginBottom:12}}),
+        lookupError&&el('div',{style:{color:'#dc2626',fontSize:13,marginBottom:8}},lookupError),
+        el('button',{onClick:lookupVisitor,style:{width:'100%',background:'#1e3a5f',color:'#fff',border:'none',borderRadius:10,padding:'14px',fontFamily:'inherit',fontSize:15,fontWeight:700,cursor:'pointer'}},'Find My Visit →'),
+      ):el('div',null,
+        el('div',{style:{background:'#f0fdf4',border:'1px solid #bbf7d0',borderRadius:10,padding:'14px',marginBottom:16}},
+          el('div',{style:{fontSize:13,fontWeight:700,color:'#16a34a',marginBottom:4}},'✓ Visit Found'),
+          el('div',{style:{fontSize:14,fontWeight:700,color:'#0f172a'}},lookupResult.visitor_name),
+          el('div',{style:{fontSize:12,color:'#475569'}},'Signed in: '+lookupResult.date+' at '+lookupResult.time_in),
+          el('div',{style:{fontSize:12,color:'#475569'}},'Purpose: '+lookupResult.purpose),
+        ),
+        el('div',{style:{fontSize:13,fontWeight:700,color:'#0f172a',marginBottom:8}},'✍️ Sign to confirm departure'),
+        sig
+          ?el('div',null,el('img',{src:sig,style:{border:'1px solid #cbd5e1',borderRadius:8,maxWidth:'100%',height:80}}),el('button',{onClick:()=>setSig(null),style:{marginLeft:8,background:'none',border:'1px solid #cbd5e1',borderRadius:6,padding:'4px 10px',fontSize:12,cursor:'pointer'}},'Clear'))
+          :el(SignaturePad,{label:'Sign to confirm you are leaving',onSave:dataUrl=>setSig(dataUrl),onClear:()=>setSig(null)}),
+        el('button',{onClick:submitSignOut,disabled:saving,style:{width:'100%',background:saving?'#94a3b8':'#1e3a5f',color:'#fff',border:'none',borderRadius:12,padding:'16px',fontFamily:'inherit',fontSize:16,fontWeight:700,cursor:saving?'not-allowed':'pointer',marginTop:16}},saving?'Saving...':'🚪 Complete Sign Out'),
+      ),
+    ),
+
+    // DONE SCREEN
+    step==='done'&&el('div',{style:CARD_STYLE},
+      el('div',{style:{textAlign:'center'}},
+        el('div',{style:{fontSize:60,marginBottom:12}},'✅'),
+        el('div',{style:{fontSize:22,fontWeight:800,color:'#16a34a',marginBottom:8}},step==='done'&&lookupResult?'Signed Out Successfully':'Signed In Successfully'),
+        el('div',{style:{fontSize:14,color:'#475569',marginBottom:8}},new Date().toLocaleString()),
+        el('div',{style:{fontSize:13,color:'#64748b',marginBottom:24,lineHeight:1.6}},'Thank you. Your visit has been logged and signed.\nA staff member will assist you shortly.'),
+        el('button',{onClick:()=>{setStep('choice');setForm({visitor_name:'',visitor_company:'',visitor_id:'',purpose:'Vendor / delivery',escorted_by:'',areas_accessed:'',notes:''});setSig(null);setSelfie(null);setLookupName('');setLookupResult(null);setLookupError('');},style:{background:'#1e3a5f',color:'#fff',border:'none',borderRadius:10,padding:'12px 32px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer'}},'← Back to Start'),
+      ),
+    ),
+  );
+}
+
 function App(){
+  // Kiosk mode — no login needed, accessible via QR code
+  const urlParams=new URLSearchParams(window.location.search);
+  if(urlParams.get('kiosk')==='visitor') return el(VisitorKiosk,null);
+
   const[cu,setCu]=useState(()=>{try{const s=localStorage.getItem('pf_session');return s?JSON.parse(s):null;}catch{return null;}});
   const[tasks,setTasks]=useState([]);
   const[salesTasks,setSalesTasks]=useState([]);
