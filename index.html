@@ -757,8 +757,8 @@ function SidebarChangePw({cu,SUPA_URL,SUPA_KEY}){
   const[saving,setSaving]=React.useState(false);
 
   async function save(){
-    if(np.length<6){setMsg('\u26A0 Min 6 characters');return;}
-    if(np!==cp){setMsg('\u26A0 Passwords do not match');return;}
+    if(np.length<6){setMsg('\u26A0\uFE0F Min 6 characters');return;}
+    if(np!==cp){setMsg('\u26A0\uFE0F Passwords do not match');return;}
     setSaving(true);setMsg('Saving...');
     try{
       const r=await fetch(`${SUPA_URL}/rest/v1/pf_users?id=eq.${cu.id}`,{
@@ -786,7 +786,7 @@ function SidebarChangePw({cu,SUPA_URL,SUPA_KEY}){
         style:{width:'100%',background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.2)',borderRadius:'var(--rs)',padding:'8px 10px',color:'#fff',fontFamily:'inherit',fontSize:12,outline:'none',boxSizing:'border-box'}}),
       el('input',{type:'password',value:cp,onChange:e=>setCp(e.target.value),placeholder:'Confirm new password...',
         style:{width:'100%',background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.2)',borderRadius:'var(--rs)',padding:'8px 10px',color:'#fff',fontFamily:'inherit',fontSize:12,outline:'none',boxSizing:'border-box'}}),
-      msg&&el('div',{style:{fontSize:11,color:msg.includes('\u2713')?'#6ee7b7':msg.includes('\u274C')||msg.includes('\u26A0')?'#fca5a5':'rgba(255,255,255,.7)',padding:'2px 0'}},msg),
+      msg&&el('div',{style:{fontSize:11,color:msg.includes('\u2713')?'#6ee7b7':msg.includes('\u274C')||msg.includes('\u26A0\uFE0F')?'#fca5a5':'rgba(255,255,255,.7)',padding:'2px 0'}},msg),
       el('button',{onClick:save,disabled:saving||np.length<6||np!==cp,
         style:{width:'100%',background:np.length>=6&&np===cp?'rgba(255,255,255,.9)':'rgba(255,255,255,.2)',color:np.length>=6&&np===cp?'#1e3a5f':'rgba(255,255,255,.5)',border:'none',borderRadius:'var(--rs)',padding:'8px',fontFamily:'inherit',fontSize:12,fontWeight:700,cursor:saving?'not-allowed':'pointer',transition:'all .15s'}}
       ,saving?'Saving...':'Set New Password'),
@@ -1730,7 +1730,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
                       note.text&&el('div',{style:{fontSize:12,lineHeight:1.5}},note.text),
                       (note.files||[]).length>0&&el('div',{style:{display:'flex',flexWrap:'wrap',gap:4,marginTop:4}},
                         (note.files||[]).map(f=>el('div',{key:f.id,style:{display:'flex',alignItems:'center',gap:4,background:'var(--surface2)',borderRadius:4,padding:'2px 7px',fontSize:10}},
-                          el('span',null,f.name.match(/\.(png|jpg|jpeg|gif|webp)$/i)?'\uD83D\uDDBB':'\uD83D\uDCCE'),
+                          el('span',null,f.name.match(/\.(png|jpg|jpeg|gif|webp)$/i)?'\uD83D\uDDBC\uFE0F':'\uD83D\uDCCE'),
                           el('span',{style:{color:'var(--text2)',maxWidth:80,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},f.name),
                           el('button',{onClick:()=>{const a=document.createElement('a');a.href=renderFileUrl(f);a.download=f.name;a.target='_blank';a.click();},style:{background:'none',border:'none',color:'var(--accent)',cursor:'pointer',fontSize:10,fontWeight:600,padding:0,fontFamily:'inherit'}},'\u2193'),
                         )),
@@ -1797,7 +1797,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
             note.text&&el('div',{style:{fontSize:13,lineHeight:1.5,marginBottom:(note.files||[]).length>0?8:0}},note.text),
             (note.files||[]).length>0&&el('div',{style:{display:'flex',flexWrap:'wrap',gap:5,marginTop:4}},
               (note.files||[]).map(f=>el('div',{key:f.id,style:{display:'flex',alignItems:'center',gap:6,background:'var(--surface)',border:'1px solid var(--border)',borderRadius:6,padding:'4px 10px',fontSize:11}},
-                el('span',null,f.name.match(/\.(png|jpg|jpeg|gif|webp)$/i)?'\uD83D\uDDBB':f.name.match(/\.pdf$/i)?'\uD83D\uDCC4':f.name.match(/\.(doc|docx)$/i)?'\uD83D\uDCDD':f.name.match(/\.(xls|xlsx|csv)$/i)?'\uD83D\uDCCA':'\uD83D\uDCCE'),
+                el('span',null,f.name.match(/\.(png|jpg|jpeg|gif|webp)$/i)?'\uD83D\uDDBC\uFE0F':f.name.match(/\.pdf$/i)?'\uD83D\uDCC4':f.name.match(/\.(doc|docx)$/i)?'\uD83D\uDCDD':f.name.match(/\.(xls|xlsx|csv)$/i)?'\uD83D\uDCCA':'\uD83D\uDCCE'),
                 el('span',{style:{color:'var(--text2)',maxWidth:120,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},f.name),
                 el('button',{
                   onClick:()=>{const a=document.createElement('a');a.href=renderFileUrl(f);a.download=f.name;a.target='_blank';a.click();},
@@ -2078,7 +2078,7 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter,canAccessQms,setP
       ),
     ),
     el('div',{className:'g4',style:{marginBottom:20}},
-      [{l:'My Tasks',v:myTasks.length,c:'var(--accent)',ico:'\uD83D\uDCCB'},{l:'Due Today',v:dueToday.length,c:dueToday.length>0?'var(--red)':'var(--text3)',ico:'\uD83D\uDD34'},{l:'Overdue',v:overdue.length,c:overdue.length>0?'var(--red)':'var(--text3)',ico:'\u26A0'},{l:'In Review',v:inReview.length,c:inReview.length>0?'var(--yellow)':'var(--text3)',ico:'\uD83D\uDC41'}]
+      [{l:'My Tasks',v:myTasks.length,c:'var(--accent)',ico:'\uD83D\uDCCB'},{l:'Due Today',v:dueToday.length,c:dueToday.length>0?'var(--red)':'var(--text3)',ico:'\uD83D\uDD34'},{l:'Overdue',v:overdue.length,c:overdue.length>0?'var(--red)':'var(--text3)',ico:'\u26A0\uFE0F'},{l:'In Review',v:inReview.length,c:inReview.length>0?'var(--yellow)':'var(--text3)',ico:'\uD83D\uDC41'}]
         .map(({l,v,c,ico})=>el('div',{key:l,className:'stat',style:{display:'flex',alignItems:'center',gap:14}},
           el('div',{style:{fontSize:28}},ico),
           el('div',null,el('div',{className:'sl'},l),el('div',{className:'sv',style:{color:c,fontSize:24}},v)),
@@ -2325,11 +2325,11 @@ function Team({users,setUsers,cu}){
         try{
           await fetch(`${SUPA_URL}/rest/v1/pf_users?id=eq.${editU.id}`,{method:'PATCH',headers:{...H.headers,'Prefer':'return=representation'},body:JSON.stringify(fallback)});
           setUsers(p=>p.map(u=>u.id===editU.id?{...u,...fallback}:u));
-          setSaveMsg('\u26A0 Saved (without dept access) \u2014 run SQL migration below');
+          setSaveMsg('\u26A0\uFE0F Saved (without dept access) \u2014 run SQL migration below');
           setTimeout(()=>setSaveMsg(''),4000);
           // Show migration prompt
           navigator.clipboard.writeText("ALTER TABLE pf_users ADD COLUMN IF NOT EXISTS oversees_depts jsonb default '[]';").catch(()=>{});
-          alert('\u26A0 Run this SQL in your Supabase SQL Editor to enable Department Access:\n\nALTER TABLE pf_users ADD COLUMN IF NOT EXISTS oversees_depts jsonb default \'[]\';\n\n(Copied to clipboard)');
+          alert('\u26A0\uFE0F Run this SQL in your Supabase SQL Editor to enable Department Access:\n\nALTER TABLE pf_users ADD COLUMN IF NOT EXISTS oversees_depts jsonb default \'[]\';\n\n(Copied to clipboard)');
         }catch(e2){
           setSaveMsg('\u274C Save failed: '+e2.message.slice(0,60));
         }
@@ -2513,7 +2513,7 @@ function Team({users,setUsers,cu}){
                 className:'btn b-blue btn-sm',
                 disabled:newPw.length<6,
                 onClick:async()=>{
-                  if(newPw.length<6){setPwMsg('\u26A0 Min 6 characters');return;}
+                  if(newPw.length<6){setPwMsg('\u26A0\uFE0F Min 6 characters');return;}
                   setPwMsg('Saving...');
                   try{
                     await fetch(`${SUPA_URL}/rest/v1/pf_users?id=eq.${editU.id}`,{
@@ -3254,7 +3254,7 @@ Create comprehensive meeting notes in this EXACT JSON format (no markdown, just 
   }
 
   const sentimentColors={productive:'var(--green)',inconclusive:'var(--yellow)','needs-follow-up':'var(--red)'};
-  const sentimentLabels={productive:'\u2705 Productive','needs-follow-up':'\u26A0 Needs Follow-up',inconclusive:'\u2753 Inconclusive'};
+  const sentimentLabels={productive:'\u2705 Productive','needs-follow-up':'\u26A0\uFE0F Needs Follow-up',inconclusive:'\u2753 Inconclusive'};
 
   return el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&onClose()},
     el('div',{className:'md',style:{width:720,maxHeight:'92vh'}},
@@ -3355,13 +3355,13 @@ Create comprehensive meeting notes in this EXACT JSON format (no markdown, just 
 // \u2500\u2500 QMS (Quality Management System) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 const QMS_TABS=[
   {id:'dashboard',label:'Dashboard',ico:'\uD83D\uDCCA'},
-  {id:'deviations',label:'Deviations',ico:'\u26A0'},
+  {id:'deviations',label:'Deviations',ico:'\u26A0\uFE0F'},
   {id:'capas',label:'CAPAs',ico:'\uD83D\uDD27'},
   {id:'audits',label:'Audits',ico:'\uD83D\uDD0D'},
   {id:'changes',label:'Change Control',ico:'\uD83D\uDCDD'},
   {id:'complaints',label:'Complaints',ico:'\uD83D\uDCE3'},
   {id:'suppliers',label:'Suppliers',ico:'\uD83C\uDFED'},
-  {id:'corrective',label:'Corrective Actions',ico:'\u2696'},
+  {id:'corrective',label:'Corrective Actions',ico:'\u2696\uFE0F'},
   {id:'training',label:'Training Matrix',ico:'\uD83C\uDF93'},
 ];
 
@@ -3387,7 +3387,7 @@ const LOG_TYPES={
     {key:'corrective_action',label:'Corrective Action (if fail)',type:'textarea',placeholder:'Describe corrective action taken'},
     {key:'notes',label:'Additional Notes',type:'textarea',placeholder:'Any observations or comments'},
   ]},
-  waste:{id:'waste',label:'Waste Destruction Log',icon:'\uD83D\uDDD1',color:'#7c2d12',bg:'#fff7ed',table:'pf_log_waste',dcr:'Missouri DCR / METRC Required',freq:'Every destruction event',fields:[
+  waste:{id:'waste',label:'Waste Destruction Log',icon:'\uD83D\uDDD1\uFE0F',color:'#7c2d12',bg:'#fff7ed',table:'pf_log_waste',dcr:'Missouri DCR / METRC Required',freq:'Every destruction event',fields:[
     {key:'date',label:'Date of Destruction *',type:'date'},{key:'time',label:'Time',type:'time'},
     {key:'metrc_tag',label:'METRC Package Tag(s) *',type:'text',placeholder:'1A4FF0100000022000012345'},
     {key:'product_type',label:'Product Type *',type:'select',options:['Flower','Pre-Roll','Cartridge','Edible','Trim/Shake','Extract','Packaging','Other']},
@@ -3438,7 +3438,7 @@ const LOG_TYPES={
     {key:'next_maintenance',label:'Next Scheduled Maintenance',type:'date'},
     {key:'notes',label:'Notes',type:'textarea',placeholder:''},
   ]},
-  temperature:{id:'temperature',label:'Temp / Humidity Log',icon:'\uD83C\uDF21',color:'#0369a1',bg:'#f0f9ff',table:'pf_log_temperature',dcr:'cGMP / Product Integrity',freq:'Every shift',fields:[
+  temperature:{id:'temperature',label:'Temp / Humidity Log',icon:'\uD83C\uDF21\uFE0F',color:'#0369a1',bg:'#f0f9ff',table:'pf_log_temperature',dcr:'cGMP / Product Integrity',freq:'Every shift',fields:[
     {key:'date',label:'Date *',type:'date'},{key:'time',label:'Time *',type:'time'},
     {key:'shift',label:'Shift',type:'select',options:['Day','Evening','Night']},
     {key:'recorded_by',label:'Recorded By *',type:'text',placeholder:'Employee name'},
@@ -3610,7 +3610,7 @@ function LogEntryForm({logType,cu,onSave,onClose,SUPA_URL,SUPA_KEY,H}){
             ?el('div',{style:{fontSize:12,color:'var(--text3)',padding:'8px 0'}},'Upload photos, PDFs, reports, or any supporting documents')
             :el('div',{style:{display:'flex',flexDirection:'column',gap:6}},
                 attachments.map((att,i)=>el('div',{key:att.id,style:{display:'flex',alignItems:'center',gap:8,background:'var(--surface2)',borderRadius:8,padding:'8px 12px'}},
-                  el('span',{style:{fontSize:18}},att.type.includes('image')?'\uD83D\uDDBB':'\uD83D\uDCC4'),
+                  el('span',{style:{fontSize:18}},att.type.includes('image')?'\uD83D\uDDBC\uFE0F':'\uD83D\uDCC4'),
                   el('div',{style:{flex:1,minWidth:0}},
                     el('div',{style:{fontSize:12,fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},att.name),
                     el('div',{style:{fontSize:10,color:'var(--text3)'}},(att.size>1024*1024?(att.size/1024/1024).toFixed(1)+'MB':(att.size/1024).toFixed(0)+'KB')),
@@ -3622,7 +3622,7 @@ function LogEntryForm({logType,cu,onSave,onClose,SUPA_URL,SUPA_KEY,H}){
           el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:4}},'Max 5MB per file \u00B7 PDF, PNG, JPG, DOCX, XLSX'),
         ),
         el('div',{style:{borderTop:'1px solid var(--border)',paddingTop:16,marginTop:8}},
-          el('div',{style:{fontSize:13,fontWeight:700,marginBottom:8}},'\u270D Signature'),
+          el('div',{style:{fontSize:13,fontWeight:700,marginBottom:8}},'\u270D\uFE0F Signature'),
           sig?el('div',null,el('img',{src:sig,style:{border:'1px solid var(--border)',borderRadius:8,maxWidth:'100%',height:80}}),el('button',{onClick:()=>setSig(null),className:'btn b-ghost btn-sm',style:{marginLeft:12}},'Clear & Re-sign'))
           :el(SignaturePad,{label:'Draw your signature to certify this record',onSave:dataUrl=>setSig(dataUrl),onClear:()=>setSig(null)}),
           el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:6}},'Certifying as: '+cu.name+' \u00B7 '+new Date().toLocaleString()),
@@ -3697,7 +3697,7 @@ function FacilityLogs({cu,isElevated,isAdmin,SUPA_URL,SUPA_KEY,H}){
       el('div',{style:{flex:1,minWidth:200}},
         el('div',{style:{fontSize:16,fontWeight:800,color:'var(--text)',marginBottom:8}},'\uD83D\uDCF1 Visitor Self-Service Kiosk'),
         el('div',{style:{fontSize:13,color:'var(--text2)',lineHeight:1.7,marginBottom:12}},
-          'Print or display this QR code at your reception area. Visitors scan it with their phone to sign in and out. Sign-in includes name, company, ID, purpose and signature. Sign-out: enter name, match to sign-in, and sign out.'
+          'Print or display this QR code at your reception area. Visitors scan it with their phone to sign in and out. Sign-in includes name, company, ID, purpose and signature. Sign-out: enter name to find record and sign.'
         ),
         el('div',{style:{display:'flex',gap:8,flexWrap:'wrap'}},
           el('a',{href:kioskUrl,target:'_blank',style:{background:'#1e3a5f',color:'#fff',borderRadius:8,padding:'8px 16px',fontSize:13,fontWeight:700,textDecoration:'none'}},'\uD83D\uDD17 Open Kiosk Page'),
@@ -3708,7 +3708,7 @@ function FacilityLogs({cu,isElevated,isAdmin,SUPA_URL,SUPA_KEY,H}){
       el('div',{style:{flexShrink:0,textAlign:'center'}},
         el('img',{src:`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(kioskUrl)}&bgcolor=ffffff&color=1e3a5f&margin=8`,alt:'QR Code',style:{borderRadius:10,border:'4px solid #1e3a5f',width:180,height:180}}),
         el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:6}},'Scan to open visitor kiosk'),
-        el('button',{onClick:()=>{const a=document.createElement('a');a.href=`https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(kioskUrl)}&bgcolor=ffffff&color=1e3a5f&margin=10`;a.download='visitor-qr-code.png';a.click();},style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:6,padding:'5px 12px',fontSize:11,cursor:'pointer',fontFamily:'inherit',marginTop:6}},'\u2B07 Download QR'),
+        el('button',{onClick:()=>{const a=document.createElement('a');a.href=`https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(kioskUrl)}&bgcolor=ffffff&color=1e3a5f&margin=10`;a.download='visitor-qr-code.png';a.click();},style:{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:6,padding:'5px 12px',fontSize:11,cursor:'pointer',fontFamily:'inherit',marginTop:6}},'\u2B07\uFE0F Download QR'),
       ),
     ),
     el('div',{style:{display:'flex',gap:10,marginBottom:16,flexWrap:'wrap',alignItems:'center'}},
@@ -3737,7 +3737,7 @@ function FacilityLogs({cu,isElevated,isAdmin,SUPA_URL,SUPA_KEY,H}){
                 el('span',{style:{fontSize:12,fontWeight:700,color:lt.color}},lt.icon+' #'+(filtered.length-i)),
                 el('span',{style:{fontSize:12,color:'var(--text2)'}},(entry.date||'')+(entry.time?' '+entry.time:'')),
                 el('span',{style:{fontSize:12,color:'var(--text2)'}},'\u00B7 '+( entry.submitted_by||'')),
-                entry.signature_image&&el('span',{style:{background:'rgba(22,163,74,.1)',color:'#16a34a',borderRadius:4,padding:'2px 8px',fontSize:10,fontWeight:700}},'\u270D Signed'),
+                entry.signature_image&&el('span',{style:{background:'rgba(22,163,74,.1)',color:'#16a34a',borderRadius:4,padding:'2px 8px',fontSize:10,fontWeight:700}},'\u270D\uFE0F Signed'),
               ),
               el('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:4}},
                 lt.fields.slice(0,4).map(f=>entry[f.key]?el('div',{key:f.key,style:{fontSize:12,color:'var(--text2)'}},el('span',{style:{fontWeight:600,color:'var(--text)'}},f.label.replace(' *','')+': '),entry[f.key]):null)
@@ -3835,7 +3835,7 @@ function RiskRegister({cu,isElevated,isAdmin,SUPA_URL,SUPA_KEY,H}){
     el('div',{style:{background:'linear-gradient(135deg,#7c2d12,#991b1b)',borderRadius:14,padding:'22px 28px',marginBottom:24,color:'#fff'}},
       el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:12}},
         el('div',null,
-          el('div',{style:{fontSize:22,fontWeight:800,marginBottom:3}},'\u26A0 Risk Register'),
+          el('div',{style:{fontSize:22,fontWeight:800,marginBottom:3}},'\u26A0\uFE0F Risk Register'),
           el('div',{style:{fontSize:13,opacity:.85}},'ISO 9001:2015 Clause 6.1 \u2014 Risk & Opportunity Management'),
         ),
         isElevated&&el('button',{onClick:openNew,style:{background:'#fff',color:'#7c2d12',border:'none',borderRadius:8,padding:'9px 20px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer'}},'+ Add Risk'),
@@ -3896,7 +3896,7 @@ function RiskRegister({cu,isElevated,isAdmin,SUPA_URL,SUPA_KEY,H}){
                 ),
               ),
               el('div',{style:{display:'flex',gap:6,flexShrink:0}},
-                isElevated&&el('button',{onClick:()=>openEdit(risk),className:'btn b-ghost btn-sm'},'\u270F Edit'),
+                isElevated&&el('button',{onClick:()=>openEdit(risk),className:'btn b-ghost btn-sm'},'\u270F\uFE0F Edit'),
                 isAdmin&&el('button',{onClick:()=>deleteRisk(risk.id),className:'btn b-red btn-sm'},'Delete'),
               ),
             ),
@@ -3981,7 +3981,7 @@ const COMPLIANCE_FRAMEWORKS={
     {id:'GMP-5',title:'Records & Reports',req:'Maintain complete, accurate and retrievable production records.',actions:['Retain all batch records for minimum 3 years','Document all deviations, corrections and rework activities','Maintain METRC compliance records and reconciliations']},
     {id:'GMP-6',title:'Returned & Salvaged Products',req:'Control all returned and salvaged cannabis product.',actions:['Document all returns in METRC within 24 hours','Quarantine all returned product pending QA review and disposition','Complete disposition assessment and document outcome']},
   ]},
-  dcr:{label:'Missouri DCR / 19 CSR 100-1',color:'#7c2d12',icon:'\uD83C\uDFDB',clauses:[
+  dcr:{label:'Missouri DCR / 19 CSR 100-1',color:'#7c2d12',icon:'\uD83C\uDFDB\uFE0F',clauses:[
     {id:'DCR-1',title:'License Compliance',req:'Maintain active and current facility license at all times.',actions:['Track license renewal dates and renew 90 days in advance','Display license prominently in facility','Notify DCR of any material changes within 10 calendar days']},
     {id:'DCR-2',title:'METRC Track & Trace',req:'All cannabis plants and products must be tracked in METRC.',actions:['Tag all plants and packages in METRC at creation','Reconcile METRC inventory daily against physical count','Report any discrepancies to DCR within 24 hours']},
     {id:'DCR-3',title:'Security Requirements',req:'Maintain all required security measures per DCR regulations.',actions:['Test and document security camera functionality monthly','Maintain visitor log with signatures for all non-staff visitors','Verify all employees have current background check on file']},
@@ -4327,7 +4327,7 @@ function CAPAForm({cu,users,deviations,onSave,onCancel,existing}){
       el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Effectiveness (if closed)'),el('select',{value:f.effectiveness_rating,onChange:ev=>setF(p=>({...p,effectiveness_rating:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
         el('option',{value:''},'\u2014 Rate effectiveness \u2014'),
         el('option',{value:'effective'},'\u2705 Effective'),
-        el('option',{value:'partially'},'\u26A0 Partially Effective'),
+        el('option',{value:'partially'},'\u26A0\uFE0F Partially Effective'),
         el('option',{value:'ineffective'},'\u274C Ineffective \u2014 Reopen'),
       )),
     ),
@@ -4454,7 +4454,7 @@ function AuditForm({cu,users,onSave,onCancel,existing}){
         :el('div',{style:{display:'flex',flexDirection:'column',gap:6}},
           (f.attachments||[]).map((att,i)=>el('div',{key:att.id,style:{display:'flex',alignItems:'center',justifyContent:'space-between',background:'var(--surface2)',borderRadius:8,padding:'8px 12px'}},
             el('div',{style:{display:'flex',alignItems:'center',gap:8,flex:1,minWidth:0}},
-              el('span',{style:{fontSize:18,flexShrink:0}},att.type&&att.type.includes('pdf')?'\uD83D\uDCC4':att.type&&att.type.includes('image')?'\uD83D\uDDBB':'\uD83D\uDCCE'),
+              el('span',{style:{fontSize:18,flexShrink:0}},att.type&&att.type.includes('pdf')?'\uD83D\uDCC4':att.type&&att.type.includes('image')?'\uD83D\uDDBC\uFE0F':'\uD83D\uDCCE'),
               el('div',{style:{minWidth:0}},
                 el('a',{href:att.data,download:att.name,style:{fontSize:12,fontWeight:600,color:'var(--accent)',textDecoration:'none',display:'block',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},att.name),
                 el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:1}},(att.size>1024*1024?(att.size/1024/1024).toFixed(1)+'MB':(att.size/1024).toFixed(0)+'KB')+' \u00B7 '+att.uploaded_by),
@@ -4644,7 +4644,7 @@ Return ONLY the full revised JSON with the same structure, no markdown. Keep unc
     el('div',{className:'md',style:{width:700,maxHeight:'92vh',overflowY:'auto'}},
       el('div',{className:'mh'},
         el('div',null,
-          el('div',{className:'mt2'},'\u270F Revise Corrective Action'),
+          el('div',{className:'mt2'},'\u270F\uFE0F Revise Corrective Action'),
           el('div',{style:{fontSize:12,color:'var(--text2)',marginTop:2}},ca.ca_number+' \u2014 '+ca.employee_name),
         ),
         el('button',{className:'mc',onClick:onClose},'\u00D7'),
@@ -4652,7 +4652,7 @@ Return ONLY the full revised JSON with the same structure, no markdown. Keep unc
       el('div',{className:'mbd'},
         // Tab switcher
         el('div',{style:{display:'flex',gap:4,background:'var(--surface2)',borderRadius:8,padding:4,marginBottom:16}},
-          ['manual','ai'].map(t=>el('button',{key:t,onClick:()=>setTab(t),style:{flex:1,padding:'7px 0',borderRadius:6,border:'none',fontFamily:'inherit',fontSize:13,fontWeight:tab===t?700:500,cursor:'pointer',background:tab===t?'var(--accent)':'transparent',color:tab===t?'#ffffff':'var(--text2)',transition:'all .15s'}},t==='manual'?'\u270F Manual Edit':'\uD83E\uDD16 AI Revise')),
+          ['manual','ai'].map(t=>el('button',{key:t,onClick:()=>setTab(t),style:{flex:1,padding:'7px 0',borderRadius:6,border:'none',fontFamily:'inherit',fontSize:13,fontWeight:tab===t?700:500,cursor:'pointer',background:tab===t?'var(--accent)':'transparent',color:tab===t?'#ffffff':'var(--text2)',transition:'all .15s'}},t==='manual'?'\u270F\uFE0F Manual Edit':'\uD83E\uDD16 AI Revise')),
         ),
 
         // AI tab
@@ -4692,7 +4692,7 @@ Return ONLY the full revised JSON with the same structure, no markdown. Keep unc
             el('button',{className:'btn b-ghost',onClick:()=>{
               const steps=f.corrective_steps.split('\n').map(s=>s.trim()).filter(Boolean);
               exportCorrectiveActionPdf({...ca,generated_content:JSON.stringify({...gen,...f,corrective_steps:steps})});
-            }},'\uD83D\uDC41 Preview PDF'),
+            }},'\uD83D\uDC41\uFE0F Preview PDF'),
             el('button',{disabled:saving,className:'btn b-blue',onClick:save},saving?'Saving...':'\uD83D\uDCBE Save Changes'),
           ),
         ),
@@ -4835,11 +4835,11 @@ Write a formal, professional Corrective Action notice. Be factual, specific, and
       // Notify the employee
       if(employee.email){
         await sendEmail({to:employee.email,
-          subject:`\u2696 Corrective Action Notice \u2014 ${editedCA.title}`,
+          subject:`\u2696\uFE0F Corrective Action Notice \u2014 ${editedCA.title}`,
           html:`<div style="font-family:sans-serif;background:#121212;color:#f0eee8;padding:28px;border-radius:12px;max-width:520px;border:1px solid #333">
-            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">\u2696 Black Fox QMS</div>
+            <div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">\u2696\uFE0F Black Fox QMS</div>
             <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:20px;margin-bottom:20px;text-align:center">
-              <div style="font-size:36px;margin-bottom:10px">\u2696</div>
+              <div style="font-size:36px;margin-bottom:10px">\u2696\uFE0F</div>
               <div style="font-size:17px;font-weight:700;margin-bottom:6px">Corrective Action Notice</div>
               <div style="font-size:14px;color:#fca5a5">${editedCA.ca_number} \u2014 ${license.name}</div>
             </div>
@@ -4861,7 +4861,7 @@ Write a formal, professional Corrective Action notice. Be factual, specific, and
       el('div',{className:'mh'},
         el('div',{style:{flex:1}},
           el('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:4}},
-            el('span',{style:{fontSize:20}},'\u2696'),
+            el('span',{style:{fontSize:20}},'\u2696\uFE0F'),
             el('div',{className:'mt2'},'AI Corrective Action Generator'),
           ),
           el('div',{style:{display:'flex',gap:8}},
@@ -4976,7 +4976,7 @@ Write a formal, professional Corrective Action notice. Be factual, specific, and
             ),
             caAttachments.length>0&&el('div',{style:{display:'flex',flexDirection:'column',gap:6}},
               caAttachments.map((att,i)=>el('div',{key:att.id,style:{display:'flex',alignItems:'center',gap:8,background:'var(--surface2)',borderRadius:6,padding:'6px 10px'}},
-                el('span',{style:{fontSize:16}},att.type&&att.type.includes('image')?'\uD83D\uDDBB':'\uD83D\uDCC4'),
+                el('span',{style:{fontSize:16}},att.type&&att.type.includes('image')?'\uD83D\uDDBC\uFE0F':'\uD83D\uDCC4'),
                 el('div',{style:{flex:1,minWidth:0}},
                   el('div',{style:{fontSize:12,fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},att.name),
                   el('div',{style:{fontSize:10,color:'var(--text3)'}},(att.size>1024*1024?(att.size/1024/1024).toFixed(1)+'MB':(att.size/1024).toFixed(0)+'KB')),
@@ -5015,12 +5015,12 @@ Write a formal, professional Corrective Action notice. Be factual, specific, and
                 el('div',{style:{fontSize:17,fontWeight:800}},editedCA.title),
                 el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:4}},'For: '+employee.name+' \u00B7 '+license.name),
               ),
-              el('button',{onClick:()=>setEditMode(!editMode),className:'btn b-ghost btn-sm'},editMode?'\uD83D\uDC41 Preview':'\u270F Edit JSON'),
+              el('button',{onClick:()=>setEditMode(!editMode),className:'btn b-ghost btn-sm'},editMode?'\uD83D\uDC41 Preview':'\u270F\uFE0F Edit JSON'),
             ),
           ),
 
           el('div',{style:{background:'rgba(30,58,95,.05)',border:'1px solid rgba(30,58,95,.15)',borderRadius:8,padding:'10px 14px',marginBottom:16,fontSize:11,color:'var(--text2)'}},
-            '\u270F You can edit any part of this document before sending. Once the employee acknowledges it, it can no longer be edited or revised \u2014 it becomes a permanent record.'
+            '\u270F\uFE0F You can edit any part of this document before sending. Once the employee acknowledges it, it can no longer be edited or revised \u2014 it becomes a permanent record.'
           ),
 
           !editMode&&el('div',null,
@@ -5066,7 +5066,7 @@ Write a formal, professional Corrective Action notice. Be factual, specific, and
                   const draftCa={...editedCA,title:editedCA.title,ca_number:editedCA.ca_number,employee_name:employee.name,employee_email:employee.email,license_id:license.id,license_name:license.name,violation_type:violationType,severity,generated_content:JSON.stringify(editedCA),status:'pending',issued_by:cu.name,created_at:new Date().toISOString()};
                   exportCorrectiveActionPdf(draftCa);
                 }
-              },'\uD83D\uDC41 Preview PDF'),
+              },'\uD83D\uDC41\uFE0F Preview PDF'),
               el('button',{
                 className:'btn b-ghost',
                 disabled:saving,
@@ -5196,7 +5196,7 @@ function SupplierTab({cu,isElevated,suppliers,setSuppliers,filterByLic,handleSav
 
   function certIcon(type){
     if(type&&type.includes('pdf'))return '\uD83D\uDCC4';
-    if(type&&type.includes('image'))return '\uD83D\uDDBB';
+    if(type&&type.includes('image'))return '\uD83D\uDDBC\uFE0F';
     return '\uD83D\uDCCE';
   }
   function fmtSize(bytes){return bytes>1024*1024?(bytes/1024/1024).toFixed(1)+'MB':(bytes/1024).toFixed(0)+'KB';}
@@ -5258,7 +5258,7 @@ function SupplierTab({cu,isElevated,suppliers,setSuppliers,filterByLic,handleSav
           el('div',{style:{fontSize:12,color:'var(--text3)',marginTop:4}},sel.category),
         ),
         el('div',{style:{display:'flex',gap:6,flexWrap:'wrap'}},
-          isElevated&&!editMode&&el('button',{className:'btn b-ghost btn-sm',onClick:()=>{setEditMode(true);}},'\u270F Edit'),
+          isElevated&&!editMode&&el('button',{className:'btn b-ghost btn-sm',onClick:()=>{setEditMode(true);}},'\u270F\uFE0F Edit'),
           isElevated&&el('button',{className:'btn b-red btn-sm',onClick:()=>deleteRec('supplier',sel.id,setSuppliers)},'Delete'),
           el('button',{className:'btn b-ghost btn-sm',onClick:()=>{setSel(null);setEditMode(false);}},'\u2190 Back'),
         ),
@@ -5492,7 +5492,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
     // \u2500\u2500 DASHBOARD \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
     tab==='dashboard'&&el('div',null,
       el('div',{className:'g4',style:{marginBottom:20}},
-        [{l:'Open Deviations',v:openDeviations.length,c:openDeviations.length>0?'var(--red)':'var(--green)',ico:'\u26A0'},
+        [{l:'Open Deviations',v:openDeviations.length,c:openDeviations.length>0?'var(--red)':'var(--green)',ico:'\u26A0\uFE0F'},
          {l:'Open CAPAs',v:openCAPAs.length,c:openCAPAs.length>0?'var(--accent)':'var(--green)',ico:'\uD83D\uDD27'},
          {l:'Overdue CAPAs',v:overdueCAPAs.length,c:overdueCAPAs.length>0?'var(--red)':'var(--green)',ico:'\uD83D\uDEA8'},
          {l:'Open Complaints',v:openComplaints.length,c:openComplaints.length>0?'var(--accent)':'var(--green)',ico:'\uD83D\uDCE3'},
@@ -5522,7 +5522,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
         ),
         // DCR Readiness
         el('div',{className:'card'},
-          el('div',{style:{fontWeight:700,fontSize:14,marginBottom:12}},'\uD83D\uDEE1 DCR Inspection Readiness'),
+          el('div',{style:{fontWeight:700,fontSize:14,marginBottom:12}},'\uD83D\uDEE1\uFE0F DCR Inspection Readiness'),
           [
             {l:'SOP Library',v:sops.filter(s=>s.status==='published').length+' published',ok:sops.filter(s=>s.status==='published').length>0},
             {l:'Training Records',v:avgAckRate+'% compliance',ok:avgAckRate>=80},
@@ -5532,7 +5532,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
             {l:'Supplier Records',v:suppliers.length+' qualified',ok:suppliers.length>0},
           ].map(({l,v,ok})=>el('div',{key:l,style:{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'7px 0',borderBottom:'1px solid var(--border)'}},
             el('div',{style:{display:'flex',alignItems:'center',gap:8}},
-              el('span',{style:{fontSize:14}},ok?'\u2705':'\u26A0'),
+              el('span',{style:{fontSize:14}},ok?'\u2705':'\u26A0\uFE0F'),
               el('span',{style:{fontSize:13}},l),
             ),
             el('span',{style:{fontSize:12,color:ok?'var(--green)':'var(--accent)',fontWeight:600}},v),
@@ -5546,7 +5546,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
           el('table',null,
             el('thead',null,el('tr',null,['Type','Record','Status','Date','By'].map(h=>el('th',{key:h},h)))),
             el('tbody',null,
-              [...deviations.slice(0,3).map(r=>({type:'\u26A0 Deviation',r,status:r.status})),
+              [...deviations.slice(0,3).map(r=>({type:'\u26A0\uFE0F Deviation',r,status:r.status})),
                ...capas.slice(0,3).map(r=>({type:'\uD83D\uDD27 CAPA',r,status:r.status})),
                ...audits.slice(0,2).map(r=>({type:'\uD83D\uDD0D Audit',r,status:r.status})),
               ].sort((a,b)=>b.r.created_at?.localeCompare(a.r.created_at||'')||0).slice(0,8).map(({type,r,status})=>
@@ -5671,7 +5671,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
         ),
         sel.effectiveness_rating&&el('div',{style:{marginTop:14,background:'rgba(16,185,129,.06)',border:'1px solid rgba(16,185,129,.2)',borderRadius:8,padding:'10px 14px'}},
           el('div',{style:{fontSize:11,fontWeight:700,color:'var(--green)',textTransform:'uppercase',marginBottom:4}},'Effectiveness'),
-          el('div',{style:{fontSize:13}},({effective:'\u2705 Effective',partially:'\u26A0 Partially Effective',ineffective:'\u274C Ineffective'})[sel.effectiveness_rating]||sel.effectiveness_rating),
+          el('div',{style:{fontSize:13}},({effective:'\u2705 Effective',partially:'\u26A0\uFE0F Partially Effective',ineffective:'\u274C Ineffective'})[sel.effectiveness_rating]||sel.effectiveness_rating),
         ),
       ),
       editing&&el('div',{className:'card',style:{padding:0}},
@@ -5740,7 +5740,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
             ?el('div',{style:{fontSize:12,color:'var(--text3)'}},'No attachments on this audit.')
             :el('div',{style:{display:'flex',flexDirection:'column',gap:6}},
               (sel.attachments||[]).map(att=>el('div',{key:att.id,style:{display:'flex',alignItems:'center',gap:10,background:'var(--surface2)',borderRadius:8,padding:'8px 12px'}},
-                el('span',{style:{fontSize:18,flexShrink:0}},att.type&&att.type.includes('pdf')?'\uD83D\uDCC4':att.type&&att.type.includes('image')?'\uD83D\uDDBB':'\uD83D\uDCCE'),
+                el('span',{style:{fontSize:18,flexShrink:0}},att.type&&att.type.includes('pdf')?'\uD83D\uDCC4':att.type&&att.type.includes('image')?'\uD83D\uDDBC\uFE0F':'\uD83D\uDCCE'),
                 el('div',{style:{minWidth:0,flex:1}},
                   el('a',{href:att.data,download:att.name,style:{fontSize:12,fontWeight:600,color:'var(--accent)',textDecoration:'none',display:'block',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},att.name),
                   el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:1}},(att.size>1024*1024?(att.size/1024/1024).toFixed(1)+'MB':(att.size/1024).toFixed(0)+'KB')+' \u00B7 '+att.uploaded_by+' \u00B7 '+new Date(att.uploaded_at).toLocaleDateString()),
@@ -5838,7 +5838,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
         renderRow:c=>el('div',{key:c.id,onClick:()=>setSel(c),style:{background:'var(--surface)',border:'1px solid var(--border)',borderLeft:'3px solid '+(c.type==='adverse_event'?'var(--red)':c.status==='open'?'var(--accent)':'var(--green)'),borderRadius:10,padding:'14px 16px',cursor:'pointer',transition:'all .15s'},onMouseEnter:ev=>ev.currentTarget.style.borderColor='rgba(30,58,95,.25)',onMouseLeave:ev=>ev.currentTarget.style.borderColor='var(--border)'},
           el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},
             el('div',{style:{flex:1}},
-              el('div',{style:{display:'flex',gap:6,marginBottom:5}},el(QMSBadge,{status:c.status}),el('span',{style:{background:c.type==='adverse_event'?'rgba(239,68,68,.1)':'var(--surface2)',color:c.type==='adverse_event'?'var(--red)':'var(--text2)',border:'1px solid',borderColor:c.type==='adverse_event'?'rgba(239,68,68,.3)':'var(--border)',borderRadius:4,padding:'2px 7px',fontSize:11,fontWeight:600}},({consumer:'Consumer',dispensary:'Dispensary',return:'Product Return',adverse_event:'\u26A0 Adverse Event'})[c.type]||c.type)),
+              el('div',{style:{display:'flex',gap:6,marginBottom:5}},el(QMSBadge,{status:c.status}),el('span',{style:{background:c.type==='adverse_event'?'rgba(239,68,68,.1)':'var(--surface2)',color:c.type==='adverse_event'?'var(--red)':'var(--text2)',border:'1px solid',borderColor:c.type==='adverse_event'?'rgba(239,68,68,.3)':'var(--border)',borderRadius:4,padding:'2px 7px',fontSize:11,fontWeight:600}},({consumer:'Consumer',dispensary:'Dispensary',return:'Product Return',adverse_event:'\u26A0\uFE0F Adverse Event'})[c.type]||c.type)),
               el('div',{style:{fontSize:14,fontWeight:700,marginBottom:3}},c.title),
               c.product&&el('div',{style:{fontSize:12,color:'var(--text2)'}},'Product: '+c.product),
             ),
@@ -5928,7 +5928,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
             isAdmin&&el('button',{
               onClick:()=>setShowCAGenerator(true),
               style:{background:'var(--red)',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'9px 16px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:6,whiteSpace:'nowrap'}
-            },'\u2696 New Corrective Action'),
+            },'\u2696\uFE0F New Corrective Action'),
           ),
         ),
         (()=>{
@@ -5942,7 +5942,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
               ||(gen.incident_summary||'').toLowerCase().includes(q)
               ||(c.ca_number||'').toLowerCase().includes(q);
           });
-          return filtered.length===0?el('div',{className:'empty'},el('div',{className:'eico'},'\u2696'),el('div',{className:'etxt'},caSearch.trim()?'No matching corrective actions':'No corrective actions on record')):
+          return filtered.length===0?el('div',{className:'empty'},el('div',{className:'eico'},'\u2696\uFE0F'),el('div',{className:'etxt'},caSearch.trim()?'No matching corrective actions':'No corrective actions on record')):
           el('div',{style:{display:'flex',flexDirection:'column',gap:6}},
             filtered.map(c=>el('div',{key:c.id,onClick:()=>setSel(c),style:{background:'var(--surface)',border:'1px solid var(--border)',borderLeft:'3px solid '+(c.status==='acknowledged'?'var(--green)':'var(--red)'),borderRadius:10,padding:'14px 16px',cursor:'pointer',transition:'all .15s'},onMouseEnter:ev=>ev.currentTarget.style.borderColor='rgba(30,58,95,.25)',onMouseLeave:ev=>ev.currentTarget.style.borderColor='var(--border)'},
               el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},
@@ -6046,7 +6046,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
 
             el('div',{style:{display:'flex',gap:8,marginTop:16,flexWrap:'wrap',alignItems:'center'}},
               el('button',{className:'btn b-ghost',onClick:()=>exportCorrectiveActionPdf(sel)},'\uD83D\uDCC4 Download PDF'),
-              isElevated&&sel.status!=='acknowledged'&&el('button',{className:'btn b-ghost',onClick:()=>setReviseCA(sel)},'\u270F Revise'),
+              isElevated&&sel.status!=='acknowledged'&&el('button',{className:'btn b-ghost',onClick:()=>setReviseCA(sel)},'\u270F\uFE0F Revise'),
               sel.status==='draft'&&isElevated&&el('button',{
                 style:{background:'#dc2626',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'9px 18px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer'},
                 onClick:async()=>{
@@ -6056,8 +6056,8 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
                     await fetch(`${SUPA_URL}/rest/v1/pf_qms_corrective?id=eq.${sel.id}`,{method:'PATCH',headers:{...H.headers},body:JSON.stringify({status:'pending',updated_at:new Date().toISOString(),updated_by:cu.name})});
                     setCorrective(p=>p.map(c=>c.id===sel.id?{...c,status:'pending'}:c));
                     setSel(p=>({...p,status:'pending'}));
-                    await sendEmail({to:sel.employee_email,subject:`\u2696 Corrective Action Notice \u2014 ${sel.title}`,
-                      html:`<div style="font-family:sans-serif;background:#121212;color:#f0eee8;padding:28px;border-radius:12px;max-width:520px;border:1px solid #333"><div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">\u2696 Black Fox QMS</div><p style="font-size:14px">A corrective action has been issued to you. Please log in to review and sign.</p><a href="${APP_URL}" style="display:inline-block;background:#f5a623;color:#000;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700;margin-top:12px">Review & Sign \u2192</a></div>`
+                    await sendEmail({to:sel.employee_email,subject:`\u2696\uFE0F Corrective Action Notice \u2014 ${sel.title}`,
+                      html:`<div style="font-family:sans-serif;background:#121212;color:#f0eee8;padding:28px;border-radius:12px;max-width:520px;border:1px solid #333"><div style="color:#f5a623;font-size:20px;font-weight:800;margin-bottom:16px">\u2696\uFE0F Black Fox QMS</div><p style="font-size:14px">A corrective action has been issued to you. Please log in to review and sign.</p><a href="${APP_URL}" style="display:inline-block;background:#f5a623;color:#000;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700;margin-top:12px">Review & Sign \u2192</a></div>`
                     });
                     alert('\u2713 Sent to '+sel.employee_name+'. Status: Pending Acknowledgement.');
                   }catch(e){alert('Failed: '+e.message);}
@@ -6113,7 +6113,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
                             if(issuer?.email) sendEmail({to:issuer.email,
                               subject:`Corrective Action Acknowledged \u2014 ${sel.employee_name}`,
                               html:`<div style="font-family:sans-serif;background:#121212;color:#f0eee8;padding:24px;border-radius:12px;max-width:480px;border:1px solid #333">
-                                <div style="color:#f5a623;font-size:18px;font-weight:800;margin-bottom:12px">\u2696 Black Fox QMS</div>
+                                <div style="color:#f5a623;font-size:18px;font-weight:800;margin-bottom:12px">\u2696\uFE0F Black Fox QMS</div>
                                 <p style="font-size:14px">${sel.employee_name} has signed and acknowledged corrective action ${sel.ca_number} ("${sel.title}") on ${update.acknowledged_at.slice(0,10)}.</p>
                               </div>`
                             });
@@ -6337,7 +6337,7 @@ function Scoreboard({tasks,cu,users}){
 
     // Needs attention
     weakest.length>0&&el('div',{style:{background:'rgba(239,68,68,.04)',border:'1px solid rgba(239,68,68,.15)',borderRadius:12,padding:'14px 16px',marginBottom:20}},
-      el('div',{style:{fontWeight:700,fontSize:13,color:'var(--red)',marginBottom:10}},'\u26A0 Needs Attention'),
+      el('div',{style:{fontWeight:700,fontSize:13,color:'var(--red)',marginBottom:10}},'\u26A0\uFE0F Needs Attention'),
       el('div',{style:{display:'flex',gap:10,flexWrap:'wrap'}},
         weakest.map(s=>el('div',{key:s.user.id,style:{display:'flex',alignItems:'center',gap:8,background:'rgba(239,68,68,.06)',borderRadius:8,padding:'8px 12px',flex:1,minWidth:180}},
           el('div',{className:'avatar',style:{background:avatarColor(s.user.name),width:28,height:28,fontSize:11}},s.user.name.charAt(0).toUpperCase()),
@@ -6406,7 +6406,7 @@ function Scoreboard({tasks,cu,users}){
       el('div',{style:{display:'flex',gap:16,flexWrap:'wrap',fontSize:12,color:'var(--text2)'}},
         el('span',{style:{color:'var(--green)'}},'\u2705 Done on time = +10 pts'),
         el('span',{style:{color:'var(--accent)'}},'\u23F0 Done late = +5 pts'),
-        el('span',{style:{color:'var(--red)'}},'\u26A0 Overdue = \u22123 pts'),
+        el('span',{style:{color:'var(--red)'}},'\u26A0\uFE0F Overdue = \u22123 pts'),
         el('span',{style:{color:'var(--red)'}},'\u274C Not completed = \u22125 pts'),
       ),
     ),
@@ -7552,7 +7552,7 @@ function EmployeeProfileModal({employee,cu,users,publishedSOPs,corrective,showCo
         ),
 
         // \u2500\u2500 CORRECTIVE ACTIONS SECTION (Admin-only) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-        showCorrectiveSection&&el('div',{style:{fontSize:12,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:8,display:'flex',alignItems:'center',gap:6}},'\u2696 Corrective Action History'),
+        showCorrectiveSection&&el('div',{style:{fontSize:12,fontWeight:700,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:8,display:'flex',alignItems:'center',gap:6}},'\u2696\uFE0F Corrective Action History'),
         showCorrectiveSection&&(corrective.length===0?el('div',{style:{fontSize:12,color:'var(--text3)'}},'No corrective actions on record for this employee.'):
         el('div',{style:{display:'flex',flexDirection:'column',gap:6}},
           corrective.map(c=>el('div',{key:c.id,
@@ -7602,7 +7602,7 @@ function MyDocuments({cu,corrective,setCorrective}){
           el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},
             el('div',{style:{flex:1}},
               el('div',{style:{display:'flex',gap:6,marginBottom:5,flexWrap:'wrap'}},
-                el('span',{style:{background:c.status==='acknowledged'?'rgba(16,185,129,.1)':c.status==='draft'?'rgba(100,116,139,.1)':'rgba(245,158,11,.1)',color:c.status==='acknowledged'?'var(--green)':c.status==='draft'?'var(--text2)':'#d97706',border:'1px solid',borderColor:c.status==='acknowledged'?'rgba(16,185,129,.3)':c.status==='draft'?'rgba(100,116,139,.3)':'rgba(245,158,11,.3)',borderRadius:4,padding:'2px 7px',fontSize:11,fontWeight:700}},c.status==='acknowledged'?'\u2705 Completed':c.status==='draft'?'\uD83D\uDCDD Draft':'\u26A0 Action Required'),
+                el('span',{style:{background:c.status==='acknowledged'?'rgba(16,185,129,.1)':c.status==='draft'?'rgba(100,116,139,.1)':'rgba(245,158,11,.1)',color:c.status==='acknowledged'?'var(--green)':c.status==='draft'?'var(--text2)':'#d97706',border:'1px solid',borderColor:c.status==='acknowledged'?'rgba(16,185,129,.3)':c.status==='draft'?'rgba(100,116,139,.3)':'rgba(245,158,11,.3)',borderRadius:4,padding:'2px 7px',fontSize:11,fontWeight:700}},c.status==='acknowledged'?'\u2705 Completed':c.status==='draft'?'\uD83D\uDCDD Draft':'\u26A0\uFE0F Action Required'),
                 el('span',{style:{background:'var(--surface2)',color:'var(--text2)',border:'1px solid var(--border)',borderRadius:4,padding:'2px 7px',fontSize:11}},c.ca_number),
               ),
               el('div',{style:{fontSize:14,fontWeight:700,marginBottom:3}},c.title),
@@ -8047,7 +8047,7 @@ Return a REVISED version as JSON only (no markdown). Increment revision to "${ne
                 el('div',{style:{fontSize:17,fontWeight:800}},editedSOP.title),
                 el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:4}},'Effective: '+editedSOP.effective_date),
               ),
-              el('button',{onClick:()=>setEditMode(!editMode),className:'btn b-ghost btn-sm'},editMode?'\uD83D\uDC41 Preview':'\u270F Edit JSON'),
+              el('button',{onClick:()=>setEditMode(!editMode),className:'btn b-ghost btn-sm'},editMode?'\uD83D\uDC41 Preview':'\u270F\uFE0F Edit JSON'),
             ),
           ),
 
@@ -8442,7 +8442,7 @@ Respond with ONLY this JSON (no markdown, be concise, this must NOT be truncated
               ),
             ),
             el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:8}},
-              '\u26A0 Only people with ',el('strong',{style:{color:'#c4b5fd'}},license.name),' assigned AND working in the department(s) above will see and be required to acknowledge this SOP.'
+              '\u26A0\uFE0F Only people with ',el('strong',{style:{color:'#c4b5fd'}},license.name),' assigned AND working in the department(s) above will see and be required to acknowledge this SOP.'
             ),
           ),
 
@@ -8460,7 +8460,7 @@ Respond with ONLY this JSON (no markdown, be concise, this must NOT be truncated
                 ),
               ),
               el('div',{style:{display:'flex',gap:6}},
-                el('button',{onClick:()=>setEditMode(!editMode),className:'btn b-ghost btn-sm'},editMode?'\uD83D\uDC41 Preview':'\u270F Edit JSON'),
+                el('button',{onClick:()=>setEditMode(!editMode),className:'btn b-ghost btn-sm'},editMode?'\uD83D\uDC41 Preview':'\u270F\uFE0F Edit JSON'),
                 el('button',{onClick:generateSOP,className:'btn b-ghost btn-sm'},'\uD83D\uDD04 Regenerate'),
               ),
             ),
@@ -8509,7 +8509,7 @@ Respond with ONLY this JSON (no markdown, be concise, this must NOT be truncated
                   el('div',{style:{fontWeight:600,fontSize:12,marginBottom:3,color:'var(--text)'}},step.title||('Step '+(i+1))),
                   el('div',{style:{fontSize:12,color:'var(--text2)',lineHeight:1.5,marginBottom:step.regulatory_note?4:0}},step.instruction||step),
                   step.regulatory_note&&el('div',{style:{fontSize:10,color:'#93c5fd',fontStyle:'italic',marginTop:3}},'\uD83D\uDCCB '+step.regulatory_note),
-                  step.critical&&el('div',{style:{fontSize:10,color:'var(--red)',fontWeight:700,marginTop:3}},'\u26A0 CRITICAL STEP'),
+                  step.critical&&el('div',{style:{fontSize:10,color:'var(--red)',fontWeight:700,marginTop:3}},'\u26A0\uFE0F CRITICAL STEP'),
                 ),
               )),
             ),
@@ -8823,7 +8823,7 @@ function SOPs({sops,setSops,cu,users}){
     el('div',{className:'g4',style:{marginBottom:20}},
       [{l:'Total SOPs',v:visibleSops.length,c:'var(--text)',ico:'\uD83D\uDCCB'},
        {l:'Published',v:visibleSops.filter(s=>s.status==='published').length,c:'var(--green)',ico:'\u2705'},
-       {l:'Needs My Ack',v:needsAck.length,c:needsAck.length>0?'var(--red)':'var(--text3)',ico:'\u26A0'},
+       {l:'Needs My Ack',v:needsAck.length,c:needsAck.length>0?'var(--red)':'var(--text3)',ico:'\u26A0\uFE0F'},
        {l:'I\'ve Acknowledged',v:myAcks.length,c:'var(--accent)',ico:'\uD83D\uDC4D'},
       ].map(({l,v,c,ico})=>el('div',{key:l,className:'stat',style:{display:'flex',alignItems:'center',gap:14}},
         el('div',{style:{fontSize:28}},ico),
@@ -8845,7 +8845,7 @@ function SOPs({sops,setSops,cu,users}){
 
     // Needs acknowledgement alert
     needsAck.length>0&&el('div',{className:'alert al-yellow',style:{marginBottom:16}},
-      el('span',{style:{fontSize:18}},'\u26A0'),
+      el('span',{style:{fontSize:18}},'\u26A0\uFE0F'),
       el('div',null,
         el('div',{style:{fontWeight:700,marginBottom:4}},'Action Required'),
         el('div',{style:{fontSize:13}},`You have ${needsAck.length} SOP${needsAck.length>1?'s':''} waiting for your acknowledgement.`),
@@ -9203,7 +9203,7 @@ function SOPs({sops,setSops,cu,users}){
         el('div',{className:'mf',style:{justifyContent:'space-between'}},
           el('div',{style:{display:'flex',gap:8}},
             el('button',{className:'btn b-ghost',onClick:()=>exportSopPdf(sel)},'\uD83D\uDCC4 Download PDF'),
-            isAdmin&&el('button',{className:'btn b-ghost',onClick:()=>setShowEditSop(true)},'\u270F Edit'),
+            isAdmin&&el('button',{className:'btn b-ghost',onClick:()=>setShowEditSop(true)},'\u270F\uFE0F Edit'),
             canCreate&&sel.status==='draft'&&el('button',{className:'btn b-green',onClick:()=>publishSOP(sel)},'\uD83D\uDCE2 Publish & Notify'),
             canAiSop&&sel.status==='published'&&el('button',{
               onClick:()=>setShowRevise(true),
@@ -9888,7 +9888,7 @@ function VisitorKiosk(){
 
       // Signature
       el('div',{style:{marginBottom:20}},
-        el('div',{style:{fontSize:13,fontWeight:700,color:'#0f172a',marginBottom:8}},'\u270D Signature *'),
+        el('div',{style:{fontSize:13,fontWeight:700,color:'#0f172a',marginBottom:8}},'\u270D\uFE0F Signature *'),
         sig
           ?el('div',null,el('img',{src:sig,style:{border:'1px solid #cbd5e1',borderRadius:8,maxWidth:'100%',height:80}}),el('button',{onClick:()=>setSig(null),style:{marginLeft:8,background:'none',border:'1px solid #cbd5e1',borderRadius:6,padding:'4px 10px',fontSize:12,cursor:'pointer'}},'Clear'))
           :el(SignaturePad,{label:'Sign here to confirm your visit',onSave:dataUrl=>setSig(dataUrl),onClear:()=>setSig(null)}),
@@ -9917,7 +9917,7 @@ function VisitorKiosk(){
           el('div',{style:{fontSize:12,color:'#475569'}},'Signed in: '+lookupResult.date+' at '+lookupResult.time_in),
           el('div',{style:{fontSize:12,color:'#475569'}},'Purpose: '+lookupResult.purpose),
         ),
-        el('div',{style:{fontSize:13,fontWeight:700,color:'#0f172a',marginBottom:8}},'\u270D Sign to confirm departure'),
+        el('div',{style:{fontSize:13,fontWeight:700,color:'#0f172a',marginBottom:8}},'\u270D\uFE0F Sign to confirm departure'),
         sig
           ?el('div',null,el('img',{src:sig,style:{border:'1px solid #cbd5e1',borderRadius:8,maxWidth:'100%',height:80}}),el('button',{onClick:()=>setSig(null),style:{marginLeft:8,background:'none',border:'1px solid #cbd5e1',borderRadius:6,padding:'4px 10px',fontSize:12,cursor:'pointer'}},'Clear'))
           :el(SignaturePad,{label:'Sign to confirm you are leaving',onSave:dataUrl=>setSig(dataUrl),onClear:()=>setSig(null)}),
@@ -9968,21 +9968,13 @@ function App(){
 
   // Capture the beforeinstallprompt event for PWA install
   React.useEffect(()=>{
-    const handler=e=>{e.preventDefault();setInstallPrompt(e);};
-    window.addEventListener('beforeinstallprompt',handler);
-    window.addEventListener('appinstalled',()=>{setShowInstallBanner(false);setInstallPrompt(null);});
-    return()=>window.removeEventListener('beforeinstallprompt',handler);
-  },[]);
-
-  // Show install banner 2s after login if not already installed/dismissed
-  React.useEffect(()=>{
     if(!cu)return;
     const dismissed=localStorage.getItem('bfm_install_dismissed');
     const isStandalone=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone;
-    if(!isStandalone&&!dismissed&&installPrompt){
-      setTimeout(()=>setShowInstallBanner(true),2000);
+    if(!isStandalone&&!dismissed){
+      setTimeout(()=>setShowInstallBanner(true),3000);
     }
-  },[cu,installPrompt]);
+  },[cu]);
   const[locFilter,setLocFilter]=useState(()=>{try{const s=localStorage.getItem('pf_session');const u=s?JSON.parse(s):null;return u?.loc||'Nationwide';}catch{return 'Nationwide';}});
 
   // FIX 2: doRefresh with correct destructuring
@@ -10112,9 +10104,9 @@ function App(){
     {id:'calendar',ico:'\uD83D\uDCC5',label:'Calendar'},
     (cu.role==='admin'||cu.dept==='Sales'||cu.dept==='Marketing')&&{id:'sales',ico:'\uD83C\uDFEA',label:'Sales & Marketing'},
     {id:'sops',ico:'\uD83D\uDCCB',label:'SOPs'},
-    canAccessQms&&{id:'qms',ico:'\uD83D\uDEE1',label:'QMS'},
+    canAccessQms&&{id:'qms',ico:'\uD83D\uDEE1\uFE0F',label:'QMS'},
     canAccessQms&&{id:'compliance',ico:'\u2705',label:'Compliance'},
-    canAccessQms&&{id:'risks',ico:'\u26A0',label:'Risk Register'},
+    canAccessQms&&{id:'risks',ico:'\u26A0\uFE0F',label:'Risk Register'},
     {id:'logs',ico:'\uD83D\uDCCB',label:'Facility Logs'},
     {id:'mydocs',ico:'\uD83D\uDCC1',label:'My Documents'},
     {id:'scores',ico:'\uD83C\uDFC6',label:'Scoreboard'},
@@ -10269,7 +10261,16 @@ function App(){
               const{outcome}=await installPrompt.userChoice;
               if(outcome==='accepted'){setShowInstallBanner(false);setInstallPrompt(null);}
             }else{
-              alert('To install: click the browser menu \u2192 Apps \u2192 Install this site as an app');
+              (()=>{
+              const ua=navigator.userAgent;
+              const isIOS=/iphone|ipad|ipod/i.test(ua);
+              const isEdge=/edg/i.test(ua);
+              const isAndroid=/android/i.test(ua);
+              if(isIOS) alert('1. Tap the Share button at the bottom of Safari\n2. Tap "Add to Home Screen"\n3. Tap "Add" in the top right');
+              else if(isEdge) alert('1. Click the ... menu in the top right\n2. Click "Apps"\n3. Click "Install this site as an app"\n4. Click "Install"');
+              else if(isAndroid) alert('1. Tap the browser menu (3 dots)\n2. Tap "Add to Home Screen"\n3. Tap "Install"');
+              else alert('Look for the + or download icon in your address bar, or go to browser menu -> Install app');
+            })();
               setShowInstallBanner(false);
             }
           },
@@ -10282,37 +10283,6 @@ function App(){
           },
           style:{background:'transparent',color:'rgba(255,255,255,.6)',border:'none',borderRadius:8,padding:'4px 8px',fontSize:11,cursor:'pointer',whiteSpace:'nowrap'}
         },"Don't show again"),
-      ),
-    ),
-
-    // Floating Install Button (FAB) \u2014 bottom right circle like Claude
-    el('div',{style:{position:'fixed',bottom:82,right:16,zIndex:8900}},
-      el('button',{
-        onClick:async()=>{
-          const isStandalone=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone;
-          if(isStandalone){alert('Already installed!');return;}
-          if(installPrompt){
-            installPrompt.prompt();
-            const res=await installPrompt.userChoice;
-            if(res.outcome==='accepted') setInstallPrompt(null);
-          } else {
-            const ua=navigator.userAgent;
-            if(/iphone|ipad|ipod/i.test(ua))
-              alert('To install on iPhone:\n1. Tap the Share button\n2. Tap "Add to Home Screen"\n3. Tap Add');
-            else if(/android/i.test(ua))
-              alert('To install on Android:\n1. Tap browser menu (3 dots)\n2. Tap "Add to Home Screen"\n3. Tap Install');
-            else
-              alert('To install:\nLook for the + icon in your browser address bar, or go to browser menu > Install app');
-          }
-        },
-        title:'Install Black Fox QMS',
-        style:{width:50,height:50,borderRadius:'50%',background:'linear-gradient(135deg,#1e3a5f,#2d5282)',border:'2px solid rgba(255,255,255,.25)',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 4px 20px rgba(30,58,95,.5)',outline:'none'},
-      },
-        el('svg',{width:22,height:22,viewBox:'0 0 24 24',fill:'none'},
-          el('line',{x1:12,y1:4,x2:12,y2:16,stroke:'white',strokeWidth:2.5,strokeLinecap:'round'}),
-          el('polyline',{points:'8,12 12,16 16,12',stroke:'white',strokeWidth:2.5,strokeLinecap:'round',strokeLinejoin:'round'}),
-          el('line',{x1:4,y1:20,x2:20,y2:20,stroke:'white',strokeWidth:2.5,strokeLinecap:'round'}),
-        ),
       ),
     ),
 
@@ -10333,7 +10303,7 @@ function App(){
         el('span',{className:'mnav-ico'},typeof Notification!=='undefined'&&Notification.permission==='granted'?'\uD83D\uDD14':'\uD83D\uDD15'),'Alerts'
       ),
       el('button',{className:`mnav-btn${page==='sops'?' on':''}`,onClick:()=>setPage('sops')},el('span',{className:'mnav-ico'},'\uD83D\uDCCB'),'SOPs'),
-      canAccessQms&&el('button',{className:`mnav-btn${page==='qms'?' on':''}`,onClick:()=>setPage('qms')},el('span',{className:'mnav-ico'},'\uD83D\uDEE1'),'QMS'),
+      canAccessQms&&el('button',{className:`mnav-btn${page==='qms'?' on':''}`,onClick:()=>setPage('qms')},el('span',{className:'mnav-ico'},'\uD83D\uDEE1\uFE0F'),'QMS'),
       el('button',{className:`mnav-btn${page==='logs'?' on':''}`,onClick:()=>setPage('logs')},el('span',{className:'mnav-ico'},'\uD83D\uDCCB'),'Logs'),
       el('button',{className:`mnav-btn${page==='scores'?' on':''}`,onClick:()=>setPage('scores')},el('span',{className:'mnav-ico'},'\uD83C\uDFC6'),'Scores'),
       el('button',{className:'mnav-btn',onClick:()=>{if(window.confirm('Sign out?')){localStorage.removeItem('pf_session');window.location.reload();}}},el('span',{className:'mnav-ico'},'\u23FB'),'Sign Out'),
