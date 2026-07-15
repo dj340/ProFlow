@@ -3642,6 +3642,8 @@ function FacilityLogs({cu,isElevated,isAdmin,SUPA_URL,SUPA_KEY,H}){
   const[dateFrom,setDateFrom]=React.useState('');
   const[dateTo,setDateTo]=React.useState('');
   const[search,setSearch]=React.useState('');
+  const[showQR,setShowQR]=React.useState(false);
+  const kioskUrl=`${APP_URL}?kiosk=visitor`;
   React.useEffect(()=>{
     if(!activeLog)return;
     setLoading(true);setEntries([]);
@@ -3675,9 +3677,6 @@ function FacilityLogs({cu,isElevated,isAdmin,SUPA_URL,SUPA_KEY,H}){
       ))
     ),
   );
-
-  const kioskUrl=`${APP_URL}?kiosk=visitor`;
-  const[showQR,setShowQR]=React.useState(false);
 
   return el('div',{style:{padding:'0 0 48px'}},
     el('div',{style:{background:lt.color,borderRadius:14,padding:'20px 24px',marginBottom:20,color:'#fff'}},
