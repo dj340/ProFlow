@@ -3737,11 +3737,51 @@ function FacilityLogs({cu,isElevated,isAdmin,SUPA_URL,SUPA_KEY,H}){
                 entry.signature_image&&el('span',{style:{background:'rgba(22,163,74,.1)',color:'#16a34a',borderRadius:4,padding:'2px 8px',fontSize:10,fontWeight:700}},'\u270D\uFE0F Signed'),
               ),
               el('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:4}},
-                lt.fields.slice(0,4).map(f=>entry[f.key]?el('div',{key:f.key,style:{fontSize:12,color:'var(--text2)'}},el('span',{style:{fontWeight:600,color:'var(--text)'}},f.label.replace(' *','')+': '),entry[f.key]):null)
+                activeLog==='visitor'
+                  ?[
+                      entry.visitor_name&&el('div',{key:'name',style:{fontSize:12,color:'var(--text2)'}},el('span',{style:{fontWeight:600,color:'var(--text)'}},'Name: '),entry.visitor_name),
+                      entry.visitor_company&&el('div',{key:'co',style:{fontSize:12,color:'var(--text2)'}},el('span',{style:{fontWeight:600,color:'var(--text)'}},'Company: '),entry.visitor_company),
+                      entry.purpose&&el('div',{key:'pur',style:{fontSize:12,color:'var(--text2)'}},el('span',{style:{fontWeight:600,color:'var(--text)'}},'Purpose: '),entry.purpose),
+                      entry.escorted_by&&el('div',{key:'esc',style:{fontSize:12,color:'var(--text2)'}},el('span',{style:{fontWeight:600,color:'var(--text)'}},'Escorted By: '),entry.escorted_by),
+                      el('div',{key:'times',style:{fontSize:12,color:'var(--text2)',fontWeight:600}},
+                        el('span',{style:{color:'var(--text)'}},'In: '),entry.time_in||'--:--',
+                        el('span',{style:{marginLeft:12,color:'var(--text)'}},'Out: '),entry.time_out||el('span',{style:{color:'#dc2626'}},'Not yet clocked out'),
+                      ),
+                    ]
+                  :lt.fields.slice(0,4).map(f=>entry[f.key]?el('div',{key:f.key,style:{fontSize:12,color:'var(--text2)'}},el('span',{style:{fontWeight:600,color:'var(--text)'}},f.label.replace(' *','')+': '),entry[f.key]):null)
               ),
             ),
-            el('div',{style:{display:'flex',gap:6,flexShrink:0}},
-              el('button',{onClick:()=>exportLogPdf(activeLog,[entry],'',''),className:'btn b-ghost btn-sm'},'\uD83D\uDCC4 PDF'),
+            el('div',{style:{display:'flex',gap:6,flexShrink:0,flexWrap:'wrap'}},
+              el('button',{onClick:()=>exportLogPdf(activeLog,[entry],'',''),className:'btn b-ghost btn-sm'},'PDF'),
+              activeLog==='visitor'&&isElevated&&!entry.time_out&&el('button',{
+                onClick:async()=>{
+                  const now=new Date().toTimeString().slice(0,5);
+                  if(!confirm('Clock out '+entry.visitor_name+' at '+now+'?')) return;
+                  await fetch(`${SUPA_URL}/rest/v1/pf_log_visitor?id=eq.${entry.id}`,{method:'PATCH',headers:H.headers,body:JSON.stringify({time_out:now})});
+                  setEntries(p=>p.map(e=>e.id===entry.id?{...e,time_out:now}:e));
+                },
+                style:{background:'#dc2626',color:'#fff',border:'none',borderRadius:'var(--rs)',padding:'5px 12px',fontFamily:'inherit',fontSize:12,fontWeight:700,cursor:'pointer'}
+              },'Clock Out'),
+              activeLog==='visitor'&&isElevated&&entry.time_out&&el('button',{
+                onClick:async()=>{
+                  if(!confirm('Remove clock-out for '+entry.visitor_name+'?')) return;
+                  await fetch(`${SUPA_URL}/rest/v1/pf_log_visitor?id=eq.${entry.id}`,{method:'PATCH',headers:H.headers,body:JSON.stringify({time_out:''})});
+                  setEntries(p=>p.map(e=>e.id===entry.id?{...e,time_out:''}:e));
+                },
+                className:'btn b-ghost btn-sm'
+              },'Undo Out'),
+              activeLog==='visitor'&&isElevated&&el('button',{
+                onClick:async()=>{
+                  const ni=prompt('Clock-in time (HH:MM):',entry.time_in||new Date().toTimeString().slice(0,5));
+                  if(!ni) return;
+                  const no2=prompt('Clock-out time (HH:MM, leave blank if still on site):',entry.time_out||'');
+                  const update={time_in:ni};
+                  if(no2!==null) update.time_out=no2;
+                  await fetch(`${SUPA_URL}/rest/v1/pf_log_visitor?id=eq.${entry.id}`,{method:'PATCH',headers:H.headers,body:JSON.stringify(update)});
+                  setEntries(p=>p.map(e=>e.id===entry.id?{...e,...update}:e));
+                },
+                className:'btn b-ghost btn-sm'
+              },'Edit Times'),
               isAdmin&&el('button',{onClick:async()=>{if(!confirm('Delete this entry?'))return;await fetch(`${SUPA_URL}/rest/v1/${lt.table}?id=eq.${entry.id}`,{method:'DELETE',headers:H.headers});setEntries(p=>p.filter(e=>e.id!==entry.id));},className:'btn b-red btn-sm'},'Delete'),
             ),
           ),
