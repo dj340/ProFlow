@@ -9726,27 +9726,54 @@ function VisitorKiosk(){
   const[lookupResult,setLookupResult]=React.useState(null);
   const[lookupError,setLookupError]=React.useState('');
   const videoRef=React.useRef(null);
+  const streamRef=React.useRef(null);
   const[cameraActive,setCameraActive]=React.useState(false);
+  const[cameraError,setCameraError]=React.useState('');
   const setF=(k,v)=>setForm(p=>({...p,[k]:v}));
 
   const PURPOSES=['Vendor / delivery','Maintenance / repair','Regulatory inspection (DCR)','Regulatory inspection (other)','Audit','Business meeting','Prospective employee','Other'];
 
-  // Camera for selfie
-  async function startCamera(){
-    try{
-      const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false});
-      if(videoRef.current){videoRef.current.srcObject=stream;videoRef.current.play();}
-      setCameraActive(true);
-    }catch(e){alert('Camera not available. You can skip the selfie.');}
-  }
-  function takeSelfie(){
-    const canvas=document.createElement('canvas');
-    canvas.width=320;canvas.height=240;
-    canvas.getContext('2d').drawImage(videoRef.current,0,0,320,240);
-    setSelfie(canvas.toDataURL('image/jpeg',0.7));
-    if(videoRef.current?.srcObject){videoRef.current.srcObject.getTracks().forEach(t=>t.stop());}
+  function stopCamera(){
+    if(streamRef.current){streamRef.current.getTracks().forEach(t=>t.stop());streamRef.current=null;}
+    if(videoRef.current){videoRef.current.srcObject=null;}
     setCameraActive(false);
   }
+
+  React.useEffect(()=>()=>stopCamera(),[]);
+
+  async function startCamera(){
+    setCameraError('');
+    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+      setCameraError('Camera not supported on this device.');return;
+    }
+    try{
+      const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'user'},width:{ideal:640},height:{ideal:480}},audio:false});
+      streamRef.current=stream;
+      if(videoRef.current){
+        videoRef.current.srcObject=stream;
+        videoRef.current.muted=true;
+        videoRef.current.playsInline=true;
+        await videoRef.current.play().catch(()=>{});
+      }
+      setCameraActive(true);
+    }catch(e){
+      const msg=e.name==='NotAllowedError'?'Camera permission denied. Tap your browser address bar and allow camera access, then try again.'
+        :e.name==='NotFoundError'?'No camera found on this device.'
+        :'Camera error: '+e.message;
+      setCameraError(msg);
+    }
+  }
+
+  function takeSelfie(){
+    if(!videoRef.current)return;
+    const v=videoRef.current;
+    const canvas=document.createElement('canvas');
+    canvas.width=v.videoWidth||320;canvas.height=v.videoHeight||240;
+    canvas.getContext('2d').drawImage(v,0,0,canvas.width,canvas.height);
+    setSelfie(canvas.toDataURL('image/jpeg',0.8));
+    stopCamera();
+  }
+
   function retakeSelfie(){setSelfie(null);startCamera();}
 
   // Sign In
@@ -9845,21 +9872,91 @@ function VisitorKiosk(){
         el('div',{style:{fontSize:18,fontWeight:700,color:'#0f172a'}},'Visitor Sign In'),
       ),
 
-      // Selfie
-      el('div',{style:{marginBottom:20,textAlign:'center'}},
+      // Selfie section
+      el('div',{style:{marginBottom:20}},
+        el('div',{style:{fontSize:13,fontWeight:700,color:'#0f172a',marginBottom:8,textAlign:'center'}},'Photo ID (Optional)'),
         selfie
-          ?el('div',null,
-              el('img',{src:selfie,style:{width:120,height:90,objectFit:'cover',borderRadius:12,border:'3px solid #1e3a5f',marginBottom:8}}),
-              el('div',null,el('button',{onClick:retakeSelfie,style:{background:'none',border:'1px solid #cbd5e1',borderRadius:8,padding:'4px 12px',fontSize:12,cursor:'pointer',color:'#64748b'}},'Retake Photo')),
-            )
-          :cameraActive
-            ?el('div',null,
-                el('video',{ref:videoRef,autoPlay:true,playsInline:true,style:{width:'100%',maxWidth:320,borderRadius:12,marginBottom:8}}),
-                el('button',{onClick:takeSelfie,style:{background:'#1e3a5f',color:'#fff',border:'none',borderRadius:10,padding:'10px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer'}},'\uD83D\uDCF8 Take Photo'),
-              )
-            :el('button',{onClick:startCamera,style:{background:'#f1f5f9',border:'2px dashed #cbd5e1',borderRadius:12,padding:'16px 32px',fontFamily:'inherit',fontSize:13,color:'#64748b',cursor:'pointer',width:'100%'}},
-                '\uD83D\uDCF8 Take a Selfie (Optional)',
+          // Photo taken — show preview
+          ?el('div',{style:{textAlign:'center'}},
+              el('img',{src:selfie,style:{width:'100%',maxWidth:320,height:200,objectFit:'cover',borderRadius:12,border:'3px solid #1e3a5f',display:'block',margin:'0 auto 8px'}}),
+              el('div',{style:{display:'flex',gap:8,justifyContent:'center'}},
+                el('button',{onClick:retakeSelfie,style:{background:'none',border:'1px solid #1e3a5f',borderRadius:8,padding:'6px 16px',fontSize:13,cursor:'pointer',color:'#1e3a5f',fontFamily:'inherit'}},'Retake'),
+                el('button',{onClick:()=>setSelfie(null),style:{background:'none',border:'1px solid #cbd5e1',borderRadius:8,padding:'6px 16px',fontSize:13,cursor:'pointer',color:'#64748b',fontFamily:'inherit'}},'Remove'),
               ),
+            )
+          // Camera active — show live feed
+          :cameraActive
+            ?el('div',{style:{textAlign:'center'}},
+                el('video',{
+                  ref:videoRef,
+                  autoPlay:true,
+                  playsInline:true,
+                  muted:true,
+                  style:{width:'100%',maxWidth:320,height:240,objectFit:'cover',borderRadius:12,marginBottom:8,background:'#000',display:'block',margin:'0 auto 8px'},
+                }),
+                el('div',{style:{display:'flex',gap:8,justifyContent:'center',marginTop:8}},
+                  el('button',{
+                    onClick:takeSelfie,
+                    style:{background:'#1e3a5f',color:'#fff',border:'none',borderRadius:10,padding:'12px 28px',fontFamily:'inherit',fontSize:15,fontWeight:700,cursor:'pointer'}
+                  },'Capture Photo'),
+                  el('button',{
+                    onClick:stopCamera,
+                    style:{background:'none',border:'1px solid #cbd5e1',borderRadius:10,padding:'12px 16px',fontFamily:'inherit',fontSize:13,cursor:'pointer',color:'#64748b'}
+                  },'Cancel'),
+                ),
+              )
+          // Not started — show options
+          :el('div',null,
+              cameraError&&el('div',{style:{background:'#fef2f2',border:'1px solid #fecaca',borderRadius:10,padding:'12px 14px',fontSize:13,color:'#dc2626',marginBottom:10,lineHeight:1.5}},
+                cameraError,
+                el('div',{style:{marginTop:6,fontSize:12,color:'#64748b'}},'You can also upload a photo from your gallery below.')
+              ),
+              el('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}},
+                // Live camera button
+                el('button',{
+                  onClick:startCamera,
+                  style:{background:'#1e3a5f',color:'#fff',border:'none',borderRadius:12,padding:'16px 12px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:6}
+                },
+                  el('span',{style:{fontSize:28}},'\uD83D\uDCF7'),
+                  'Open Camera',
+                ),
+                // File upload fallback (works on all devices incl iOS)
+                el('label',{
+                  style:{background:'#f8fafc',border:'2px solid #e2e8f0',borderRadius:12,padding:'16px 12px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:6,color:'#475569',textAlign:'center'}
+                },
+                  el('span',{style:{fontSize:28}},'\uD83D\uDDBC'),
+                  'Upload Photo',
+                  el('input',{
+                    type:'file',
+                    accept:'image/*',
+                    capture:'user',
+                    style:{display:'none'},
+                    onChange:ev=>{
+                      const file=ev.target.files[0];
+                      if(!file)return;
+                      const reader=new FileReader();
+                      reader.onload=re=>{
+                        // Compress
+                        const img=new Image();
+                        img.onload=()=>{
+                          const canvas=document.createElement('canvas');
+                          const MAX=640;
+                          let w=img.width,h=img.height;
+                          if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}
+                          canvas.width=w;canvas.height=h;
+                          canvas.getContext('2d').drawImage(img,0,0,w,h);
+                          setSelfie(canvas.toDataURL('image/jpeg',0.8));
+                        };
+                        img.src=re.target.result;
+                      };
+                      reader.readAsDataURL(file);
+                      ev.target.value='';
+                    }
+                  }),
+                ),
+              ),
+              el('div',{style:{textAlign:'center',fontSize:11,color:'#94a3b8',marginTop:8}},'Photo is optional — tap Skip to continue without one'),
+            ),
       ),
 
       // Form fields
