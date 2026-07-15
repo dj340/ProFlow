@@ -3375,7 +3375,7 @@ const QMS_STATUSES={open:{label:'Open',color:'#ef4444'},in_progress:{label:'In P
 // FACILITY LOGS MODULE — Sanitation, Waste, Security, Pest, Equipment, Temp, Visitor, Environmental
 // ══════════════════════════════════════════════════════════════════════════════
 const LOG_TYPES={
-  sanitation:{id:'sanitation',label:'Sanitation Log',icon:'🧹',color:'#065f46',bg:'#f0fdf4',table:'pf_log_sanitation',dcr:'cGMP / 21 CFR 117 / Missouri DCR',freq:'Every shift',fields:[
+  sanitation:{id:'sanitation',label:'Sanitation Log',icon:'\uD83E\uDDF9',color:'#065f46',bg:'#f0fdf4',table:'pf_log_sanitation',dcr:'cGMP / 21 CFR 117 / Missouri DCR',freq:'Every shift',fields:[
     {key:'date',label:'Date *',type:'date'},{key:'time',label:'Time Completed',type:'time'},
     {key:'shift',label:'Shift',type:'select',options:['Day','Evening','Night']},
     {key:'area',label:'Area / Zone Cleaned *',type:'text',placeholder:'e.g. Pre-Roll Room, Cart Fill Station'},
@@ -3387,7 +3387,7 @@ const LOG_TYPES={
     {key:'corrective_action',label:'Corrective Action (if fail)',type:'textarea',placeholder:'Describe corrective action taken'},
     {key:'notes',label:'Additional Notes',type:'textarea',placeholder:'Any observations or comments'},
   ]},
-  waste:{id:'waste',label:'Waste Destruction Log',icon:'🗑️',color:'#7c2d12',bg:'#fff7ed',table:'pf_log_waste',dcr:'Missouri DCR / METRC Required',freq:'Every destruction event',fields:[
+  waste:{id:'waste',label:'Waste Destruction Log',icon:'\uD83D\uDDD1',color:'#7c2d12',bg:'#fff7ed',table:'pf_log_waste',dcr:'Missouri DCR / METRC Required',freq:'Every destruction event',fields:[
     {key:'date',label:'Date of Destruction *',type:'date'},{key:'time',label:'Time',type:'time'},
     {key:'metrc_tag',label:'METRC Package Tag(s) *',type:'text',placeholder:'1A4FF0100000022000012345'},
     {key:'product_type',label:'Product Type *',type:'select',options:['Flower','Pre-Roll','Cartridge','Edible','Trim/Shake','Extract','Packaging','Other']},
@@ -3400,7 +3400,7 @@ const LOG_TYPES={
     {key:'metrc_recorded',label:'Recorded in METRC?',type:'select',options:['Yes — recorded before destruction','Yes — recorded after destruction','Pending']},
     {key:'notes',label:'Notes',type:'textarea',placeholder:''},
   ]},
-  security:{id:'security',label:'Security Malfunction Log',icon:'🔒',color:'#1e3a5f',bg:'#eff6ff',table:'pf_log_security',dcr:'Missouri DCR Security Requirements',freq:'Every malfunction event',fields:[
+  security:{id:'security',label:'Security Malfunction Log',icon:'\uD83D\uDD12',color:'#1e3a5f',bg:'#eff6ff',table:'pf_log_security',dcr:'Missouri DCR Security Requirements',freq:'Every malfunction event',fields:[
     {key:'date',label:'Date *',type:'date'},{key:'time',label:'Time Discovered',type:'time'},
     {key:'system_type',label:'System Type *',type:'select',options:['CCTV Camera','DVR/NVR Recorder','Motion Sensor','Door Access Control','Alarm System','Perimeter Fence/Gate','Safe/Vault','Other']},
     {key:'location',label:'Location *',type:'text',placeholder:'e.g. Front entrance camera'},
@@ -3412,7 +3412,7 @@ const LOG_TYPES={
     {key:'verified_by',label:'Verified Operational By',type:'text',placeholder:'Name of verifying person'},
     {key:'notes',label:'Notes',type:'textarea',placeholder:''},
   ]},
-  pest:{id:'pest',label:'Pest Control Log',icon:'🐛',color:'#4c1d95',bg:'#f5f3ff',table:'pf_log_pest',dcr:'cGMP / 21 CFR 117 / Missouri DCR',freq:'Each inspection / treatment',fields:[
+  pest:{id:'pest',label:'Pest Control Log',icon:'\uD83D\uDC1B',color:'#4c1d95',bg:'#f5f3ff',table:'pf_log_pest',dcr:'cGMP / 21 CFR 117 / Missouri DCR',freq:'Each inspection / treatment',fields:[
     {key:'date',label:'Date *',type:'date'},
     {key:'type',label:'Type *',type:'select',options:['Routine inspection','Pest sighting report','Treatment / Extermination','Follow-up inspection','Bait station check','Glue trap check']},
     {key:'performed_by',label:'Performed By *',type:'text',placeholder:'Name or licensed vendor'},
@@ -3425,7 +3425,7 @@ const LOG_TYPES={
     {key:'next_scheduled',label:'Next Scheduled Inspection',type:'date'},
     {key:'notes',label:'Notes',type:'textarea',placeholder:''},
   ]},
-  equipment:{id:'equipment',label:'Equipment Maintenance Log',icon:'🔧',color:'#92400e',bg:'#fffbeb',table:'pf_log_equipment',dcr:'cGMP / ISO 9001 Clause 7.1.3',freq:'Each maintenance event',fields:[
+  equipment:{id:'equipment',label:'Equipment Maintenance Log',icon:'\uD83D\uDD27',color:'#92400e',bg:'#fffbeb',table:'pf_log_equipment',dcr:'cGMP / ISO 9001 Clause 7.1.3',freq:'Each maintenance event',fields:[
     {key:'date',label:'Date *',type:'date'},
     {key:'equipment_name',label:'Equipment Name *',type:'text',placeholder:'e.g. Futurola Knockbox, Filling Machine #2'},
     {key:'equipment_id',label:'Equipment ID / Serial #',type:'text',placeholder:'Asset tag or serial number'},
@@ -3438,7 +3438,7 @@ const LOG_TYPES={
     {key:'next_maintenance',label:'Next Scheduled Maintenance',type:'date'},
     {key:'notes',label:'Notes',type:'textarea',placeholder:''},
   ]},
-  temperature:{id:'temperature',label:'Temp / Humidity Log',icon:'🌡️',color:'#0369a1',bg:'#f0f9ff',table:'pf_log_temperature',dcr:'cGMP / Product Integrity',freq:'Every shift',fields:[
+  temperature:{id:'temperature',label:'Temp / Humidity Log',icon:'\uD83C\uDF21',color:'#0369a1',bg:'#f0f9ff',table:'pf_log_temperature',dcr:'cGMP / Product Integrity',freq:'Every shift',fields:[
     {key:'date',label:'Date *',type:'date'},{key:'time',label:'Time *',type:'time'},
     {key:'shift',label:'Shift',type:'select',options:['Day','Evening','Night']},
     {key:'recorded_by',label:'Recorded By *',type:'text',placeholder:'Employee name'},
@@ -3449,7 +3449,7 @@ const LOG_TYPES={
     {key:'corrective_action',label:'Corrective Action (if out of range)',type:'textarea',placeholder:'Action taken to correct'},
     {key:'notes',label:'Notes',type:'textarea',placeholder:''},
   ]},
-  visitor:{id:'visitor',label:'Visitor Log',icon:'👤',color:'#475569',bg:'#f8fafc',table:'pf_log_visitor',dcr:'Missouri DCR Security Requirements',freq:'Every visitor entry',fields:[
+  visitor:{id:'visitor',label:'Visitor Log',icon:'\uD83D\uDC64',color:'#475569',bg:'#f8fafc',table:'pf_log_visitor',dcr:'Missouri DCR Security Requirements',freq:'Every visitor entry',fields:[
     {key:'date',label:'Date *',type:'date'},{key:'time_in',label:'Time In *',type:'time'},{key:'time_out',label:'Time Out',type:'time'},
     {key:'visitor_name',label:'Visitor Full Name *',type:'text',placeholder:''},
     {key:'visitor_company',label:'Company / Organization',type:'text',placeholder:''},
@@ -3459,7 +3459,7 @@ const LOG_TYPES={
     {key:'escorted_by',label:'Escorted By *',type:'text',placeholder:'Employee who supervised visitor'},
     {key:'notes',label:'Notes',type:'textarea',placeholder:''},
   ]},
-  environmental:{id:'environmental',label:'Environmental Monitoring Log',icon:'🔬',color:'#0e7490',bg:'#ecfeff',table:'pf_log_environmental',dcr:'FSMA 21 CFR 117 / cGMP',freq:'Monthly minimum',fields:[
+  environmental:{id:'environmental',label:'Environmental Monitoring Log',icon:'\uD83D\uDD2C',color:'#0e7490',bg:'#ecfeff',table:'pf_log_environmental',dcr:'FSMA 21 CFR 117 / cGMP',freq:'Monthly minimum',fields:[
     {key:'date',label:'Date *',type:'date'},
     {key:'performed_by',label:'Performed By *',type:'text',placeholder:'QC technician name'},
     {key:'location',label:'Sampling Location *',type:'text',placeholder:'e.g. Pre-Roll Room — floor drain'},
@@ -3526,7 +3526,7 @@ function exportLogPdf(logType,entries,dateFrom,dateTo){
     entry.attachments.forEach(att=>{
       checkPage(24);
       doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(...TEXT);
-      doc.text('📎 '+att.name+' ('+((att.size||0)>1024*1024?((att.size||0)/1024/1024).toFixed(1)+'MB':((att.size||0)/1024).toFixed(0)+'KB')+')',margin+8,y);
+      doc.text('[Attachment] '+att.name+' ('+((att.size||0)>1024*1024?((att.size||0)/1024/1024).toFixed(1)+'MB':((att.size||0)/1024).toFixed(0)+'KB')+')',margin+8,y);
       y+=18;
       if(att.data&&att.type&&att.type.includes('image')){
         try{checkPage(120);doc.addImage(att.data,'JPEG',margin+8,y,W-margin*2-16,100);y+=108;}catch(e){}
@@ -3644,6 +3644,8 @@ function FacilityLogs({cu,isElevated,isAdmin,SUPA_URL,SUPA_KEY,H}){
   const[dateFrom,setDateFrom]=React.useState('');
   const[dateTo,setDateTo]=React.useState('');
   const[search,setSearch]=React.useState('');
+  const[showQR,setShowQR]=React.useState(false);
+  const kioskUrl=`${APP_URL}?kiosk=visitor`;
   React.useEffect(()=>{
     if(!activeLog)return;
     setLoading(true);setEntries([]);
@@ -3678,9 +3680,6 @@ function FacilityLogs({cu,isElevated,isAdmin,SUPA_URL,SUPA_KEY,H}){
     ),
   );
 
-  const kioskUrl=`${APP_URL}?kiosk=visitor`;
-  const[showQR,setShowQR]=React.useState(false);
-
   return el('div',{style:{padding:'0 0 48px'}},
     el('div',{style:{background:lt.color,borderRadius:14,padding:'20px 24px',marginBottom:20,color:'#fff'}},
       el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:10}},
@@ -3697,10 +3696,7 @@ function FacilityLogs({cu,isElevated,isAdmin,SUPA_URL,SUPA_KEY,H}){
       el('div',{style:{flex:1,minWidth:200}},
         el('div',{style:{fontSize:16,fontWeight:800,color:'var(--text)',marginBottom:8}},'📱 Visitor Self-Service Kiosk'),
         el('div',{style:{fontSize:13,color:'var(--text2)',lineHeight:1.7,marginBottom:12}},
-          'Print or display this QR code at your reception area. Visitors scan it with their phone to sign in and out without needing staff help.
-
-Sign-in includes: Name, company, ID, purpose, signature, and optional selfie photo.
-Sign-out: They enter their name, get matched to their sign-in, and sign out.'
+          'Print or display this QR code at your reception area. Visitors scan it with their phone to sign in and out. Sign-in includes: Name, company, ID, purpose, signature, and optional selfie photo.'
         ),
         el('div',{style:{display:'flex',gap:8,flexWrap:'wrap'}},
           el('a',{href:kioskUrl,target:'_blank',style:{background:'#1e3a5f',color:'#fff',borderRadius:8,padding:'8px 16px',fontSize:13,fontWeight:700,textDecoration:'none'}},'🔗 Open Kiosk Page'),
@@ -9823,7 +9819,7 @@ function VisitorKiosk(){
 
     // Header
     el('div',{style:{textAlign:'center',marginBottom:28,color:'#fff'}},
-      el('div',{style:{fontSize:36,marginBottom:4}},'🦊'),
+      el('div',{style:{fontSize:36,marginBottom:4}},'\uD83E\uDD8A'),
       el('div',{style:{fontSize:22,fontWeight:800,letterSpacing:'-0.5px'}},['BLACK FOX QMS'].join('')),
       el('div',{style:{fontSize:13,opacity:.75,marginTop:2}},'Visitor Management · Black Fox Manufacturing'),
     ),
@@ -9835,17 +9831,17 @@ function VisitorKiosk(){
       el('button',{
         onClick:()=>setStep('signin'),
         style:{width:'100%',background:'#1e3a5f',color:'#fff',border:'none',borderRadius:12,padding:'18px',fontFamily:'inherit',fontSize:16,fontWeight:700,cursor:'pointer',marginBottom:12,display:'flex',alignItems:'center',justifyContent:'center',gap:10}
-      },el('span',{style:{fontSize:24}},'👋'),'Sign In — I am arriving'),
+      },el('span',{style:{fontSize:24}},'\uD83D\uDC4B'),'Sign In — I am arriving'),
       el('button',{
         onClick:()=>setStep('signout'),
         style:{width:'100%',background:'#f0f9ff',color:'#1e3a5f',border:'2px solid #1e3a5f',borderRadius:12,padding:'18px',fontFamily:'inherit',fontSize:16,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:10}
-      },el('span',{style:{fontSize:24}},'🚪'),'Sign Out — I am leaving'),
+      },el('span',{style:{fontSize:24}},'\uD83D\uDEAA'),'Sign Out — I am leaving'),
     ),
 
     // SIGN IN SCREEN
     step==='signin'&&el('div',{style:{...CARD_STYLE,maxWidth:520}},
       el('div',{style:{display:'flex',alignItems:'center',gap:10,marginBottom:20}},
-        el('button',{onClick:()=>setStep('choice'),style:{background:'none',border:'none',fontSize:20,cursor:'pointer',color:'#64748b'}},el('span',null,'←')),
+        el('button',{onClick:()=>setStep('choice'),style:{background:'none',border:'none',fontSize:20,cursor:'pointer',color:'#64748b'}},el('span',null,'\u2190')),
         el('div',{style:{fontSize:18,fontWeight:700,color:'#0f172a'}},'Visitor Sign In'),
       ),
 
@@ -9859,10 +9855,10 @@ function VisitorKiosk(){
           :cameraActive
             ?el('div',null,
                 el('video',{ref:videoRef,autoPlay:true,playsInline:true,style:{width:'100%',maxWidth:320,borderRadius:12,marginBottom:8}}),
-                el('button',{onClick:takeSelfie,style:{background:'#1e3a5f',color:'#fff',border:'none',borderRadius:10,padding:'10px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer'}},'📸 Take Photo'),
+                el('button',{onClick:takeSelfie,style:{background:'#1e3a5f',color:'#fff',border:'none',borderRadius:10,padding:'10px 24px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer'}},'\uD83D\uDCF8 Take Photo'),
               )
             :el('button',{onClick:startCamera,style:{background:'#f1f5f9',border:'2px dashed #cbd5e1',borderRadius:12,padding:'16px 32px',fontFamily:'inherit',fontSize:13,color:'#64748b',cursor:'pointer',width:'100%'}},
-                '📸 Take a Selfie (Optional)',
+                '\uD83D\uDCF8 Take a Selfie (Optional)',
               ),
       ),
 
@@ -9899,13 +9895,13 @@ function VisitorKiosk(){
 
       el('div',{style:{fontSize:11,color:'#94a3b8',marginBottom:14,lineHeight:1.5}},'By signing, you confirm you have read and will follow all facility safety, security, and compliance rules. This visit is being logged for regulatory compliance.'),
 
-      el('button',{onClick:submitSignIn,disabled:saving,style:{width:'100%',background:saving?'#94a3b8':'#1e3a5f',color:'#fff',border:'none',borderRadius:12,padding:'16px',fontFamily:'inherit',fontSize:16,fontWeight:700,cursor:saving?'not-allowed':'pointer'}},saving?'Saving...':'✅ Sign In'),
+      el('button',{onClick:submitSignIn,disabled:saving,style:{width:'100%',background:saving?'#94a3b8':'#1e3a5f',color:'#fff',border:'none',borderRadius:12,padding:'16px',fontFamily:'inherit',fontSize:16,fontWeight:700,cursor:saving?'not-allowed':'pointer'}},saving?'Saving...':'\u2705 Sign In'),
     ),
 
     // SIGN OUT SCREEN
     step==='signout'&&el('div',{style:CARD_STYLE},
       el('div',{style:{display:'flex',alignItems:'center',gap:10,marginBottom:20}},
-        el('button',{onClick:()=>{setStep('choice');setLookupName('');setLookupResult(null);setLookupError('');setSig(null);},style:{background:'none',border:'none',fontSize:20,cursor:'pointer',color:'#64748b'}},'←'),
+        el('button',{onClick:()=>{setStep('choice');setLookupName('');setLookupResult(null);setLookupError('');setSig(null);},style:{background:'none',border:'none',fontSize:20,cursor:'pointer',color:'#64748b'}},'\u2190'),
         el('div',{style:{fontSize:18,fontWeight:700,color:'#0f172a'}},'Sign Out'),
       ),
       !lookupResult?el('div',null,
@@ -9924,28 +9920,24 @@ function VisitorKiosk(){
         sig
           ?el('div',null,el('img',{src:sig,style:{border:'1px solid #cbd5e1',borderRadius:8,maxWidth:'100%',height:80}}),el('button',{onClick:()=>setSig(null),style:{marginLeft:8,background:'none',border:'1px solid #cbd5e1',borderRadius:6,padding:'4px 10px',fontSize:12,cursor:'pointer'}},'Clear'))
           :el(SignaturePad,{label:'Sign to confirm you are leaving',onSave:dataUrl=>setSig(dataUrl),onClear:()=>setSig(null)}),
-        el('button',{onClick:submitSignOut,disabled:saving,style:{width:'100%',background:saving?'#94a3b8':'#1e3a5f',color:'#fff',border:'none',borderRadius:12,padding:'16px',fontFamily:'inherit',fontSize:16,fontWeight:700,cursor:saving?'not-allowed':'pointer',marginTop:16}},saving?'Saving...':'🚪 Complete Sign Out'),
+        el('button',{onClick:submitSignOut,disabled:saving,style:{width:'100%',background:saving?'#94a3b8':'#1e3a5f',color:'#fff',border:'none',borderRadius:12,padding:'16px',fontFamily:'inherit',fontSize:16,fontWeight:700,cursor:saving?'not-allowed':'pointer',marginTop:16}},saving?'Saving...':'\uD83D\uDEAA Complete Sign Out'),
       ),
     ),
 
     // DONE SCREEN
     step==='done'&&el('div',{style:CARD_STYLE},
       el('div',{style:{textAlign:'center'}},
-        el('div',{style:{fontSize:60,marginBottom:12}},'✅'),
+        el('div',{style:{fontSize:60,marginBottom:12}},'\u2705'),
         el('div',{style:{fontSize:22,fontWeight:800,color:'#16a34a',marginBottom:8}},step==='done'&&lookupResult?'Signed Out Successfully':'Signed In Successfully'),
         el('div',{style:{fontSize:14,color:'#475569',marginBottom:8}},new Date().toLocaleString()),
         el('div',{style:{fontSize:13,color:'#64748b',marginBottom:24,lineHeight:1.6}},'Thank you. Your visit has been logged and signed.\nA staff member will assist you shortly.'),
-        el('button',{onClick:()=>{setStep('choice');setForm({visitor_name:'',visitor_company:'',visitor_id:'',purpose:'Vendor / delivery',escorted_by:'',areas_accessed:'',notes:''});setSig(null);setSelfie(null);setLookupName('');setLookupResult(null);setLookupError('');},style:{background:'#1e3a5f',color:'#fff',border:'none',borderRadius:10,padding:'12px 32px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer'}},'← Back to Start'),
+        el('button',{onClick:()=>{setStep('choice');setForm({visitor_name:'',visitor_company:'',visitor_id:'',purpose:'Vendor / delivery',escorted_by:'',areas_accessed:'',notes:''});setSig(null);setSelfie(null);setLookupName('');setLookupResult(null);setLookupError('');},style:{background:'#1e3a5f',color:'#fff',border:'none',borderRadius:10,padding:'12px 32px',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer'}},'\u2190 Back to Start'),
       ),
     ),
   );
 }
 
 function App(){
-  // Kiosk mode — no login needed, accessible via QR code
-  const urlParams=new URLSearchParams(window.location.search);
-  if(urlParams.get('kiosk')==='visitor') return el(VisitorKiosk,null);
-
   const[cu,setCu]=useState(()=>{try{const s=localStorage.getItem('pf_session');return s?JSON.parse(s):null;}catch{return null;}});
   const[tasks,setTasks]=useState([]);
   const[salesTasks,setSalesTasks]=useState([]);
@@ -10334,7 +10326,11 @@ function App(){
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(el(App));
+(function(){
+  const urlParams=new URLSearchParams(window.location.search);
+  const RootComponent=urlParams.get('kiosk')==='visitor'?VisitorKiosk:App;
+  ReactDOM.createRoot(document.getElementById('root')).render(el(RootComponent));
+})();
 </script>
 <script>
 if('serviceWorker' in navigator && window.location.hostname !== 'www.claudeusercontent.com'){
