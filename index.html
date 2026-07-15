@@ -9807,6 +9807,112 @@ function SanitationKiosk(){
   );
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// GENERIC LOG KIOSK — handles pest, equipment, temperature (and any future logs)
+// URL: blfoxman.github.io/bfm/?kiosk=pest | ?kiosk=equipment | ?kiosk=temperature
+// ══════════════════════════════════════════════════════════════════════════════
+function LogKiosk({logKey}){
+  const lt=LOG_TYPES[logKey];
+  const fields=lt.fields;
+  const init=()=>{
+    const f={};
+    fields.forEach(fl=>{
+      if(fl.type==='date') f[fl.key]=new Date().toISOString().slice(0,10);
+      else if(fl.type==='time') f[fl.key]=new Date().toTimeString().slice(0,5);
+      else if(fl.type==='select') f[fl.key]=fl.options[0];
+      else f[fl.key]='';
+    });
+    return f;
+  };
+  const[form,setForm]=React.useState(init);
+  const[sig,setSig]=React.useState(null);
+  const[saving,setSaving]=React.useState(false);
+  const[done,setDone]=React.useState(false);
+  const[error,setError]=React.useState('');
+  const setF=(k,v)=>setForm(p=>({...p,[k]:v}));
+
+  // Find first required text field as name identifier
+  const nameField=fields.find(f=>f.label.includes('*')&&(f.type==='text'||f.type==='textarea'));
+
+  async function submit(){
+    const req=fields.filter(f=>f.label.includes('*'));
+    for(const f of req){if(!form[f.key]?.trim()){setError('Please fill in: '+f.label.replace(' *',''));return;}}
+    if(!sig){setError('Please draw your signature.');return;}
+    setSaving(true);setError('');
+    const submittedBy=nameField?form[nameField.key]:'Kiosk User';
+    const rec={...form,id:'log-'+Date.now(),log_type:logKey,signature_image:sig,attachments:[],submitted_by:submittedBy,submitted_by_id:'kiosk',created_at:new Date().toISOString()};
+    try{
+      const res=await fetch(`${SUPA_URL}/rest/v1/${lt.table}`,{
+        method:'POST',
+        headers:{'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Prefer':'return=representation'},
+        body:JSON.stringify(rec),
+      });
+      if(!res.ok){const e=await res.json();throw new Error(e.message||'Save failed');}
+      setDone(true);
+    }catch(e){setError('Error: '+e.message);}
+    setSaving(false);
+  }
+
+  const INP=(f)=>el('div',{key:f.key,style:{marginBottom:14}},
+    el('label',{style:{fontSize:12,fontWeight:700,color:'#0f172a',display:'block',marginBottom:5}},f.label),
+    f.type==='select'
+      ?el('select',{value:form[f.key]||f.options[0],onChange:ev=>setF(f.key,ev.target.value),style:{width:'100%',border:'1px solid #cbd5e1',borderRadius:8,padding:'10px 12px',fontFamily:'inherit',fontSize:14,color:'#0f172a',background:'#fff',boxSizing:'border-box'}},
+          f.options.map(o=>el('option',{key:o,value:o},o)))
+      :f.type==='textarea'
+        ?el('textarea',{value:form[f.key]||'',onChange:ev=>setF(f.key,ev.target.value),placeholder:f.placeholder||'',rows:2,style:{width:'100%',border:'1px solid #cbd5e1',borderRadius:8,padding:'10px 12px',fontFamily:'inherit',fontSize:14,color:'#0f172a',resize:'vertical',boxSizing:'border-box'}})
+        :el('input',{type:f.type||'text',value:form[f.key]||'',onChange:ev=>setF(f.key,ev.target.value),placeholder:f.placeholder||'',style:{width:'100%',border:'1px solid #cbd5e1',borderRadius:8,padding:'10px 12px',fontFamily:'inherit',fontSize:14,color:'#0f172a',boxSizing:'border-box'}}),
+  );
+
+  if(done) return el('div',{style:{minHeight:'100vh',background:`linear-gradient(135deg,${lt.color},${lt.color}cc)`,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:24,fontFamily:'Inter,sans-serif',color:'#fff',textAlign:'center'}},
+    el('div',{style:{fontSize:72,marginBottom:16}},'\u2705'),
+    el('div',{style:{fontSize:24,fontWeight:800,marginBottom:8}},lt.label+' Submitted!'),
+    el('div',{style:{fontSize:14,opacity:.85,marginBottom:8}},nameField?'Submitted by: '+form[nameField.key]:''),
+    el('div',{style:{fontSize:13,opacity:.7,marginBottom:32}},new Date().toLocaleString()),
+    el('div',{style:{background:'rgba(255,255,255,.15)',borderRadius:12,padding:'16px 24px',fontSize:13,marginBottom:32,maxWidth:360,lineHeight:1.7}},
+      'Your record has been saved and signed. It is now available in Black Fox QMS for inspection and compliance review.'
+    ),
+    el('button',{onClick:()=>{setDone(false);setForm(init());setSig(null);},style:{background:'#fff',color:lt.color,border:'none',borderRadius:12,padding:'14px 32px',fontFamily:'inherit',fontSize:15,fontWeight:800,cursor:'pointer'}},'Submit Another'),
+  );
+
+  return el('div',{style:{minHeight:'100vh',background:lt.bg,fontFamily:'Inter,sans-serif'}},
+    el('div',{style:{background:lt.color,padding:'20px 24px',color:'#fff'}},
+      el('div',{style:{display:'flex',alignItems:'center',gap:12,maxWidth:540,margin:'0 auto'}},
+        el('div',{style:{fontSize:28}},lt.icon),
+        el('div',null,
+          el('div',{style:{fontSize:18,fontWeight:800}},lt.label),
+          el('div',{style:{fontSize:11,opacity:.8}},'Black Fox Manufacturing \u2014 Missouri'),
+        ),
+        el('div',{style:{marginLeft:'auto',fontSize:12,opacity:.75}},new Date().toLocaleDateString()),
+      ),
+    ),
+    el('div',{style:{maxWidth:540,margin:'0 auto',padding:'20px 16px 48px'}},
+      el('div',{style:{background:'rgba(0,0,0,.05)',border:'1px solid rgba(0,0,0,.1)',borderRadius:10,padding:'10px 14px',marginBottom:18,fontSize:12,color:lt.color,fontWeight:600}},
+        '\uD83D\uDCCB Fill out all required (*) fields and sign at the bottom.'
+      ),
+      fields.map(f=>INP(f)),
+      el('div',{style:{borderTop:'2px solid #e2e8f0',paddingTop:16,marginTop:8,marginBottom:16}},
+        el('div',{style:{fontSize:14,fontWeight:700,color:'#0f172a',marginBottom:8}},'Signature *'),
+        sig
+          ?el('div',null,
+              el('img',{src:sig,style:{border:'2px solid '+lt.color,borderRadius:8,maxWidth:'100%',height:80,display:'block',marginBottom:8}}),
+              el('button',{onClick:()=>setSig(null),style:{background:'none',border:'1px solid #cbd5e1',borderRadius:6,padding:'5px 14px',fontSize:12,cursor:'pointer',fontFamily:'inherit'}},'Clear & Re-sign'),
+            )
+          :el(SignaturePad,{label:'Sign to certify this record is accurate',onSave:d=>setSig(d),onClear:()=>setSig(null)}),
+        el('div',{style:{fontSize:11,color:'#94a3b8',marginTop:6}},'This record is legally valid for DCR inspections and ISO 9001 audits.'),
+      ),
+      error&&el('div',{style:{background:'#fef2f2',border:'1px solid #fecaca',borderRadius:10,padding:'12px 14px',fontSize:13,color:'#dc2626',marginBottom:12}},error),
+      el('button',{onClick:submit,disabled:saving,style:{width:'100%',background:saving?'#94a3b8':lt.color,color:'#fff',border:'none',borderRadius:14,padding:'16px',fontFamily:'inherit',fontSize:16,fontWeight:800,cursor:saving?'not-allowed':'pointer',boxShadow:'0 4px 16px rgba(0,0,0,.2)'}},
+        saving?'Saving...':'\u2705 Submit '+lt.label
+      ),
+      el('div',{style:{textAlign:'center',fontSize:11,color:'#94a3b8',marginTop:12}},'Black Fox QMS \u2014 HMBF Management Inc.'),
+    ),
+  );
+}
+
+function PestKiosk(){return el(LogKiosk,{logKey:'pest'});}
+function EquipmentKiosk(){return el(LogKiosk,{logKey:'equipment'});}
+function TemperatureKiosk(){return el(LogKiosk,{logKey:'temperature'});}
+
 // URL: blfoxman.github.io/BFM/?kiosk=visitor
 // \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
 function VisitorKiosk(){
@@ -10429,7 +10535,12 @@ function App(){
 (function(){
   const p=new URLSearchParams(window.location.search);
   const k=p.get('kiosk');
-  const C=k==='visitor'?VisitorKiosk:k==='sanitation'?SanitationKiosk:App;
+  const C=k==='visitor'?VisitorKiosk
+    :k==='sanitation'?SanitationKiosk
+    :k==='pest'?PestKiosk
+    :k==='equipment'?EquipmentKiosk
+    :k==='temperature'?TemperatureKiosk
+    :App;
   ReactDOM.createRoot(document.getElementById('root')).render(el(C));
 })();
 </script>
