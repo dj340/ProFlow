@@ -302,7 +302,7 @@ function notifyTask({task, actor, subject, body, skipId=null}){
 }
 
 // \u2500\u2500 CONSTANTS \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-const LOCS=['Nationwide','Missouri'];
+const LOCS=['Missouri'];
 // \u2500\u2500 DEPARTMENT HIERARCHY (Grandmother \u2192 Mother \u2192 Child) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 const DEPT_TREE={
   'Production':{
@@ -825,7 +825,7 @@ async function requestPushPermission(userId){
 // \u2500\u2500 AUTH \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 function Auth({onLogin}){
   const[tab,setTab]=useState('login');
-  const[f,setF]=useState({firstName:'',lastName:'',email:'',pw:'',dept:'Production',loc:'Nationwide',depts:[],licenses:[]});
+  const[f,setF]=useState({firstName:'',lastName:'',email:'',pw:'',dept:'Production',loc:'Missouri',depts:[],licenses:[]});
   const[msg,setMsg]=useState('');
   const[pend,setPend]=useState(false);
   const[loading,setLoading]=useState(false);
@@ -928,7 +928,7 @@ const SETUP_SQL=`
 CREATE TABLE IF NOT EXISTS pf_users (
   id text primary key, name text, first_name text, last_name text,
   email text unique, pw text, role text default 'employee',
-  dept text default 'General', loc text default 'Nationwide',
+  dept text default 'General', loc text default 'Missouri',
   approved boolean default false, perms jsonb default '[]', managers jsonb default '[]', oversees_depts jsonb default '[]', licenses jsonb default '[]', depts jsonb default '[]'
 );
 ALTER TABLE pf_users DISABLE ROW LEVEL SECURITY;
@@ -939,7 +939,7 @@ CREATE TABLE IF NOT EXISTS pf_tasks (
   id text primary key, title text, section text,
   description text default '', assignees jsonb default '[]',
   due_date text, priority text default 'medium',
-  status text default 'not_started', loc text default 'Nationwide',
+  status text default 'not_started', loc text default 'Missouri',
   tags jsonb default '[]', notes jsonb default '[]',
   attachments jsonb default '[]', created_by text,
   created_by_id text, created_at text, updated_at text,
@@ -957,7 +957,7 @@ CREATE TABLE IF NOT EXISTS pf_events (
   all_day boolean default false, attendees jsonb default '[]',
   location text, meet_link text, color text default '#f5a623',
   created_by text, created_by_id text, created_at text, updated_at text,
-  loc text default 'Nationwide', personal boolean default false
+  loc text default 'Missouri', personal boolean default false
 );
 ALTER TABLE pf_events DISABLE ROW LEVEL SECURITY;
 CREATE TABLE IF NOT EXISTS pf_meeting_notes (
@@ -1976,7 +1976,7 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter,canAccessQms,setP
 
   const filtered=useMemo(()=>{
     let list=tasks;
-    if(locFilter&&locFilter!=='Nationwide') list=list.filter(t=>!t.loc||t.loc===locFilter||t.loc==='Nationwide');
+    // Single location: Missouri only — no loc filtering needed
     if(section!=='All') list=list.filter(t=>t.section===section);
     if(cu.role!=='admin'){
       list=list.filter(t=>{
@@ -2087,9 +2087,7 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter,canAccessQms,setP
     canAccessQms&&el(ComplianceSummaryWidget,{cu,setPage,SUPA_URL,SUPA_KEY,H}),
     el('div',{style:{display:'flex',gap:16,marginBottom:16,flexWrap:'wrap',alignItems:'center'}},
       el('div',{style:{display:'flex',gap:6}},
-        LOCS.filter(l=>cu.role==='admin'||l===cu.loc||cu.loc==='Nationwide').map(l=>
-          el('button',{key:l,onClick:()=>setLocFilter(l),style:{padding:'5px 14px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:500,cursor:'pointer',background:locFilter===l?'var(--accent)':'transparent',color:locFilter===l?'#fff':'var(--text2)',borderColor:locFilter===l?'var(--accent)':'var(--border)'}},l==='Nationwide'?'\uD83C\uDF10 All':'\uD83C\uDFD7 Missouri')
-        )
+        el('button',{onClick:()=>setLocFilter('Missouri'),style:{padding:'5px 14px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:500,cursor:'default',background:'var(--accent)',color:'#fff',borderColor:'var(--accent)'}},"\uD83C\uDFD7 Missouri")
       ),
       el('div',{style:{width:1,height:20,background:'var(--border)'}}),
       el('div',{style:{display:'flex',gap:6,flexWrap:'wrap'}},
@@ -2151,7 +2149,7 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter,canAccessQms,setP
               el('div',{style:{width:3,height:32,borderRadius:4,background:PRI[task.priority]?.color||'#6b7280',flexShrink:0}}),
               el('div',{style:{flex:1,minWidth:0}},
                 el('div',{style:{fontSize:13,fontWeight:600}},task.title),
-                el('div',{style:{fontSize:11,color:'var(--text2)',marginTop:2}},task.section+' \u00B7 Created by '+task.created_by+(task.loc&&task.loc!=='Nationwide'?' \u00B7 '+task.loc:'')),
+                el('div',{style:{fontSize:11,color:'var(--text2)',marginTop:2}},task.section+' \u00B7 Created by '+task.created_by+(task.loc&&task.loc!=='Missouri'?' \u00B7 '+task.loc:'')),
                 task.status==='on_hold'&&el('div',{style:{fontSize:11,color:'var(--red)',fontWeight:700,marginTop:2}},'\uD83D\uDEA8 ON HOLD \u2014 '+task.hold_reason?.slice(0,50)),
               ),
               el('div',{style:{display:'flex',gap:6,alignItems:'center',flexShrink:0}},
@@ -2253,7 +2251,7 @@ function Team({users,setUsers,cu}){
   const[saveMsg,setSaveMsg]=useState('');
   const[newPw,setNewPw]=useState('');
   const[pwMsg,setPwMsg]=useState('');
-  const[af,setAf]=useState({firstName:'',lastName:'',email:'',pw:'',role:'employee',dept:'Production',loc:'Nationwide'});
+  const[af,setAf]=useState({firstName:'',lastName:'',email:'',pw:'',role:'employee',dept:'Production',loc:'Missouri'});
   const pending=users.filter(u=>!u.approved);
   const approved=users.filter(u=>u.approved).filter(u=>
     !search||u.name.toLowerCase().includes(search.toLowerCase())||
@@ -2355,7 +2353,7 @@ function Team({users,setUsers,cu}){
       await db.insert('pf_users',nu);
       setUsers(p=>[...p,nu]);
       setAdd(false);
-      setAf({firstName:'',lastName:'',email:'',pw:'',role:'employee',dept:'Production',loc:'Nationwide'});
+      setAf({firstName:'',lastName:'',email:'',pw:'',role:'employee',dept:'Production',loc:'Missouri'});
     }catch(e){console.error('addUser error:',e);alert('Failed to add user: '+e.message);}
   }
 
@@ -2759,7 +2757,7 @@ function SalesMarketing({salesTasks,setSalesTasks,cu,users,locFilter}){
   const today=new Date().toISOString().slice(0,10);
 
   const filtered=salesTasks.filter(t=>{
-    if(locFilter&&locFilter!=='Nationwide'&&t.state&&t.state!==locFilter) return false;
+    // Single location — no loc filtering
     if(!isSalesAdmin) return t.created_by_id===cu.id||t.assigned_id===cu.id;
     return true;
   });
@@ -5365,7 +5363,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
   // GM/AGM=everyone in their facility, Director=their dept across all licenses,
   // COO/Admin=everyone.
   const trainingMatrixScope=getVisibleUsers(cu,users)
-    .filter(u=>licFilter==='all'||(u.licenses||[]).includes(licFilter)||u.loc==='Nationwide');
+    .filter(u=>licFilter==='all'||(u.licenses||[]).includes(licFilter));
   const today=new Date().toISOString().slice(0,10);
 
   // Dashboard stats
@@ -5395,7 +5393,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
         if(u.role==='admin'){
           const adminLics=u.licenses||[];
           if(adminLics.length>0&&!sopLicIds.some(id=>adminLics.includes(id))) return false;
-        } else if(u.loc==='Nationwide'){
+        } else if(u.loc==='Missouri'){
           // Nationwide users work across all states \u2014 they bypass the license check
           // entirely and are scoped only by department below.
           // e.g. Cart Cleaning Supervisor Nationwide sees Cart SOPs in both MI and MO.
@@ -5425,7 +5423,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
   // Training: users who have NOT acked all SOPs that target them specifically
   // Dashboard training gap panel uses same visibility hierarchy as Training Matrix.
   const dashboardScope=getVisibleUsers(cu,users)
-    .filter(u=>licFilter==='all'||(u.licenses||[]).includes(licFilter)||u.loc==='Nationwide');
+    .filter(u=>licFilter==='all'||(u.licenses||[]).includes(licFilter));
   const untrainedUsers=dashboardScope.filter(u=>publishedSOPs.some(s=>{
     const targets=targetUsersForSop(s);
     const isTargeted=targets.some(t=>t.id===u.id);
@@ -8611,7 +8609,7 @@ function SOPs({sops,setSops,cu,users}){
     const sopLicIds=s.license_ids&&s.license_ids.length>0?s.license_ids:(s.license_id?[s.license_id]:(s.license_name?[LICENSES.find(l=>l.name===s.license_name)?.id].filter(Boolean):[]));
     if(sopLicIds.length>0){
       // Nationwide users bypass license check \u2014 scoped by dept only
-      if(cu.loc!=='Nationwide'){
+      if(false){
         if((cu.licenses||[]).length>0){
           const hasMatch=sopLicIds.some(id=>cu.licenses.includes(id));
           if(!hasMatch) return false;
@@ -8645,7 +8643,7 @@ function SOPs({sops,setSops,cu,users}){
         if(u.role==='admin'){
           const adminLics=u.licenses||[];
           if(adminLics.length>0&&!sopLicIds.some(id=>adminLics.includes(id))) return false;
-        } else if(u.loc==='Nationwide'){
+        } else if(u.loc==='Missouri'){
           // Nationwide users work across all states \u2014 they bypass the license check
           // entirely and are scoped only by department below.
           // e.g. Cart Cleaning Supervisor Nationwide sees Cart SOPs in both MI and MO.
@@ -9301,7 +9299,7 @@ function getVisibleUsers(viewer, allUsers){
         return viewerLics.some(l=>uLics.includes(l));
       }
       // Nationwide GM sees everyone (across all facilities)
-      if(viewer.loc==='Nationwide') return true;
+      return true; // Single facility: Missouri
       return false;
     });
   }
@@ -9355,7 +9353,7 @@ function Calendar({events,setEvents,tasks,cu,users,locFilter,meetingNotes,setMee
   const[showNew,setNew]=useState(false);
   const[sel,setSel]=useState(null);
   const[saving,setSaving]=useState(false);
-  const[f,setF]=useState({title:'',type:'event',date:'',start_time:'09:00',end_time:'10:00',all_day:false,description:'',location:'',attendees:[],color:'#f5a623',personal:false,loc:'Nationwide',meet_link:''});
+  const[f,setF]=useState({title:'',type:'event',date:'',start_time:'09:00',end_time:'10:00',all_day:false,description:'',location:'',attendees:[],color:'#f5a623',personal:false,loc:'Missouri',meet_link:''});
   const today=new Date().toISOString().slice(0,10);
 
   const allEvents=useMemo(()=>{
@@ -9376,7 +9374,7 @@ function Calendar({events,setEvents,tasks,cu,users,locFilter,meetingNotes,setMee
       return false;
     }).filter(e=>{
       if(e._task) return true;
-      if(locFilter&&locFilter!=='Nationwide'&&e.loc&&e.loc!=='Nationwide'&&e.loc!==locFilter) return false;
+      // Single location Missouri — no loc filtering needed
       return true;
     });
   },[events,tasks,cu,locFilter]);
@@ -9430,7 +9428,7 @@ function Calendar({events,setEvents,tasks,cu,users,locFilter,meetingNotes,setMee
     if(meetLink){
       setTimeout(()=>{if(window.confirm('Meeting created!\n\nLink:\n'+meetLink+'\n\nCopy to clipboard?')){navigator.clipboard.writeText(meetLink).catch(()=>{}); }},300);
     }
-    setF({title:'',type:'event',date:'',start_time:'09:00',end_time:'10:00',all_day:false,description:'',location:'',attendees:[],color:'#f5a623',personal:false,loc:'Nationwide',meet_link:''});
+    setF({title:'',type:'event',date:'',start_time:'09:00',end_time:'10:00',all_day:false,description:'',location:'',attendees:[],color:'#f5a623',personal:false,loc:'Missouri',meet_link:''});
     setNew(false);setSaving(false);
   }
 
@@ -9592,7 +9590,7 @@ function Calendar({events,setEvents,tasks,cu,users,locFilter,meetingNotes,setMee
               ))
             ),
           ),
-          el('div',{className:'fg'},el('label',null,'Location Filter'),el('select',{value:f.loc,onChange:ev=>setF(p=>({...p,loc:ev.target.value}))},['Nationwide','Missouri'].map(l=>el('option',{key:l,value:l},l)))),
+          el('div',{className:'fg'},el('label',null,'Location Filter'),el('select',{value:f.loc,onChange:ev=>setF(p=>({...p,loc:ev.target.value}))},['Missouri'].map(l=>el('option',{key:l,value:l},l)))),
         ),
         el('div',{className:'mf'},
           el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),
@@ -9973,7 +9971,7 @@ function App(){
       setTimeout(()=>setShowInstallBanner(true),3000);
     }
   },[cu]);
-  const[locFilter,setLocFilter]=useState(()=>{try{const s=localStorage.getItem('pf_session');const u=s?JSON.parse(s):null;return u?.loc==='Michigan'?'Missouri':u?.loc||'Nationwide';}catch{return 'Nationwide';}});
+  const[locFilter,setLocFilter]=useState('Missouri');
 
   // FIX 2: doRefresh with correct destructuring
   const doRefresh=useCallback(()=>{
@@ -10083,7 +10081,7 @@ function App(){
 
   if(dbReady===null) return el('div',{className:'loading'},el('div',{className:'spinner'}),el('div',null,'Connecting...'));
   if(dbReady===false) return el(SetupScreen,{onDone:()=>setDbReady(true)});
-  if(!cu) return el(Auth,{onLogin:u=>{setCu(u);setLocFilter(u.loc||'Nationwide');}});
+  if(!cu) return el(Auth,{onLogin:u=>{setCu(u);setLocFilter(u.loc||'Missouri');}});
   if(loading) return el('div',{className:'loading'},el('div',{className:'spinner'}),el('div',null,'Loading...'));
 
   const pending=users.filter(u=>!u.approved).length;
@@ -10116,9 +10114,9 @@ function App(){
       el(BFMlogo,{size:28,labelSize:18,className:'sb-logo',textColor:'#ffffff'}),
       el('div',{style:{marginBottom:16}},
         el('div',{className:'sb-label',style:{marginBottom:8}},'Location'),
-        LOCS.filter(l=>isAdmin||isElevated||l===cu.loc||cu.loc==='Nationwide').map(l=>
+        LOCS.map(l=>
           el('button',{key:l,className:`nav${locFilter===l?' on':''}`,onClick:()=>setLocFilter(l)},
-            el('span',null,l==='Nationwide'?'\uD83C\uDF10':'\uD83C\uDFD7'),l
+            el('span',null,'\uD83C\uDFD7'),l
           )
         )
       ),
