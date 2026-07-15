@@ -302,7 +302,7 @@ function notifyTask({task, actor, subject, body, skipId=null}){
 }
 
 // \u2500\u2500 CONSTANTS \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-const LOCS=['Nationwide','Michigan','Missouri'];
+const LOCS=['Nationwide','Missouri'];
 // \u2500\u2500 DEPARTMENT HIERARCHY (Grandmother \u2192 Mother \u2192 Child) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 const DEPT_TREE={
   'Production':{
@@ -463,7 +463,7 @@ const SECTION_TREE={
 // Flat list for backwards compat
 const SECTIONS=[
   // Grandmothers
-  'Michigan Production','Missouri Production','Distribution','Facility','Compliance','Warehouse','Sales & Marketing','General',
+  'Missouri Production','Distribution','Facility','Compliance','Warehouse','Sales & Marketing','General',
   // Michigan Production children
   'Cart Department','Pre-Roll Department','Gummy Department','Biomass','Extraction','QC',
   // Cart children
@@ -696,7 +696,7 @@ const CART_WORKFLOW=[
 function isCartWorkflow(task){
   // Triggers for Michigan location + Cart Department or any cart child section
   const cartSections=['Cart Department','Cart Priming','Cart Filling','Cart Cleaning','Cart Packaging'];
-  return task.loc==='Michigan'&&cartSections.includes(task.section);
+  return false;
 }
 
 // Get current workflow step index
@@ -1970,7 +1970,7 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter,canAccessQms,setP
   const[colOrder,setColOrder]=useState(()=>{try{const s=localStorage.getItem('pf_col_order');const saved=s?JSON.parse(s):null;const allIds=COLS.map(c=>c.id);if(saved){const merged=[...saved.filter(id=>allIds.includes(id)),...allIds.filter(id=>!saved.includes(id))];return merged;}return allIds;}catch{return COLS.map(c=>c.id);}});
   const[dragCol,setDragCol]=useState(null);
   const[dragOver,setDragOver]=useState(null);
-  const[f,setF]=useState({title:'',section:'Michigan Production',description:'',assignees:[],due_date:'',priority:'medium',loc:locFilter==='Nationwide'?'Nationwide':locFilter,tags:[]});
+  const[f,setF]=useState({title:'',section:'Missouri Production',description:'',assignees:[],due_date:'',priority:'medium',loc:'Missouri',tags:[]});
   const today=new Date().toISOString().slice(0,10);
   const isAdmin=cu.role==='admin';
 
@@ -1993,7 +1993,7 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter,canAccessQms,setP
     if(!f.title||f.assignees.length===0)return;
     setSaving(true);
     const cartSecs=['Cart Department','Cart Priming','Cart Filling','Cart Cleaning','Cart Packaging'];
-    const isCartWFTask=f.loc==='Michigan'&&cartSecs.includes(f.section);
+    const isCartWFTask=false;
     // Determine starting step based on section selected
     const sectionToStep={'Cart Department':'cart_priming','Cart Priming':'cart_priming','Cart Filling':'cart_filling','Cart Cleaning':'cart_cleaning','Cart Packaging':'cart_packaging'};
     const startStep=sectionToStep[f.section]||'cart_priming';
@@ -2024,7 +2024,7 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter,canAccessQms,setP
       sendEmail({to:a.email,subject:`\uD83D\uDCCB New task assigned: "${f.title}"`,html:emailBody});
     });
     sendLocalNotification('\uD83D\uDCCB Task Created',`"${f.title}" assigned to ${f.assignees.map(a=>a.name.split(' ')[0]).join(', ')}`).catch(()=>{});
-    setF({title:'',section:'General',description:'',assignees:[],due_date:'',priority:'medium',loc:locFilter==='Nationwide'?'Nationwide':locFilter,tags:[]});
+    setF({title:'',section:'General',description:'',assignees:[],due_date:'',priority:'medium',loc:'Missouri',tags:[]});
     setNew(false);setSaving(false);
   }
 
@@ -2088,7 +2088,7 @@ function Board({tasks,setTasks,cu,users,locFilter,setLocFilter,canAccessQms,setP
     el('div',{style:{display:'flex',gap:16,marginBottom:16,flexWrap:'wrap',alignItems:'center'}},
       el('div',{style:{display:'flex',gap:6}},
         LOCS.filter(l=>cu.role==='admin'||l===cu.loc||cu.loc==='Nationwide').map(l=>
-          el('button',{key:l,onClick:()=>setLocFilter(l),style:{padding:'5px 14px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:500,cursor:'pointer',background:locFilter===l?'var(--accent)':'transparent',color:locFilter===l?'#fff':'var(--text2)',borderColor:locFilter===l?'var(--accent)':'var(--border)'}},l==='Nationwide'?'\uD83C\uDF10 All':l==='Michigan'?'\uD83C\uDFED Michigan':'\uD83C\uDFD7 Missouri')
+          el('button',{key:l,onClick:()=>setLocFilter(l),style:{padding:'5px 14px',borderRadius:20,border:'1px solid',fontSize:12,fontWeight:500,cursor:'pointer',background:locFilter===l?'var(--accent)':'transparent',color:locFilter===l?'#fff':'var(--text2)',borderColor:locFilter===l?'var(--accent)':'var(--border)'}},l==='Nationwide'?'\uD83C\uDF10 All':'\uD83C\uDFD7 Missouri')
         )
       ),
       el('div',{style:{width:1,height:20,background:'var(--border)'}}),
@@ -2751,7 +2751,7 @@ function SalesMarketing({salesTasks,setSalesTasks,cu,users,locFilter}){
     type:'Retail Visit',title:'',description:'',
     assigned_to:'',assigned_id:'',
     date:'',time:'',
-    state:'Michigan',brand:'',location:'',
+    state:'Missouri',brand:'',location:'',
     priority:'medium',report:'',
   });
 
@@ -2820,7 +2820,7 @@ function SalesMarketing({salesTasks,setSalesTasks,cu,users,locFilter}){
         </div>`
       });
     }
-    setF({type:'Retail Visit',title:'',description:'',assigned_to:'',assigned_id:'',date:'',time:'',state:'Michigan',brand:'',location:'',priority:'medium',report:''});
+    setF({type:'Retail Visit',title:'',description:'',assigned_to:'',assigned_id:'',date:'',time:'',state:'Missouri',brand:'',location:'',priority:'medium',report:''});
     setNew(false);setSaving(false);
   }
 
@@ -2989,7 +2989,7 @@ function SalesMarketing({salesTasks,setSalesTasks,cu,users,locFilter}){
           el('div',{className:'fg',style:{marginTop:13}},
             el('label',null,'State'),
             el('div',{style:{display:'flex',gap:8,marginTop:4}},
-              ['Michigan','Missouri'].map(s=>el('button',{key:s,onClick:()=>setF(p=>({...p,state:s,brand:'',location:''})),style:{flex:1,padding:'9px',borderRadius:'var(--rs)',border:'2px solid',borderColor:f.state===s?'var(--accent)':'var(--border)',background:f.state===s?'rgba(30,58,95,.08)':'transparent',color:f.state===s?'var(--accent)':'var(--text2)',fontFamily:'inherit',fontWeight:600,fontSize:13,cursor:'pointer',transition:'all .15s'}},'\uD83D\uDDFA '+s))
+              ['Missouri'].map(s=>el('button',{key:s,onClick:()=>setF(p=>({...p,state:s,brand:'',location:''})),style:{flex:1,padding:'9px',borderRadius:'var(--rs)',border:'2px solid',borderColor:f.state===s?'var(--accent)':'var(--border)',background:f.state===s?'rgba(30,58,95,.08)':'transparent',color:f.state===s?'var(--accent)':'var(--text2)',fontFamily:'inherit',fontWeight:600,fontSize:13,cursor:'pointer',transition:'all .15s'}},'\uD83D\uDDFA '+s))
             ),
           ),
           el('div',{className:'fg'},
@@ -6416,8 +6416,6 @@ function Scoreboard({tasks,cu,users}){
 // \u2500\u2500 SOPs \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 // \u2500\u2500 LICENSE & REGULATORY CONSTANTS \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 const LICENSES=[
-  {id:'mi10',name:'Michigan Investments 10',state:'Michigan',license_type:'Adult Use Grower / Processor'},
-  {id:'wvc',name:'Wellness & Vitality Consulting',state:'Michigan',license_type:'Comprehensive Facility License'},
   {id:'bfm',name:'Black Fox Manufacturing',state:'Missouri',license_type:'Comprehensive Facility License'},
 ];
 
@@ -6849,7 +6847,7 @@ function SOPEditModal({sop,cu,onClose,onSave}){
   const initLic=LICENSES.find(l=>l.id===sop.license_id)||LICENSES.find(l=>l.name===sop.license_name)||null;
   const[ef,setEf]=useState({
     title:sop.title||'',
-    state:sop.state||initLic?.state||'Michigan',
+    state:sop.state||initLic?.state||'Missouri',
     license_ids:sop.license_id?[sop.license_id]:(initLic?[initLic.id]:[]),
     depts:sop.visible_to_depts||sop.depts||[],
   });
@@ -6918,7 +6916,7 @@ function SOPEditModal({sop,cu,onClose,onSave}){
         el('div',{className:'fg'},
           el('label',null,'State *'),
           el('div',{style:{display:'flex',gap:8}},
-            ['Michigan','Missouri'].map(s=>el('button',{key:s,
+            ['Missouri'].map(s=>el('button',{key:s,
               onClick:()=>setEf(p=>({...p,state:s,license_ids:[]})), // reset licenses when state changes
               style:{flex:1,padding:'9px',borderRadius:'var(--rs)',border:'2px solid',borderColor:ef.state===s?'var(--accent)':'var(--border)',background:ef.state===s?'rgba(30,58,95,.08)':'transparent',color:ef.state===s?'var(--accent)':'var(--text2)',fontFamily:'inherit',fontWeight:600,fontSize:13,cursor:'pointer',transition:'all .15s'}
             },s))
@@ -8265,7 +8263,7 @@ Respond with ONLY this JSON (no markdown, be concise, this must NOT be truncated
     const catParts=category.split(' \u2014 ');
     const targetDept=catParts[1]||catParts[0]||'Production';
     // Find which grandmother this belongs to based on state/license -> Michigan/Missouri Production
-    const grandmother=state==='Michigan'?'Michigan Production':'Missouri Production';
+    const grandmother='Missouri Production';
     const sop={
       id:'sop-'+Date.now(),
       title:editedSOP.title||title,
@@ -8345,7 +8343,7 @@ Respond with ONLY this JSON (no markdown, be concise, this must NOT be truncated
               el('div',{className:'fg',style:{marginBottom:0}},
                 el('label',null,'State'),
                 el('div',{style:{display:'flex',gap:8,marginTop:4}},
-                  ['Michigan','Missouri'].map(s=>el('button',{key:s,
+                  ['Missouri'].map(s=>el('button',{key:s,
                     onClick:()=>setState(s),
                     style:{flex:1,padding:'9px',borderRadius:'var(--rs)',border:'2px solid',borderColor:state===s?'var(--accent)':'var(--border)',background:state===s?'rgba(30,58,95,.08)':'transparent',color:state===s?'var(--accent)':'var(--text2)',fontFamily:'inherit',fontWeight:600,fontSize:13,cursor:'pointer',transition:'all .15s'}
                   },'\uD83D\uDDFA '+s))
@@ -8435,7 +8433,7 @@ Respond with ONLY this JSON (no markdown, be concise, this must NOT be truncated
               el('div',{className:'fg',style:{marginBottom:0}},
                 el('label',null,'Department(s) \u2014 applied to this SOP'),
                 el('div',{style:{display:'flex',flexWrap:'wrap',gap:5}},
-                  [...new Set([category.split(' \u2014 ')[1]||category.split(' \u2014 ')[0],state==='Michigan'?'Michigan Production':'Missouri Production'])].map(d=>
+                  [...new Set([category.split(' \u2014 ')[1]||category.split(' \u2014 ')[0],'Missouri Production'])].map(d=>
                     el('div',{key:d,style:{padding:'4px 10px',borderRadius:16,background:'rgba(139,92,246,.15)',color:'#c4b5fd',border:'1px solid rgba(139,92,246,.3)',fontSize:11,fontWeight:600}},d)
                   )
                 ),
@@ -9594,7 +9592,7 @@ function Calendar({events,setEvents,tasks,cu,users,locFilter,meetingNotes,setMee
               ))
             ),
           ),
-          el('div',{className:'fg'},el('label',null,'Location Filter'),el('select',{value:f.loc,onChange:ev=>setF(p=>({...p,loc:ev.target.value}))},['Nationwide','Michigan','Missouri'].map(l=>el('option',{key:l,value:l},l)))),
+          el('div',{className:'fg'},el('label',null,'Location Filter'),el('select',{value:f.loc,onChange:ev=>setF(p=>({...p,loc:ev.target.value}))},['Nationwide','Missouri'].map(l=>el('option',{key:l,value:l},l)))),
         ),
         el('div',{className:'mf'},
           el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),
@@ -9975,7 +9973,7 @@ function App(){
       setTimeout(()=>setShowInstallBanner(true),3000);
     }
   },[cu]);
-  const[locFilter,setLocFilter]=useState(()=>{try{const s=localStorage.getItem('pf_session');const u=s?JSON.parse(s):null;return u?.loc||'Nationwide';}catch{return 'Nationwide';}});
+  const[locFilter,setLocFilter]=useState(()=>{try{const s=localStorage.getItem('pf_session');const u=s?JSON.parse(s):null;return u?.loc==='Michigan'?'Missouri':u?.loc||'Nationwide';}catch{return 'Nationwide';}});
 
   // FIX 2: doRefresh with correct destructuring
   const doRefresh=useCallback(()=>{
@@ -10120,7 +10118,7 @@ function App(){
         el('div',{className:'sb-label',style:{marginBottom:8}},'Location'),
         LOCS.filter(l=>isAdmin||isElevated||l===cu.loc||cu.loc==='Nationwide').map(l=>
           el('button',{key:l,className:`nav${locFilter===l?' on':''}`,onClick:()=>setLocFilter(l)},
-            el('span',null,l==='Nationwide'?'\uD83C\uDF10':l==='Michigan'?'\uD83C\uDFED':'\uD83C\uDFD7'),l
+            el('span',null,l==='Nationwide'?'\uD83C\uDF10':'\uD83C\uDFD7'),l
           )
         )
       ),
