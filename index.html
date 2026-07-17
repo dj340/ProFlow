@@ -3386,39 +3386,33 @@ const LOG_TYPES={
     {key:'notes',label:'Additional Notes',type:'textarea',placeholder:'Any observations or comments'},
   ]},
   waste:{id:'waste',label:'Waste Destruction Log',icon:'\uD83D\uDDD1\uFE0F',color:'#7c2d12',bg:'#fff7ed',table:'pf_log_waste',dcr:'Missouri DCR / METRC Required',freq:'Every destruction event',fields:[
-    // SECTION 1: WASTE GENERATION
-    {key:'_s1',label:'--- SECTION 1: WASTE GENERATION ---',type:'section'},
     {key:'date',label:'Date of Waste Generation *',type:'date'},
     {key:'time',label:'Time of Waste Generation',type:'time'},
     {key:'personnel_involved',label:'Personnel Involved *',type:'text',placeholder:'Names of all staff involved'},
     {key:'agent_ids',label:'Agent ID(s) *',type:'text',placeholder:'DCR agent ID numbers'},
-    {key:'strain',label:'Strain',type:'text',placeholder:'Strain name if applicable'},
+    {key:'category',label:'Category *',type:'select',options:['Concentrate','Flower','Vape Cartridges','Edibles','Infused Pre-Rolls']},
+    {key:'strain',label:'Strain / Flavor',type:'text',placeholder:'Strain or flavor name'},
     {key:'metrc_tag',label:'METRC Tag # *',type:'text',placeholder:'24-digit METRC package tag number'},
-    {key:'qty_expired',label:'Quantity of Used / Expired Product',type:'text',placeholder:'e.g. 14.2g, 50 units'},
-    {key:'qty_usable',label:'Quantity of Usable Product',type:'text',placeholder:'e.g. 0g (if all unusable)'},
-    // SECTION 2: WASTE RENDERING
-    {key:'_s2',label:'--- SECTION 2: WASTE RENDERING ---',type:'section'},
-    {key:'rendering_method',label:'Method of Rendering *',type:'select',options:['49/51 Mix - Flower/Edibles (kitty litter, sand, soil, or vegetable oil)','49/51 Mix - Concentrates/Carts (ethanol or approved solvent)','Grinding with non-cannabis waste','Incineration (licensed facility)','Composting','Other approved method']},
-    {key:'rendering_description',label:'Description of Rendering Process',type:'textarea',placeholder:'Describe exactly how the material was rendered unusable'},
-    {key:'mixing_medium',label:'Mixing Medium Used (49/51% Mix)',type:'text',placeholder:'e.g. Kitty litter, sand, soil, vegetable oil, ethanol'},
-    // SECTION 3: WASTE STORAGE
-    {key:'_s3',label:'--- SECTION 3: WASTE STORAGE ---',type:'section'},
+    {key:'qty_unit',label:'Unit of Measure *',type:'select',options:['Grams','EA (Each)']},
+    {key:'qty_expired',label:'Quantity of Waste / Expired Product *',type:'text',placeholder:'e.g. 14.2 or 50'},
+    // WASTE STORAGE
+    {key:'_s3',label:'--- WASTE STORAGE ---',type:'section'},
     {key:'container_id',label:'Container ID / Label',type:'text',placeholder:'Waste container ID or label'},
     {key:'storage_metrc_tag',label:'METRC Tag # (Storage Container)',type:'text',placeholder:'METRC tag for waste storage container'},
     {key:'storage_location',label:'Waste Storage Location',type:'text',placeholder:'Location where waste is stored before disposal'},
     {key:'camera_1',label:'Camera #1 Name (Angle 1 of Destruction)',type:'text',placeholder:'Camera name or ID'},
     {key:'camera_2',label:'Camera #2 Name (Angle 2 of Destruction)',type:'text',placeholder:'Camera name or ID'},
     {key:'qty_rendered',label:'Quantity of Rendered Waste',type:'text',placeholder:'Total weight/quantity after rendering'},
-    // SECTION 4: WASTE DISPOSAL
-    {key:'_s4',label:'--- SECTION 4: WASTE DISPOSAL ---',type:'section'},
+    // WASTE DISPOSAL
+    {key:'_s4',label:'--- WASTE DISPOSAL ---',type:'section'},
     {key:'disposal_date',label:'Date of Disposal',type:'date'},
     {key:'disposal_time',label:'Time of Disposal',type:'time'},
     {key:'waste_company',label:'Waste Management Company / Facility Used',type:'text',placeholder:'Licensed waste disposal company name'},
     {key:'manifest_number',label:'Waste Manifest Number',type:'text',placeholder:'Manifest #'},
     {key:'receipt_number',label:'Disposal Receipt Number',type:'text',placeholder:'Receipt #'},
     {key:'disposal_location',label:'Location of Disposal',type:'text',placeholder:'Address or facility name'},
-    // SECTION 5: NOTES & COMPLIANCE
-    {key:'_s5',label:'--- SECTION 5: NOTES & COMPLIANCE ---',type:'section'},
+    // NOTES & COMPLIANCE
+    {key:'_s5',label:'--- NOTES & COMPLIANCE ---',type:'section'},
     {key:'notes',label:'Additional Notes / Comments',type:'textarea',placeholder:'Any additional information'},
     {key:'metrc_recorded',label:'Recorded in METRC?',type:'select',options:['Yes - recorded before destruction','Yes - recorded after destruction','Pending']},
     {key:'compliance_verification',label:'Compliance Verification',type:'text',placeholder:'Confirm all fields complete and METRC updated'},
