@@ -3386,17 +3386,43 @@ const LOG_TYPES={
     {key:'notes',label:'Additional Notes',type:'textarea',placeholder:'Any observations or comments'},
   ]},
   waste:{id:'waste',label:'Waste Destruction Log',icon:'\uD83D\uDDD1\uFE0F',color:'#7c2d12',bg:'#fff7ed',table:'pf_log_waste',dcr:'Missouri DCR / METRC Required',freq:'Every destruction event',fields:[
-    {key:'date',label:'Date of Destruction *',type:'date'},{key:'time',label:'Time',type:'time'},
-    {key:'metrc_tag',label:'METRC Package Tag(s) *',type:'text',placeholder:'1A4FF0100000022000012345'},
-    {key:'product_type',label:'Product Type *',type:'select',options:['Flower','Pre-Roll','Cartridge','Edible','Trim/Shake','Extract','Packaging','Other']},
-    {key:'quantity',label:'Quantity *',type:'text',placeholder:'e.g. 14.2g, 5 units'},
-    {key:'reason',label:'Reason *',type:'select',options:['Failed testing','Contamination','Expiration','Overage/Reconciliation','Non-compliant packaging','Recall','Other']},
-    {key:'reason_detail',label:'Reason Detail',type:'textarea',placeholder:'Describe why this material is being destroyed'},
-    {key:'destruction_method',label:'Method *',type:'select',options:['Grinding with non-cannabis waste (50%+)','Incineration','Composting','Other approved method']},
-    {key:'witness_1',label:'Witness 1 Name *',type:'text',placeholder:'Required by DCR'},
-    {key:'witness_2',label:'Witness 2 Name',type:'text',placeholder:'Recommended'},
-    {key:'metrc_recorded',label:'Recorded in METRC?',type:'select',options:['Yes \u2014 recorded before destruction','Yes \u2014 recorded after destruction','Pending']},
-    {key:'notes',label:'Notes',type:'textarea',placeholder:''},
+    // SECTION 1: WASTE GENERATION
+    {key:'_s1',label:'--- SECTION 1: WASTE GENERATION ---',type:'section'},
+    {key:'date',label:'Date of Waste Generation *',type:'date'},
+    {key:'time',label:'Time of Waste Generation',type:'time'},
+    {key:'personnel_involved',label:'Personnel Involved *',type:'text',placeholder:'Names of all staff involved'},
+    {key:'agent_ids',label:'Agent ID(s) *',type:'text',placeholder:'DCR agent ID numbers'},
+    {key:'strain',label:'Strain',type:'text',placeholder:'Strain name if applicable'},
+    {key:'metrc_tag',label:'METRC Tag # *',type:'text',placeholder:'24-digit METRC package tag number'},
+    {key:'qty_expired',label:'Quantity of Used / Expired Product',type:'text',placeholder:'e.g. 14.2g, 50 units'},
+    {key:'qty_usable',label:'Quantity of Usable Product',type:'text',placeholder:'e.g. 0g (if all unusable)'},
+    // SECTION 2: WASTE RENDERING
+    {key:'_s2',label:'--- SECTION 2: WASTE RENDERING ---',type:'section'},
+    {key:'rendering_method',label:'Method of Rendering *',type:'select',options:['49/51 Mix - Flower/Edibles (kitty litter, sand, soil, or vegetable oil)','49/51 Mix - Concentrates/Carts (ethanol or approved solvent)','Grinding with non-cannabis waste','Incineration (licensed facility)','Composting','Other approved method']},
+    {key:'rendering_description',label:'Description of Rendering Process',type:'textarea',placeholder:'Describe exactly how the material was rendered unusable'},
+    {key:'mixing_medium',label:'Mixing Medium Used (49/51% Mix)',type:'text',placeholder:'e.g. Kitty litter, sand, soil, vegetable oil, ethanol'},
+    // SECTION 3: WASTE STORAGE
+    {key:'_s3',label:'--- SECTION 3: WASTE STORAGE ---',type:'section'},
+    {key:'container_id',label:'Container ID / Label',type:'text',placeholder:'Waste container ID or label'},
+    {key:'storage_metrc_tag',label:'METRC Tag # (Storage Container)',type:'text',placeholder:'METRC tag for waste storage container'},
+    {key:'storage_location',label:'Waste Storage Location',type:'text',placeholder:'Location where waste is stored before disposal'},
+    {key:'camera_1',label:'Camera #1 Name (Angle 1 of Destruction)',type:'text',placeholder:'Camera name or ID'},
+    {key:'camera_2',label:'Camera #2 Name (Angle 2 of Destruction)',type:'text',placeholder:'Camera name or ID'},
+    {key:'qty_rendered',label:'Quantity of Rendered Waste',type:'text',placeholder:'Total weight/quantity after rendering'},
+    // SECTION 4: WASTE DISPOSAL
+    {key:'_s4',label:'--- SECTION 4: WASTE DISPOSAL ---',type:'section'},
+    {key:'disposal_date',label:'Date of Disposal',type:'date'},
+    {key:'disposal_time',label:'Time of Disposal',type:'time'},
+    {key:'waste_company',label:'Waste Management Company / Facility Used',type:'text',placeholder:'Licensed waste disposal company name'},
+    {key:'manifest_number',label:'Waste Manifest Number',type:'text',placeholder:'Manifest #'},
+    {key:'receipt_number',label:'Disposal Receipt Number',type:'text',placeholder:'Receipt #'},
+    {key:'disposal_location',label:'Location of Disposal',type:'text',placeholder:'Address or facility name'},
+    // SECTION 5: NOTES & COMPLIANCE
+    {key:'_s5',label:'--- SECTION 5: NOTES & COMPLIANCE ---',type:'section'},
+    {key:'notes',label:'Additional Notes / Comments',type:'textarea',placeholder:'Any additional information'},
+    {key:'metrc_recorded',label:'Recorded in METRC?',type:'select',options:['Yes - recorded before destruction','Yes - recorded after destruction','Pending']},
+    {key:'compliance_verification',label:'Compliance Verification',type:'text',placeholder:'Confirm all fields complete and METRC updated'},
+    {key:'supervisor_name',label:'Supervisor Name *',type:'text',placeholder:'Verifying supervisor full name'},
   ]},
   security:{id:'security',label:'Security Malfunction Log',icon:'\uD83D\uDD12',color:'#1e3a5f',bg:'#eff6ff',table:'pf_log_security',dcr:'Missouri DCR Security Requirements',freq:'Every malfunction event',fields:[
     {key:'date',label:'Date *',type:'date'},{key:'time',label:'Time Discovered',type:'time'},
@@ -3536,7 +3562,7 @@ function exportLogPdf(logType,entries,dateFrom,dateTo){
   doc.save('BlackFox_'+lt.label.replace(/[^a-z0-9]/gi,'_')+'_'+new Date().toISOString().slice(0,10)+'.pdf');
 }
 
-function LogEntryForm({logType,cu,onSave,onClose,SUPA_URL,SUPA_KEY,H}){
+function LogEntryForm({logType,cu,onSave,onClose,SUPA_URL,SUPA_KEY,H,editData}){
   const lt=LOG_TYPES[logType];
   const init=()=>{const f={submitted_by:cu.name,created_at:new Date().toISOString()};lt.fields.forEach(fl=>{if(fl.type==='date')f[fl.key]=new Date().toISOString().slice(0,10);else if(fl.type==='time')f[fl.key]=new Date().toTimeString().slice(0,5);else if(fl.type==='select')f[fl.key]=fl.options[0];else f[fl.key]='';});return f;};
   const[form,setForm]=React.useState(init);
@@ -3569,14 +3595,21 @@ function LogEntryForm({logType,cu,onSave,onClose,SUPA_URL,SUPA_KEY,H}){
   }
 
   async function save(){
-    const req=lt.fields.filter(f=>f.label.includes('*'));
+    const req=lt.fields.filter(f=>f.label.includes('*')&&f.type!=='section');
     for(const f of req){if(!form[f.key]?.trim()){alert(f.label.replace(' *','')+' is required.');return;}}
     setSaving(true);
-    const rec={...form,id:'log-'+Date.now(),log_type:logType,signature_image:sig||null,attachments:attachments.map(a=>({id:a.id,name:a.name,type:a.type,size:a.size,data:a.data})),submitted_by:cu.name,submitted_by_id:cu.id,created_at:new Date().toISOString()};
     try{
-      const res=await fetch(`${SUPA_URL}/rest/v1/${lt.table}`,{method:'POST',headers:{...H.headers,'Prefer':'return=representation'},body:JSON.stringify(rec)});
-      if(!res.ok){const e=await res.json();throw new Error(e.message||'Save failed');}
-      onSave(rec);
+      if(editData){
+        const update={...form,signature_image:sig||editData.signature_image||null,updated_by:cu.name,updated_at:new Date().toISOString()};
+        const res=await fetch(`${SUPA_URL}/rest/v1/${lt.table}?id=eq.${editData.id}`,{method:'PATCH',headers:{...H.headers,'Prefer':'return=representation'},body:JSON.stringify(update)});
+        if(!res.ok){const e=await res.json();throw new Error(e.message||'Update failed');}
+        onSave({...editData,...update});
+      } else {
+        const rec={...form,id:'log-'+Date.now(),log_type:logType,signature_image:sig||null,attachments:attachments.map(a=>({id:a.id,name:a.name,type:a.type,size:a.size,data:a.data})),submitted_by:cu.name,submitted_by_id:cu.id,created_at:new Date().toISOString()};
+        const res=await fetch(`${SUPA_URL}/rest/v1/${lt.table}`,{method:'POST',headers:{...H.headers,'Prefer':'return=representation'},body:JSON.stringify(rec)});
+        if(!res.ok){const e=await res.json();throw new Error(e.message||'Save failed');}
+        onSave(rec);
+      }
     }catch(e){alert('Save failed: '+e.message);}
     setSaving(false);
   }
@@ -3589,7 +3622,7 @@ function LogEntryForm({logType,cu,onSave,onClose,SUPA_URL,SUPA_KEY,H}){
   return el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&onClose()},
     el('div',{className:'md',style:{width:640,maxHeight:'93vh',overflowY:'auto'}},
       el('div',{className:'mh'},
-        el('div',null,el('div',{style:{fontSize:18}},[lt.icon,' ',lt.label,' Entry'].join('')),el('div',{style:{fontSize:12,color:'var(--text2)',marginTop:2}},lt.dcr)),
+        el('div',null,el('div',{style:{fontSize:18}},[lt.icon,' ',editData?'Edit ':'',lt.label,editData?'':' Entry'].join('')),el('div',{style:{fontSize:12,color:'var(--text2)',marginTop:2}},lt.dcr)),
         el('button',{className:'mc',onClick:onClose},'\u00D7'),
       ),
       el('div',{className:'mbd'},
@@ -3639,6 +3672,7 @@ function FacilityLogs({cu,isElevated,isAdmin,SUPA_URL,SUPA_KEY,H}){
   const[entries,setEntries]=React.useState([]);
   const[loading,setLoading]=React.useState(false);
   const[showForm,setShowForm]=React.useState(false);
+  const[editEntry,setEditEntry]=React.useState(null);
   const[dateFrom,setDateFrom]=React.useState('');
   const[dateTo,setDateTo]=React.useState('');
   const[search,setSearch]=React.useState('');
@@ -3753,6 +3787,7 @@ function FacilityLogs({cu,isElevated,isAdmin,SUPA_URL,SUPA_KEY,H}){
             ),
             el('div',{style:{display:'flex',gap:6,flexShrink:0,flexWrap:'wrap'}},
               el('button',{onClick:()=>exportLogPdf(activeLog,[entry],'',''),className:'btn b-ghost btn-sm'},'PDF'),
+              isElevated&&el('button',{onClick:()=>{setEditEntry(entry);setShowForm(false);},className:'btn b-ghost btn-sm'},'Edit'),
               activeLog==='visitor'&&isElevated&&!entry.time_out&&el('button',{
                 onClick:async()=>{
                   const now=new Date().toTimeString().slice(0,5);
@@ -3787,7 +3822,14 @@ function FacilityLogs({cu,isElevated,isAdmin,SUPA_URL,SUPA_KEY,H}){
           ),
         ))
       ),
-    showForm&&el(LogEntryForm,{logType:activeLog,cu,SUPA_URL,SUPA_KEY,H,onClose:()=>setShowForm(false),onSave:(rec)=>{setEntries(p=>[rec,...p]);setShowForm(false);}}),
+    (showForm||editEntry)&&el(LogEntryForm,{logType:activeLog,cu,SUPA_URL,SUPA_KEY,H,
+      editData:editEntry,
+      onClose:()=>{setShowForm(false);setEditEntry(null);},
+      onSave:(rec)=>{
+        if(editEntry){setEntries(p=>p.map(e=>e.id===rec.id?rec:e));}
+        else{setEntries(p=>[rec,...p]);}
+        setShowForm(false);setEditEntry(null);
+      }}),
   );
 }
 
@@ -9755,8 +9797,10 @@ function usePullToRefresh(onRefresh){
 function SanitationKiosk(){
   const fields=LOG_TYPES.sanitation.fields;
   const init=()=>{
+    if(editData) return {...editData};
     const f={};
     fields.forEach(fl=>{
+      if(fl.type==='section') return;
       if(fl.type==='date') f[fl.key]=new Date().toISOString().slice(0,10);
       else if(fl.type==='time') f[fl.key]=new Date().toTimeString().slice(0,5);
       else if(fl.type==='select') f[fl.key]=fl.options[0];
@@ -9789,15 +9833,19 @@ function SanitationKiosk(){
     setSaving(false);
   }
 
-  const INP=(f)=>el('div',{key:f.key,style:{marginBottom:14}},
-    el('label',{style:{fontSize:12,fontWeight:700,color:'#0f172a',display:'block',marginBottom:5}},f.label),
-    f.type==='select'
-      ?el('select',{value:form[f.key]||f.options[0],onChange:ev=>setF(f.key,ev.target.value),style:{width:'100%',border:'1px solid #cbd5e1',borderRadius:8,padding:'10px 12px',fontFamily:'inherit',fontSize:14,color:'#0f172a',background:'#fff',boxSizing:'border-box'}},
-          f.options.map(o=>el('option',{key:o,value:o},o)))
-      :f.type==='textarea'
-        ?el('textarea',{value:form[f.key]||'',onChange:ev=>setF(f.key,ev.target.value),placeholder:f.placeholder||'',rows:2,style:{width:'100%',border:'1px solid #cbd5e1',borderRadius:8,padding:'10px 12px',fontFamily:'inherit',fontSize:14,color:'#0f172a',resize:'vertical',boxSizing:'border-box'}})
-        :el('input',{type:f.type||'text',value:form[f.key]||'',onChange:ev=>setF(f.key,ev.target.value),placeholder:f.placeholder||'',style:{width:'100%',border:'1px solid #cbd5e1',borderRadius:8,padding:'10px 12px',fontFamily:'inherit',fontSize:14,color:'#0f172a',boxSizing:'border-box'}}),
-  );
+  const INP=(f)=>{
+    if(f.type==='section') return el('div',{key:f.key,style:{background:'#1e3a5f',color:'#fff',borderRadius:8,padding:'8px 14px',marginBottom:12,marginTop:8,fontSize:11,fontWeight:800,letterSpacing:'.5px'}},
+      f.label.replace(/^--- /,'').replace(/ ---$/,''));
+    return el('div',{key:f.key,style:{marginBottom:14}},
+      el('label',{style:{fontSize:12,fontWeight:700,color:'#0f172a',display:'block',marginBottom:5}},f.label),
+      f.type==='select'
+        ?el('select',{value:form[f.key]||f.options[0],onChange:ev=>setF(f.key,ev.target.value),style:{width:'100%',border:'1px solid #cbd5e1',borderRadius:8,padding:'10px 12px',fontFamily:'inherit',fontSize:14,color:'#0f172a',background:'#fff',boxSizing:'border-box'}},
+            f.options.map(o=>el('option',{key:o,value:o},o)))
+        :f.type==='textarea'
+          ?el('textarea',{value:form[f.key]||'',onChange:ev=>setF(f.key,ev.target.value),placeholder:f.placeholder||'',rows:2,style:{width:'100%',border:'1px solid #cbd5e1',borderRadius:8,padding:'10px 12px',fontFamily:'inherit',fontSize:14,color:'#0f172a',resize:'vertical',boxSizing:'border-box'}})
+          :el('input',{type:f.type||'text',value:form[f.key]||'',onChange:ev=>setF(f.key,ev.target.value),placeholder:f.placeholder||'',style:{width:'100%',border:'1px solid #cbd5e1',borderRadius:8,padding:'10px 12px',fontFamily:'inherit',fontSize:14,color:'#0f172a',boxSizing:'border-box'}}),
+    );
+  };
 
   if(done) return el('div',{style:{minHeight:'100vh',background:'linear-gradient(135deg,#065f46,#047857)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:24,fontFamily:'Inter,sans-serif',color:'#fff',textAlign:'center'}},
     el('div',{style:{fontSize:72,marginBottom:16}},'\u2705'),
