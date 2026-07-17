@@ -3492,7 +3492,7 @@ function exportLogPdf(logType,entries,dateFrom,dateTo){
   doc.setFont('helvetica','normal');doc.setFontSize(11);doc.setTextColor(...SUBTEXT);
   doc.text('Regulatory Basis: '+lt.dcr,margin,y);y+=18;
   doc.text('Period: '+(dateFrom||'All dates')+' to '+(dateTo||'All dates')+' \u00B7 Entries: '+entries.length,margin,y);y+=18;
-  doc.text('Black Fox Manufacturing \u2014 HMBF Management Inc.',margin,y);y+=10;
+  doc.text('Black Fox Manufacturing \u2014 HMBF Management Inc. \u2014 MAN000109',margin,y);y+=10;
   doc.setDrawColor(...BORDER);doc.setLineWidth(0.5);doc.line(margin,y,W-margin,y);y+=20;
   entries.forEach((entry,ei)=>{
     checkPage(60);
@@ -3532,7 +3532,7 @@ function exportLogPdf(logType,entries,dateFrom,dateTo){
     });
   });
   doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(22,163,74);
-  doc.text('Official record \u2014 Black Fox QMS \u00B7 HMBF Management Inc. \u00B7 Retain 5+ years per Missouri DCR',margin,H-20);
+  doc.text('Official record \u2014 Black Fox QMS \u00B7 MAN000109 \u00B7 HMBF Management Inc. \u00B7 Retain 5+ years per Missouri DCR',margin,H-20);
   doc.save('BlackFox_'+lt.label.replace(/[^a-z0-9]/gi,'_')+'_'+new Date().toISOString().slice(0,10)+'.pdf');
 }
 
@@ -6453,7 +6453,7 @@ function Scoreboard({tasks,cu,users}){
 // \u2500\u2500 SOPs \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 // \u2500\u2500 LICENSE & REGULATORY CONSTANTS \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 const LICENSES=[
-  {id:'bfm',name:'Black Fox Manufacturing',state:'Missouri',license_type:'Comprehensive Facility License'},
+  {id:'bfm',name:'Black Fox Manufacturing',state:'Missouri',license_type:'Comprehensive Facility License',license_number:'MAN000109'},
 ];
 
 const STATE_REGS={
@@ -7105,7 +7105,7 @@ function exportCorrectiveActionPdf(ca){
     doc.setTextColor(...TEXT2);
     doc.setFont('helvetica','normal');
     doc.setFontSize(8);
-    doc.text('CONFIDENTIAL \u2014 '+(ca.license_name||companyName)+' \u2014 Internal HR Record',margin,H-32);
+    doc.text('CONFIDENTIAL \u2014 MAN000109 \u2014 '+(ca.license_name||companyName)+' \u2014 Internal HR Record',margin,H-32);
     doc.text('Page '+pageNum,W-margin,H-32,{align:'right'});
   }
 
@@ -9842,7 +9842,7 @@ function SanitationKiosk(){
       el('button',{onClick:submit,disabled:saving,style:{width:'100%',background:saving?'#94a3b8':'#065f46',color:'#fff',border:'none',borderRadius:14,padding:'16px',fontFamily:'inherit',fontSize:16,fontWeight:800,cursor:saving?'not-allowed':'pointer',boxShadow:'0 4px 16px rgba(6,95,70,.3)'}},
         saving?'Saving...':'\u2705 Submit Sanitation Log'
       ),
-      el('div',{style:{textAlign:'center',fontSize:11,color:'#94a3b8',marginTop:12}},'Black Fox QMS \u2014 Powered by HMBF Management Inc.'),
+      el('div',{style:{textAlign:'center',fontSize:11,color:'#94a3b8',marginTop:12}},'Black Fox QMS \u2014 MAN000109 \u2014 HMBF Management Inc.'),
     ),
   );
 }
@@ -9944,11 +9944,12 @@ function LogKiosk({logKey}){
       el('button',{onClick:submit,disabled:saving,style:{width:'100%',background:saving?'#94a3b8':lt.color,color:'#fff',border:'none',borderRadius:14,padding:'16px',fontFamily:'inherit',fontSize:16,fontWeight:800,cursor:saving?'not-allowed':'pointer',boxShadow:'0 4px 16px rgba(0,0,0,.2)'}},
         saving?'Saving...':'\u2705 Submit '+lt.label
       ),
-      el('div',{style:{textAlign:'center',fontSize:11,color:'#94a3b8',marginTop:12}},'Black Fox QMS \u2014 HMBF Management Inc.'),
+      el('div',{style:{textAlign:'center',fontSize:11,color:'#94a3b8',marginTop:12}},'Black Fox QMS \u2014 MAN000109 \u2014 HMBF Management Inc.'),
     ),
   );
 }
 
+function WasteKiosk(){return el(LogKiosk,{logKey:'waste'});}
 function PestKiosk(){return el(LogKiosk,{logKey:'pest'});}
 function EquipmentKiosk(){return el(LogKiosk,{logKey:'equipment'});}
 function TemperatureKiosk(){return el(LogKiosk,{logKey:'temperature'});}
@@ -10577,6 +10578,7 @@ function App(){
   const k=p.get('kiosk');
   const C=k==='visitor'?VisitorKiosk
     :k==='sanitation'?SanitationKiosk
+    :k==='waste'?WasteKiosk
     :k==='pest'?PestKiosk
     :k==='equipment'?EquipmentKiosk
     :k==='temperature'?TemperatureKiosk
