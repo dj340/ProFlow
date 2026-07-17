@@ -3395,27 +3395,20 @@ const LOG_TYPES={
     {key:'metrc_tag',label:'METRC Tag # *',type:'text',placeholder:'24-digit METRC package tag number'},
     {key:'qty_unit',label:'Unit of Measure *',type:'select',options:['Grams','EA (Each)']},
     {key:'qty_expired',label:'Quantity of Waste / Expired Product *',type:'text',placeholder:'e.g. 14.2 or 50'},
-    // WASTE STORAGE
-    {key:'_s3',label:'--- WASTE STORAGE ---',type:'section'},
-    {key:'container_id',label:'Container ID / Label',type:'text',placeholder:'Waste container ID or label'},
-    {key:'storage_metrc_tag',label:'METRC Tag # (Storage Container)',type:'text',placeholder:'METRC tag for waste storage container'},
-    {key:'storage_location',label:'Waste Storage Location',type:'text',placeholder:'Location where waste is stored before disposal'},
     {key:'camera_1',label:'Camera #1 Name (Angle 1 of Destruction)',type:'text',placeholder:'Camera name or ID'},
     {key:'camera_2',label:'Camera #2 Name (Angle 2 of Destruction)',type:'text',placeholder:'Camera name or ID'},
     {key:'qty_rendered',label:'Quantity of Rendered Waste',type:'text',placeholder:'Total weight/quantity after rendering'},
-    // WASTE DISPOSAL
-    {key:'_s4',label:'--- WASTE DISPOSAL ---',type:'section'},
+    {key:'_s4',label:'--- WASTE DISPOSAL (Optional) ---',type:'section'},
     {key:'disposal_date',label:'Date of Disposal',type:'date'},
     {key:'disposal_time',label:'Time of Disposal',type:'time'},
     {key:'waste_company',label:'Waste Management Company / Facility Used',type:'text',placeholder:'Licensed waste disposal company name'},
     {key:'manifest_number',label:'Waste Manifest Number',type:'text',placeholder:'Manifest #'},
     {key:'receipt_number',label:'Disposal Receipt Number',type:'text',placeholder:'Receipt #'},
     {key:'disposal_location',label:'Location of Disposal',type:'text',placeholder:'Address or facility name'},
-    // NOTES & COMPLIANCE
     {key:'_s5',label:'--- NOTES & COMPLIANCE ---',type:'section'},
     {key:'notes',label:'Additional Notes / Comments',type:'textarea',placeholder:'Any additional information'},
     {key:'metrc_recorded',label:'Recorded in METRC?',type:'select',options:['Yes - recorded before destruction','Yes - recorded after destruction','Pending']},
-    {key:'compliance_verification',label:'Compliance Verification',type:'text',placeholder:'Confirm all fields complete and METRC updated'},
+    {key:'compliance_verification',label:'Compliance Verification',type:'checkbox'},
     {key:'supervisor_name',label:'Supervisor Name *',type:'text',placeholder:'Verifying supervisor full name'},
   ]},
   security:{id:'security',label:'Security Malfunction Log',icon:'\uD83D\uDD12',color:'#1e3a5f',bg:'#eff6ff',table:'pf_log_security',dcr:'Missouri DCR Security Requirements',freq:'Every malfunction event',fields:[
@@ -9828,8 +9821,16 @@ function SanitationKiosk(){
   }
 
   const INP=(f)=>{
-    if(f.type==='section') return el('div',{key:f.key,style:{background:'#1e3a5f',color:'#fff',borderRadius:8,padding:'8px 14px',marginBottom:12,marginTop:8,fontSize:11,fontWeight:800,letterSpacing:'.5px'}},
-      f.label.replace(/^--- /,'').replace(/ ---$/,''));
+    if(f.type==='section'){
+      const isOptional=f.label.includes('Optional');
+      return el('div',{key:f.key,style:{background:isOptional?'#7c3aed':'#1e3a5f',color:'#fff',borderRadius:8,padding:'8px 14px',marginBottom:12,marginTop:8,fontSize:11,fontWeight:800,letterSpacing:'.5px',display:'flex',justifyContent:'space-between',alignItems:'center'}},
+        f.label.replace(/^--- /,'').replace(/ ---$/,''),
+        isOptional&&el('span',{style:{fontSize:10,fontWeight:400,opacity:.8}},'Not required'));
+    }
+    if(f.type==='checkbox') return el('div',{key:f.key,style:{marginBottom:14,display:'flex',alignItems:'center',gap:12,background:'#f0fdf4',border:'1px solid #bbf7d0',borderRadius:8,padding:'12px 14px'}},
+      el('input',{type:'checkbox',id:'chk_'+f.key,checked:!!form[f.key],onChange:ev=>setF(f.key,ev.target.checked),style:{width:20,height:20,accentColor:'#16a34a',cursor:'pointer',flexShrink:0}}),
+      el('label',{htmlFor:'chk_'+f.key,style:{fontSize:13,fontWeight:700,color:'#16a34a',cursor:'pointer',lineHeight:1.4}},f.label),
+    );
     return el('div',{key:f.key,style:{marginBottom:14}},
       el('label',{style:{fontSize:12,fontWeight:700,color:'#0f172a',display:'block',marginBottom:5}},f.label),
       f.type==='select'
