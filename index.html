@@ -3866,6 +3866,12 @@ function FacilityLogs({cu,isElevated,isAdmin,SUPA_URL,SUPA_KEY,H}){
   const filtered=entries.filter(e=>!search||(JSON.stringify(e).toLowerCase().includes(search.toLowerCase())));
 
   if(!activeLog) return el('div',{style:{padding:'0 0 48px'}},
+    // SecurityInspectionForm renders here so it works from the landing page
+    showSecInsp&&el(SecurityInspectionForm,{cu,SUPA_URL,SUPA_KEY,H,
+      editData:editSecInsp,
+      onClose:()=>{setShowSecInsp(false);setEditSecInsp(null);},
+      onSave:(rec)=>{setShowSecInsp(false);setEditSecInsp(null);},
+    }),
     el('div',{style:{background:'linear-gradient(135deg,#1e3a5f,#2d5282)',borderRadius:14,padding:'24px 28px',marginBottom:24,color:'#fff'}},
       el('div',{style:{fontSize:22,fontWeight:800,marginBottom:4}},'\uD83D\uDCCB Facility Logs'),
       el('div',{style:{fontSize:13,opacity:.85,lineHeight:1.6}},'All logs are timestamped, signed, and exportable as PDF for DCR inspections and ISO 9001 audits. Retain all records for minimum 5 years per Missouri DCR.'),
@@ -4005,14 +4011,7 @@ function FacilityLogs({cu,isElevated,isAdmin,SUPA_URL,SUPA_KEY,H}){
         else{setEntries(p=>[rec,...p]);}
         setShowForm(false);setEditEntry(null);
       }}),
-    (showSecInsp)&&el(SecurityInspectionForm,{cu,SUPA_URL,SUPA_KEY,H,
-      editData:editSecInsp,
-      onClose:()=>{setShowSecInsp(false);setEditSecInsp(null);},
-      onSave:(rec)=>{
-        if(editSecInsp){setEntries(p=>p.map(e=>e.id===rec.id?rec:e));}
-        else{setEntries(p=>[rec,...p]);}
-        setShowSecInsp(false);setEditSecInsp(null);
-      }}),
+
   );
 }
 
