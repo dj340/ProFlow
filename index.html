@@ -374,46 +374,54 @@ const DEPTS=['Production','Distribution','Facility','Compliance','Warehouse','Sa
   'Cart Priming','Cart Filling','Cart Cleaning','Cart Packaging',
   'Pre-Roll Priming','Pre-Roll Filling','Pre-Roll Kiefing',
   'Gummy Production','Gummy Packaging'];
+// Assignable job titles. 'admin' is a hidden system-level role for platform
+// administration (Sam's account) — intentionally NOT in this list so it never
+// appears in role-assignment dropdowns, but it still works everywhere isAdmin
+// is checked.
 const ROLES=[
-  'employee',
-  'brand_ambassador',
-  'marketing_lead',
-  'biomass_lead','concentrate_lead','cart_priming_lead','cart_filling_lead','cart_cleaning_lead','cart_packaging_lead','pre_roll_lead','edible_lead','qc_lead',
-  'cart_filling_supervisor','cart_cleaning_supervisor','cart_packaging_supervisor','pre_roll_supervisor','edible_supervisor','qc_supervisor','facility_supervisor',
-  'compliance_manager','distribution_manager','warehouse_manager','extraction_manager','production_manager','maintenance_manager','facility_manager',
-  'sales_marketing_manager','general_manager',
-  'director_sales_marketing','director_production','director_operations',
-  'coo','admin'
+  'general_manager',
+  'assistant_general_manager',
+  'compliance_officer',
+  'security_manager',
+  'security_officer',
+  'sanitation',
+  'team_member',
+  'inventory_manager',
+  'extraction_manager',
 ];
 const RLABEL={
-  employee:'Employee',
-  brand_ambassador:'Brand Ambassador',
-  marketing_lead:'Marketing Lead',
-  biomass_lead:'Biomass Lead',concentrate_lead:'Concentrate Lead',cart_priming_lead:'Cart Priming Lead',cart_filling_lead:'Cart Filling Lead',cart_cleaning_lead:'Cart Cleaning Lead',cart_packaging_lead:'Cart Packaging Lead',pre_roll_lead:'Pre Roll Lead',edible_lead:'Edible Lead',qc_lead:'QC Lead',
-  cart_filling_supervisor:'Cart Filling Supervisor',cart_cleaning_supervisor:'Cart Cleaning Supervisor',cart_packaging_supervisor:'Cart Packaging Supervisor',pre_roll_supervisor:'Pre Roll Supervisor',edible_supervisor:'Edible Supervisor',qc_supervisor:'QC Supervisor',facility_supervisor:'Facility Supervisor',
-  compliance_manager:'Compliance Manager',distribution_manager:'Distribution Manager',warehouse_manager:'Warehouse Manager',extraction_manager:'Extraction Manager',production_manager:'Production Manager',maintenance_manager:'Maintenance Manager',facility_manager:'Facility Manager',
-  sales_marketing_manager:'Sales & Marketing Manager',general_manager:'General Manager',assistant_general_manager:'Assistant General Manager',
-  director_sales_marketing:'Director of Sales & Marketing',director_production:'Director of Production',director_operations:'Director of Operations',
-  coo:'COO',admin:'Admin'
+  general_manager:'General Manager',
+  assistant_general_manager:'Assistant of General Manager',
+  compliance_officer:'Compliance Officer',
+  security_manager:'Security Manager',
+  security_officer:'Security Officer',
+  sanitation:'Sanitation',
+  team_member:'Team Member',
+  inventory_manager:'Inventory Manager',
+  extraction_manager:'Extraction Manager',
+  admin:'Admin',
 };
 const RCOLOR={
-  employee:'bb-gray',
-  brand_ambassador:'bb-gray',marketing_lead:'bb-blue',
-  biomass_lead:'bb-blue',concentrate_lead:'bb-blue',cart_priming_lead:'bb-blue',cart_filling_lead:'bb-blue',cart_cleaning_lead:'bb-blue',cart_packaging_lead:'bb-blue',pre_roll_lead:'bb-blue',edible_lead:'bb-blue',qc_lead:'bb-blue',
-  cart_filling_supervisor:'bb-purple',cart_cleaning_supervisor:'bb-purple',cart_packaging_supervisor:'bb-purple',pre_roll_supervisor:'bb-purple',edible_supervisor:'bb-purple',qc_supervisor:'bb-purple',facility_supervisor:'bb-purple',
-  compliance_manager:'bb-yellow',distribution_manager:'bb-yellow',warehouse_manager:'bb-yellow',extraction_manager:'bb-yellow',production_manager:'bb-yellow',maintenance_manager:'bb-yellow',facility_manager:'bb-yellow',
-  sales_marketing_manager:'bb-yellow',general_manager:'bb-yellow',
-  director_sales_marketing:'bb-red',director_production:'bb-red',director_operations:'bb-red',
-  coo:'bb-red',admin:'bb-red'
+  general_manager:'bb-red',
+  assistant_general_manager:'bb-red',
+  compliance_officer:'bb-yellow',
+  security_manager:'bb-yellow',
+  security_officer:'bb-blue',
+  sanitation:'bb-gray',
+  team_member:'bb-gray',
+  inventory_manager:'bb-yellow',
+  extraction_manager:'bb-yellow',
+  admin:'bb-red',
 };
 const ROLE_GROUPS=[
-  {label:'Executive',roles:['coo','admin']},
-  {label:'Directors',roles:['director_sales_marketing','director_production','director_operations']},
-  {label:'Managers',roles:['general_manager','assistant_general_manager','sales_marketing_manager','facility_manager','production_manager','compliance_manager','distribution_manager','warehouse_manager','extraction_manager','maintenance_manager']},
-  {label:'Supervisors',roles:['facility_supervisor','cart_filling_supervisor','cart_cleaning_supervisor','cart_packaging_supervisor','pre_roll_supervisor','edible_supervisor','qc_supervisor']},
-  {label:'Leads',roles:['marketing_lead','cart_priming_lead','cart_filling_lead','cart_cleaning_lead','cart_packaging_lead','pre_roll_lead','edible_lead','qc_lead','biomass_lead','concentrate_lead']},
-  {label:'Staff',roles:['brand_ambassador','employee']},
+  {label:'Leadership',roles:['general_manager','assistant_general_manager']},
+  {label:'Compliance & Security',roles:['compliance_officer','security_manager','security_officer']},
+  {label:'Operations',roles:['inventory_manager','extraction_manager']},
+  {label:'Staff',roles:['sanitation','team_member']},
 ];
+// Mid-level managers who get elevated operational rights (create SOPs/logs, etc.)
+// without full facility-wide oversight.
+const MID_MANAGERS=['inventory_manager','extraction_manager','security_manager'];
 // \u2500\u2500 SECTIONS (mirrors DEPT_TREE hierarchy) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 const SECTION_TREE={
   'Michigan Production':{
@@ -850,7 +858,7 @@ function Auth({onLogin}){
       const exists=await db.get('pf_users',`email=eq.${encodeURIComponent(f.email)}`);
       if(exists.length){setMsg('Email already registered.');setLoading(false);return;}
       const fullName=f.firstName.trim()+' '+f.lastName.trim();
-      await db.insert('pf_users',{id:'u'+Date.now(),name:fullName,first_name:f.firstName,last_name:f.lastName,email:f.email,pw:f.pw,role:'employee',dept:(f.depts||[])[0]||'Production',depts:f.depts||[],licenses:f.licenses||[],loc:f.loc,approved:false,perms:[],managers:[],oversees_depts:[]});
+      await db.insert('pf_users',{id:'u'+Date.now(),name:fullName,first_name:f.firstName,last_name:f.lastName,email:f.email,pw:f.pw,role:'team_member',dept:(f.depts||[])[0]||'Production',depts:f.depts||[],licenses:f.licenses||[],loc:f.loc,approved:false,perms:[],managers:[],oversees_depts:[]});
       setPend(true);
     }catch(e){setMsg('Error. Please try again.');console.error(e);}
     setLoading(false);
@@ -927,7 +935,7 @@ function Auth({onLogin}){
 const SETUP_SQL=`
 CREATE TABLE IF NOT EXISTS pf_users (
   id text primary key, name text, first_name text, last_name text,
-  email text unique, pw text, role text default 'employee',
+  email text unique, pw text, role text default 'team_member',
   dept text default 'General', loc text default 'Missouri',
   approved boolean default false, perms jsonb default '[]', managers jsonb default '[]', oversees_depts jsonb default '[]', licenses jsonb default '[]', depts jsonb default '[]'
 );
@@ -1057,7 +1065,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
   const isTesting=isCartWF&&cwfStep?.isTesting;
   const isCCManager=(task.cc||[]).some(c=>c.id===cu.id);
   const userRole=cu.role||'';
-  const isManagerRole=['admin','coo','director_production','director_operations','general_manager','production_manager','qc_supervisor','qc_lead','facility_manager','compliance_manager','manager','supervisor'].includes(userRole);
+  const isManagerRole=['admin','general_manager','assistant_general_manager','compliance_officer','security_manager','inventory_manager','extraction_manager'].includes(userRole);
   const canTestingChange=isTesting&&(isCCManager||isAdmin||isManagerRole||isCreator);
 
   async function changeStatus(s){
@@ -2251,7 +2259,7 @@ function Team({users,setUsers,cu}){
   const[saveMsg,setSaveMsg]=useState('');
   const[newPw,setNewPw]=useState('');
   const[pwMsg,setPwMsg]=useState('');
-  const[af,setAf]=useState({firstName:'',lastName:'',email:'',pw:'',role:'employee',dept:'Production',loc:'Missouri'});
+  const[af,setAf]=useState({firstName:'',lastName:'',email:'',pw:'',role:'team_member',dept:'Production',loc:'Missouri'});
   const pending=users.filter(u=>!u.approved);
   const approved=users.filter(u=>u.approved).filter(u=>
     !search||u.name.toLowerCase().includes(search.toLowerCase())||
@@ -2353,7 +2361,7 @@ function Team({users,setUsers,cu}){
       await db.insert('pf_users',nu);
       setUsers(p=>[...p,nu]);
       setAdd(false);
-      setAf({firstName:'',lastName:'',email:'',pw:'',role:'employee',dept:'Production',loc:'Missouri'});
+      setAf({firstName:'',lastName:'',email:'',pw:'',role:'team_member',dept:'Production',loc:'Missouri'});
     }catch(e){console.error('addUser error:',e);alert('Failed to add user: '+e.message);}
   }
 
@@ -5600,7 +5608,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
   const[editing,setEditing]=useState(null);
   const[licFilter,setLicFilter]=useState(()=>{
     const ul=cu.licenses||[];
-    const elevated=cu.role==='admin'||['coo','director_production','director_operations','general_manager','compliance_manager','director_sales_marketing'].includes(cu.role);
+    const elevated=cu.role==='admin'||['general_manager','assistant_general_manager','compliance_officer','security_manager'].includes(cu.role);
     if(elevated||ul.length===0) return 'all';
     return ul.length===1?ul[0]:'all';
   });
@@ -5614,10 +5622,10 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
   // Senior leadership roles get elevated OPERATIONAL access (creating deviations/CAPAs/audits,
   // seeing the full QMS dashboard) but are NOT treated as Admin for privacy-sensitive checks
   // like disciplinary records or full Training Matrix visibility \u2014 those stay strict isAdmin only.
-  const isElevated=isAdmin||['coo','director_production','director_operations','general_manager','compliance_manager','director_sales_marketing'].includes(cu.role);
+  const isElevated=isAdmin||['general_manager','assistant_general_manager','compliance_officer','security_manager'].includes(cu.role);
   const qmsRoleGroup=ROLE_GROUPS.find(g=>g.roles.includes(cu.role))?.label;
-  const isManager=qmsRoleGroup==='Managers';
-  const isSupervisor=qmsRoleGroup==='Supervisors';
+  const isManager=qmsRoleGroup==='Operations';
+  const isSupervisor=false;
   // Managers and above can report Deviations/CAPAs/Audits; Supervisors are read-only in those tabs.
   const canReport=isElevated||isManager;
   // License scope for QMS
@@ -6057,7 +6065,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
           el('div',{className:'fg'},el('label',null,'Implementation Plan'),el('textarea',{id:'chg-plan',placeholder:'How and when will this change be implemented?'})),
           el('div',{className:'fg'},el('label',null,'Approved By'),el('select',{id:'chg-approver',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
             el('option',{value:''},'\u2014 Select Approver \u2014'),
-            ...users.filter(u=>u.approved&&['admin','manager','coo','director_production','director_operations','general_manager'].includes(u.role)).map(u=>el('option',{key:u.id,value:u.name},u.name+' \u2014 '+( RLABEL[u.role]||u.role))),
+            ...users.filter(u=>u.approved&&['admin','general_manager','assistant_general_manager','compliance_officer','security_manager'].includes(u.role)).map(u=>el('option',{key:u.id,value:u.name},u.name+' \u2014 '+( RLABEL[u.role]||u.role))),
           )),
           el('div',{className:'mf'},
             el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),
@@ -8834,7 +8842,7 @@ function SOPs({sops,setSops,cu,users}){
   const[deptFilter,setDeptFilter]=useState('All');
   const[licFilter,setLicFilter]=useState(()=>{
     const ul=cu.licenses||[];
-    const elevated=cu.role==='admin'||['coo','director_production','director_operations','director_sales_marketing','general_manager','assistant_general_manager','facility_manager','production_manager','compliance_manager','warehouse_manager','distribution_manager','extraction_manager','maintenance_manager','sales_marketing_manager'].includes(cu.role);
+    const elevated=cu.role==='admin'||['general_manager','assistant_general_manager','compliance_officer','security_manager','inventory_manager','extraction_manager'].includes(cu.role);
     if(elevated||ul.length===0) return 'all';
     return ul.length===1?ul[0]:'all';
   });
@@ -8851,9 +8859,9 @@ function SOPs({sops,setSops,cu,users}){
   });
 
   const isAdmin=cu.role==='admin';
-  const isElevated=isAdmin||['coo','director_production','director_operations','director_sales_marketing','general_manager'].includes(cu.role);
-  const canCreate=isElevated||['facility_manager','production_manager','compliance_manager','warehouse_manager','distribution_manager','extraction_manager','maintenance_manager','sales_marketing_manager'].includes(cu.role);
-  const canAiSop=isAdmin||['coo','director_production','director_operations','director_sales_marketing','general_manager','assistant_general_manager'].includes(cu.role);
+  const isElevated=isAdmin||['general_manager','assistant_general_manager','compliance_officer','security_manager'].includes(cu.role);
+  const canCreate=isElevated||MID_MANAGERS.includes(cu.role);
+  const canAiSop=isAdmin||['general_manager','assistant_general_manager','compliance_officer','security_manager'].includes(cu.role);
   // Non-elevated users are locked to their assigned licenses only
   const userLicenses=cu.licenses||[];
   const allowedLicenses=isElevated?LICENSES:LICENSES.filter(l=>userLicenses.includes(l.id));
@@ -9493,92 +9501,28 @@ const EVENT_COLORS=['#f5a623','#3b82f6','#10b981','#ef4444','#8b5cf6','#f97316',
 // employee profiles, and other HR/compliance views.
 //
 // Rules:
-// Employee        \u2192 themselves only
-// Lead            \u2192 self + employees under them (managers field)
-// Supervisor      \u2192 self + leads + employees under them
-// Manager         \u2192 self + supervisors + leads + employees under them
-//                   scoped to their assigned licenses
+// Team Member / Sanitation / Security Officer \u2192 themselves only
+// Inventory Manager / Extraction Manager / Compliance Officer / Security Manager
+//                 \u2192 self + direct/indirect reports (managers[] field)
 // General Manager / Assistant General Manager
-//                 \u2192 everyone assigned to their license(s)
-// Director        \u2192 everyone in their department (production/operations/compliance)
-//                   across ALL licenses
-// COO / Admin     \u2192 everyone everywhere
-
-// Director department mapping \u2014 which roles fall under each director's scope
-const DIRECTOR_DEPT_ROLES = {
-  director_production: [
-    'production_manager','extraction_manager','maintenance_manager','warehouse_manager',
-    'cart_filling_supervisor','cart_cleaning_supervisor','cart_packaging_supervisor',
-    'pre_roll_supervisor','edible_supervisor','qc_supervisor',
-    'cart_priming_lead','cart_filling_lead','cart_cleaning_lead','cart_packaging_lead',
-    'pre_roll_lead','edible_lead','qc_lead','biomass_lead','concentrate_lead',
-    'employee','brand_ambassador',
-  ],
-  director_operations: [
-    'facility_manager','distribution_manager','compliance_manager',
-    'facility_supervisor','qc_supervisor',
-    'qc_lead',
-    'employee','brand_ambassador',
-  ],
-  director_sales_marketing: [
-    'sales_marketing_manager',
-    'marketing_lead',
-    'brand_ambassador','employee',
-  ],
-};
-
-// Department keyword matching for director scope \u2014 used to filter by dept too
-const DIRECTOR_DEPT_KEYWORDS = {
-  director_production: ['cart','pre-roll','pre roll','edible','extraction','biomass','concentrate','production','warehouse','maintenance'],
-  director_operations: ['facility','distribution','compliance','operations','qc','quality'],
-  director_sales_marketing: ['sales','marketing'],
-};
+//                 \u2192 everyone at the facility
+// Admin           \u2192 everyone everywhere
 
 function getVisibleUsers(viewer, allUsers){
   const role = viewer.role;
-  const viewerLics = viewer.licenses || [];
   const rg = ROLE_GROUPS.find(g=>g.roles.includes(role))?.label;
 
-  // Admin and COO see everyone
-  if(role==='admin'||role==='coo') return allUsers.filter(u=>u.approved);
+  // Admin sees everyone
+  if(role==='admin') return allUsers.filter(u=>u.approved);
 
-  // Directors see everyone in their department across all licenses
-  if(role==='director_production'||role==='director_operations'||role==='director_sales_marketing'){
-    const deptRoles = DIRECTOR_DEPT_ROLES[role]||[];
-    const keywords = DIRECTOR_DEPT_KEYWORDS[role]||[];
-    return allUsers.filter(u=>{
-      if(!u.approved) return false;
-      if(u.id===viewer.id) return true;
-      // Include roles that fall under this director's scope
-      if(deptRoles.includes(u.role)) return true;
-      // Also match by department keyword for employees without specific roles
-      const dept = (u.dept||'').toLowerCase();
-      if(keywords.some(k=>dept.includes(k))) return true;
-      return false;
-    });
-  }
-
-  // General Manager and Assistant General Manager see everyone in their license(s)
+  // General Manager and Assistant General Manager see everyone at the facility
   if(role==='general_manager'||role==='assistant_general_manager'){
-    return allUsers.filter(u=>{
-      if(!u.approved) return false;
-      if(u.id===viewer.id) return true;
-      // Same license(s) as this GM
-      const uLics = u.licenses||[];
-      if(viewerLics.length>0&&uLics.length>0){
-        return viewerLics.some(l=>uLics.includes(l));
-      }
-      // Nationwide GM sees everyone (across all facilities)
-      return true; // Single facility: Missouri
-      return false;
-    });
+    return allUsers.filter(u=>u.approved);
   }
 
-  // Other managers \u2014 see themselves + supervisors + leads + employees under them
-  // scoped to their license(s)
-  if(rg==='Managers'){
-    // Build the set of people who report (directly or indirectly) to this manager
-    // by walking the managers[] field on each user
+  // Mid-level managers (Compliance Officer, Security Manager, Inventory Manager,
+  // Extraction Manager) \u2014 see themselves + anyone reporting to them
+  if(rg==='Compliance & Security'||rg==='Operations'){
     const directReports = allUsers.filter(u=>
       u.approved && u.id!==viewer.id &&
       (u.managers||[]).some(m=>(m.id||m)===viewer.id)
@@ -9588,29 +9532,7 @@ function getVisibleUsers(viewer, allUsers){
     return allUsers.filter(u=>u.approved&&reportIds.has(u.id));
   }
 
-  // Supervisors \u2014 see themselves + leads + employees under them
-  if(rg==='Supervisors'){
-    const directReports = allUsers.filter(u=>
-      u.approved && u.id!==viewer.id &&
-      (u.managers||[]).some(m=>(m.id||m)===viewer.id)
-    );
-    const reportIds = new Set(directReports.map(u=>u.id));
-    reportIds.add(viewer.id);
-    return allUsers.filter(u=>u.approved&&reportIds.has(u.id));
-  }
-
-  // Leads \u2014 see themselves + employees under them
-  if(rg==='Leads'){
-    const directReports = allUsers.filter(u=>
-      u.approved && u.id!==viewer.id &&
-      (u.managers||[]).some(m=>(m.id||m)===viewer.id)
-    );
-    const reportIds = new Set(directReports.map(u=>u.id));
-    reportIds.add(viewer.id);
-    return allUsers.filter(u=>u.approved&&reportIds.has(u.id));
-  }
-
-  // Staff/Employee \u2014 see only themselves
+  // Staff (Sanitation, Team Member) \u2014 see only themselves
   return allUsers.filter(u=>u.approved&&u.id===viewer.id);
 }
 
@@ -10744,11 +10666,11 @@ function App(){
 
   const pending=users.filter(u=>!u.approved).length;
   const isAdmin=cu.role==='admin';
-  const isElevated=isAdmin||['coo','director_production','director_operations','director_sales_marketing','general_manager','compliance_manager'].includes(cu.role);
+  const isElevated=isAdmin||['general_manager','assistant_general_manager','compliance_officer','security_manager'].includes(cu.role);
   // QMS access: Admin, Managers, and Supervisors. Employees, Leads, and Staff
   // get SOPs only (per Black Fox QMS QMS RBAC policy).
   const qmsRoleGroup=ROLE_GROUPS.find(g=>g.roles.includes(cu.role))?.label;
-  const canAccessQms=isAdmin||['Executive','Directors','Managers'].includes(qmsRoleGroup);
+  const canAccessQms=isAdmin||['Leadership','Compliance & Security','Operations'].includes(qmsRoleGroup);
   const today=new Date().toISOString().slice(0,10);
   const myTasks=tasks.filter(t=>(t.assignees||[]).some(a=>a.id===cu.id)&&!['archived'].includes(t.status));
   const overdueCt=tasks.filter(t=>!['done','archived'].includes(t.status)&&t.due_date&&t.due_date<today).length;
