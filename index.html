@@ -10199,6 +10199,175 @@ function PestKiosk(){return el(LogKiosk,{logKey:'pest'});}
 function EquipmentKiosk(){return el(LogKiosk,{logKey:'equipment'});}
 function TemperatureKiosk(){return el(LogKiosk,{logKey:'temperature'});}
 
+// URL: blfoxman.github.io/bfm/?kiosk=security
+// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+function SecurityKiosk(){
+  const lt=LOG_TYPES.security_inspection;
+  const init=()=>{
+    const f={date:new Date().toISOString().slice(0,10),time:new Date().toTimeString().slice(0,5),inspected_by:'',notes:''};
+    lt.cameras.forEach(c=>{f['cam_view_'+c]='';f['cam_ok_'+c]='';});
+    lt.door_locks.forEach(d=>{f['door_batt_'+d]='';f['door_ok_'+d]='';});
+    lt.alarms.forEach(a=>{f['alarm_batt_'+a]='';f['alarm_ok_'+a]='';});
+    return f;
+  };
+  const[form,setForm]=React.useState(init);
+  const[sig,setSig]=React.useState(null);
+  const[saving,setSaving]=React.useState(false);
+  const[done,setDone]=React.useState(false);
+  const[error,setError]=React.useState('');
+  const[tab,setTab]=React.useState('cameras');
+  const setF=(k,v)=>setForm(p=>({...p,[k]:v}));
+
+  const STATUS_OPTS=['OK','FAIL','N/A'];
+  const statusColor={'OK':'#16a34a','FAIL':'#dc2626','N/A':'#94a3b8','':'#cbd5e1'};
+
+  function StatusBtn({fieldKey,value}){
+    return el('div',{style:{display:'flex',gap:3}},
+      STATUS_OPTS.map(opt=>el('button',{key:opt,onClick:()=>setF(fieldKey,opt),
+        style:{padding:'5px 9px',borderRadius:6,border:'none',fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:'inherit',
+          background:value===opt?statusColor[opt]:'#f1f5f9',
+          color:value===opt?'#fff':'#64748b',
+        }
+      },opt))
+    );
+  }
+
+  async function submit(){
+    if(!form.inspected_by.trim()){setError('Please enter Inspected By.');return;}
+    if(!sig){setError('Please draw your signature.');return;}
+    setSaving(true);setError('');
+    const rec={...form,id:'sec-insp-'+Date.now(),log_type:'security_inspection',signature_image:sig,submitted_by:form.inspected_by.trim(),submitted_by_id:'kiosk',created_at:new Date().toISOString()};
+    try{
+      const res=await fetch(`${SUPA_URL}/rest/v1/pf_log_security_inspection`,{
+        method:'POST',
+        headers:{'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Prefer':'return=representation'},
+        body:JSON.stringify(rec),
+      });
+      if(!res.ok){const e=await res.json();throw new Error(e.message||'Save failed');}
+      setDone(true);
+    }catch(e){setError('Error: '+e.message);}
+    setSaving(false);
+  }
+
+  const failCount=[...lt.cameras.map(c=>form['cam_ok_'+c]),...lt.door_locks.map(d=>form['door_ok_'+d]),...lt.alarms.map(a=>form['alarm_ok_'+a])].filter(v=>v==='FAIL').length;
+  const doneCount=[...lt.cameras.map(c=>form['cam_ok_'+c]),...lt.door_locks.map(d=>form['door_ok_'+d]),...lt.alarms.map(a=>form['alarm_ok_'+a])].filter(v=>v&&v!=='').length;
+  const totalCount=lt.cameras.length+lt.door_locks.length+lt.alarms.length;
+  const TABS=[{id:'cameras',label:'\uD83D\uDCF7 Cameras ('+lt.cameras.length+')'},{id:'doors',label:'\uD83D\uDD10 Doors ('+lt.door_locks.length+')'},{id:'alarms',label:'\uD83D\uDEA8 Alarms ('+lt.alarms.length+')'}];
+
+  if(done) return el('div',{style:{minHeight:'100vh',background:'linear-gradient(135deg,#1e3a5f 0%,#2d5282 100%)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:24,fontFamily:'Inter,sans-serif',color:'#fff',textAlign:'center'}},
+    el('div',{style:{fontSize:72,marginBottom:16}},'\u2705'),
+    el('div',{style:{fontSize:24,fontWeight:800,marginBottom:8}},'Inspection Submitted!'),
+    el('div',{style:{fontSize:14,opacity:.85,marginBottom:8}},'Inspected by: '+form.inspected_by),
+    failCount>0&&el('div',{style:{background:'rgba(220,38,38,.25)',border:'1px solid rgba(220,38,38,.5)',borderRadius:10,padding:'8px 16px',fontSize:13,fontWeight:700,marginBottom:16}},'\u26A0\uFE0F '+failCount+' FAIL'+(failCount!==1?'s':'')+' recorded \u2014 notify management'),
+    el('div',{style:{fontSize:13,opacity:.7,marginBottom:32}},new Date().toLocaleString()),
+    el('div',{style:{background:'rgba(255,255,255,.15)',borderRadius:12,padding:'16px 24px',fontSize:13,marginBottom:32,maxWidth:360,lineHeight:1.7}},
+      'This inspection has been saved and signed. It is now available in Black Fox QMS Facility Logs for review.'
+    ),
+    el('button',{onClick:()=>{setDone(false);setForm(init());setSig(null);setTab('cameras');},style:{background:'#fff',color:'#1e3a5f',border:'none',borderRadius:12,padding:'14px 32px',fontFamily:'inherit',fontSize:15,fontWeight:800,cursor:'pointer'}},'Submit Another'),
+  );
+
+  return el('div',{style:{minHeight:'100vh',background:lt.bg,fontFamily:'Inter,sans-serif'}},
+    el('div',{style:{background:lt.color,padding:'20px 24px',color:'#fff'}},
+      el('div',{style:{display:'flex',alignItems:'center',gap:12,maxWidth:780,margin:'0 auto'}},
+        el('div',{style:{fontSize:28}},lt.icon),
+        el('div',null,
+          el('div',{style:{fontSize:18,fontWeight:800}},'Weekly Security Equipment Inspection'),
+          el('div',{style:{fontSize:11,opacity:.8}},'Black Fox Manufacturing \u2014 Missouri \u00B7 DCR'),
+        ),
+        el('div',{style:{marginLeft:'auto',fontSize:12,opacity:.75}},new Date().toLocaleDateString()),
+      ),
+    ),
+    el('div',{style:{maxWidth:780,margin:'0 auto',padding:'20px 16px 60px'}},
+      el('div',{style:{background:'#fff',border:'1px solid #e2e8f0',borderRadius:12,padding:'16px',marginBottom:16,display:'grid',gridTemplateColumns:'1fr 1fr 1.4fr',gap:12}},
+        el('div',null,el('label',{style:{fontSize:11,fontWeight:700,color:'#0f172a',display:'block',marginBottom:5}},'Date *'),
+          el('input',{type:'date',value:form.date,onChange:ev=>setF('date',ev.target.value),style:{width:'100%',border:'1px solid #cbd5e1',borderRadius:8,padding:'9px 10px',fontFamily:'inherit',fontSize:13,boxSizing:'border-box'}})),
+        el('div',null,el('label',{style:{fontSize:11,fontWeight:700,color:'#0f172a',display:'block',marginBottom:5}},'Time'),
+          el('input',{type:'time',value:form.time,onChange:ev=>setF('time',ev.target.value),style:{width:'100%',border:'1px solid #cbd5e1',borderRadius:8,padding:'9px 10px',fontFamily:'inherit',fontSize:13,boxSizing:'border-box'}})),
+        el('div',null,el('label',{style:{fontSize:11,fontWeight:700,color:'#0f172a',display:'block',marginBottom:5}},'Inspected By *'),
+          el('input',{type:'text',value:form.inspected_by,onChange:ev=>setF('inspected_by',ev.target.value),placeholder:'Your full name',style:{width:'100%',border:'1px solid #cbd5e1',borderRadius:8,padding:'9px 10px',fontFamily:'inherit',fontSize:13,boxSizing:'border-box'}})),
+      ),
+
+      el('div',{style:{background:'#fff',borderRadius:10,padding:'10px 14px',marginBottom:14,display:'flex',gap:12,alignItems:'center',flexWrap:'wrap',border:'1px solid #e2e8f0'}},
+        el('div',{style:{flex:1,minWidth:160}},
+          el('div',{style:{display:'flex',justifyContent:'space-between',fontSize:11,marginBottom:4,color:'#475569'}},
+            el('span',null,'Progress'),el('span',{style:{fontWeight:700}},doneCount+' / '+totalCount+' checked'),
+          ),
+          el('div',{style:{background:'#e2e8f0',borderRadius:10,height:8}},
+            el('div',{style:{width:(doneCount/totalCount*100)+'%',height:'100%',background:failCount>0?'#dc2626':'#16a34a',borderRadius:10,transition:'width .3s'}}),
+          ),
+        ),
+        failCount>0&&el('div',{style:{background:'rgba(220,38,38,.1)',border:'1px solid rgba(220,38,38,.3)',borderRadius:8,padding:'5px 12px',fontSize:12,fontWeight:700,color:'#dc2626'}},'\u26A0\uFE0F '+failCount+' FAIL'+(failCount!==1?'s':'')),
+        failCount===0&&doneCount>0&&el('div',{style:{background:'rgba(22,163,74,.1)',border:'1px solid rgba(22,163,74,.3)',borderRadius:8,padding:'5px 12px',fontSize:12,fontWeight:700,color:'#16a34a'}},'\u2705 '+(doneCount===totalCount?'All clear':'In progress')),
+      ),
+
+      el('div',{style:{display:'flex',gap:4,background:'#e2e8f0',borderRadius:8,padding:4,marginBottom:14}},
+        TABS.map(t=>el('button',{key:t.id,onClick:()=>setTab(t.id),style:{flex:1,padding:'9px 4px',borderRadius:6,border:'none',fontFamily:'inherit',fontSize:12,fontWeight:tab===t.id?700:500,cursor:'pointer',background:tab===t.id?'#1e3a5f':'transparent',color:tab===t.id?'#fff':'#475569'}},t.label)),
+      ),
+
+      tab==='cameras'&&el('div',{style:{background:'#fff',border:'1px solid #e2e8f0',borderRadius:10,overflow:'hidden',marginBottom:16}},
+        el('div',{style:{display:'grid',gridTemplateColumns:'1fr 100px 140px',background:'#1e3a5f',color:'#fff',padding:'8px 10px',fontSize:11,fontWeight:700}},
+          el('span',null,'CAMERA'),el('span',{style:{textAlign:'center'}},'VIEW'),el('span',{style:{textAlign:'center'}},'STATUS'),
+        ),
+        lt.cameras.map((cam,i)=>el('div',{key:cam,style:{display:'grid',gridTemplateColumns:'1fr 100px 140px',padding:'7px 10px',background:i%2===0?'#ffffff':'#f8fafc',borderBottom:'1px solid #e2e8f0',alignItems:'center',gap:6}},
+          el('span',{style:{fontSize:11,fontWeight:600,color:'#0f172a'}},cam),
+          el('select',{value:form['cam_view_'+cam]||'',onChange:ev=>setF('cam_view_'+cam,ev.target.value),style:{fontSize:11,padding:'4px',borderRadius:6,border:'1px solid #cbd5e1',fontFamily:'inherit',width:'100%'}},
+            el('option',{value:''},'--'),
+            ['Clear','Partial','Obstructed','Offline'].map(o=>el('option',{key:o,value:o},o)),
+          ),
+          el(StatusBtn,{fieldKey:'cam_ok_'+cam,value:form['cam_ok_'+cam]||''}),
+        ))
+      ),
+
+      tab==='doors'&&el('div',{style:{background:'#fff',border:'1px solid #e2e8f0',borderRadius:10,overflow:'hidden',marginBottom:16}},
+        el('div',{style:{display:'grid',gridTemplateColumns:'1fr 110px 140px',background:'#1e3a5f',color:'#fff',padding:'8px 10px',fontSize:11,fontWeight:700}},
+          el('span',null,'DOOR'),el('span',{style:{textAlign:'center'}},'BATTERY'),el('span',{style:{textAlign:'center'}},'STATUS'),
+        ),
+        lt.door_locks.map((door,i)=>el('div',{key:door,style:{display:'grid',gridTemplateColumns:'1fr 110px 140px',padding:'7px 10px',background:i%2===0?'#ffffff':'#f8fafc',borderBottom:'1px solid #e2e8f0',alignItems:'center',gap:6}},
+          el('span',{style:{fontSize:11,fontWeight:600,color:'#0f172a'}},door),
+          el('select',{value:form['door_batt_'+door]||'',onChange:ev=>setF('door_batt_'+door,ev.target.value),style:{fontSize:11,padding:'4px',borderRadius:6,border:'1px solid #cbd5e1',fontFamily:'inherit',width:'100%'}},
+            el('option',{value:''},'--'),
+            ['Good (100-60%)','Low (59-20%)','Critical (<20%)','N/A - Wired'].map(o=>el('option',{key:o,value:o},o)),
+          ),
+          el(StatusBtn,{fieldKey:'door_ok_'+door,value:form['door_ok_'+door]||''}),
+        ))
+      ),
+
+      tab==='alarms'&&el('div',{style:{background:'#fff',border:'1px solid #e2e8f0',borderRadius:10,overflow:'hidden',marginBottom:16}},
+        el('div',{style:{display:'grid',gridTemplateColumns:'1fr 110px 140px',background:'#1e3a5f',color:'#fff',padding:'8px 10px',fontSize:11,fontWeight:700}},
+          el('span',null,'COMPONENT'),el('span',{style:{textAlign:'center'}},'BATTERY'),el('span',{style:{textAlign:'center'}},'STATUS'),
+        ),
+        lt.alarms.map((alarm,i)=>el('div',{key:alarm,style:{display:'grid',gridTemplateColumns:'1fr 110px 140px',padding:'7px 10px',background:i%2===0?'#ffffff':'#f8fafc',borderBottom:'1px solid #e2e8f0',alignItems:'center',gap:6}},
+          el('span',{style:{fontSize:11,fontWeight:600,color:'#0f172a'}},alarm),
+          el('select',{value:form['alarm_batt_'+alarm]||'',onChange:ev=>setF('alarm_batt_'+alarm,ev.target.value),style:{fontSize:11,padding:'4px',borderRadius:6,border:'1px solid #cbd5e1',fontFamily:'inherit',width:'100%'}},
+            el('option',{value:''},'--'),
+            ['Good (100-60%)','Low (59-20%)','Critical (<20%)','N/A - Wired','N/A'].map(o=>el('option',{key:o,value:o},o)),
+          ),
+          el(StatusBtn,{fieldKey:'alarm_ok_'+alarm,value:form['alarm_ok_'+alarm]||''}),
+        ))
+      ),
+
+      el('div',{style:{background:'#fff',border:'1px solid #e2e8f0',borderRadius:10,padding:14,marginBottom:14}},
+        el('label',{style:{fontSize:12,fontWeight:700,color:'#0f172a',display:'block',marginBottom:6}},'General Notes / Issues Found'),
+        el('textarea',{value:form.notes,onChange:ev=>setF('notes',ev.target.value),rows:3,placeholder:'Describe any failures, offline cameras, low batteries, or issues found...',style:{width:'100%',border:'1px solid #cbd5e1',borderRadius:8,padding:'9px 10px',fontFamily:'inherit',fontSize:13,resize:'vertical',boxSizing:'border-box'}}),
+      ),
+
+      el('div',{style:{borderTop:'2px solid #e2e8f0',paddingTop:16,marginBottom:16}},
+        el('div',{style:{fontSize:14,fontWeight:700,color:'#0f172a',marginBottom:8}},'Inspector Signature *'),
+        sig
+          ?el('div',null,el('img',{src:sig,style:{border:'2px solid #1e3a5f',borderRadius:8,maxWidth:'100%',height:80,display:'block',marginBottom:8}}),el('button',{onClick:()=>setSig(null),style:{background:'none',border:'1px solid #cbd5e1',borderRadius:6,padding:'5px 14px',fontSize:12,cursor:'pointer',fontFamily:'inherit'}},'Clear & Re-sign'))
+          :el(SignaturePad,{label:'Sign to certify this inspection was completed accurately',onSave:d=>setSig(d),onClear:()=>setSig(null)}),
+        el('div',{style:{fontSize:11,color:'#94a3b8',marginTop:6}},'This record is legally valid for DCR inspections and ISO 9001 audits.'),
+      ),
+
+      error&&el('div',{style:{background:'#fef2f2',border:'1px solid #fecaca',borderRadius:10,padding:'12px 14px',fontSize:13,color:'#dc2626',marginBottom:12}},error),
+      el('button',{onClick:submit,disabled:saving,style:{width:'100%',background:saving?'#94a3b8':lt.color,color:'#fff',border:'none',borderRadius:14,padding:'16px',fontFamily:'inherit',fontSize:16,fontWeight:800,cursor:saving?'not-allowed':'pointer',boxShadow:'0 4px 16px rgba(0,0,0,.2)'}},
+        saving?'Saving...':'\u2705 Submit Inspection'
+      ),
+      el('div',{style:{textAlign:'center',fontSize:11,color:'#94a3b8',marginTop:12}},'Black Fox QMS \u2014 MAN000109 \u2014 HMBF Management Inc.'),
+    ),
+  );
+}
+
 // URL: blfoxman.github.io/BFM/?kiosk=visitor
 // \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
 function VisitorKiosk(){
@@ -10827,6 +10996,7 @@ function App(){
     :k==='pest'?PestKiosk
     :k==='equipment'?EquipmentKiosk
     :k==='temperature'?TemperatureKiosk
+    :k==='security'?SecurityKiosk
     :App;
   ReactDOM.createRoot(document.getElementById('root')).render(el(C));
 })();
