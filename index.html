@@ -9986,7 +9986,6 @@ function usePullToRefresh(onRefresh){
 function SanitationKiosk(){
   const fields=LOG_TYPES.sanitation.fields;
   const init=()=>{
-    if(editData) return {...editData};
     const f={};
     fields.forEach(fl=>{
       if(fl.type==='section') return;
