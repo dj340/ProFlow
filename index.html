@@ -3380,6 +3380,11 @@ const QMS_STATUSES={open:{label:'Open',color:'#ef4444'},in_progress:{label:'In P
 // \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
 // FACILITY LOGS MODULE \u2014 Sanitation, Waste, Security, Pest, Equipment, Temp, Visitor, Environmental
 // \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+// Turns a raw label like "BASE STATION" or "VAULT 1" into a safe, deterministic
+// Supabase column-name fragment (lowercase, alphanumeric + underscores only).
+// Used for the security inspection's per-camera/door/alarm fields so the JS key
+// always matches a real Postgres column name.
+function slug(s){return String(s).toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'');}
 const LOG_TYPES={
   sanitation:{id:'sanitation',label:'Sanitation Log',icon:'\uD83E\uDDF9',color:'#065f46',bg:'#f0fdf4',table:'pf_log_sanitation',dcr:'cGMP / 21 CFR 117 / Missouri DCR',freq:'Every shift',fields:[
     {key:'date',label:'Date *',type:'date'},{key:'time',label:'Time Completed',type:'time'},
@@ -3680,9 +3685,9 @@ function SecurityInspectionForm({cu,onSave,onClose,editData,SUPA_URL,SUPA_KEY,H}
     if(editData) return {...editData};
     const f={date:new Date().toISOString().slice(0,10),time:new Date().toTimeString().slice(0,5),inspected_by:cu.name,notes:''};
     // init all cameras/doors/alarms as empty
-    lt.cameras.forEach(c=>{f['cam_view_'+c]='';f['cam_ok_'+c]='';});
-    lt.door_locks.forEach(d=>{f['door_batt_'+d]='';f['door_ok_'+d]='';});
-    lt.alarms.forEach(a=>{f['alarm_batt_'+a]='';f['alarm_ok_'+a]='';});
+    lt.cameras.forEach(c=>{f['cam_view_'+slug(c)]='';f['cam_ok_'+slug(c)]='';});
+    lt.door_locks.forEach(d=>{f['door_batt_'+slug(d)]='';f['door_ok_'+slug(d)]='';});
+    lt.alarms.forEach(a=>{f['alarm_batt_'+slug(a)]='';f['alarm_ok_'+slug(a)]='';});
     return f;
   };
   const[form,setForm]=React.useState(initForm);
@@ -3724,8 +3729,8 @@ function SecurityInspectionForm({cu,onSave,onClose,editData,SUPA_URL,SUPA_KEY,H}
   }
 
   // Count fails
-  const failCount=[...lt.cameras.map(c=>form['cam_ok_'+c]),...lt.door_locks.map(d=>form['door_ok_'+d]),...lt.alarms.map(a=>form['alarm_ok_'+a])].filter(v=>v==='FAIL').length;
-  const doneCount=[...lt.cameras.map(c=>form['cam_ok_'+c]),...lt.door_locks.map(d=>form['door_ok_'+d]),...lt.alarms.map(a=>form['alarm_ok_'+a])].filter(v=>v&&v!=='').length;
+  const failCount=[...lt.cameras.map(c=>form['cam_ok_'+slug(c)]),...lt.door_locks.map(d=>form['door_ok_'+slug(d)]),...lt.alarms.map(a=>form['alarm_ok_'+slug(a)])].filter(v=>v==='FAIL').length;
+  const doneCount=[...lt.cameras.map(c=>form['cam_ok_'+slug(c)]),...lt.door_locks.map(d=>form['door_ok_'+slug(d)]),...lt.alarms.map(a=>form['alarm_ok_'+slug(a)])].filter(v=>v&&v!=='').length;
   const totalCount=lt.cameras.length+lt.door_locks.length+lt.alarms.length;
 
   const TABS=[{id:'cameras',label:'\uD83D\uDCF7 Cameras ('+lt.cameras.length+')'},{id:'doors',label:'\uD83D\uDD10 Door Locks ('+lt.door_locks.length+')'},{id:'alarms',label:'\uD83D\uDEA8 Alarm System ('+lt.alarms.length+')'}];
@@ -3780,11 +3785,11 @@ function SecurityInspectionForm({cu,onSave,onClose,editData,SUPA_URL,SUPA_KEY,H}
             ),
             lt.cameras.map((cam,i)=>el('div',{key:cam,style:{display:'grid',gridTemplateColumns:'1fr 100px 120px',padding:'7px 12px',background:i%2===0?'#ffffff':'var(--surface2)',borderBottom:'1px solid var(--border)',alignItems:'center',gap:8}},
               el('span',{style:{fontSize:12,fontWeight:600,color:'var(--text)'}},' '+cam),
-              el('select',{value:form['cam_view_'+cam]||'',onChange:ev=>setF('cam_view_'+cam,ev.target.value),style:{fontSize:11,padding:'3px 4px',borderRadius:6,border:'1px solid var(--border)',background:'var(--bg)',color:'var(--text)',fontFamily:'inherit',width:'100%'}},
+              el('select',{value:form['cam_view_'+slug(cam)]||'',onChange:ev=>setF('cam_view_'+slug(cam),ev.target.value),style:{fontSize:11,padding:'3px 4px',borderRadius:6,border:'1px solid var(--border)',background:'var(--bg)',color:'var(--text)',fontFamily:'inherit',width:'100%'}},
                 el('option',{value:''},'--'),
                 ['Clear','Partial','Obstructed','Offline'].map(o=>el('option',{key:o,value:o},o)),
               ),
-              el(StatusBtn,{fieldKey:'cam_ok_'+cam,value:form['cam_ok_'+cam]||''}),
+              el(StatusBtn,{fieldKey:'cam_ok_'+slug(cam),value:form['cam_ok_'+slug(cam)]||''}),
             ))
           ),
         ),
@@ -3797,11 +3802,11 @@ function SecurityInspectionForm({cu,onSave,onClose,editData,SUPA_URL,SUPA_KEY,H}
             ),
             lt.door_locks.map((door,i)=>el('div',{key:door,style:{display:'grid',gridTemplateColumns:'1fr 110px 120px',padding:'7px 12px',background:i%2===0?'#ffffff':'var(--surface2)',borderBottom:'1px solid var(--border)',alignItems:'center',gap:8}},
               el('span',{style:{fontSize:12,fontWeight:600,color:'var(--text)'}},' '+door),
-              el('select',{value:form['door_batt_'+door]||'',onChange:ev=>setF('door_batt_'+door,ev.target.value),style:{fontSize:11,padding:'3px 4px',borderRadius:6,border:'1px solid var(--border)',background:'var(--bg)',color:'var(--text)',fontFamily:'inherit',width:'100%'}},
+              el('select',{value:form['door_batt_'+slug(door)]||'',onChange:ev=>setF('door_batt_'+slug(door),ev.target.value),style:{fontSize:11,padding:'3px 4px',borderRadius:6,border:'1px solid var(--border)',background:'var(--bg)',color:'var(--text)',fontFamily:'inherit',width:'100%'}},
                 el('option',{value:''},'--'),
                 ['Good (100-60%)','Low (59-20%)','Critical (<20%)','N/A - Wired'].map(o=>el('option',{key:o,value:o},o)),
               ),
-              el(StatusBtn,{fieldKey:'door_ok_'+door,value:form['door_ok_'+door]||''}),
+              el(StatusBtn,{fieldKey:'door_ok_'+slug(door),value:form['door_ok_'+slug(door)]||''}),
             ))
           ),
         ),
@@ -3814,11 +3819,11 @@ function SecurityInspectionForm({cu,onSave,onClose,editData,SUPA_URL,SUPA_KEY,H}
             ),
             lt.alarms.map((alarm,i)=>el('div',{key:alarm,style:{display:'grid',gridTemplateColumns:'1fr 110px 120px',padding:'7px 12px',background:i%2===0?'#ffffff':'var(--surface2)',borderBottom:'1px solid var(--border)',alignItems:'center',gap:8}},
               el('span',{style:{fontSize:12,fontWeight:600,color:'var(--text)'}},' '+alarm),
-              el('select',{value:form['alarm_batt_'+alarm]||'',onChange:ev=>setF('alarm_batt_'+alarm,ev.target.value),style:{fontSize:11,padding:'3px 4px',borderRadius:6,border:'1px solid var(--border)',background:'var(--bg)',color:'var(--text)',fontFamily:'inherit',width:'100%'}},
+              el('select',{value:form['alarm_batt_'+slug(alarm)]||'',onChange:ev=>setF('alarm_batt_'+slug(alarm),ev.target.value),style:{fontSize:11,padding:'3px 4px',borderRadius:6,border:'1px solid var(--border)',background:'var(--bg)',color:'var(--text)',fontFamily:'inherit',width:'100%'}},
                 el('option',{value:''},'--'),
                 ['Good (100-60%)','Low (59-20%)','Critical (<20%)','N/A - Wired','N/A'].map(o=>el('option',{key:o,value:o},o)),
               ),
-              el(StatusBtn,{fieldKey:'alarm_ok_'+alarm,value:form['alarm_ok_'+alarm]||''}),
+              el(StatusBtn,{fieldKey:'alarm_ok_'+slug(alarm),value:form['alarm_ok_'+slug(alarm)]||''}),
             ))
           ),
         ),
@@ -10126,9 +10131,9 @@ function SecurityKiosk(){
   const lt=LOG_TYPES.security_inspection;
   const init=()=>{
     const f={date:new Date().toISOString().slice(0,10),time:new Date().toTimeString().slice(0,5),inspected_by:'',notes:''};
-    lt.cameras.forEach(c=>{f['cam_view_'+c]='';f['cam_ok_'+c]='';});
-    lt.door_locks.forEach(d=>{f['door_batt_'+d]='';f['door_ok_'+d]='';});
-    lt.alarms.forEach(a=>{f['alarm_batt_'+a]='';f['alarm_ok_'+a]='';});
+    lt.cameras.forEach(c=>{f['cam_view_'+slug(c)]='';f['cam_ok_'+slug(c)]='';});
+    lt.door_locks.forEach(d=>{f['door_batt_'+slug(d)]='';f['door_ok_'+slug(d)]='';});
+    lt.alarms.forEach(a=>{f['alarm_batt_'+slug(a)]='';f['alarm_ok_'+slug(a)]='';});
     return f;
   };
   const[form,setForm]=React.useState(init);
@@ -10170,8 +10175,8 @@ function SecurityKiosk(){
     setSaving(false);
   }
 
-  const failCount=[...lt.cameras.map(c=>form['cam_ok_'+c]),...lt.door_locks.map(d=>form['door_ok_'+d]),...lt.alarms.map(a=>form['alarm_ok_'+a])].filter(v=>v==='FAIL').length;
-  const doneCount=[...lt.cameras.map(c=>form['cam_ok_'+c]),...lt.door_locks.map(d=>form['door_ok_'+d]),...lt.alarms.map(a=>form['alarm_ok_'+a])].filter(v=>v&&v!=='').length;
+  const failCount=[...lt.cameras.map(c=>form['cam_ok_'+slug(c)]),...lt.door_locks.map(d=>form['door_ok_'+slug(d)]),...lt.alarms.map(a=>form['alarm_ok_'+slug(a)])].filter(v=>v==='FAIL').length;
+  const doneCount=[...lt.cameras.map(c=>form['cam_ok_'+slug(c)]),...lt.door_locks.map(d=>form['door_ok_'+slug(d)]),...lt.alarms.map(a=>form['alarm_ok_'+slug(a)])].filter(v=>v&&v!=='').length;
   const totalCount=lt.cameras.length+lt.door_locks.length+lt.alarms.length;
   const TABS=[{id:'cameras',label:'\uD83D\uDCF7 Cameras ('+lt.cameras.length+')'},{id:'doors',label:'\uD83D\uDD10 Doors ('+lt.door_locks.length+')'},{id:'alarms',label:'\uD83D\uDEA8 Alarms ('+lt.alarms.length+')'}];
 
@@ -10231,11 +10236,11 @@ function SecurityKiosk(){
         ),
         lt.cameras.map((cam,i)=>el('div',{key:cam,style:{display:'grid',gridTemplateColumns:'1fr 100px 140px',padding:'7px 10px',background:i%2===0?'#ffffff':'#f8fafc',borderBottom:'1px solid #e2e8f0',alignItems:'center',gap:6}},
           el('span',{style:{fontSize:11,fontWeight:600,color:'#0f172a'}},cam),
-          el('select',{value:form['cam_view_'+cam]||'',onChange:ev=>setF('cam_view_'+cam,ev.target.value),style:{fontSize:11,padding:'4px',borderRadius:6,border:'1px solid #cbd5e1',fontFamily:'inherit',width:'100%'}},
+          el('select',{value:form['cam_view_'+slug(cam)]||'',onChange:ev=>setF('cam_view_'+slug(cam),ev.target.value),style:{fontSize:11,padding:'4px',borderRadius:6,border:'1px solid #cbd5e1',fontFamily:'inherit',width:'100%'}},
             el('option',{value:''},'--'),
             ['Clear','Partial','Obstructed','Offline'].map(o=>el('option',{key:o,value:o},o)),
           ),
-          el(StatusBtn,{fieldKey:'cam_ok_'+cam,value:form['cam_ok_'+cam]||''}),
+          el(StatusBtn,{fieldKey:'cam_ok_'+slug(cam),value:form['cam_ok_'+slug(cam)]||''}),
         ))
       ),
 
@@ -10245,11 +10250,11 @@ function SecurityKiosk(){
         ),
         lt.door_locks.map((door,i)=>el('div',{key:door,style:{display:'grid',gridTemplateColumns:'1fr 110px 140px',padding:'7px 10px',background:i%2===0?'#ffffff':'#f8fafc',borderBottom:'1px solid #e2e8f0',alignItems:'center',gap:6}},
           el('span',{style:{fontSize:11,fontWeight:600,color:'#0f172a'}},door),
-          el('select',{value:form['door_batt_'+door]||'',onChange:ev=>setF('door_batt_'+door,ev.target.value),style:{fontSize:11,padding:'4px',borderRadius:6,border:'1px solid #cbd5e1',fontFamily:'inherit',width:'100%'}},
+          el('select',{value:form['door_batt_'+slug(door)]||'',onChange:ev=>setF('door_batt_'+slug(door),ev.target.value),style:{fontSize:11,padding:'4px',borderRadius:6,border:'1px solid #cbd5e1',fontFamily:'inherit',width:'100%'}},
             el('option',{value:''},'--'),
             ['Good (100-60%)','Low (59-20%)','Critical (<20%)','N/A - Wired'].map(o=>el('option',{key:o,value:o},o)),
           ),
-          el(StatusBtn,{fieldKey:'door_ok_'+door,value:form['door_ok_'+door]||''}),
+          el(StatusBtn,{fieldKey:'door_ok_'+slug(door),value:form['door_ok_'+slug(door)]||''}),
         ))
       ),
 
@@ -10259,11 +10264,11 @@ function SecurityKiosk(){
         ),
         lt.alarms.map((alarm,i)=>el('div',{key:alarm,style:{display:'grid',gridTemplateColumns:'1fr 110px 140px',padding:'7px 10px',background:i%2===0?'#ffffff':'#f8fafc',borderBottom:'1px solid #e2e8f0',alignItems:'center',gap:6}},
           el('span',{style:{fontSize:11,fontWeight:600,color:'#0f172a'}},alarm),
-          el('select',{value:form['alarm_batt_'+alarm]||'',onChange:ev=>setF('alarm_batt_'+alarm,ev.target.value),style:{fontSize:11,padding:'4px',borderRadius:6,border:'1px solid #cbd5e1',fontFamily:'inherit',width:'100%'}},
+          el('select',{value:form['alarm_batt_'+slug(alarm)]||'',onChange:ev=>setF('alarm_batt_'+slug(alarm),ev.target.value),style:{fontSize:11,padding:'4px',borderRadius:6,border:'1px solid #cbd5e1',fontFamily:'inherit',width:'100%'}},
             el('option',{value:''},'--'),
             ['Good (100-60%)','Low (59-20%)','Critical (<20%)','N/A - Wired','N/A'].map(o=>el('option',{key:o,value:o},o)),
           ),
-          el(StatusBtn,{fieldKey:'alarm_ok_'+alarm,value:form['alarm_ok_'+alarm]||''}),
+          el(StatusBtn,{fieldKey:'alarm_ok_'+slug(alarm),value:form['alarm_ok_'+slug(alarm)]||''}),
         ))
       ),
 
