@@ -3530,7 +3530,36 @@ function exportLogPdf(logType,entries,dateFrom,dateTo){
   doc.text('Period: '+(dateFrom||'All dates')+' to '+(dateTo||'All dates')+' \u00B7 Entries: '+entries.length,margin,y);y+=18;
   doc.text('Black Fox Manufacturing \u2014 HMBF Management Inc. \u2014 MAN000109',margin,y);y+=10;
   doc.setDrawColor(...BORDER);doc.setLineWidth(0.5);doc.line(margin,y,W-margin,y);y+=20;
-  entries.forEach((entry,ei)=>{
+  function sectionTable(title,items,keyPrefix,statusOpts){
+    checkPage(30);
+    doc.setFillColor(...NAVY);doc.rect(margin,y,W-margin*2,20,'F');
+    doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(9.5);
+    doc.text(title,margin+8,y+14);y+=20;
+    const col1=margin+8,col2=margin+270,col3=margin+400,rowH=15;
+    doc.setFillColor(...NAVY);doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(8);
+    doc.rect(margin,y,W-margin*2,14,'F');
+    doc.text('NAME',col1,y+10);doc.text(statusOpts.label1,col2,y+10);doc.text('STATUS',col3,y+10);
+    y+=14;
+    items.forEach((name,i)=>{
+      checkPage(rowH+2);
+      const s=slug(name);
+      const val1=entry[keyPrefix.batt+s]||entry[keyPrefix.view+s]||'--';
+      const val2=entry[keyPrefix.ok+s]||'--';
+      if(i%2===0){doc.setFillColor(248,250,252);doc.rect(margin,y,W-margin*2,rowH,'F');}
+      doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(...TEXT);
+      doc.text(name,col1,y+11);
+      doc.setTextColor(...SUBTEXT);doc.text(String(val1),col2,y+11);
+      if(val2==='FAIL'){doc.setTextColor(220,38,38);doc.setFont('helvetica','bold');}
+      else if(val2==='OK'){doc.setTextColor(22,163,74);doc.setFont('helvetica','bold');}
+      else{doc.setTextColor(148,163,184);doc.setFont('helvetica','normal');}
+      doc.text(String(val2),col3,y+11);
+      y+=rowH;
+    });
+    y+=10;
+  }
+  let entry; // used by sectionTable closure below
+  entries.forEach((e,ei)=>{
+    entry=e;
     checkPage(60);
     doc.setFillColor(...LIGHT);doc.rect(margin,y,W-margin*2,26,'F');
     doc.setFillColor(...NAVY);doc.rect(margin,y,4,26,'F');
@@ -3539,6 +3568,28 @@ function exportLogPdf(logType,entries,dateFrom,dateTo){
     doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...SUBTEXT);
     doc.text('By: '+(entry.submitted_by||'')+' \u00B7 '+new Date(entry.created_at||Date.now()).toLocaleString(),W-margin-4,y+17,{align:'right'});
     y+=34;
+
+    if(logType==='security_inspection'){
+      const cams=lt.cameras||[],doors=lt.door_locks||[],alarms=lt.alarms||[];
+      const allOk=[...cams.map(c=>entry['cam_ok_'+slug(c)]),...doors.map(d=>entry['door_ok_'+slug(d)]),...alarms.map(a=>entry['alarm_ok_'+slug(a)])];
+      const failCount=allOk.filter(v=>v==='FAIL').length;
+      const checkedCount=allOk.filter(v=>v&&v!=='').length;
+      doc.setFont('helvetica','bold');doc.setFontSize(9);
+      doc.setTextColor(...(failCount>0?[220,38,38]:[22,163,74]));
+      doc.text((failCount>0?(failCount+' FAIL'+(failCount!==1?'S':'')+' FOUND'):'ALL CLEAR')+'  \u00B7  '+checkedCount+' / '+allOk.length+' items checked',margin+8,y);
+      y+=18;
+      sectionTable('CAMERAS ('+cams.length+')',cams,{view:'cam_view_',ok:'cam_ok_',batt:'cam_view_'},{label1:'VIEW'});
+      sectionTable('DOOR LOCKS ('+doors.length+')',doors,{view:'door_batt_',ok:'door_ok_',batt:'door_batt_'},{label1:'BATTERY'});
+      sectionTable('ALARM SYSTEM ('+alarms.length+')',alarms,{view:'alarm_batt_',ok:'alarm_ok_',batt:'alarm_batt_'},{label1:'BATTERY'});
+      if(entry.notes&&String(entry.notes).trim()){
+        checkPage(30);
+        doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(...SUBTEXT);doc.text('GENERAL NOTES / ISSUES FOUND',margin+8,y);y+=14;
+        doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.setTextColor(...TEXT);
+        const nlines=doc.splitTextToSize(String(entry.notes),W-margin*2-16);
+        nlines.forEach(l=>{checkPage(14);doc.text(l,margin+8,y);y+=14;});
+        y+=6;
+      }
+    } else {
     lt.fields.forEach(f=>{
       const val=entry[f.key];if(!val||!String(val).trim())return;
       checkPage(22);
@@ -3547,6 +3598,7 @@ function exportLogPdf(logType,entries,dateFrom,dateTo){
       const lines=doc.splitTextToSize(String(val),W-margin*2-130);
       lines.forEach((l,li)=>{if(li>0){y+=14;checkPage(14);}doc.text(l,margin+155,y);});y+=20;
     });
+    }
     if(entry.signature_image){checkPage(50);doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(...SUBTEXT);doc.text('SIGNATURE',margin+8,y);try{doc.addImage(entry.signature_image,'PNG',margin+155,y-14,110,30);}catch(e){}y+=36;}
     checkPage(16);doc.setDrawColor(...BORDER);doc.line(margin,y+4,W-margin,y+4);y+=16;
   });
@@ -10975,5 +11027,3 @@ window.addEventListener('beforeinstallprompt', e => {
 </script>
 </body>
 </html>
-
-  
