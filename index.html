@@ -388,6 +388,8 @@ const ROLES=[
   'team_member',
   'inventory_manager',
   'extraction_manager',
+  'production_manager',
+  'sales_manager',
 ];
 const RLABEL={
   general_manager:'General Manager',
@@ -399,6 +401,8 @@ const RLABEL={
   team_member:'Team Member',
   inventory_manager:'Inventory Manager',
   extraction_manager:'Extraction Manager',
+  production_manager:'Production Manager',
+  sales_manager:'Sales Manager',
   admin:'Admin',
 };
 const RCOLOR={
@@ -411,17 +415,50 @@ const RCOLOR={
   team_member:'bb-gray',
   inventory_manager:'bb-yellow',
   extraction_manager:'bb-yellow',
+  production_manager:'bb-yellow',
+  sales_manager:'bb-yellow',
   admin:'bb-red',
 };
 const ROLE_GROUPS=[
   {label:'Leadership',roles:['general_manager','assistant_general_manager']},
   {label:'Compliance & Security',roles:['compliance_officer','security_manager','security_officer']},
-  {label:'Operations',roles:['inventory_manager','extraction_manager']},
+  {label:'Operations',roles:['inventory_manager','extraction_manager','production_manager','sales_manager']},
   {label:'Staff',roles:['sanitation','team_member']},
 ];
 // Mid-level managers who get elevated operational rights (create SOPs/logs, etc.)
 // without full facility-wide oversight.
-const MID_MANAGERS=['inventory_manager','extraction_manager','security_manager'];
+const MID_MANAGERS=['inventory_manager','extraction_manager','security_manager','production_manager','sales_manager'];
+// Priority order used when a multi-role person's "primary" group/role needs to be
+// picked for display or single-value logic (highest tier first).
+const ROLE_GROUP_PRIORITY=['Leadership','Compliance & Security','Operations','Staff'];
+
+// ── Multi-role helpers ──────────────────────────────────────────────────────
+// A user can now hold more than one title. `roles` (array) is the source of
+// truth going forward; `role` (single string) is kept in sync as roles[0] so
+// every existing single-role check (isAdmin, etc.) keeps working unchanged.
+function userRoles(u){
+  if(!u) return [];
+  if(Array.isArray(u.roles)&&u.roles.length) return u.roles;
+  return u.role?[u.role]:[];
+}
+function hasRole(u,r){return userRoles(u).includes(r);}
+function hasAnyRole(u,arr){return userRoles(u).some(r=>arr.includes(r));}
+// The user's highest-priority ROLE_GROUPS label across all of their roles —
+// used wherever code used to do a single ROLE_GROUPS.find(...).label lookup.
+function topRoleGroup(u){
+  const rs=userRoles(u);
+  const groups=ROLE_GROUPS.filter(g=>g.roles.some(r=>rs.includes(r))).map(g=>g.label);
+  for(const p of ROLE_GROUP_PRIORITY){if(groups.includes(p))return p;}
+  return groups[0];
+}
+// Human-readable, comma-joined list of ALL of a user's role titles (not just
+// the primary one) — use this instead of RLABEL[u.role] wherever a user's
+// role is displayed, now that people can hold more than one title.
+function roleLabels(u){
+  const rs=userRoles(u);
+  if(!rs.length) return '\u2014';
+  return rs.map(r=>RLABEL[r]||r).join(', ');
+}
 // \u2500\u2500 SECTIONS (mirrors DEPT_TREE hierarchy) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 const SECTION_TREE={
   'Michigan Production':{
@@ -1064,8 +1101,7 @@ function TaskModal({task,cu,users,onClose,onUpdate,onDelete}){
   const cwfIdx=isCartWF?getWorkflowStep(task):0;
   const isTesting=isCartWF&&cwfStep?.isTesting;
   const isCCManager=(task.cc||[]).some(c=>c.id===cu.id);
-  const userRole=cu.role||'';
-  const isManagerRole=['admin','general_manager','assistant_general_manager','compliance_officer','security_manager','inventory_manager','extraction_manager'].includes(userRole);
+  const isManagerRole=hasAnyRole(cu,['admin','general_manager','assistant_general_manager','compliance_officer','security_manager','inventory_manager','extraction_manager','production_manager','sales_manager']);
   const canTestingChange=isTesting&&(isCCManager||isAdmin||isManagerRole||isCreator);
 
   async function changeStatus(s){
@@ -2259,12 +2295,12 @@ function Team({users,setUsers,cu}){
   const[saveMsg,setSaveMsg]=useState('');
   const[newPw,setNewPw]=useState('');
   const[pwMsg,setPwMsg]=useState('');
-  const[af,setAf]=useState({firstName:'',lastName:'',email:'',pw:'',role:'team_member',dept:'Production',loc:'Missouri'});
+  const[af,setAf]=useState({firstName:'',lastName:'',email:'',pw:'',role:'team_member',roles:['team_member'],dept:'Production',loc:'Missouri'});
   const pending=users.filter(u=>!u.approved);
   const approved=users.filter(u=>u.approved).filter(u=>
     !search||u.name.toLowerCase().includes(search.toLowerCase())||
     u.email?.toLowerCase().includes(search.toLowerCase())||
-    (RLABEL[u.role]||'').toLowerCase().includes(search.toLowerCase())
+    roleLabels(u).toLowerCase().includes(search.toLowerCase())
   );
 
   async function approve(id){
@@ -2293,6 +2329,7 @@ function Team({users,setUsers,cu}){
       name:editU.name,
       email:editU.email,
       role:editU.role,
+      roles:editU.roles&&editU.roles.length?editU.roles:(editU.role?[editU.role]:[]),
       dept:editU.dept,
       depts:editU.depts||[],
       licenses:editU.licenses||[],
@@ -2327,7 +2364,7 @@ function Team({users,setUsers,cu}){
       if(e.message.startsWith('MISSING_COLUMN')){
         // Save without oversees_depts so at least other fields persist
         setSaveMsg('Adding column\u2026 retrying\u2026');
-        const fallback={role:editU.role,dept:editU.dept,depts:editU.depts||[],licenses:editU.licenses||[],loc:editU.loc,managers:editU.managers||[]};
+        const fallback={role:editU.role,roles:editU.roles&&editU.roles.length?editU.roles:(editU.role?[editU.role]:[]),dept:editU.dept,depts:editU.depts||[],licenses:editU.licenses||[],loc:editU.loc,managers:editU.managers||[]};
         try{
           await fetch(`${SUPA_URL}/rest/v1/pf_users?id=eq.${editU.id}`,{method:'PATCH',headers:{...H.headers,'Prefer':'return=representation'},body:JSON.stringify(fallback)});
           setUsers(p=>p.map(u=>u.id===editU.id?{...u,...fallback}:u));
@@ -2349,10 +2386,11 @@ function Team({users,setUsers,cu}){
   async function addUser(){
     if(!af.firstName||!af.email||!af.pw)return;
     const fullName=af.firstName.trim()+' '+(af.lastName||'').trim();
+    const rolesArr=af.roles&&af.roles.length?af.roles:[af.role||'team_member'];
     const nu={
       id:'u'+Date.now(),name:fullName,
       first_name:af.firstName,last_name:af.lastName||'',
-      email:af.email,pw:af.pw,role:af.role,
+      email:af.email,pw:af.pw,role:rolesArr[0],roles:rolesArr,
       dept:af.dept,depts:af.depts||[af.dept],
       licenses:af.licenses||[],loc:af.loc,
       approved:true,perms:[],managers:[],oversees_depts:[],
@@ -2361,9 +2399,10 @@ function Team({users,setUsers,cu}){
       await db.insert('pf_users',nu);
       setUsers(p=>[...p,nu]);
       setAdd(false);
-      setAf({firstName:'',lastName:'',email:'',pw:'',role:'team_member',dept:'Production',loc:'Missouri'});
+      setAf({firstName:'',lastName:'',email:'',pw:'',role:'team_member',roles:['team_member'],dept:'Production',loc:'Missouri'});
     }catch(e){console.error('addUser error:',e);alert('Failed to add user: '+e.message);}
   }
+
 
   function toggleDept(dept){
     setEditU(p=>{
@@ -2449,7 +2488,7 @@ function Team({users,setUsers,cu}){
                   )
                 )
               ),
-              el('td',null,el('span',{className:`badge ${RCOLOR[u.role]||'bb-gray'}`,style:{fontSize:11,whiteSpace:'nowrap'}},RLABEL[u.role]||u.role)),
+              el('td',null,userRoles(u).map(r=>el('span',{key:r,className:`badge ${RCOLOR[r]||'bb-gray'}`,style:{fontSize:11,whiteSpace:'nowrap',marginRight:4}},RLABEL[r]||r))),
               el('td',null,el('span',{style:{fontSize:12,color:'var(--text2)'}},u.loc)),
               el('td',null,
                 (u.managers||[]).length===0
@@ -2471,7 +2510,7 @@ function Team({users,setUsers,cu}){
                   )
               ),
               el('td',null,
-                el('button',{className:'btn b-ghost btn-sm',onClick:()=>setEditU({...u,oversees_depts:u.oversees_depts||[],managers:u.managers||[]})},'Edit'),
+                el('button',{className:'btn b-ghost btn-sm',onClick:()=>setEditU({...u,oversees_depts:u.oversees_depts||[],managers:u.managers||[],roles:u.roles&&u.roles.length?u.roles:(u.role?[u.role]:[])})},'Edit'),
                 u.id!==cu.id&&el('button',{className:'btn b-red btn-sm',style:{marginLeft:6},onClick:()=>removeUser(u.id)},'Remove'),
               ),
             );
@@ -2540,21 +2579,27 @@ function Team({users,setUsers,cu}){
 
           el('div',{className:'divider'}),
 
-          // Role dropdown (grouped)
+          // Roles (multi-select checkboxes, grouped)
           el('div',{className:'fg'},
-            el('label',null,'Role'),
-            el('select',{
-              value:editU.role,
-              onChange:ev=>setEditU(p=>({...p,role:ev.target.value})),
-              style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'10px 14px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none'},
-            },
-              ROLE_GROUPS.map(g=>[
-                el('option',{key:'h-'+g.label,disabled:true,style:{color:'#6b7280',fontWeight:700}},'\u2500\u2500 '+g.label+' \u2500\u2500'),
-                ...g.roles.map(r=>el('option',{key:r,value:r,style:{paddingLeft:16}},RLABEL[r]||r))
-              ])
+            el('label',null,'Roles (select one or more)'),
+            el('div',{style:{background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'10px 14px'}},
+              ROLE_GROUPS.map(g=>el('div',{key:g.label,style:{marginBottom:8}},
+                el('div',{style:{fontSize:10,fontWeight:700,color:'var(--text3)',letterSpacing:'.5px',marginBottom:4}},g.label.toUpperCase()),
+                g.roles.map(r=>{
+                  const checked=(editU.roles||(editU.role?[editU.role]:[])).includes(r);
+                  return el('label',{key:r,style:{display:'flex',alignItems:'center',gap:8,padding:'4px 0',cursor:'pointer',fontSize:13,color:'var(--text)'}},
+                    el('input',{type:'checkbox',checked,accentColor:'var(--accent)',onChange:ev=>setEditU(p=>{
+                      const cur=p.roles||(p.role?[p.role]:[]);
+                      const next=ev.target.checked?[...new Set([...cur,r])]:cur.filter(x=>x!==r);
+                      return{...p,roles:next,role:next[0]||''};
+                    })}),
+                    RLABEL[r]||r,
+                  );
+                }),
+              )),
             ),
-            el('div',{style:{marginTop:6,display:'flex',alignItems:'center',gap:6}},
-              el('span',{className:`badge ${RCOLOR[editU.role]||'bb-gray'}`,style:{fontSize:11}},RLABEL[editU.role]||editU.role),
+            el('div',{style:{marginTop:8,display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}},
+              (editU.roles||(editU.role?[editU.role]:[])).map(r=>el('span',{key:r,className:`badge ${RCOLOR[r]||'bb-gray'}`,style:{fontSize:11}},RLABEL[r]||r)),
             ),
           ),
 
@@ -2710,13 +2755,23 @@ function Team({users,setUsers,cu}){
           el('div',{className:'fg'},el('label',null,'Email'),el('input',{type:'email',value:af.email,onChange:ev=>setAf(p=>({...p,email:ev.target.value}))})),
           el('div',{className:'fg'},el('label',null,'Password'),el('input',{type:'password',value:af.pw,onChange:ev=>setAf(p=>({...p,pw:ev.target.value}))})),
           el('div',{className:'fg'},
-            el('label',null,'Role'),
-            el('select',{value:af.role,onChange:ev=>setAf(p=>({...p,role:ev.target.value})),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
-              ROLE_GROUPS.map(g=>[
-                el('option',{key:'h-'+g.label,disabled:true,style:{color:'#6b7280',fontWeight:700}},'\u2500\u2500 '+g.label+' \u2500\u2500'),
-                ...g.roles.map(r=>el('option',{key:r,value:r},RLABEL[r]||r))
-              ])
-            )
+            el('label',null,'Roles (select one or more)'),
+            el('div',{style:{background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'10px 14px'}},
+              ROLE_GROUPS.map(g=>el('div',{key:g.label,style:{marginBottom:8}},
+                el('div',{style:{fontSize:10,fontWeight:700,color:'var(--text3)',letterSpacing:'.5px',marginBottom:4}},g.label.toUpperCase()),
+                g.roles.map(r=>{
+                  const checked=(af.roles||[af.role]).includes(r);
+                  return el('label',{key:r,style:{display:'flex',alignItems:'center',gap:8,padding:'4px 0',cursor:'pointer',fontSize:13,color:'var(--text)'}},
+                    el('input',{type:'checkbox',checked,onChange:ev=>setAf(p=>{
+                      const cur=p.roles||[p.role];
+                      const next=ev.target.checked?[...new Set([...cur,r])]:cur.filter(x=>x!==r);
+                      return{...p,roles:next,role:next[0]||'team_member'};
+                    })}),
+                    RLABEL[r]||r,
+                  );
+                }),
+              )),
+            ),
           ),
           el('div',{className:'g2'},
             el('div',{className:'fg',style:{marginBottom:0}},el('label',null,'Location'),el('select',{value:af.loc,onChange:ev=>setAf(p=>({...p,loc:ev.target.value}))},LOCS.map(l=>el('option',{key:l,value:l},l)))),
@@ -2761,7 +2816,7 @@ function SalesMarketing({salesTasks,setSalesTasks,cu,users,locFilter}){
     priority:'medium',report:'',
   });
 
-  const isSalesAdmin=cu.role==='admin'||cu.dept==='Sales'||cu.dept==='Marketing'||SALES_ROLES.includes(cu.position)||SALES_ROLES.includes(cu.role);
+  const isSalesAdmin=cu.role==='admin'||hasRole(cu,'sales_manager')||cu.dept==='Sales'||cu.dept==='Marketing'||SALES_ROLES.includes(cu.position)||SALES_ROLES.includes(cu.role);
   const today=new Date().toISOString().slice(0,10);
 
   const filtered=salesTasks.filter(t=>{
@@ -4833,7 +4888,7 @@ function EmployeeTypeahead({users,value,onChange,placeholder}){
         el('div',{className:'avatar',style:{background:avatarColor(u.name),width:24,height:24,fontSize:10}},u.name.charAt(0).toUpperCase()),
         el('div',null,
           el('div',{style:{fontSize:12,fontWeight:600,color:'var(--text)'}},u.name),
-          el('div',{style:{fontSize:10,color:'var(--text3)'}},(RLABEL[u.role]||u.role)+(u.dept?' \u00B7 '+u.dept:'')),
+          el('div',{style:{fontSize:10,color:'var(--text3)'}},roleLabels(u)+(u.dept?' \u00B7 '+u.dept:'')),
         ),
       ))
     ),
@@ -5065,7 +5120,7 @@ function CorrectiveActionGenerator({cu,users,onClose,onSave}){
 
     const prompt=`You are an HR/compliance officer at a licensed cannabis manufacturing facility writing a formal Corrective Action document for an employee violation.
 
-EMPLOYEE: ${employee.name} (${RLABEL[employee.role]||employee.role}, ${employee.dept||'N/A'} department)
+EMPLOYEE: ${employee.name} (${roleLabels(employee)}, ${employee.dept||'N/A'} department)
 LICENSE/FACILITY: ${license.name} (${license.state})
 VIOLATION TYPE: ${violationType}
 SEVERITY: ${SEVERITY_LEVELS.find(s=>s.id===severity)?.label}
@@ -5665,7 +5720,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
   const[editing,setEditing]=useState(null);
   const[licFilter,setLicFilter]=useState(()=>{
     const ul=cu.licenses||[];
-    const elevated=cu.role==='admin'||['general_manager','assistant_general_manager','compliance_officer','security_manager'].includes(cu.role);
+    const elevated=hasAnyRole(cu,['admin','general_manager','assistant_general_manager','compliance_officer','security_manager']);
     if(elevated||ul.length===0) return 'all';
     return ul.length===1?ul[0]:'all';
   });
@@ -5679,8 +5734,8 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
   // Senior leadership roles get elevated OPERATIONAL access (creating deviations/CAPAs/audits,
   // seeing the full QMS dashboard) but are NOT treated as Admin for privacy-sensitive checks
   // like disciplinary records or full Training Matrix visibility \u2014 those stay strict isAdmin only.
-  const isElevated=isAdmin||['general_manager','assistant_general_manager','compliance_officer','security_manager'].includes(cu.role);
-  const qmsRoleGroup=ROLE_GROUPS.find(g=>g.roles.includes(cu.role))?.label;
+  const isElevated=isAdmin||hasAnyRole(cu,['general_manager','assistant_general_manager','compliance_officer','security_manager']);
+  const qmsRoleGroup=topRoleGroup(cu);
   const isManager=qmsRoleGroup==='Operations';
   const isSupervisor=false;
   // Managers and above can report Deviations/CAPAs/Audits; Supervisors are read-only in those tabs.
@@ -6122,7 +6177,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
           el('div',{className:'fg'},el('label',null,'Implementation Plan'),el('textarea',{id:'chg-plan',placeholder:'How and when will this change be implemented?'})),
           el('div',{className:'fg'},el('label',null,'Approved By'),el('select',{id:'chg-approver',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 13px',color:'var(--text)',fontFamily:'inherit',fontSize:13}},
             el('option',{value:''},'\u2014 Select Approver \u2014'),
-            ...users.filter(u=>u.approved&&['admin','general_manager','assistant_general_manager','compliance_officer','security_manager'].includes(u.role)).map(u=>el('option',{key:u.id,value:u.name},u.name+' \u2014 '+( RLABEL[u.role]||u.role))),
+            ...users.filter(u=>u.approved&&hasAnyRole(u,['admin','general_manager','assistant_general_manager','compliance_officer','security_manager'])).map(u=>el('option',{key:u.id,value:u.name},u.name+' \u2014 '+roleLabels(u))),
           )),
           el('div',{className:'mf'},
             el('button',{className:'btn b-ghost',onClick:()=>setNew(false)},'Cancel'),
@@ -6518,7 +6573,7 @@ function QMS({cu,users,tasks,sops,deviations,setDeviations,capas,setCapas,audits
                     onMouseLeave:ev=>ev.currentTarget.querySelector('.emp-name').style.color='var(--text)',
                   },
                     el('div',{className:'avatar',style:{background:avatarColor(u.name),width:24,height:24,fontSize:10}},u.name.charAt(0).toUpperCase()),
-                    el('div',null,el('div',{className:'emp-name',style:{fontSize:12,fontWeight:600,color:'var(--text)',transition:'color .15s'}},u.name),el('div',{style:{fontSize:10,color:'var(--text3)'}},RLABEL[u.role]||u.role)),
+                    el('div',null,el('div',{className:'emp-name',style:{fontSize:12,fontWeight:600,color:'var(--text)',transition:'color .15s'}},u.name),el('div',{style:{fontSize:10,color:'var(--text3)'}},roleLabels(u))),
                   )
                 ),
                 ...publishedSOPs.map(s=>{
@@ -6700,7 +6755,7 @@ function Scoreboard({tasks,cu,users}){
                   el('div',{className:'avatar',style:{background:avatarColor(s.user.name),width:28,height:28,fontSize:11}},s.user.name.charAt(0).toUpperCase()),
                   el('div',null,
                     el('div',{style:{fontWeight:600,fontSize:13}},s.user.name),
-                    el('div',{style:{fontSize:11,color:'var(--text3)'}},RLABEL[s.user.role]||s.user.role),
+                    el('div',{style:{fontSize:11,color:'var(--text3)'}},roleLabels(s.user)),
                   )
                 )
               ),
@@ -7627,7 +7682,7 @@ function exportEmployeeTrainingPdf(employee,applicableSOPs){
   doc.setFont('helvetica','normal');
   doc.setFontSize(11);
   doc.setTextColor(...TEXT2);
-  doc.text((RLABEL[employee.role]||employee.role)+(employee.dept?' \u00B7 '+employee.dept:''),margin,y);
+  doc.text(roleLabels(employee)+(employee.dept?' \u00B7 '+employee.dept:''),margin,y);
   y+=20;
 
   doc.setDrawColor(...BORDER);
@@ -7794,7 +7849,7 @@ function ManagerTypeahead({editU,setEditU,users}){
           style:{padding:'9px 13px',cursor:'pointer',fontSize:13,display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:'1px solid var(--border)'}
         },
           el('span',{style:{fontWeight:600}},u.name),
-          el('span',{style:{fontSize:11,color:'var(--text2)',marginLeft:8}},RLABEL[u.role]||u.role)
+          el('span',{style:{fontSize:11,color:'var(--text2)',marginLeft:8}},roleLabels(u))
         ))
       ),
       open&&query.length>=3&&filtered.length===0&&el('div',{
@@ -7808,7 +7863,7 @@ function ManagerTypeahead({editU,setEditU,users}){
           el('div',{style:{background:'var(--accent)',color:'#ffffff',borderRadius:5,padding:'2px 7px',fontSize:10,fontWeight:800}},'M'+(i+1)),
           el('div',null,
             el('div',{style:{fontSize:12,fontWeight:600}},m.name),
-            el('div',{style:{fontSize:11,color:'var(--text2)'}},RLABEL[m.role]||m.role)
+            el('div',{style:{fontSize:11,color:'var(--text2)'}},roleLabels(m))
           )
         ),
         el('button',{style:{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:18,lineHeight:1},onClick:()=>setEditU(p=>({...p,managers:p.managers.filter(x=>x.id!==m.id)}))},'\u00D7')
@@ -7836,7 +7891,7 @@ function EmployeeProfileModal({employee,cu,users,publishedSOPs,corrective,showCo
           el('div',{className:'avatar',style:{background:avatarColor(employee.name),width:38,height:38,fontSize:15}},employee.name.charAt(0).toUpperCase()),
           el('div',null,
             el('div',{className:'mt2'},employee.name),
-            el('div',{style:{fontSize:11,color:'var(--text3)'}},(RLABEL[employee.role]||employee.role)+(employee.dept?' \u00B7 '+employee.dept:'')+(employee.email?' \u00B7 '+employee.email:'')),
+            el('div',{style:{fontSize:11,color:'var(--text3)'}},roleLabels(employee)+(employee.dept?' \u00B7 '+employee.dept:'')+(employee.email?' \u00B7 '+employee.email:'')),
           ),
         ),
         el('button',{className:'mc',onClick:onClose},'\u00D7'),
@@ -8899,7 +8954,7 @@ function SOPs({sops,setSops,cu,users}){
   const[deptFilter,setDeptFilter]=useState('All');
   const[licFilter,setLicFilter]=useState(()=>{
     const ul=cu.licenses||[];
-    const elevated=cu.role==='admin'||['general_manager','assistant_general_manager','compliance_officer','security_manager','inventory_manager','extraction_manager'].includes(cu.role);
+    const elevated=hasAnyRole(cu,['admin','general_manager','assistant_general_manager','compliance_officer','security_manager','inventory_manager','extraction_manager','production_manager','sales_manager']);
     if(elevated||ul.length===0) return 'all';
     return ul.length===1?ul[0]:'all';
   });
@@ -8916,17 +8971,17 @@ function SOPs({sops,setSops,cu,users}){
   });
 
   const isAdmin=cu.role==='admin';
-  const isElevated=isAdmin||['general_manager','assistant_general_manager','compliance_officer','security_manager'].includes(cu.role);
-  const canCreate=isElevated||MID_MANAGERS.includes(cu.role);
-  const canAiSop=isAdmin||['general_manager','assistant_general_manager','compliance_officer','security_manager'].includes(cu.role);
+  const isElevated=isAdmin||hasAnyRole(cu,['general_manager','assistant_general_manager','compliance_officer','security_manager']);
+  const canCreate=isElevated||hasAnyRole(cu,MID_MANAGERS);
+  const canAiSop=isAdmin||hasAnyRole(cu,['general_manager','assistant_general_manager','compliance_officer','security_manager']);
   // Non-elevated users are locked to their assigned licenses only
   const userLicenses=cu.licenses||[];
   const allowedLicenses=isElevated?LICENSES:LICENSES.filter(l=>userLicenses.includes(l.id));
   const canSeeAllLicenses=isElevated;
 
   // Filter SOPs visible to this user
-  const isElevatedForSops=isElevated||cu.role==='assistant_general_manager';
-  const canSeeArchivedSops=cu.role==='admin'||cu.role==='general_manager'||cu.role==='assistant_general_manager';
+  const isElevatedForSops=isElevated||hasRole(cu,'assistant_general_manager');
+  const canSeeArchivedSops=isAdmin||hasAnyRole(cu,['general_manager','assistant_general_manager']);
   const visibleSops=sops.filter(s=>{
     if(s.status==='archived'&&!canSeeArchivedSops) return false;
     // Non-elevated users can ONLY see SOPs for their assigned licenses
@@ -9566,19 +9621,18 @@ const EVENT_COLORS=['#f5a623','#3b82f6','#10b981','#ef4444','#8b5cf6','#f97316',
 // Admin           \u2192 everyone everywhere
 
 function getVisibleUsers(viewer, allUsers){
-  const role = viewer.role;
-  const rg = ROLE_GROUPS.find(g=>g.roles.includes(role))?.label;
+  const rg = topRoleGroup(viewer);
 
   // Admin sees everyone
-  if(role==='admin') return allUsers.filter(u=>u.approved);
+  if(hasRole(viewer,'admin')) return allUsers.filter(u=>u.approved);
 
   // General Manager and Assistant General Manager see everyone at the facility
-  if(role==='general_manager'||role==='assistant_general_manager'){
+  if(hasAnyRole(viewer,['general_manager','assistant_general_manager'])){
     return allUsers.filter(u=>u.approved);
   }
 
   // Mid-level managers (Compliance Officer, Security Manager, Inventory Manager,
-  // Extraction Manager) \u2014 see themselves + anyone reporting to them
+  // Extraction Manager, Production Manager, Sales Manager) \u2014 see themselves + anyone reporting to them
   if(rg==='Compliance & Security'||rg==='Operations'){
     const directReports = allUsers.filter(u=>
       u.approved && u.id!==viewer.id &&
@@ -10723,10 +10777,10 @@ function App(){
 
   const pending=users.filter(u=>!u.approved).length;
   const isAdmin=cu.role==='admin';
-  const isElevated=isAdmin||['general_manager','assistant_general_manager','compliance_officer','security_manager'].includes(cu.role);
+  const isElevated=isAdmin||hasAnyRole(cu,['general_manager','assistant_general_manager','compliance_officer','security_manager']);
   // QMS access: Admin, Managers, and Supervisors. Employees, Leads, and Staff
   // get SOPs only (per Black Fox QMS QMS RBAC policy).
-  const qmsRoleGroup=ROLE_GROUPS.find(g=>g.roles.includes(cu.role))?.label;
+  const qmsRoleGroup=topRoleGroup(cu);
   const canAccessQms=isAdmin||['Leadership','Compliance & Security','Operations'].includes(qmsRoleGroup);
   const today=new Date().toISOString().slice(0,10);
   const myTasks=tasks.filter(t=>(t.assignees||[]).some(a=>a.id===cu.id)&&!['archived'].includes(t.status));
@@ -10735,7 +10789,7 @@ function App(){
   const nav=[
     {id:'board',ico:'\u2B1B',label:'Task Board'},
     {id:'calendar',ico:'\uD83D\uDCC5',label:'Calendar'},
-    (cu.role==='admin'||cu.dept==='Sales'||cu.dept==='Marketing')&&{id:'sales',ico:'\uD83C\uDFEA',label:'Sales & Marketing'},
+    (cu.role==='admin'||hasRole(cu,'sales_manager')||cu.dept==='Sales'||cu.dept==='Marketing')&&{id:'sales',ico:'\uD83C\uDFEA',label:'Sales & Marketing'},
     {id:'sops',ico:'\uD83D\uDCCB',label:'SOPs'},
     canAccessQms&&{id:'qms',ico:'\uD83D\uDEE1\uFE0F',label:'QMS'},
     canAccessQms&&{id:'compliance',ico:'\u2705',label:'Compliance'},
@@ -10772,7 +10826,7 @@ function App(){
       ),
       el('div',{className:'sb-user'},
         el('div',{className:'sb-name'},cu.name),
-        el('div',{className:'sb-role'},`${RLABEL[cu.role]||cu.role} \u00B7 ${cu.dept}`),
+        el('div',{className:'sb-role'},`${roleLabels(cu)} \u00B7 ${cu.dept}`),
         el('div',{className:'sb-role',style:{marginTop:2}},cu.loc),
         el('button',{
           onClick:async()=>{
