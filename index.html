@@ -3398,7 +3398,6 @@ const LOG_TYPES={
     {key:'camera_1',label:'Camera #1 Name (Angle 1 of Destruction)',type:'text',placeholder:'Camera name or ID'},
     {key:'camera_2',label:'Camera #2 Name (Angle 2 of Destruction)',type:'text',placeholder:'Camera name or ID'},
     {key:'qty_rendered',label:'Quantity of Rendered Waste',type:'text',placeholder:'Total weight/quantity after rendering'},
-    {key:'_s4',label:'--- WASTE DISPOSAL (Optional) ---',type:'section'},
     {key:'disposal_date',label:'Date of Disposal',type:'date'},
     {key:'disposal_time',label:'Time of Disposal',type:'time'},
     {key:'waste_company',label:'Waste Management Company / Facility Used',type:'text',placeholder:'Licensed waste disposal company name'},
@@ -3411,6 +3410,17 @@ const LOG_TYPES={
     {key:'compliance_verification',label:'Compliance Verification',type:'checkbox'},
     {key:'supervisor_name',label:'Supervisor Name *',type:'text',placeholder:'Verifying supervisor full name'},
   ]},
+  security_inspection:{id:'security_inspection',label:'Security Equipment Inspection',icon:'\uD83D\uDEE1\uFE0F',color:'#1e3a5f',bg:'#eff6ff',table:'pf_log_security_inspection',dcr:'Missouri DCR Security Requirements — Weekly',freq:'Weekly',
+    cameras:["VAULT 1", "VAULT 2", "VAULT FISHEYE", "VAULT 4", "BIOMASS 1", "BIOMASS 2", "WAREHOUSE AIR COMPRESSOR", "WAREHOUSE SHIPPING OFFICE DOOR", "WAREHOUSE DOOR INSIDE", "MAIN ENTRANCE DOOR IN", "MAIN ENTRANCE OUT", "MAIN ENTRANCE OUT 2", "FRONT OFFICE", "TESTING 1", "TESTING 2", "1 ETHANOL EXTRACTION", "2 ETHANOL EXTRACTION", "STORAGE 1", "STORAGE 1B", "STORAGE 2", "STORAGE 3", "EXECUTIVE OFFICE", "EXECUTIVE OFFICE 2", "WASTE 1", "WASTE 2", "WASTE 3", "SECURITY HALLWAY", "SHIP/REC OFFICE", "FREEZER 1", "FREEZER 2", "FREEZER 3", "HWY 47 N", "HWY 47 S", "WAREHOUSE SECURITY OUT", "SHIPPING DOCK", "DUNCAN ST E", "DUNCAN ST W", "SANITATION ROOM DOOR", "EMERGENCY EXIT INSIDE", "EMERGENCY EXIT OUTSIDE", "SECURITY ROOM", "1 BUTANE EXTRACTION", "2 BUTANE EXTRACTION", "3 BUTANE EXTRACTION", "C1D1 A", "C1D1 B", "DATA ROOM", "PRE ROLL FILLING", "PACKAGING / PRE ROLL", "GUMMY PRODUCTION", "CART FILLING", "PRODUCTION CART FILLING", "GUMMY DEMOLDING AREA", "PRODUCTION CENTER WEST", "PRODUCTION PACKAGING AREA", "TESTING / WASTE", "QC", "RESTROOMS"],
+    door_locks:["MAIN ENTRANCE", "SECURITY 1 ENTRANCE", "FLOOR MANAGERS OFFICE", "SOUTH EAST PRODUCTION", "WAREHOUSE ENTRANCE", "SECURITY 2 ENTRANCE", "WAREHOUSE", "VAULT", "BUTANE EXTRACTION", "BIOMASS", "ETHANOL EXTRACTION", "DATA ROOM", "EXECUTIVE OFFICE", "DOOR BELL", "MAIN ENTRANCE (2)", "WAREHOUSE ENTRANCE (2)"],
+    alarms:["MAIN ENTRANCE CONTACT SENSOR", "SECURITY 2 ENTRANCE CONTACT SENSOR", "WAREHOUSE ENTRANCE CONTACT SENSOR", "DISTRIBUTION CONTACT SENSOR", "EMERGENCY EXIT CONTACT SENSOR", "DATA ROOM CONTACT SENSOR", "MAIN ENTRANCE MOTION DETECTOR", "EMERGENCY EXIT MOTION DETECTOR", "WAREHOUSE MOTION DETECTOR", "EXECUTIVE OFFICE MOTION DETECTOR 1", "SECURITY 2 ENTRANCE MOTION DETECTOR", "BASE STATION", "EXECUTIVE OFFICE MOTION DETECTOR 2", "SECURITY 1 PANIC BUTTON", "SECURITY 2 PANIC BUTTON", "SECURITY 1 KEY PAD", "SECURITY 2 KEY PAD"],
+    fields:[
+      {key:'date',label:'Date *',type:'date'},
+      {key:'time',label:'Time',type:'time'},
+      {key:'inspected_by',label:'Inspected By *',type:'text',placeholder:'Inspector full name'},
+      {key:'notes',label:'General Notes / Issues Found',type:'textarea',placeholder:'Any issues, failures, or observations'},
+    ],
+  },
   security:{id:'security',label:'Security Malfunction Log',icon:'\uD83D\uDD12',color:'#1e3a5f',bg:'#eff6ff',table:'pf_log_security',dcr:'Missouri DCR Security Requirements',freq:'Every malfunction event',fields:[
     {key:'date',label:'Date *',type:'date'},{key:'time',label:'Time Discovered',type:'time'},
     {key:'system_type',label:'System Type *',type:'select',options:['CCTV Camera','DVR/NVR Recorder','Motion Sensor','Door Access Control','Alarm System','Perimeter Fence/Gate','Safe/Vault','Other']},
@@ -3654,12 +3664,189 @@ function LogEntryForm({logType,cu,onSave,onClose,SUPA_URL,SUPA_KEY,H,editData}){
   );
 }
 
+
+// ── SECURITY INSPECTION CHECKLIST ──────────────────────────────────────────
+function SecurityInspectionForm({cu,onSave,onClose,editData,SUPA_URL,SUPA_KEY,H}){
+  const lt=LOG_TYPES.security_inspection;
+  const initForm=()=>{
+    if(editData) return {...editData};
+    const f={date:new Date().toISOString().slice(0,10),time:new Date().toTimeString().slice(0,5),inspected_by:cu.name,notes:''};
+    // init all cameras/doors/alarms as empty
+    lt.cameras.forEach(c=>{f['cam_view_'+c]='';f['cam_ok_'+c]='';});
+    lt.door_locks.forEach(d=>{f['door_batt_'+d]='';f['door_ok_'+d]='';});
+    lt.alarms.forEach(a=>{f['alarm_batt_'+a]='';f['alarm_ok_'+a]='';});
+    return f;
+  };
+  const[form,setForm]=React.useState(initForm);
+  const[sig,setSig]=React.useState(editData?.signature_image||null);
+  const[saving,setSaving]=React.useState(false);
+  const[tab,setTab]=React.useState('cameras');
+  const setF=(k,v)=>setForm(p=>({...p,[k]:v}));
+
+  const STATUS_OPTS=['OK','FAIL','N/A'];
+  const statusColor={'OK':'#16a34a','FAIL':'#dc2626','N/A':'#94a3b8','':'#cbd5e1'};
+
+  function StatusBtn({fieldKey,value}){
+    return el('div',{style:{display:'flex',gap:3}},
+      STATUS_OPTS.map(opt=>el('button',{key:opt,onClick:()=>setF(fieldKey,opt),
+        style:{padding:'3px 8px',borderRadius:6,border:'none',fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:'inherit',
+          background:value===opt?statusColor[opt]:'#f1f5f9',
+          color:value===opt?'#fff':'#64748b',
+          transition:'all .1s',
+        }
+      },opt))
+    );
+  }
+
+  async function save(){
+    if(!form.inspected_by?.trim()){alert('Inspected By is required.');return;}
+    if(!sig){alert('Please draw your signature to certify this inspection.');return;}
+    setSaving(true);
+    const rec={...form,id:editData?.id||('sec-insp-'+Date.now()),log_type:'security_inspection',signature_image:sig,submitted_by:cu.name,submitted_by_id:cu.id,created_at:editData?.created_at||new Date().toISOString(),updated_at:new Date().toISOString()};
+    try{
+      if(editData){
+        await fetch(`${SUPA_URL}/rest/v1/pf_log_security_inspection?id=eq.${editData.id}`,{method:'PATCH',headers:{...H.headers,'Prefer':'return=representation'},body:JSON.stringify(rec)});
+      } else {
+        const res=await fetch(`${SUPA_URL}/rest/v1/pf_log_security_inspection`,{method:'POST',headers:{...H.headers,'Prefer':'return=representation'},body:JSON.stringify(rec)});
+        if(!res.ok){const e=await res.json();throw new Error(e.message||'Save failed');}
+      }
+      onSave(rec);
+    }catch(e){alert('Save failed: '+e.message);}
+    setSaving(false);
+  }
+
+  // Count fails
+  const failCount=[...lt.cameras.map(c=>form['cam_ok_'+c]),...lt.door_locks.map(d=>form['door_ok_'+d]),...lt.alarms.map(a=>form['alarm_ok_'+a])].filter(v=>v==='FAIL').length;
+  const doneCount=[...lt.cameras.map(c=>form['cam_ok_'+c]),...lt.door_locks.map(d=>form['door_ok_'+d]),...lt.alarms.map(a=>form['alarm_ok_'+a])].filter(v=>v&&v!=='').length;
+  const totalCount=lt.cameras.length+lt.door_locks.length+lt.alarms.length;
+
+  const TABS=[{id:'cameras',label:'\uD83D\uDCF7 Cameras ('+lt.cameras.length+')'},{id:'doors',label:'\uD83D\uDD10 Door Locks ('+lt.door_locks.length+')'},{id:'alarms',label:'\uD83D\uDEA8 Alarm System ('+lt.alarms.length+')'}];
+
+  return el('div',{className:'mo',onClick:ev=>ev.target===ev.currentTarget&&onClose()},
+    el('div',{className:'md',style:{width:780,maxHeight:'95vh',overflowY:'auto'}},
+      el('div',{className:'mh'},
+        el('div',null,
+          el('div',{style:{fontSize:17,fontWeight:800}},'\uD83D\uDEE1\uFE0F Weekly Security Equipment Inspection'),
+          el('div',{style:{fontSize:11,color:'var(--text2)',marginTop:2}},'Missouri DCR \u2014 '+(editData?'Edit Record':'New Inspection')),
+        ),
+        el('button',{className:'mc',onClick:onClose},'\u00D7'),
+      ),
+      el('div',{className:'mbd'},
+
+        // Header fields
+        el('div',{className:'g3',style:{marginBottom:16}},
+          el('div',{className:'fg'},el('label',null,'Date *'),el('input',{type:'date',value:form.date,onChange:ev=>setF('date',ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 12px',color:'var(--text)',fontFamily:'inherit',fontSize:13,boxSizing:'border-box'}})),
+          el('div',{className:'fg'},el('label',null,'Time'),el('input',{type:'time',value:form.time,onChange:ev=>setF('time',ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 12px',color:'var(--text)',fontFamily:'inherit',fontSize:13,boxSizing:'border-box'}})),
+          el('div',{className:'fg'},el('label',null,'Inspected By *'),el('input',{type:'text',value:form.inspected_by,onChange:ev=>setF('inspected_by',ev.target.value),style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 12px',color:'var(--text)',fontFamily:'inherit',fontSize:13,boxSizing:'border-box'}})),
+        ),
+
+        // Progress bar
+        el('div',{style:{background:'var(--surface2)',borderRadius:10,padding:'10px 14px',marginBottom:16,display:'flex',gap:16,alignItems:'center',flexWrap:'wrap'}},
+          el('div',{style:{flex:1,minWidth:180}},
+            el('div',{style:{display:'flex',justifyContent:'space-between',fontSize:11,marginBottom:4}},
+              el('span',{style:{color:'var(--text2)'}},'Progress'),
+              el('span',{style:{fontWeight:700}},doneCount+' / '+totalCount+' checked'),
+            ),
+            el('div',{style:{background:'var(--border)',borderRadius:10,height:8}},
+              el('div',{style:{width:(doneCount/totalCount*100)+'%',height:'100%',background:failCount>0?'#dc2626':'#16a34a',borderRadius:10,transition:'width .3s'}}),
+            ),
+          ),
+          failCount>0&&el('div',{style:{background:'rgba(220,38,38,.1)',border:'1px solid rgba(220,38,38,.3)',borderRadius:8,padding:'5px 12px',fontSize:12,fontWeight:700,color:'#dc2626'}},
+            '\u26A0\uFE0F '+failCount+' FAIL'+(failCount!==1?'s':'')+' found'
+          ),
+          failCount===0&&doneCount>0&&el('div',{style:{background:'rgba(22,163,74,.1)',border:'1px solid rgba(22,163,74,.3)',borderRadius:8,padding:'5px 12px',fontSize:12,fontWeight:700,color:'#16a34a'}},
+            '\u2705 '+(doneCount===totalCount?'All clear':'In progress')
+          ),
+        ),
+
+        // Tab buttons
+        el('div',{style:{display:'flex',gap:4,background:'var(--surface2)',borderRadius:8,padding:4,marginBottom:14}},
+          TABS.map(t=>el('button',{key:t.id,onClick:()=>setTab(t.id),style:{flex:1,padding:'7px 4px',borderRadius:6,border:'none',fontFamily:'inherit',fontSize:12,fontWeight:tab===t.id?700:500,cursor:'pointer',background:tab===t.id?'#1e3a5f':'transparent',color:tab===t.id?'#fff':'var(--text2)',transition:'all .15s'}},' '+t.label)),
+        ),
+
+        // CAMERAS TAB
+        tab==='cameras'&&el('div',null,
+          el('div',{style:{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:10,overflow:'hidden'}},
+            el('div',{style:{display:'grid',gridTemplateColumns:'1fr 100px 120px',background:'#1e3a5f',color:'#fff',padding:'8px 12px',fontSize:11,fontWeight:700}},
+              el('span',null,'CAMERA NAME'),el('span',{style:{textAlign:'center'}},'CAMERA VIEW'),el('span',{style:{textAlign:'center'}},'FUNCTIONALITY'),
+            ),
+            lt.cameras.map((cam,i)=>el('div',{key:cam,style:{display:'grid',gridTemplateColumns:'1fr 100px 120px',padding:'7px 12px',background:i%2===0?'#ffffff':'var(--surface2)',borderBottom:'1px solid var(--border)',alignItems:'center',gap:8}},
+              el('span',{style:{fontSize:12,fontWeight:600,color:'var(--text)'}},' '+cam),
+              el('select',{value:form['cam_view_'+cam]||'',onChange:ev=>setF('cam_view_'+cam,ev.target.value),style:{fontSize:11,padding:'3px 4px',borderRadius:6,border:'1px solid var(--border)',background:'var(--bg)',color:'var(--text)',fontFamily:'inherit',width:'100%'}},
+                el('option',{value:''},'--'),
+                ['Clear','Partial','Obstructed','Offline'].map(o=>el('option',{key:o,value:o},o)),
+              ),
+              el(StatusBtn,{fieldKey:'cam_ok_'+cam,value:form['cam_ok_'+cam]||''}),
+            ))
+          ),
+        ),
+
+        // DOOR LOCKS TAB
+        tab==='doors'&&el('div',null,
+          el('div',{style:{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:10,overflow:'hidden'}},
+            el('div',{style:{display:'grid',gridTemplateColumns:'1fr 110px 120px',background:'#1e3a5f',color:'#fff',padding:'8px 12px',fontSize:11,fontWeight:700}},
+              el('span',null,'DOOR NAME'),el('span',{style:{textAlign:'center'}},'BATTERY LEVEL'),el('span',{style:{textAlign:'center'}},'FUNCTIONALITY'),
+            ),
+            lt.door_locks.map((door,i)=>el('div',{key:door,style:{display:'grid',gridTemplateColumns:'1fr 110px 120px',padding:'7px 12px',background:i%2===0?'#ffffff':'var(--surface2)',borderBottom:'1px solid var(--border)',alignItems:'center',gap:8}},
+              el('span',{style:{fontSize:12,fontWeight:600,color:'var(--text)'}},' '+door),
+              el('select',{value:form['door_batt_'+door]||'',onChange:ev=>setF('door_batt_'+door,ev.target.value),style:{fontSize:11,padding:'3px 4px',borderRadius:6,border:'1px solid var(--border)',background:'var(--bg)',color:'var(--text)',fontFamily:'inherit',width:'100%'}},
+                el('option',{value:''},'--'),
+                ['Good (100-60%)','Low (59-20%)','Critical (<20%)','N/A - Wired'].map(o=>el('option',{key:o,value:o},o)),
+              ),
+              el(StatusBtn,{fieldKey:'door_ok_'+door,value:form['door_ok_'+door]||''}),
+            ))
+          ),
+        ),
+
+        // ALARM TAB
+        tab==='alarms'&&el('div',null,
+          el('div',{style:{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:10,overflow:'hidden'}},
+            el('div',{style:{display:'grid',gridTemplateColumns:'1fr 110px 120px',background:'#1e3a5f',color:'#fff',padding:'8px 12px',fontSize:11,fontWeight:700}},
+              el('span',null,'COMPONENT NAME'),el('span',{style:{textAlign:'center'}},'BATTERY LEVEL'),el('span',{style:{textAlign:'center'}},'FUNCTIONALITY'),
+            ),
+            lt.alarms.map((alarm,i)=>el('div',{key:alarm,style:{display:'grid',gridTemplateColumns:'1fr 110px 120px',padding:'7px 12px',background:i%2===0?'#ffffff':'var(--surface2)',borderBottom:'1px solid var(--border)',alignItems:'center',gap:8}},
+              el('span',{style:{fontSize:12,fontWeight:600,color:'var(--text)'}},' '+alarm),
+              el('select',{value:form['alarm_batt_'+alarm]||'',onChange:ev=>setF('alarm_batt_'+alarm,ev.target.value),style:{fontSize:11,padding:'3px 4px',borderRadius:6,border:'1px solid var(--border)',background:'var(--bg)',color:'var(--text)',fontFamily:'inherit',width:'100%'}},
+                el('option',{value:''},'--'),
+                ['Good (100-60%)','Low (59-20%)','Critical (<20%)','N/A - Wired','N/A'].map(o=>el('option',{key:o,value:o},o)),
+              ),
+              el(StatusBtn,{fieldKey:'alarm_ok_'+alarm,value:form['alarm_ok_'+alarm]||''}),
+            ))
+          ),
+        ),
+
+        // Notes
+        el('div',{className:'fg',style:{marginTop:14}},
+          el('label',null,'Notes / Issues Found'),
+          el('textarea',{value:form.notes,onChange:ev=>setF('notes',ev.target.value),rows:3,placeholder:'Describe any failures, offline cameras, low batteries, or issues found during inspection...',style:{width:'100%',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'9px 12px',color:'var(--text)',fontFamily:'inherit',fontSize:13,resize:'vertical',boxSizing:'border-box'}}),
+        ),
+
+        // Signature
+        el('div',{style:{borderTop:'1px solid var(--border)',paddingTop:14,marginTop:8}},
+          el('div',{style:{fontSize:13,fontWeight:700,marginBottom:8}},'\u270D\uFE0F Inspector Signature *'),
+          sig
+            ?el('div',null,el('img',{src:sig,style:{border:'2px solid #1e3a5f',borderRadius:8,maxWidth:'100%',height:80}}),el('button',{onClick:()=>setSig(null),className:'btn b-ghost btn-sm',style:{marginLeft:8}},'Clear'))
+            :el(SignaturePad,{label:'Sign to certify this inspection was completed accurately',onSave:d=>setSig(d),onClear:()=>setSig(null)}),
+          el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:5}},'Certifying as: '+cu.name+' \u00B7 '+new Date().toLocaleString()),
+        ),
+
+        el('div',{className:'mf'},
+          el('button',{className:'btn b-ghost',onClick:onClose},'Cancel'),
+          el('button',{disabled:saving,className:'btn b-blue',onClick:save},saving?'Saving...':editData?'Save Changes':'\u2705 Submit Inspection'),
+        ),
+      ),
+    ),
+  );
+}
+
 function FacilityLogs({cu,isElevated,isAdmin,SUPA_URL,SUPA_KEY,H}){
   const[activeLog,setActiveLog]=React.useState(null);
   const[entries,setEntries]=React.useState([]);
   const[loading,setLoading]=React.useState(false);
   const[showForm,setShowForm]=React.useState(false);
   const[editEntry,setEditEntry]=React.useState(null);
+  const[showSecInsp,setShowSecInsp]=React.useState(false);
+  const[editSecInsp,setEditSecInsp]=React.useState(null);
   const[dateFrom,setDateFrom]=React.useState('');
   const[dateTo,setDateTo]=React.useState('');
   const[search,setSearch]=React.useState('');
@@ -3669,6 +3856,7 @@ function FacilityLogs({cu,isElevated,isAdmin,SUPA_URL,SUPA_KEY,H}){
     if(!activeLog)return;
     setLoading(true);setEntries([]);
     const lt=LOG_TYPES[activeLog];
+    if(!lt||!lt.table)return;
     let url=`${SUPA_URL}/rest/v1/${lt.table}?select=*&order=created_at.desc`;
     if(dateFrom)url+=`&created_at=gte.${dateFrom}`;
     if(dateTo)url+=`&created_at=lte.${dateTo}T23:59:59`;
@@ -3683,7 +3871,7 @@ function FacilityLogs({cu,isElevated,isAdmin,SUPA_URL,SUPA_KEY,H}){
       el('div',{style:{fontSize:13,opacity:.85,lineHeight:1.6}},'All logs are timestamped, signed, and exportable as PDF for DCR inspections and ISO 9001 audits. Retain all records for minimum 5 years per Missouri DCR.'),
     ),
     el('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))',gap:14}},
-      Object.values(LOG_TYPES).map(log=>el('div',{key:log.id,onClick:()=>setActiveLog(log.id),
+      Object.values(LOG_TYPES).map(log=>el('div',{key:log.id,onClick:()=>{if(log.id==='security_inspection'){setShowSecInsp(true);setEditSecInsp(null);}else setActiveLog(log.id);},
         style:{background:log.bg,border:'2px solid',borderColor:log.color+'30',borderRadius:14,padding:'20px',cursor:'pointer',transition:'all .2s'},
         onMouseEnter:ev=>{ev.currentTarget.style.borderColor=log.color;ev.currentTarget.style.transform='translateY(-2px)';},
         onMouseLeave:ev=>{ev.currentTarget.style.borderColor=log.color+'30';ev.currentTarget.style.transform='translateY(0)';},
@@ -3704,7 +3892,7 @@ function FacilityLogs({cu,isElevated,isAdmin,SUPA_URL,SUPA_KEY,H}){
       el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:10}},
         el('div',null,el('div',{style:{fontSize:20,fontWeight:800}},lt.icon+' '+lt.label),el('div',{style:{fontSize:12,opacity:.8,marginTop:2}},lt.dcr+' \u00B7 '+lt.freq)),
         el('div',{style:{display:'flex',gap:8,flexWrap:'wrap'}},
-          el('button',{onClick:()=>setShowForm(true),style:{background:'#fff',color:lt.color,border:'none',borderRadius:8,padding:'8px 18px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer'}},'+ New Entry'),
+          el('button',{onClick:()=>{if(activeLog==='security_inspection'){setShowSecInsp(true);setEditSecInsp(null);}else setShowForm(true);},style:{background:'#fff',color:lt.color,border:'none',borderRadius:8,padding:'8px 18px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer'}},'+ New Entry'),
           activeLog==='visitor'&&el('button',{onClick:()=>setShowQR(p=>!p),style:{background:'rgba(255,255,255,.15)',color:'#fff',border:'1px solid rgba(255,255,255,.4)',borderRadius:8,padding:'8px 18px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer'}},'\uD83D\uDCF1 QR Code / Kiosk'),
           el('button',{onClick:()=>exportLogPdf(activeLog,filtered,dateFrom,dateTo),style:{background:'rgba(255,255,255,.2)',color:'#fff',border:'1px solid rgba(255,255,255,.4)',borderRadius:8,padding:'8px 18px',fontFamily:'inherit',fontSize:13,fontWeight:700,cursor:'pointer'}},'\uD83D\uDCC4 Export PDF'),
           el('button',{onClick:()=>setActiveLog(null),className:'btn b-ghost btn-sm',style:{color:'#fff',borderColor:'rgba(255,255,255,.4)'}},'\u2190 All Logs'),
@@ -3774,7 +3962,7 @@ function FacilityLogs({cu,isElevated,isAdmin,SUPA_URL,SUPA_KEY,H}){
             ),
             el('div',{style:{display:'flex',gap:6,flexShrink:0,flexWrap:'wrap'}},
               el('button',{onClick:()=>exportLogPdf(activeLog,[entry],'',''),className:'btn b-ghost btn-sm'},'PDF'),
-              isElevated&&el('button',{onClick:()=>{setEditEntry(entry);setShowForm(false);},className:'btn b-ghost btn-sm'},'Edit'),
+              isElevated&&el('button',{onClick:()=>{if(activeLog==='security_inspection'){setEditSecInsp(entry);setShowSecInsp(true);}else{setEditEntry(entry);setShowForm(false);}},className:'btn b-ghost btn-sm'},'Edit'),
               activeLog==='visitor'&&isElevated&&!entry.time_out&&el('button',{
                 onClick:async()=>{
                   const now=new Date().toTimeString().slice(0,5);
@@ -3816,6 +4004,14 @@ function FacilityLogs({cu,isElevated,isAdmin,SUPA_URL,SUPA_KEY,H}){
         if(editEntry){setEntries(p=>p.map(e=>e.id===rec.id?rec:e));}
         else{setEntries(p=>[rec,...p]);}
         setShowForm(false);setEditEntry(null);
+      }}),
+    (showSecInsp)&&el(SecurityInspectionForm,{cu,SUPA_URL,SUPA_KEY,H,
+      editData:editSecInsp,
+      onClose:()=>{setShowSecInsp(false);setEditSecInsp(null);},
+      onSave:(rec)=>{
+        if(editSecInsp){setEntries(p=>p.map(e=>e.id===rec.id?rec:e));}
+        else{setEntries(p=>[rec,...p]);}
+        setShowSecInsp(false);setEditSecInsp(null);
       }}),
   );
 }
