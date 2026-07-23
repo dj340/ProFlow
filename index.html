@@ -3440,18 +3440,33 @@ const QMS_STATUSES={open:{label:'Open',color:'#ef4444'},in_progress:{label:'In P
 // Used for the security inspection's per-camera/door/alarm fields so the JS key
 // always matches a real Postgres column name.
 function slug(s){return String(s).toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'');}
+// Turns a plain list of names into an array of checkbox field definitions
+// (used for the Sanitation Log's Daily/Weekly/Monthly area & equipment checklists).
+function checklistFields(prefix,names){return names.map(n=>({key:prefix+'_'+slug(n),label:n,type:'checkbox'}));}
 const LOG_TYPES={
-  sanitation:{id:'sanitation',label:'Sanitation Log',icon:'\uD83E\uDDF9',color:'#065f46',bg:'#f0fdf4',table:'pf_log_sanitation',dcr:'cGMP / 21 CFR 117 / Missouri DCR',freq:'Every shift',fields:[
+  sanitation:{id:'sanitation',label:'Sanitation Log',icon:'\uD83E\uDDF9',color:'#065f46',bg:'#f0fdf4',table:'pf_log_sanitation',dcr:'cGMP / 21 CFR 117 / Missouri DCR',freq:'Daily / Weekly / Monthly',fields:[
     {key:'date',label:'Date *',type:'date'},{key:'time',label:'Time Completed',type:'time'},
     {key:'shift',label:'Shift',type:'select',options:['Day','Evening','Night']},
-    {key:'area',label:'Area / Zone Cleaned *',type:'text',placeholder:'e.g. Pre-Roll Room, Cart Fill Station'},
     {key:'cleaned_by',label:'Cleaned By *',type:'text',placeholder:'Employee name'},
     {key:'sanitizer_used',label:'Sanitizer / Chemical Used',type:'text',placeholder:'e.g. Sanidate 5.0, 70% IPA'},
     {key:'concentration',label:'Concentration / Dilution',type:'text',placeholder:'e.g. 1:64 dilution'},
-    {key:'surfaces_cleaned',label:'Surfaces / Equipment Cleaned',type:'textarea',placeholder:'List all surfaces and equipment cleaned'},
-    {key:'verification_result',label:'Verification Result',type:'select',options:['Pass - Clean','Pass - Acceptable','Fail - Re-cleaned','Fail - Supervisor notified']},
-    {key:'corrective_action',label:'Corrective Action (if fail)',type:'textarea',placeholder:'Describe corrective action taken'},
-    {key:'notes',label:'Additional Notes',type:'textarea',placeholder:'Any observations or comments'},
+    {key:'_s_daily',label:'--- DAILY: AREAS CLEANED ---',type:'section'},
+    ...checklistFields('area',[
+      'Main Entrance','Floor Managers Office','Testing Area','Waste Area',
+      "Men's Restroom","Men's Locker Room","Women's Restroom","Women's Locker Room",'Emergency Exit',
+      'Managers Restroom','Managers Offices','Sales Offices','Upstairs Storage Room 1','Upstairs Storage Room 2',
+      'Production Floor','Distribution','Biomass','Security Room',
+    ]),
+    {key:'_s_daily_san',label:'--- DAILY: FACILITY EQUIPMENT SANITIZED ---',type:'section'},
+    ...checklistFields('equip_san',['Mops','Sink','Tables','Mop Sink','Toilet Bowls','Hand Wash Sink']),
+    {key:'_s_daily_clean',label:'--- DAILY: EQUIPMENT CLEANED ---',type:'section'},
+    ...checklistFields('equip_clean',['Scrubs','Towels']),
+    {key:'_s_weekly',label:'--- WEEKLY: AREAS CLEANED ---',type:'section'},
+    ...checklistFields('weekly',['Warehouse','Security Room','Shipping & Receiving']),
+    {key:'_s_monthly',label:'--- MONTHLY: AREAS CLEANED ---',type:'section'},
+    ...checklistFields('monthly',['Emergency Exit','Ethanol Extraction','BHO Extraction']),
+    {key:'_s_notes',label:'--- NOTES ---',type:'section'},
+    {key:'notes',label:'Additional Notes',type:'textarea',placeholder:'Any observations, issues found, or comments'},
   ]},
   waste:{id:'waste',label:'Waste Destruction Log',icon:'\uD83D\uDDD1\uFE0F',color:'#7c2d12',bg:'#fff7ed',table:'pf_log_waste',dcr:'Missouri DCR / METRC Required',freq:'Every destruction event',fields:[
     {key:'date',label:'Date of Waste Generation *',type:'date'},
@@ -3646,6 +3661,25 @@ function exportLogPdf(logType,entries,dateFrom,dateTo){
       }
     } else {
     lt.fields.forEach(f=>{
+      if(f.type==='section'){
+        checkPage(22);
+        doc.setFillColor(...LIGHT);doc.rect(margin,y,W-margin*2,16,'F');
+        doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor(...NAVY);
+        doc.text(f.label.replace(/^--- /,'').replace(/ ---$/,'').toUpperCase(),margin+8,y+11);
+        y+=22;
+        return;
+      }
+      if(f.type==='checkbox'){
+        const checked=!!entry[f.key];
+        checkPage(15);
+        doc.setFont('helvetica','bold');doc.setFontSize(9.5);
+        doc.setTextColor(...(checked?[22,163,74]:[148,163,184]));
+        doc.text(checked?'[X]':'[ ]',margin+8,y+8);
+        doc.setFont('helvetica','normal');doc.setTextColor(...TEXT);
+        doc.text(f.label,margin+30,y+8);
+        y+=15;
+        return;
+      }
       const val=entry[f.key];if(!val||!String(val).trim())return;
       checkPage(22);
       doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(...SUBTEXT);doc.text(f.label.replace(' *','').toUpperCase(),margin+8,y);
@@ -10037,6 +10071,7 @@ function SanitationKiosk(){
       if(fl.type==='date') f[fl.key]=new Date().toISOString().slice(0,10);
       else if(fl.type==='time') f[fl.key]=new Date().toTimeString().slice(0,5);
       else if(fl.type==='select') f[fl.key]=fl.options[0];
+      else if(fl.type==='checkbox') f[fl.key]=false;
       else f[fl.key]='';
     });
     return f;
@@ -10049,7 +10084,6 @@ function SanitationKiosk(){
   const setF=(k,v)=>setForm(p=>({...p,[k]:v}));
 
   async function submit(){
-    if(!form.area?.trim()){setError('Please enter the area cleaned.');return;}
     if(!form.cleaned_by?.trim()){setError('Please enter your name.');return;}
     if(!sig){setError('Please draw your signature.');return;}
     setSaving(true);setError('');
